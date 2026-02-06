@@ -1,0 +1,355 @@
+name: JavaClass
+endianness: big
+root: java_class
+
+enums:
+  java_version:
+    - value: 45
+      label: Java_1_1
+    - value: 46
+      label: Java_1_2
+    - value: 47
+      label: Java_1_3
+    - value: 48
+      label: Java_1_4
+    - value: 49
+      label: Java_5
+    - value: 50
+      label: Java_6
+    - value: 51
+      label: Java_7
+    - value: 52
+      label: Java_8
+    - value: 53
+      label: Java_9
+    - value: 54
+      label: Java_10
+    - value: 55
+      label: Java_11
+    - value: 56
+      label: Java_12
+    - value: 57
+      label: Java_13
+    - value: 58
+      label: Java_14
+    - value: 59
+      label: Java_15
+    - value: 60
+      label: Java_16
+    - value: 61
+      label: Java_17
+    - value: 62
+      label: Java_18
+    - value: 63
+      label: Java_19
+    - value: 64
+      label: Java_20
+    - value: 65
+      label: Java_21
+    - value: 66
+      label: Java_22
+    - value: 67
+      label: Java_23
+
+  cp_tag:
+    - value: 1
+      label: Utf8
+    - value: 3
+      label: Integer
+    - value: 4
+      label: Float
+    - value: 5
+      label: Long
+    - value: 6
+      label: Double
+    - value: 7
+      label: Class
+    - value: 8
+      label: String
+    - value: 9
+      label: Fieldref
+    - value: 10
+      label: Methodref
+    - value: 11
+      label: InterfaceMethodref
+    - value: 12
+      label: NameAndType
+    - value: 15
+      label: MethodHandle
+    - value: 16
+      label: MethodType
+    - value: 18
+      label: InvokeDynamic
+
+flags:
+  class_access_flags:
+    bit_size: 16
+    fields:
+      - name: ACC_PUBLIC
+        bit: 0
+        set: "public"
+        clear: ""
+      - name: ACC_FINAL
+        bit: 4
+        set: "final"
+        clear: ""
+      - name: ACC_SUPER
+        bit: 5
+        set: "super"
+        clear: ""
+      - name: ACC_INTERFACE
+        bit: 9
+        set: "interface"
+        clear: ""
+      - name: ACC_ABSTRACT
+        bit: 10
+        set: "abstract"
+        clear: ""
+      - name: ACC_SYNTHETIC
+        bit: 12
+        set: "synthetic"
+        clear: ""
+      - name: ACC_ANNOTATION
+        bit: 13
+        set: "annotation"
+        clear: ""
+      - name: ACC_ENUM
+        bit: 14
+        set: "enum"
+        clear: ""
+
+  member_access_flags:
+    bit_size: 16
+    fields:
+      - name: ACC_PUBLIC
+        bit: 0
+        set: "public"
+        clear: ""
+      - name: ACC_PRIVATE
+        bit: 1
+        set: "private"
+        clear: ""
+      - name: ACC_PROTECTED
+        bit: 2
+        set: "protected"
+        clear: ""
+      - name: ACC_STATIC
+        bit: 3
+        set: "static"
+        clear: ""
+      - name: ACC_FINAL
+        bit: 4
+        set: "final"
+        clear: ""
+      - name: ACC_SYNCHRONIZED
+        bit: 5
+        set: "synchronized"
+        clear: ""
+      - name: ACC_BRIDGE
+        bit: 6
+        set: "bridge"
+        clear: ""
+      - name: ACC_VARARGS
+        bit: 7
+        set: "varargs"
+        clear: ""
+      - name: ACC_NATIVE
+        bit: 8
+        set: "native"
+        clear: ""
+      - name: ACC_ABSTRACT
+        bit: 10
+        set: "abstract"
+        clear: ""
+
+structs:
+  java_class:
+    - name: magic
+      type: bytes
+      size: "4"
+      expected: [0xCA, 0xFE, 0xBA, 0xBE]
+      description: "Java class file magic (0xCAFEBABE)"
+    - name: minor_version
+      type: uint16
+    - name: major_version
+      type: uint16
+      enum: java_version
+    - name: constant_pool_count
+      type: uint16
+    - name: constant_pool
+      type: struct
+      struct: cp_entry
+      repeat_count: "{constant_pool_count - 1}"
+      description: "Constant pool (count - 1 entries; Long/Double take 2 slots - known limitation)"
+    - name: access_flags
+      type: uint16
+      flags: class_access_flags
+    - name: this_class
+      type: uint16
+      description: "Constant pool index of this class"
+    - name: super_class
+      type: uint16
+      description: "Constant pool index of super class"
+    - name: interfaces_count
+      type: uint16
+    - name: interfaces
+      type: uint16
+      repeat_count: "{interfaces_count}"
+      description: "Constant pool indices of interfaces"
+    - name: fields_count
+      type: uint16
+    - name: fields
+      type: struct
+      struct: member_info
+      repeat_count: "{fields_count}"
+    - name: methods_count
+      type: uint16
+    - name: methods
+      type: struct
+      struct: member_info
+      repeat_count: "{methods_count}"
+    - name: attributes_count
+      type: uint16
+    - name: attributes
+      type: struct
+      struct: attribute_info
+      repeat_count: "{attributes_count}"
+
+  cp_entry:
+    - name: tag
+      type: uint8
+      enum: cp_tag
+    - name: info
+      type: switch
+      switch_on: "{tag}"
+      cases:
+        "1": cp_utf8
+        "3": cp_integer
+        "4": cp_float
+        "5": cp_long
+        "6": cp_double
+        "7": cp_class
+        "8": cp_string
+        "9": cp_fieldref
+        "10": cp_methodref
+        "11": cp_interface_methodref
+        "12": cp_name_and_type
+        "15": cp_method_handle
+        "16": cp_method_type
+        "18": cp_invoke_dynamic
+      default: raw_data
+
+  cp_utf8:
+    - name: length
+      type: uint16
+    - name: value
+      type: bytes
+      size: "{length}"
+      description: "UTF-8 encoded string bytes"
+
+  cp_integer:
+    - name: value
+      type: int32
+
+  cp_float:
+    - name: value
+      type: float32
+
+  cp_long:
+    - name: value
+      type: int64
+      description: "Long value (takes 2 constant pool slots)"
+
+  cp_double:
+    - name: value
+      type: float64
+      description: "Double value (takes 2 constant pool slots)"
+
+  cp_class:
+    - name: name_index
+      type: uint16
+      description: "Constant pool index of class name (CONSTANT_Utf8)"
+
+  cp_string:
+    - name: string_index
+      type: uint16
+      description: "Constant pool index of string value (CONSTANT_Utf8)"
+
+  cp_fieldref:
+    - name: class_index
+      type: uint16
+      description: "Constant pool index of class (CONSTANT_Class)"
+    - name: name_and_type_index
+      type: uint16
+      description: "Constant pool index of name and type (CONSTANT_NameAndType)"
+
+  cp_methodref:
+    - name: class_index
+      type: uint16
+    - name: name_and_type_index
+      type: uint16
+
+  cp_interface_methodref:
+    - name: class_index
+      type: uint16
+    - name: name_and_type_index
+      type: uint16
+
+  cp_name_and_type:
+    - name: name_index
+      type: uint16
+      description: "Constant pool index of field/method name"
+    - name: descriptor_index
+      type: uint16
+      description: "Constant pool index of field/method descriptor"
+
+  cp_method_handle:
+    - name: reference_kind
+      type: uint8
+      description: "Reference kind (1-9)"
+    - name: reference_index
+      type: uint16
+
+  cp_method_type:
+    - name: descriptor_index
+      type: uint16
+
+  cp_invoke_dynamic:
+    - name: bootstrap_method_attr_index
+      type: uint16
+      description: "Index into bootstrap_methods array of BootstrapMethods attribute"
+    - name: name_and_type_index
+      type: uint16
+
+  member_info:
+    - name: access_flags
+      type: uint16
+      flags: member_access_flags
+    - name: name_index
+      type: uint16
+      description: "Constant pool index of member name"
+    - name: descriptor_index
+      type: uint16
+      description: "Constant pool index of member descriptor"
+    - name: attributes_count
+      type: uint16
+    - name: attributes
+      type: struct
+      struct: attribute_info
+      repeat_count: "{attributes_count}"
+
+  attribute_info:
+    - name: attribute_name_index
+      type: uint16
+      description: "Constant pool index of attribute name"
+    - name: attribute_length
+      type: uint32
+    - name: info
+      type: bytes
+      size: "{attribute_length}"
+      description: "Attribute data (raw bytes)"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

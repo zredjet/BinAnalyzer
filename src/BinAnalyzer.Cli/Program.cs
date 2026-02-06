@@ -1,6 +1,8 @@
 using System.CommandLine;
 using BinAnalyzer.Core;
+using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Interfaces;
+using BinAnalyzer.Core.Models;
 using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl;
 using BinAnalyzer.Engine;
@@ -39,6 +41,12 @@ var filterOption = new Option<string[]>("--filter")
     Description = "出力フィルタ（フィールドパスパターン、複数指定可）",
 };
 
+var onErrorOption = new Option<string>("--on-error")
+{
+    Description = "エラー時の動作 (stop, continue)",
+    DefaultValueFactory = _ => "stop",
+};
+
 var rootCommand = new RootCommand("BinAnalyzer - 汎用バイナリ構造解析ツール")
 {
     fileArg,
@@ -47,6 +55,7 @@ var rootCommand = new RootCommand("BinAnalyzer - 汎用バイナリ構造解析�
     colorOption,
     noValidateOption,
     filterOption,
+    onErrorOption,
 };
 
 rootCommand.SetAction((parseResult) =>
@@ -57,6 +66,7 @@ rootCommand.SetAction((parseResult) =>
     var colorSetting = parseResult.GetValue(colorOption)!;
     var noValidate = parseResult.GetValue(noValidateOption);
     var filterPatterns = parseResult.GetValue(filterOption);
+    var onError = parseResult.GetValue(onErrorOption);
 
     if (!file.Exists)
     {
@@ -92,9 +102,20 @@ rootCommand.SetAction((parseResult) =>
         }
 
         var data = File.ReadAllBytes(file.FullName);
+        var errorMode = onError == "continue" ? ErrorMode.Continue : ErrorMode.Stop;
 
         var decoder = new BinaryDecoder();
-        var decoded = decoder.Decode(data, format);
+        DecodeResult? decodeResult = null;
+        DecodedStruct decoded;
+        if (errorMode == ErrorMode.Continue)
+        {
+            decodeResult = decoder.DecodeWithRecovery(data, format, errorMode);
+            decoded = decodeResult.Root;
+        }
+        else
+        {
+            decoded = decoder.Decode(data, format);
+        }
 
         // フィルタ適用
         if (filterPatterns is { Length: > 0 })
@@ -141,6 +162,18 @@ rootCommand.SetAction((parseResult) =>
         }
 
         Console.Write(output);
+
+        // エラーサマリー
+        if (decodeResult?.Errors is { Count: > 0 } errors)
+        {
+            Console.Error.WriteLine();
+            Console.Error.WriteLine($"--- {errors.Count} 件のデコードエラー ---");
+            foreach (var err in errors)
+            {
+                Console.Error.WriteLine($"  [{err.FieldPath}] 0x{err.Offset:X8}: {err.Message}");
+            }
+        }
+
         return 0;
     }
     catch (DecodeException dex)

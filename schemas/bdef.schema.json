@@ -48,13 +48,20 @@
     },
     "structs": {
       "type": "object",
-      "description": "構造体の定義。キーが構造体名、値がフィールドの配列。",
+      "description": "構造体の定義。キーが構造体名、値がフィールドの配列またはオブジェクト（endianness/align/fields）。",
       "additionalProperties": {
-        "type": "array",
-        "description": "構造体のフィールドリスト",
-        "items": {
-          "$ref": "#/$defs/field"
-        }
+        "oneOf": [
+          {
+            "type": "array",
+            "description": "構造体のフィールドリスト（旧形式）",
+            "items": {
+              "$ref": "#/$defs/field"
+            }
+          },
+          {
+            "$ref": "#/$defs/structDefinition"
+          }
+        ]
       }
     }
   },
@@ -266,6 +273,28 @@
         "value": {
           "type": "string",
           "description": "virtual型フィールドの値を計算する式。type が virtual のとき必須。"
+        },
+        "seek": {
+          "type": "string",
+          "description": "フィールドデコード前にジャンプする絶対オフセット（式）"
+        },
+        "seek_restore": {
+          "type": "boolean",
+          "description": "seekしたフィールドのデコード後に元の位置に復帰",
+          "default": false
+        },
+        "endianness": {
+          "type": "string",
+          "enum": ["big", "little", "be", "le"],
+          "description": "このフィールドに適用するエンディアン。構造体・フォーマットのデフォルトを上書きする。"
+        },
+        "validate": {
+          "type": "string",
+          "description": "デコード後に評価するバリデーション式。式が真なら ✓、偽なら ✗ を表示。"
+        },
+        "string_table": {
+          "type": "string",
+          "description": "参照する文字列テーブル名。整数値をオフセットとして文字列を解決する。"
         }
       }
     },
@@ -310,6 +339,35 @@
           "description": "チェックサムの計算対象となるフィールド名のリスト",
           "items": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "structDefinition": {
+      "type": "object",
+      "description": "構造体定義（新形式）。endianness/align/fields を持つ。",
+      "required": ["fields"],
+      "additionalProperties": false,
+      "properties": {
+        "endianness": {
+          "type": "string",
+          "enum": ["big", "little", "be", "le"],
+          "description": "この構造体内のフィールドに適用するエンディアン。フォーマットのデフォルトを上書きする。"
+        },
+        "align": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "繰り返し時の各要素のアライメント（バイト単位）"
+        },
+        "string_table": {
+          "type": "boolean",
+          "description": "trueの場合、この構造体のバイト列を文字列テーブルとして登録する。"
+        },
+        "fields": {
+          "type": "array",
+          "description": "構造体のフィールドリスト",
+          "items": {
+            "$ref": "#/$defs/field"
           }
         }
       }

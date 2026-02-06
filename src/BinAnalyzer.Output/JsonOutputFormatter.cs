@@ -50,6 +50,9 @@ public sealed class JsonOutputFormatter : IOutputFormatter
             case DecodedVirtual virtualNode:
                 WriteVirtualNode(writer, virtualNode);
                 break;
+            case DecodedError errorNode:
+                WriteErrorNode(writer, errorNode);
+                break;
         }
     }
 
@@ -60,6 +63,14 @@ public sealed class JsonOutputFormatter : IOutputFormatter
         writer.WriteNumber("size", node.Size);
         if (node.Description is not null)
             writer.WriteString("description", node.Description);
+        if (node.Validation is { } v)
+        {
+            writer.WritePropertyName("_validation");
+            writer.WriteStartObject();
+            writer.WriteBoolean("passed", v.Passed);
+            writer.WriteString("expression", v.Expression);
+            writer.WriteEndObject();
+        }
     }
 
     private static void WriteStructNode(Utf8JsonWriter writer, DecodedStruct node)
@@ -120,6 +131,9 @@ public sealed class JsonOutputFormatter : IOutputFormatter
             if (node.ChecksumExpected.HasValue)
                 writer.WriteString("checksum_expected", $"0x{node.ChecksumExpected:X}");
         }
+
+        if (node.StringTableValue is not null)
+            writer.WriteString("string_table_value", node.StringTableValue);
 
         writer.WriteEndObject();
     }
@@ -267,6 +281,17 @@ public sealed class JsonOutputFormatter : IOutputFormatter
                 writer.WriteString("value", node.Value.ToString());
                 break;
         }
+        writer.WriteEndObject();
+    }
+
+    private static void WriteErrorNode(Utf8JsonWriter writer, DecodedError node)
+    {
+        writer.WriteStartObject();
+        WriteCommonProperties(writer, node, "error");
+        writer.WriteString("name", node.Name);
+        writer.WriteString("error_message", node.ErrorMessage);
+        if (node.FieldType is not null)
+            writer.WriteString("field_type", node.FieldType);
         writer.WriteEndObject();
     }
 

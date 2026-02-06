@@ -1,0 +1,332 @@
+name: PE
+endianness: little
+root: pe
+
+enums:
+  machine_type:
+    - value: 0x14C
+      label: IMAGE_FILE_MACHINE_I386
+      description: "Intel 386"
+    - value: 0x8664
+      label: IMAGE_FILE_MACHINE_AMD64
+      description: "AMD64 (x86-64)"
+    - value: 0xAA64
+      label: IMAGE_FILE_MACHINE_ARM64
+      description: "ARM64"
+    - value: 0x1C0
+      label: IMAGE_FILE_MACHINE_ARM
+      description: "ARM"
+
+  pe_magic:
+    - value: 0x10B
+      label: PE32
+      description: "32-bit executable"
+    - value: 0x20B
+      label: PE32+
+      description: "64-bit executable"
+
+  subsystem:
+    - value: 0
+      label: IMAGE_SUBSYSTEM_UNKNOWN
+    - value: 1
+      label: IMAGE_SUBSYSTEM_NATIVE
+    - value: 2
+      label: IMAGE_SUBSYSTEM_WINDOWS_GUI
+    - value: 3
+      label: IMAGE_SUBSYSTEM_WINDOWS_CUI
+    - value: 7
+      label: IMAGE_SUBSYSTEM_POSIX_CUI
+    - value: 10
+      label: IMAGE_SUBSYSTEM_EFI_APPLICATION
+
+flags:
+  pe_characteristics:
+    bit_size: 16
+    fields:
+      - name: RELOCS_STRIPPED
+        bit: 0
+      - name: EXECUTABLE_IMAGE
+        bit: 1
+      - name: LARGE_ADDRESS_AWARE
+        bit: 5
+      - name: 32BIT_MACHINE
+        bit: 8
+      - name: DLL
+        bit: 13
+
+  section_characteristics:
+    bit_size: 32
+    fields:
+      - name: CNT_CODE
+        bit: 5
+      - name: CNT_INITIALIZED_DATA
+        bit: 6
+      - name: CNT_UNINITIALIZED_DATA
+        bit: 7
+      - name: MEM_EXECUTE
+        bit: 29
+      - name: MEM_READ
+        bit: 30
+      - name: MEM_WRITE
+        bit: 31
+
+structs:
+  pe:
+    - name: dos_header
+      type: struct
+      struct: dos_header
+    - name: pe_signature
+      type: bytes
+      size: "4"
+      expected: [0x50, 0x45, 0x00, 0x00]
+      seek: "{e_lfanew}"
+      description: "PE signature ('PE\\0\\0')"
+    - name: coff_header
+      type: struct
+      struct: coff_header
+    - name: optional_header
+      type: switch
+      switch_on: "{magic}"
+      cases:
+        "267": pe32_optional_header
+        "523": pe32plus_optional_header
+      default: raw_data
+    - name: sections
+      type: struct
+      struct: section_header
+      repeat_count: "{number_of_sections}"
+
+  dos_header:
+    - name: e_magic
+      type: bytes
+      size: "2"
+      expected: [0x4D, 0x5A]
+      description: "DOS magic number ('MZ')"
+    - name: e_cblp
+      type: uint16
+    - name: e_cp
+      type: uint16
+    - name: e_crlc
+      type: uint16
+    - name: e_cparhdr
+      type: uint16
+    - name: e_minalloc
+      type: uint16
+    - name: e_maxalloc
+      type: uint16
+    - name: e_ss
+      type: uint16
+    - name: e_sp
+      type: uint16
+    - name: e_csum
+      type: uint16
+    - name: e_ip
+      type: uint16
+    - name: e_cs
+      type: uint16
+    - name: e_lfarlc
+      type: uint16
+    - name: e_ovno
+      type: uint16
+    - name: e_res
+      type: bytes
+      size: "8"
+      description: "Reserved words"
+    - name: e_oemid
+      type: uint16
+    - name: e_oeminfo
+      type: uint16
+    - name: e_res2
+      type: bytes
+      size: "20"
+      description: "Reserved words"
+    - name: e_lfanew
+      type: uint32
+      description: "Offset to PE header"
+
+  coff_header:
+    - name: machine
+      type: uint16
+      enum: machine_type
+    - name: number_of_sections
+      type: uint16
+    - name: time_date_stamp
+      type: uint32
+    - name: pointer_to_symbol_table
+      type: uint32
+    - name: number_of_symbols
+      type: uint32
+    - name: size_of_optional_header
+      type: uint16
+    - name: characteristics
+      type: uint16
+      flags: pe_characteristics
+
+  pe32_optional_header:
+    - name: magic
+      type: uint16
+      enum: pe_magic
+    - name: major_linker_version
+      type: uint8
+    - name: minor_linker_version
+      type: uint8
+    - name: size_of_code
+      type: uint32
+    - name: size_of_initialized_data
+      type: uint32
+    - name: size_of_uninitialized_data
+      type: uint32
+    - name: address_of_entry_point
+      type: uint32
+    - name: base_of_code
+      type: uint32
+    - name: base_of_data
+      type: uint32
+    - name: image_base
+      type: uint32
+    - name: section_alignment
+      type: uint32
+    - name: file_alignment
+      type: uint32
+    - name: major_os_version
+      type: uint16
+    - name: minor_os_version
+      type: uint16
+    - name: major_image_version
+      type: uint16
+    - name: minor_image_version
+      type: uint16
+    - name: major_subsystem_version
+      type: uint16
+    - name: minor_subsystem_version
+      type: uint16
+    - name: win32_version_value
+      type: uint32
+    - name: size_of_image
+      type: uint32
+    - name: size_of_headers
+      type: uint32
+    - name: checksum
+      type: uint32
+    - name: subsystem
+      type: uint16
+      enum: subsystem
+    - name: dll_characteristics
+      type: uint16
+    - name: size_of_stack_reserve
+      type: uint32
+    - name: size_of_stack_commit
+      type: uint32
+    - name: size_of_heap_reserve
+      type: uint32
+    - name: size_of_heap_commit
+      type: uint32
+    - name: loader_flags
+      type: uint32
+    - name: number_of_rva_and_sizes
+      type: uint32
+    - name: data_directories
+      type: struct
+      struct: data_directory
+      repeat_count: "{number_of_rva_and_sizes}"
+
+  pe32plus_optional_header:
+    - name: magic
+      type: uint16
+      enum: pe_magic
+    - name: major_linker_version
+      type: uint8
+    - name: minor_linker_version
+      type: uint8
+    - name: size_of_code
+      type: uint32
+    - name: size_of_initialized_data
+      type: uint32
+    - name: size_of_uninitialized_data
+      type: uint32
+    - name: address_of_entry_point
+      type: uint32
+    - name: base_of_code
+      type: uint32
+    - name: image_base
+      type: uint64
+    - name: section_alignment
+      type: uint32
+    - name: file_alignment
+      type: uint32
+    - name: major_os_version
+      type: uint16
+    - name: minor_os_version
+      type: uint16
+    - name: major_image_version
+      type: uint16
+    - name: minor_image_version
+      type: uint16
+    - name: major_subsystem_version
+      type: uint16
+    - name: minor_subsystem_version
+      type: uint16
+    - name: win32_version_value
+      type: uint32
+    - name: size_of_image
+      type: uint32
+    - name: size_of_headers
+      type: uint32
+    - name: checksum
+      type: uint32
+    - name: subsystem
+      type: uint16
+      enum: subsystem
+    - name: dll_characteristics
+      type: uint16
+    - name: size_of_stack_reserve
+      type: uint64
+    - name: size_of_stack_commit
+      type: uint64
+    - name: size_of_heap_reserve
+      type: uint64
+    - name: size_of_heap_commit
+      type: uint64
+    - name: loader_flags
+      type: uint32
+    - name: number_of_rva_and_sizes
+      type: uint32
+    - name: data_directories
+      type: struct
+      struct: data_directory
+      repeat_count: "{number_of_rva_and_sizes}"
+
+  data_directory:
+    - name: virtual_address
+      type: uint32
+    - name: size
+      type: uint32
+
+  section_header:
+    - name: name
+      type: ascii
+      size: "8"
+    - name: virtual_size
+      type: uint32
+    - name: virtual_address
+      type: uint32
+    - name: size_of_raw_data
+      type: uint32
+    - name: pointer_to_raw_data
+      type: uint32
+    - name: pointer_to_relocations
+      type: uint32
+    - name: pointer_to_linenumbers
+      type: uint32
+    - name: number_of_relocations
+      type: uint16
+    - name: number_of_linenumbers
+      type: uint16
+    - name: characteristics
+      type: uint32
+      flags: section_characteristics
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

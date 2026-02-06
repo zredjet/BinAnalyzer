@@ -72,18 +72,32 @@ public static class YamlToIrMapper
     }
 
     private static IReadOnlyDictionary<string, StructDefinition> MapStructs(
-        Dictionary<string, List<YamlFieldModel>> yamlStructs)
+        Dictionary<string, YamlStructModel> yamlStructs)
     {
         var result = new Dictionary<string, StructDefinition>();
-        foreach (var (name, fields) in yamlStructs)
+        foreach (var (name, structModel) in yamlStructs)
         {
             result[name] = new StructDefinition
             {
                 Name = name,
-                Fields = fields.Select(MapField).ToList(),
+                Fields = structModel.Fields.Select(MapField).ToList(),
+                Endianness = ParseEndianness(structModel.Endianness),
+                Align = structModel.Align,
+                IsStringTable = structModel.StringTable ?? false,
             };
         }
         return result;
+    }
+
+    private static Endianness? ParseEndianness(string? value)
+    {
+        return value?.ToLowerInvariant() switch
+        {
+            "little" or "le" => Endianness.Little,
+            "big" or "be" => Endianness.Big,
+            null => null,
+            _ => throw new InvalidOperationException($"Unknown endianness: {value}"),
+        };
     }
 
     private static FieldDefinition MapField(YamlFieldModel yaml)
@@ -118,6 +132,11 @@ public static class YamlToIrMapper
             ElementSize = elementSize,
             ElementSizeExpression = elementSizeExpr,
             ValueExpression = yaml.Value is not null ? ExpressionParser.Parse(yaml.Value) : null,
+            SeekExpression = yaml.Seek is not null ? ExpressionParser.Parse(yaml.Seek) : null,
+            SeekRestore = yaml.SeekRestore ?? false,
+            Endianness = ParseEndianness(yaml.Endianness),
+            ValidationExpression = yaml.Validate is not null ? ExpressionParser.Parse(yaml.Validate) : null,
+            StringTableRef = yaml.StringTable,
         };
     }
 

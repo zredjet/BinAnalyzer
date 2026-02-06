@@ -7,4 +7,10 @@ public sealed class StructDefinition
 
     /// <summary>この構造体のインスタンス開始位置を指定バイト境界にアラインする（繰り返し時）。</summary>
     public int? Align { get; init; }
+
+    /// <summary>この構造体内のフィールドに適用するエンディアン。nullの場合は親スコープまたはフォーマットデフォルトを使用。</summary>
+    public Endianness? Endianness { get; init; }
+
+    /// <summary>trueの場合、この構造体のデコード結果のバイト列を文字列テーブルとして登録する。</summary>
+    public bool IsStringTable { get; init; }
 }

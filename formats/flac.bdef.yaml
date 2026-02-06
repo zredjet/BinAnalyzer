@@ -1,0 +1,177 @@
+name: FLAC
+endianness: big
+root: flac
+
+enums:
+  picture_type:
+    - value: 0
+      label: Other
+    - value: 1
+      label: File_Icon_32x32
+    - value: 2
+      label: Other_File_Icon
+    - value: 3
+      label: Front_Cover
+    - value: 4
+      label: Back_Cover
+    - value: 5
+      label: Leaflet
+    - value: 6
+      label: Media
+
+structs:
+  flac:
+    - name: magic
+      type: bytes
+      size: "4"
+      expected: [0x66, 0x4C, 0x61, 0x43]
+      description: "fLaCマジック"
+    - name: metadata_blocks
+      type: struct
+      struct: metadata_block
+      repeat_until: "{is_last == 1}"
+
+  metadata_block:
+    - name: header_byte
+      type: uint8
+    - name: is_last
+      type: virtual
+      value: "{header_byte >> 7}"
+      description: "最終ブロックフラグ（1=最終）"
+    - name: block_type
+      type: virtual
+      value: "{header_byte & 127}"
+      description: "ブロックタイプ（0=STREAMINFO, 1=PADDING, 2=APPLICATION, 3=SEEKTABLE, 4=VORBIS_COMMENT, 6=PICTURE）"
+    - name: length_b0
+      type: uint8
+    - name: length_b1
+      type: uint8
+    - name: length_b2
+      type: uint8
+    - name: length
+      type: virtual
+      value: "{(length_b0 << 16) | (length_b1 << 8) | length_b2}"
+      description: "ブロックデータ長（24ビット）"
+    - name: data
+      type: switch
+      size: "{length}"
+      switch_on: "{block_type}"
+      cases:
+        "0": streaminfo
+        "1": padding_block
+        "2": application_block
+        "3": seektable_block
+        "4": vorbis_comment_block
+        "6": picture_block
+      default: raw_data
+
+  streaminfo:
+    - name: min_block_size
+      type: uint16
+      description: "最小ブロックサイズ（サンプル数）"
+    - name: max_block_size
+      type: uint16
+      description: "最大ブロックサイズ（サンプル数）"
+    - name: min_frame_size_b0
+      type: uint8
+    - name: min_frame_size_b1
+      type: uint8
+    - name: min_frame_size_b2
+      type: uint8
+    - name: min_frame_size
+      type: virtual
+      value: "{(min_frame_size_b0 << 16) | (min_frame_size_b1 << 8) | min_frame_size_b2}"
+      description: "最小フレームサイズ（バイト、0=不明）"
+    - name: max_frame_size_b0
+      type: uint8
+    - name: max_frame_size_b1
+      type: uint8
+    - name: max_frame_size_b2
+      type: uint8
+    - name: max_frame_size
+      type: virtual
+      value: "{(max_frame_size_b0 << 16) | (max_frame_size_b1 << 8) | max_frame_size_b2}"
+      description: "最大フレームサイズ（バイト、0=不明）"
+    - name: stream_info_bits
+      type: bytes
+      size: "8"
+      description: "sample_rate(20bit) + channels(3bit) + bps(5bit) + total_samples(36bit) パック領域"
+    - name: md5
+      type: bytes
+      size: "16"
+      description: "非圧縮オーディオデータのMD5シグネチャ"
+
+  padding_block:
+    - name: padding
+      type: bytes
+      size: remaining
+
+  application_block:
+    - name: app_id
+      type: bytes
+      size: "4"
+      description: "アプリケーションID"
+    - name: data
+      type: bytes
+      size: remaining
+
+  seektable_block:
+    - name: seekpoints
+      type: struct
+      struct: seekpoint
+      repeat: eof
+
+  seekpoint:
+    - name: sample_number
+      type: uint64
+      description: "ターゲットフレームの先頭サンプル番号"
+    - name: offset
+      type: uint64
+      description: "先頭フレームヘッダからのオフセット（バイト）"
+    - name: num_samples
+      type: uint16
+      description: "ターゲットフレームのサンプル数"
+
+  vorbis_comment_block:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "Vorbisコメント（リトルエンディアン制約のため生バイト出力）"
+
+  picture_block:
+    - name: picture_type
+      type: uint32
+      enum: picture_type
+    - name: mime_length
+      type: uint32
+    - name: mime
+      type: ascii
+      size: "{mime_length}"
+      description: "MIMEタイプ"
+    - name: desc_length
+      type: uint32
+    - name: description
+      type: utf8
+      size: "{desc_length}"
+      description: "画像の説明"
+    - name: width
+      type: uint32
+    - name: height
+      type: uint32
+    - name: depth
+      type: uint32
+      description: "ビット深度"
+    - name: colors
+      type: uint32
+      description: "インデックスカラー数（0=非インデックス）"
+    - name: data_length
+      type: uint32
+    - name: data
+      type: bytes
+      size: "{data_length}"
+      description: "画像データ"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

@@ -1,0 +1,111 @@
+name: JPEG
+endianness: big
+root: jpeg
+
+enums:
+  jpeg_marker:
+    - value: 0xC0
+      label: SOF0
+      description: "Baseline DCT"
+    - value: 0xC2
+      label: SOF2
+      description: "Progressive DCT"
+    - value: 0xC4
+      label: DHT
+      description: "Define Huffman Table"
+    - value: 0xD9
+      label: EOI
+      description: "End of Image"
+    - value: 0xDA
+      label: SOS
+      description: "Start of Scan"
+    - value: 0xDB
+      label: DQT
+      description: "Define Quantization Table"
+    - value: 0xE0
+      label: APP0
+      description: "JFIF"
+    - value: 0xE1
+      label: APP1
+      description: "Exif"
+    - value: 0xFE
+      label: COM
+      description: "Comment"
+
+structs:
+  jpeg:
+    - name: soi
+      type: bytes
+      size: "2"
+      expected: [0xFF, 0xD8]
+      description: "Start of Image marker"
+    - name: segments
+      type: struct
+      struct: marker_segment
+      repeat: eof
+
+  marker_segment:
+    - name: marker_prefix
+      type: uint8
+      expected: [0xFF]
+    - name: marker_type
+      type: uint8
+      enum: jpeg_marker
+    - name: body
+      type: switch
+      switch_on: "{marker_type}"
+      cases:
+        "0xC0": sof0_segment
+        "0xDA": sos_segment
+        "0xD9": eoi_marker
+      default: generic_segment
+
+  generic_segment:
+    - name: length
+      type: uint16
+    - name: data
+      type: bytes
+      size: "{length - 2}"
+
+  sof0_segment:
+    - name: length
+      type: uint16
+    - name: body
+      type: struct
+      struct: sof0_body
+      size: "{length - 2}"
+
+  sof0_body:
+    - name: precision
+      type: uint8
+    - name: height
+      type: uint16
+    - name: width
+      type: uint16
+    - name: num_components
+      type: uint8
+    - name: components
+      type: struct
+      struct: sof0_component
+      repeat_count: "{num_components}"
+
+  sof0_component:
+    - name: id
+      type: uint8
+    - name: sampling
+      type: uint8
+    - name: qt_id
+      type: uint8
+
+  sos_segment:
+    - name: length
+      type: uint16
+    - name: sos_header
+      type: bytes
+      size: "{length - 2}"
+    - name: compressed_data
+      type: bytes
+      size: remaining
+      description: "Entropy-coded data (includes embedded EOI marker)"
+
+  eoi_marker: []

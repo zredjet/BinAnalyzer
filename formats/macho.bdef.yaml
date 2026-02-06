@@ -1,0 +1,199 @@
+name: Mach-O
+endianness: little
+root: macho
+
+enums:
+  cpu_type:
+    - value: 7
+      label: CPU_TYPE_X86
+    - value: 12
+      label: CPU_TYPE_ARM
+    - value: 16777223
+      label: CPU_TYPE_X86_64
+      description: "x86-64 (0x01000007)"
+    - value: 16777228
+      label: CPU_TYPE_ARM64
+      description: "ARM64 (0x0100000C)"
+
+  file_type:
+    - value: 1
+      label: MH_OBJECT
+      description: "Relocatable object"
+    - value: 2
+      label: MH_EXECUTE
+      description: "Executable"
+    - value: 3
+      label: MH_FVMLIB
+      description: "Fixed VM shared library"
+    - value: 4
+      label: MH_CORE
+      description: "Core dump"
+    - value: 5
+      label: MH_PRELOAD
+    - value: 6
+      label: MH_DYLIB
+      description: "Dynamic library"
+    - value: 7
+      label: MH_DYLINKER
+      description: "Dynamic linker"
+    - value: 8
+      label: MH_BUNDLE
+      description: "Bundle"
+
+  lc_type:
+    - value: 1
+      label: LC_SEGMENT
+    - value: 2
+      label: LC_SYMTAB
+    - value: 4
+      label: LC_THREAD
+    - value: 5
+      label: LC_UNIXTHREAD
+    - value: 11
+      label: LC_DYSYMTAB
+    - value: 12
+      label: LC_LOAD_DYLIB
+    - value: 13
+      label: LC_ID_DYLIB
+    - value: 14
+      label: LC_LOAD_DYLINKER
+    - value: 25
+      label: LC_SEGMENT_64
+      description: "64-bit segment"
+    - value: 27
+      label: LC_UUID
+    - value: 34
+      label: LC_SOURCE_VERSION
+    - value: 36
+      label: LC_VERSION_MIN_MACOSX
+    - value: 38
+      label: LC_FUNCTION_STARTS
+    - value: 44
+      label: LC_BUILD_VERSION
+    - value: 2147483688
+      label: LC_MAIN
+      description: "Entry point (0x80000028)"
+
+flags:
+  mh_flags:
+    bit_size: 32
+    fields:
+      - name: MH_NOUNDEFS
+        bit: 0
+      - name: MH_DYLDLINK
+        bit: 2
+      - name: MH_TWOLEVEL
+        bit: 7
+      - name: MH_PIE
+        bit: 21
+
+structs:
+  macho:
+    - name: header
+      type: struct
+      struct: mach_header_64
+    - name: load_commands
+      type: struct
+      struct: load_command
+      repeat_count: "{ncmds}"
+
+  mach_header_64:
+    - name: magic
+      type: bytes
+      size: "4"
+      expected: [0xCF, 0xFA, 0xED, 0xFE]
+      description: "Mach-O 64-bit magic (0xFEEDFACF, little-endian)"
+    - name: cputype
+      type: uint32
+      enum: cpu_type
+    - name: cpusubtype
+      type: uint32
+    - name: filetype
+      type: uint32
+      enum: file_type
+    - name: ncmds
+      type: uint32
+      description: "Number of load commands"
+    - name: sizeofcmds
+      type: uint32
+      description: "Total size of load commands"
+    - name: flags
+      type: uint32
+      flags: mh_flags
+    - name: reserved
+      type: uint32
+
+  load_command:
+    endianness: little
+    fields:
+      - name: cmd
+        type: uint32
+        enum: lc_type
+      - name: cmdsize
+        type: uint32
+        description: "Total size of this load command"
+      - name: body
+        type: switch
+        switch_on: "{cmd}"
+        size: "{cmdsize - 8}"
+        cases:
+          "25": segment_64_body
+        default: generic_body
+
+  segment_64_body:
+    - name: segname
+      type: ascii
+      size: "16"
+    - name: vmaddr
+      type: uint64
+    - name: vmsize
+      type: uint64
+    - name: fileoff
+      type: uint64
+    - name: filesize
+      type: uint64
+    - name: maxprot
+      type: uint32
+    - name: initprot
+      type: uint32
+    - name: nsects
+      type: uint32
+    - name: flags
+      type: uint32
+    - name: sections
+      type: struct
+      struct: section_64
+      repeat_count: "{nsects}"
+
+  section_64:
+    - name: sectname
+      type: ascii
+      size: "16"
+    - name: segname
+      type: ascii
+      size: "16"
+    - name: addr
+      type: uint64
+    - name: size
+      type: uint64
+    - name: offset
+      type: uint32
+    - name: align
+      type: uint32
+    - name: reloff
+      type: uint32
+    - name: nreloc
+      type: uint32
+    - name: flags
+      type: uint32
+    - name: reserved1
+      type: uint32
+    - name: reserved2
+      type: uint32
+    - name: reserved3
+      type: uint32
+
+  generic_body:
+    - name: data
+      type: bytes
+      size: remaining

@@ -24,7 +24,8 @@ public sealed class CsvOutputFormatter : IOutputFormatter
           .Append("type").Append(_separator)
           .Append("offset").Append(_separator)
           .Append("size").Append(_separator)
-          .Append("value");
+          .Append("value").Append(_separator)
+          .Append("validation");
         sb.AppendLine();
 
         CollectLeafRows(sb, root, "");
@@ -85,11 +86,16 @@ public sealed class CsvOutputFormatter : IOutputFormatter
     {
         var (type, value) = GetTypeAndValue(node);
 
+        var validationStr = node.Validation is { } v
+            ? (v.Passed ? "✓" : "✗")
+            : "";
+
         sb.Append(Escape(path)).Append(_separator)
           .Append(Escape(type)).Append(_separator)
           .Append(node.Offset).Append(_separator)
           .Append(node.Size).Append(_separator)
-          .Append(Escape(value));
+          .Append(Escape(value)).Append(_separator)
+          .Append(Escape(validationStr));
         sb.AppendLine();
     }
 
@@ -103,6 +109,7 @@ public sealed class CsvOutputFormatter : IOutputFormatter
         DecodedFlags flagsNode => ("flags", $"0x{flagsNode.RawValue:X}"),
         DecodedVirtual virtualNode => ("virtual", virtualNode.Value.ToString() ?? ""),
         DecodedCompressed compressedNode => ("compressed", $"{compressedNode.Algorithm} ({compressedNode.CompressedSize} -> {compressedNode.DecompressedSize} bytes)"),
+        DecodedError errorNode => ("error", errorNode.ErrorMessage),
         _ => ("unknown", ""),
     };
 

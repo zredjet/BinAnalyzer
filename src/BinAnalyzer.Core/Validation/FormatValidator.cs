@@ -24,6 +24,8 @@ public static class FormatValidator
                 ValidateAlign(field, structName, diagnostics);
                 ValidateElementSize(field, structName, diagnostics);
                 ValidateVirtualField(field, structName, diagnostics);
+                ValidateSeek(field, structName, diagnostics);
+                ValidateStringTable(field, structName, diagnostics);
             }
 
             ValidateStructAlign(structDef, diagnostics);
@@ -361,6 +363,34 @@ public static class FormatValidator
         {
             diagnostics.Add(Error("VAL010",
                 $"virtual型フィールド '{field.Name}' に value が指定されていません",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL011: seek_restore が seek なしで指定されている</summary>
+    private static void ValidateSeek(
+        FieldDefinition field, string structName, List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.SeekRestore && field.SeekExpression is null)
+        {
+            diagnostics.Add(Error("VAL011",
+                $"フィールド '{field.Name}' に seek_restore が指定されていますが、seek が指定されていません",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL012: string_table が整数型以外のフィールドに指定されている</summary>
+    private static void ValidateStringTable(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.StringTableRef is null)
+            return;
+
+        if (!IsIntegerType(field.Type))
+        {
+            diagnostics.Add(Warning("VAL112",
+                $"フィールド '{field.Name}' ({field.Type}) にstring_table参照が指定されていますが、string_table参照は整数型フィールドでのみ有効です",
                 structName, field.Name));
         }
     }

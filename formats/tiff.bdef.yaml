@@ -1,0 +1,151 @@
+name: TIFF
+endianness: little
+root: tiff
+
+enums:
+  tiff_tag:
+    - value: 254
+      label: NewSubfileType
+    - value: 256
+      label: ImageWidth
+    - value: 257
+      label: ImageLength
+    - value: 258
+      label: BitsPerSample
+    - value: 259
+      label: Compression
+    - value: 262
+      label: PhotometricInterpretation
+    - value: 270
+      label: ImageDescription
+    - value: 271
+      label: Make
+    - value: 272
+      label: Model
+    - value: 273
+      label: StripOffsets
+    - value: 274
+      label: Orientation
+    - value: 277
+      label: SamplesPerPixel
+    - value: 278
+      label: RowsPerStrip
+    - value: 279
+      label: StripByteCounts
+    - value: 282
+      label: XResolution
+    - value: 283
+      label: YResolution
+    - value: 284
+      label: PlanarConfiguration
+    - value: 296
+      label: ResolutionUnit
+    - value: 305
+      label: Software
+    - value: 306
+      label: DateTime
+    - value: 315
+      label: Artist
+    - value: 320
+      label: ColorMap
+    - value: 34665
+      label: ExifIFD
+    - value: 34853
+      label: GPSIFD
+
+  tiff_field_type:
+    - value: 1
+      label: BYTE
+    - value: 2
+      label: ASCII
+    - value: 3
+      label: SHORT
+    - value: 4
+      label: LONG
+    - value: 5
+      label: RATIONAL
+    - value: 6
+      label: SBYTE
+    - value: 7
+      label: UNDEFINED
+    - value: 8
+      label: SSHORT
+    - value: 9
+      label: SLONG
+    - value: 10
+      label: SRATIONAL
+    - value: 11
+      label: FLOAT
+    - value: 12
+      label: DOUBLE
+
+  tiff_compression:
+    - value: 1
+      label: Uncompressed
+    - value: 2
+      label: CCITT_1D
+    - value: 3
+      label: Group3_Fax
+    - value: 4
+      label: Group4_Fax
+    - value: 5
+      label: LZW
+    - value: 6
+      label: JPEG_old
+    - value: 7
+      label: JPEG_new
+    - value: 8
+      label: Deflate
+    - value: 32773
+      label: PackBits
+
+structs:
+  tiff:
+    - name: header
+      type: struct
+      struct: tiff_header
+    - name: ifd0
+      type: struct
+      struct: ifd
+      seek: "{ifd_offset}"
+      description: "First IFD"
+
+  tiff_header:
+    - name: byte_order
+      type: ascii
+      size: "2"
+      description: "Byte order ('II'=little-endian, 'MM'=big-endian)"
+      validate: "{byte_order == 'II'}"
+    - name: magic
+      type: uint16
+      description: "TIFF magic number (42)"
+      validate: "{magic == 42}"
+    - name: ifd_offset
+      type: uint32
+      description: "Offset to first IFD"
+
+  ifd:
+    - name: entry_count
+      type: uint16
+      description: "Number of directory entries"
+    - name: entries
+      type: struct
+      struct: ifd_entry
+      repeat_count: "{entry_count}"
+    - name: next_ifd_offset
+      type: uint32
+      description: "Offset to next IFD (0 if none)"
+
+  ifd_entry:
+    - name: tag
+      type: uint16
+      enum: tiff_tag
+    - name: field_type
+      type: uint16
+      enum: tiff_field_type
+    - name: count
+      type: uint32
+      description: "Number of values"
+    - name: value_offset
+      type: uint32
+      description: "Value or offset to value (if > 4 bytes)"

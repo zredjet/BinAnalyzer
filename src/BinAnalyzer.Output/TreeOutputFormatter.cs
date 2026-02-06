@@ -70,6 +70,9 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             case DecodedVirtual virtualNode:
                 FormatVirtual(sb, virtualNode, prefix);
                 break;
+            case DecodedError errorNode:
+                FormatError(sb, errorNode, prefix);
+                break;
         }
     }
 
@@ -163,6 +166,12 @@ public sealed class TreeOutputFormatter : IOutputFormatter
                 sb.Append(C($"✗ (CRC-32, 期待値: 0x{node.ChecksumExpected:X})", AnsiColors.Red));
             }
         }
+        if (node.StringTableValue is not null)
+        {
+            sb.Append(" → ");
+            sb.Append(C($"\"{node.StringTableValue}\"", AnsiColors.Green));
+        }
+        AppendValidation(sb, node);
         sb.AppendLine();
     }
 
@@ -189,6 +198,7 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             sb.Append("  ");
             sb.Append(node.ValidationPassed.Value ? C("✓", AnsiColors.Green) : C("✗", AnsiColors.Red));
         }
+        AppendValidation(sb, node);
 
         sb.AppendLine();
     }
@@ -214,6 +224,7 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             }
             sb.Append(']');
         }
+        AppendValidation(sb, node);
 
         sb.AppendLine();
     }
@@ -263,6 +274,7 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         sb.Append(node.Name);
         sb.Append(": ");
         sb.Append(C(node.Value.ToString("G"), AnsiColors.Cyan));
+        AppendValidation(sb, node);
         sb.AppendLine();
     }
 
@@ -293,6 +305,23 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         sb.Append(": ");
         sb.Append(C($"= {node.Value}", AnsiColors.Cyan));
         sb.AppendLine();
+    }
+
+    private void FormatError(StringBuilder sb, DecodedError node, string prefix)
+    {
+        sb.Append(prefix);
+        sb.Append(C($"✗ {node.Name}", AnsiColors.Red));
+        sb.Append(C($" [ERROR at 0x{node.Offset:X8}]: {node.ErrorMessage}", AnsiColors.Red));
+        sb.AppendLine();
+    }
+
+    private void AppendValidation(StringBuilder sb, DecodedNode node)
+    {
+        if (node.Validation is { } v)
+        {
+            sb.Append("  ");
+            sb.Append(v.Passed ? C("✓", AnsiColors.Green) : C("✗", AnsiColors.Red));
+        }
     }
 
     private void FormatCompressed(

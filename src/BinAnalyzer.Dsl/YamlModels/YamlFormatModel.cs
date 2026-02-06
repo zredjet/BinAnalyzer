@@ -20,7 +20,7 @@ public sealed class YamlFormatModel
     public Dictionary<string, YamlFlagsModel>? Flags { get; set; }
 
     [YamlMember(Alias = "structs")]
-    public Dictionary<string, List<YamlFieldModel>> Structs { get; set; } = new();
+    public Dictionary<string, YamlStructModel> Structs { get; set; } = new();
 
     [YamlMember(Alias = "root")]
     public string Root { get; set; } = "";
@@ -135,6 +135,21 @@ public sealed class YamlFieldModel
 
     [YamlMember(Alias = "value")]
     public string? Value { get; set; }
+
+    [YamlMember(Alias = "seek")]
+    public string? Seek { get; set; }
+
+    [YamlMember(Alias = "seek_restore")]
+    public bool? SeekRestore { get; set; }
+
+    [YamlMember(Alias = "endianness")]
+    public string? Endianness { get; set; }
+
+    [YamlMember(Alias = "validate")]
+    public string? Validate { get; set; }
+
+    [YamlMember(Alias = "string_table")]
+    public string? StringTable { get; set; }
 }
 
 public sealed class YamlChecksumModel

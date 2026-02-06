@@ -11,15 +11,34 @@ namespace BinAnalyzer.Engine;
 public sealed class BinaryDecoder : IBinaryDecoder
 {
     private readonly Stack<string> _pathStack = new();
+    private ErrorMode _errorMode = ErrorMode.Stop;
+    private List<DecodeError>? _errors;
 
     private string CurrentPath => _pathStack.Count == 0 ? "(root)" : string.Join(".", _pathStack.Reverse());
 
     public DecodedStruct Decode(ReadOnlyMemory<byte> data, FormatDefinition format)
     {
         _pathStack.Clear();
+        _errorMode = ErrorMode.Stop;
+        _errors = null;
         var context = new DecodeContext(data, format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
         return DecodeStruct(rootStruct, format, context, format.Name);
+    }
+
+    public DecodeResult DecodeWithRecovery(ReadOnlyMemory<byte> data, FormatDefinition format, ErrorMode errorMode)
+    {
+        _pathStack.Clear();
+        _errorMode = errorMode;
+        _errors = errorMode == ErrorMode.Continue ? new List<DecodeError>() : null;
+        var context = new DecodeContext(data, format.Endianness);
+        var rootStruct = format.Structs[format.RootStruct];
+        var root = DecodeStruct(rootStruct, format, context, format.Name);
+        return new DecodeResult
+        {
+            Root = root,
+            Errors = _errors?.AsReadOnly() ?? (IReadOnlyList<DecodeError>)Array.Empty<DecodeError>(),
+        };
     }
 
     private DecodedStruct DecodeStruct(
@@ -28,6 +47,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
         DecodeContext context,
         string name)
     {
+        var hasEndiannessOverride = structDef.Endianness.HasValue;
+        if (hasEndiannessOverride)
+            context.PushEndiannessScope(structDef.Endianness!.Value);
+
         var startOffset = context.Position;
         var children = new List<DecodedNode>();
 
@@ -36,6 +59,16 @@ public sealed class BinaryDecoder : IBinaryDecoder
             var node = DecodeField(field, format, context, children);
             if (node is not null)
                 children.Add(node);
+        }
+
+        if (hasEndiannessOverride)
+            context.PopScope();
+
+        // 文字列テーブル登録
+        if (structDef.IsStringTable)
+        {
+            var structSize = context.Position - startOffset;
+            context.RegisterStringTable(name, startOffset, structSize);
         }
 
         return new DecodedStruct
@@ -63,27 +96,78 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     return null;
             }
 
-            if (field.Repeat is not RepeatMode.None)
-                return DecodeRepeatedField(field, format, context);
+            // --- seek処理 ---
+            int? savedPosition = null;
+            if (field.SeekExpression is not null)
+            {
+                var seekOffset = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekExpression, context);
+                if (field.SeekRestore)
+                    savedPosition = context.SavePosition();
+                context.Seek(seekOffset);
+            }
+            try
+            {
+                if (field.Repeat is not RepeatMode.None)
+                    return DecodeRepeatedField(field, format, context);
 
-            var node = DecodeSingleField(field, format, context, siblings);
+                var node = DecodeSingleField(field, format, context, siblings);
 
-            // フィールドレベルアライメント
-            if (field.Align is { } align)
-                context.AlignTo(align);
+                // カスタムバリデーション式
+                if (field.ValidationExpression is not null)
+                {
+                    var passed = ExpressionEvaluator.EvaluateAsBool(field.ValidationExpression, context);
+                    node = SetValidation(node, new Core.Decoded.ValidationInfo(passed, field.ValidationExpression.OriginalText));
+                }
 
-            // パディングフラグを伝搬
-            if (field.IsPadding)
-                return SetPaddingFlag(node);
+                // フィールドレベルアライメント
+                if (field.Align is { } align)
+                    context.AlignTo(align);
 
-            return node;
+                // パディングフラグを伝搬
+                if (field.IsPadding)
+                    return SetPaddingFlag(node);
+
+                return node;
+            }
+            finally
+            {
+                if (savedPosition is { } pos)
+                    context.RestorePosition(pos);
+            }
         }
-        catch (DecodeException)
+        catch (DecodeException dex)
         {
+            if (_errorMode == ErrorMode.Continue)
+            {
+                _errors!.Add(new DecodeError(dex.Message, dex.Offset, dex.FieldPath, dex.FieldType));
+                TrySkipField(field, context);
+                return new DecodedError
+                {
+                    Name = field.Name,
+                    Offset = dex.Offset,
+                    Size = 0,
+                    ErrorMessage = dex.Message,
+                    FieldType = dex.FieldType,
+                };
+            }
             throw;
         }
         catch (Exception ex)
         {
+            if (_errorMode == ErrorMode.Continue)
+            {
+                var errorOffset = context.Position;
+                _errors!.Add(new DecodeError(ex.Message, errorOffset, CurrentPath, field.Type.ToString()));
+                TrySkipField(field, context);
+                return new DecodedError
+                {
+                    Name = field.Name,
+                    Offset = errorOffset,
+                    Size = 0,
+                    ErrorMessage = ex.Message,
+                    FieldType = field.Type.ToString(),
+                };
+            }
             throw new DecodeException(
                 ex.Message, context.Position, CurrentPath,
                 field.Type.ToString(), inner: ex);
@@ -100,7 +184,11 @@ public sealed class BinaryDecoder : IBinaryDecoder
         DecodeContext context,
         IReadOnlyList<DecodedNode>? siblings = null)
     {
-        return field.Type switch
+        var hasEndiannessOverride = field.Endianness.HasValue;
+        if (hasEndiannessOverride)
+            context.PushEndiannessScope(field.Endianness!.Value);
+
+        var result = field.Type switch
         {
             FieldType.UInt8 or FieldType.UInt16 or FieldType.UInt32 or FieldType.UInt64
                 or FieldType.Int8 or FieldType.Int16 or FieldType.Int32 or FieldType.Int64
@@ -122,6 +210,11 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.Virtual => DecodeVirtualField(field, context),
             _ => throw new InvalidOperationException($"Unknown field type: {field.Type}"),
         };
+
+        if (hasEndiannessOverride)
+            context.PopScope();
+
+        return result;
     }
 
     private DecodedInteger DecodeIntegerField(
@@ -169,6 +262,13 @@ public sealed class BinaryDecoder : IBinaryDecoder
             checksumExpected = expected;
         }
 
+        // 文字列テーブル参照
+        string? stringTableValue = null;
+        if (field.StringTableRef is not null)
+        {
+            stringTableValue = context.LookupString(field.StringTableRef, (int)value);
+        }
+
         return new DecodedInteger
         {
             Name = field.Name,
@@ -179,6 +279,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             EnumDescription = enumDesc,
             ChecksumValid = checksumValid,
             ChecksumExpected = checksumExpected,
+            StringTableValue = stringTableValue,
             Description = field.Description,
         };
     }
@@ -339,7 +440,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         ReadOnlyMemory<byte>? rawDecompressed = decompressed;
         if (field.StructRef is not null && format.Structs.TryGetValue(field.StructRef, out var structDef))
         {
-            var innerContext = new DecodeContext(decompressed, format.Endianness);
+            var innerContext = new DecodeContext(decompressed, context.Endianness);
             decodedContent = DecodeStruct(structDef, format, innerContext, field.Name);
             rawDecompressed = null;
         }
@@ -561,16 +662,55 @@ public sealed class BinaryDecoder : IBinaryDecoder
             ElementSize = field.ElementSize,
             ElementSizeExpression = field.ElementSizeExpression,
             ValueExpression = field.ValueExpression,
+            SeekExpression = field.SeekExpression,
+            SeekRestore = field.SeekRestore,
+            Endianness = field.Endianness,
+            ValidationExpression = field.ValidationExpression,
+            StringTableRef = field.StringTableRef,
         };
     }
 
     private static DecodedNode SetPaddingFlag(DecodedNode node) => node switch
     {
-        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true },
-        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, Description = i.Description, IsPadding = true },
-        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = true },
+        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true, Validation = b.Validation },
+        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = true, Validation = i.Validation },
+        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = true, Validation = s.Validation },
         _ => node, // struct/array等はパディングとしてマークしない
     };
+
+    private static DecodedNode SetValidation(DecodedNode node, Core.Decoded.ValidationInfo validation) => node switch
+    {
+        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = b.IsPadding, Validation = validation },
+        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = i.IsPadding, Validation = validation },
+        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = s.IsPadding, Validation = validation },
+        DecodedFloat f => new DecodedFloat { Name = f.Name, Offset = f.Offset, Size = f.Size, Value = f.Value, IsSinglePrecision = f.IsSinglePrecision, Description = f.Description, IsPadding = f.IsPadding, Validation = validation },
+        _ => node, // struct/array/bitfield等はバリデーションをサポートしない
+    };
+
+    /// <summary>
+    /// エラー回復時にフィールドのスキップを試みる。固定サイズ型はスキップ、不明サイズは現位置維持。
+    /// </summary>
+    private static void TrySkipField(FieldDefinition field, DecodeContext context)
+    {
+        var knownSize = field.Type switch
+        {
+            FieldType.UInt8 or FieldType.Int8 => 1,
+            FieldType.UInt16 or FieldType.Int16 => 2,
+            FieldType.UInt32 or FieldType.Int32 or FieldType.Float32 => 4,
+            FieldType.UInt64 or FieldType.Int64 or FieldType.Float64 => 8,
+            _ => (int?)null,
+        };
+
+        if (knownSize.HasValue && context.Position + knownSize.Value <= context.DataLength)
+        {
+            context.Seek(context.Position + knownSize.Value);
+        }
+        else if (field.Size.HasValue && context.Position + field.Size.Value <= context.DataLength)
+        {
+            context.Seek(context.Position + field.Size.Value);
+        }
+        // else: unknown size, stay at current position
+    }
 
     private int ResolveSize(FieldDefinition field, DecodeContext context)
     {

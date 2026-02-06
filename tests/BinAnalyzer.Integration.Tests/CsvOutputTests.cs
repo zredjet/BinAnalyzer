@@ -21,7 +21,7 @@ public class CsvOutputTests
         var output = new CsvOutputFormatter().Format(decoded);
 
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        lines[0].Should().Be("path,type,offset,size,value");
+        lines[0].Should().Be("path,type,offset,size,value,validation");
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class CsvOutputTests
         var output = new CsvOutputFormatter(useTsv: true).Format(decoded);
 
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        lines[0].Should().Be("path\ttype\toffset\tsize\tvalue");
+        lines[0].Should().Be("path\ttype\toffset\tsize\tvalue\tvalidation");
         lines[1].Should().Contain("\t");
         lines[1].Should().NotContain(",");
     }

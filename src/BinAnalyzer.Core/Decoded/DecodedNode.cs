@@ -10,4 +10,7 @@ public abstract class DecodedNode
 
     /// <summary>パディングフィールドの場合true。出力時にデフォルト非表示。</summary>
     public bool IsPadding { get; init; }
+
+    /// <summary>カスタムバリデーション式の結果。</summary>
+    public ValidationInfo? Validation { get; init; }
 }

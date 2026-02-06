@@ -1,0 +1,81 @@
+name: PCAP
+endianness: little
+root: pcap
+
+enums:
+  link_type:
+    - value: 0
+      label: NULL
+      description: "BSD loopback"
+    - value: 1
+      label: ETHERNET
+      description: "IEEE 802.3 Ethernet"
+    - value: 6
+      label: TOKEN_RING
+      description: "IEEE 802.5 Token Ring"
+    - value: 101
+      label: RAW
+      description: "Raw IP"
+    - value: 105
+      label: IEEE802_11
+      description: "IEEE 802.11 wireless"
+    - value: 113
+      label: LINUX_SLL
+      description: "Linux cooked capture"
+    - value: 228
+      label: IPV4
+      description: "Raw IPv4"
+    - value: 229
+      label: IPV6
+      description: "Raw IPv6"
+
+structs:
+  pcap:
+    - name: header
+      type: struct
+      struct: pcap_header
+    - name: packets
+      type: struct
+      struct: pcap_packet
+      repeat: eof
+
+  pcap_header:
+    - name: magic
+      type: bytes
+      size: "4"
+      expected: [0xD4, 0xC3, 0xB2, 0xA1]
+      description: "PCAP magic number (little-endian)"
+    - name: version_major
+      type: uint16
+    - name: version_minor
+      type: uint16
+    - name: thiszone
+      type: int32
+      description: "GMT to local time zone correction"
+    - name: sigfigs
+      type: uint32
+      description: "Accuracy of timestamps (typically 0)"
+    - name: snaplen
+      type: uint32
+      description: "Max length of captured packets"
+    - name: network
+      type: uint32
+      enum: link_type
+
+  pcap_packet:
+    - name: ts_sec
+      type: uint32
+      description: "Timestamp seconds"
+    - name: ts_usec
+      type: uint32
+      description: "Timestamp microseconds"
+    - name: incl_len
+      type: uint32
+      description: "Number of bytes captured"
+    - name: orig_len
+      type: uint32
+      description: "Original packet length"
+    - name: data
+      type: bytes
+      size: "{incl_len}"
+      description: "Packet data"

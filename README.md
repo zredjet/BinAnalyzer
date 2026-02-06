@@ -17,6 +17,10 @@
 - **条件フィールド / チェックサム** — `if` による条件スキップ、CRC-32チェックサム検証
 - **DSLインポート** — 共通定義を別ファイルに分離し `imports` で再利用
 - **アライメント / パディング** — フィールド・構造体レベルのバイト境界調整、パディング非表示
+- **エンディアン切り替え** — 構造体・フィールドレベルでエンディアンを上書き（優先順位: フィールド > 構造体 > フォーマットデフォルト）
+- **カスタムバリデーション** — `validate` 式でデコード後の値を検証し ✓/✗ で表示
+- **エラー回復** — `--on-error continue` でデコードエラー後も解析を継続
+- **文字列テーブル参照** — ELF `.strtab` 等の文字列テーブルを整数フィールドから参照し文字列に解決
 
 ## クイックスタート
 
@@ -90,7 +94,7 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。
 
-サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（PNG, BMP, WAV, ZIP, ELF, PDF）。
+サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（PNG, BMP, WAV, ZIP, ELF, PDF, JPEG, ICO, MIDI, PCAP, WebP, MP3, TAR, FLAC, Java Class, GIF, PE, Mach-O, SQLite, TIFF）。
 
 ### エディタ補完（JSON Schema）
 

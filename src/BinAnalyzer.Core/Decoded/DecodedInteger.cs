@@ -7,4 +7,5 @@ public sealed class DecodedInteger : DecodedNode
     public string? EnumDescription { get; init; }
     public bool? ChecksumValid { get; init; }
     public long? ChecksumExpected { get; init; }
+    public string? StringTableValue { get; init; }
 }

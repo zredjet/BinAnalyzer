@@ -10,6 +10,9 @@ public sealed class YamlFormatLoader : IFormatLoader
 {
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
         .WithNamingConvention(UnderscoredNamingConvention.Instance)
+        .WithNodeDeserializer(
+            inner => new StructNodeDeserializer(inner),
+            s => s.InsteadOf<YamlDotNet.Serialization.NodeDeserializers.ObjectNodeDeserializer>())
         .IgnoreUnmatchedProperties()
         .Build();
 
@@ -86,12 +89,12 @@ public sealed class YamlFormatLoader : IFormatLoader
         // Structs マージ
         if (source.Structs is { Count: > 0 })
         {
-            foreach (var (name, fields) in source.Structs)
+            foreach (var (name, structModel) in source.Structs)
             {
                 if (target.Structs.ContainsKey(name))
                     throw new InvalidOperationException(
                         $"インポート '{sourcePath}' で定義名 '{name}' (struct) が重複しています");
-                target.Structs[name] = fields;
+                target.Structs[name] = structModel;
             }
         }
 

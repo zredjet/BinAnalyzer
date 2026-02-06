@@ -1,0 +1,98 @@
+name: WebP
+endianness: little
+root: webp
+
+structs:
+  webp:
+    - name: riff_magic
+      type: bytes
+      size: "4"
+      expected: [0x52, 0x49, 0x46, 0x46]
+      description: "RIFF container magic"
+    - name: file_size
+      type: uint32
+      description: "File size minus 8 bytes (RIFF header)"
+    - name: webp_magic
+      type: bytes
+      size: "4"
+      expected: [0x57, 0x45, 0x42, 0x50]
+      description: "WEBP form type"
+    - name: chunks
+      type: struct
+      struct: webp_chunk
+      repeat: eof
+
+  webp_chunk:
+    - name: chunk_id
+      type: ascii
+      size: "4"
+    - name: chunk_size
+      type: uint32
+    - name: data
+      type: switch
+      size: "{chunk_size}"
+      switch_on: "{chunk_id}"
+      cases:
+        "'VP8X'": vp8x_data
+      default: raw_data
+    - name: padding
+      type: bytes
+      size: "{chunk_size % 2}"
+      if: "{chunk_size % 2 != 0}"
+      padding: true
+      description: "Padding byte for 2-byte alignment"
+
+  vp8x_data:
+    - name: flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: reserved_a
+          bits: "7:6"
+        - name: animation
+          bits: "5"
+        - name: xmp_metadata
+          bits: "4"
+        - name: exif_metadata
+          bits: "3"
+        - name: alpha_channel
+          bits: "2"
+        - name: icc_profile
+          bits: "1"
+        - name: reserved_b
+          bits: "0"
+    - name: reserved
+      type: bytes
+      size: "3"
+      padding: true
+    - name: canvas_width_minus_one_b0
+      type: uint8
+      description: "Canvas width minus 1 (byte 0, LSB)"
+    - name: canvas_width_minus_one_b1
+      type: uint8
+      description: "Canvas width minus 1 (byte 1)"
+    - name: canvas_width_minus_one_b2
+      type: uint8
+      description: "Canvas width minus 1 (byte 2, MSB)"
+    - name: canvas_width
+      type: virtual
+      value: "{(canvas_width_minus_one_b0 | (canvas_width_minus_one_b1 << 8) | (canvas_width_minus_one_b2 << 16)) + 1}"
+      description: "Canvas width (computed from 24-bit LE value + 1)"
+    - name: canvas_height_minus_one_b0
+      type: uint8
+      description: "Canvas height minus 1 (byte 0, LSB)"
+    - name: canvas_height_minus_one_b1
+      type: uint8
+      description: "Canvas height minus 1 (byte 1)"
+    - name: canvas_height_minus_one_b2
+      type: uint8
+      description: "Canvas height minus 1 (byte 2, MSB)"
+    - name: canvas_height
+      type: virtual
+      value: "{(canvas_height_minus_one_b0 | (canvas_height_minus_one_b1 << 8) | (canvas_height_minus_one_b2 << 16)) + 1}"
+      description: "Canvas height (computed from 24-bit LE value + 1)"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

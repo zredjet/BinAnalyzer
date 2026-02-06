@@ -1,0 +1,52 @@
+name: MIDI
+endianness: big
+root: midi
+
+enums:
+  midi_format:
+    - value: 0
+      label: single_track
+      description: "Single track"
+    - value: 1
+      label: multi_track_sync
+      description: "Multiple tracks, synchronous"
+    - value: 2
+      label: multi_track_async
+      description: "Multiple tracks, asynchronous"
+
+structs:
+  midi:
+    - name: header_magic
+      type: bytes
+      size: "4"
+      expected: [0x4D, 0x54, 0x68, 0x64]
+      description: "MThd"
+    - name: header_length
+      type: uint32
+      description: "Header data length (always 6)"
+    - name: format
+      type: uint16
+      enum: midi_format
+    - name: ntrks
+      type: uint16
+      description: "Number of tracks"
+    - name: division
+      type: uint16
+      description: "Ticks per quarter note or SMPTE timing"
+    - name: tracks
+      type: struct
+      struct: mtrk
+      repeat_count: "{ntrks}"
+
+  mtrk:
+    - name: magic
+      type: bytes
+      size: "4"
+      expected: [0x4D, 0x54, 0x72, 0x6B]
+      description: "MTrk"
+    - name: length
+      type: uint32
+    - name: data
+      type: bytes
+      size: "{length}"
+      description: "MIDI event data"

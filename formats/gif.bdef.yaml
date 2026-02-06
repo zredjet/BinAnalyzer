@@ -1,0 +1,203 @@
+name: GIF
+endianness: little
+root: gif
+
+enums:
+  block_introducer:
+    - value: 0x2C
+      label: Image
+    - value: 0x21
+      label: Extension
+    - value: 0x3B
+      label: Trailer
+
+  extension_label:
+    - value: 0xF9
+      label: Graphic_Control
+    - value: 0xFE
+      label: Comment
+    - value: 0xFF
+      label: Application
+    - value: 0x01
+      label: Plain_Text
+
+  disposal_method:
+    - value: 0
+      label: None
+    - value: 1
+      label: Do_Not_Dispose
+    - value: 2
+      label: Restore_to_Background
+    - value: 3
+      label: Restore_to_Previous
+
+structs:
+  gif:
+    - name: signature
+      type: ascii
+      size: "3"
+      expected: [0x47, 0x49, 0x46]
+      description: "GIF signature ('GIF')"
+    - name: version
+      type: ascii
+      size: "3"
+      description: "Version ('87a' or '89a')"
+    - name: logical_screen_desc
+      type: struct
+      struct: logical_screen_desc
+    - name: global_color_table
+      type: bytes
+      size: "{3 * (1 << (size_of_global_color_table + 1))}"
+      if: "{global_color_table_flag == 1}"
+      description: "Global Color Table (3 bytes per entry)"
+    - name: blocks
+      type: struct
+      struct: gif_block
+      repeat: eof
+
+  logical_screen_desc:
+    - name: width
+      type: uint16
+    - name: height
+      type: uint16
+    - name: packed
+      type: bitfield
+      size: "1"
+      fields:
+        - name: global_color_table_flag
+          bits: "7"
+        - name: color_resolution
+          bits: "6:4"
+        - name: sort_flag
+          bits: "3"
+        - name: size_of_global_color_table
+          bits: "2:0"
+    - name: bg_color_index
+      type: uint8
+      description: "Background Color Index"
+    - name: pixel_aspect_ratio
+      type: uint8
+
+  gif_block:
+    - name: introducer
+      type: uint8
+      enum: block_introducer
+    - name: body
+      type: switch
+      switch_on: "{introducer}"
+      cases:
+        "0x3B": trailer
+        "0x2C": image_block
+        "0x21": extension_block
+      default: raw_data
+
+  trailer: []
+
+  image_block:
+    - name: left
+      type: uint16
+    - name: top
+      type: uint16
+    - name: width
+      type: uint16
+    - name: height
+      type: uint16
+    - name: packed
+      type: bitfield
+      size: "1"
+      fields:
+        - name: local_color_table_flag
+          bits: "7"
+        - name: interlace_flag
+          bits: "6"
+        - name: sort_flag
+          bits: "5"
+        - name: reserved
+          bits: "4:3"
+        - name: size_of_local_color_table
+          bits: "2:0"
+    - name: local_color_table
+      type: bytes
+      size: "{3 * (1 << (size_of_local_color_table + 1))}"
+      if: "{local_color_table_flag == 1}"
+      description: "Local Color Table"
+    - name: lzw_min_code_size
+      type: uint8
+      description: "LZW Minimum Code Size"
+    - name: sub_block_data
+      type: bytes
+      size: remaining
+      description: "LZW compressed sub-blocks (raw bytes)"
+
+  extension_block:
+    - name: label
+      type: uint8
+      enum: extension_label
+    - name: body
+      type: switch
+      switch_on: "{label}"
+      cases:
+        "0xF9": graphic_control_ext
+        "0xFE": comment_ext
+        "0xFF": application_ext
+      default: generic_ext
+
+  graphic_control_ext:
+    - name: block_size
+      type: uint8
+      description: "Block size (always 4)"
+    - name: packed
+      type: bitfield
+      size: "1"
+      fields:
+        - name: reserved
+          bits: "7:5"
+        - name: disposal_method
+          bits: "4:2"
+          enum: disposal_method
+        - name: user_input_flag
+          bits: "1"
+        - name: transparent_color_flag
+          bits: "0"
+    - name: delay_time
+      type: uint16
+      description: "Delay time in 1/100 seconds"
+    - name: transparent_color_index
+      type: uint8
+    - name: terminator
+      type: uint8
+      description: "Block terminator (always 0x00)"
+
+  comment_ext:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "Comment sub-blocks (raw bytes)"
+
+  application_ext:
+    - name: block_size
+      type: uint8
+      description: "Block size (always 11)"
+    - name: app_identifier
+      type: ascii
+      size: "8"
+      description: "Application Identifier"
+    - name: auth_code
+      type: bytes
+      size: "3"
+      description: "Application Authentication Code"
+    - name: sub_block_data
+      type: bytes
+      size: remaining
+      description: "Application sub-block data (raw bytes)"
+
+  generic_ext:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "Extension sub-blocks (raw bytes)"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

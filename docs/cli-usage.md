@@ -3,7 +3,7 @@
 ## 基本コマンド
 
 ```
-binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [--filter <pattern>...]
+binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [--on-error <mode>] [--filter <pattern>...]
 ```
 
 ### 引数
@@ -20,6 +20,7 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [-
 | `-o, --output <format>` | 出力形式（`tree`, `json`, `hexdump`, `html`, `map`, `csv`, `tsv`） | `tree` |
 | `--color <mode>` | カラー出力（`auto`, `always`, `never`） | `auto` |
 | `--no-validate` | フォーマット定義のバリデーションをスキップ | — |
+| `--on-error <mode>` | エラー時の動作（`stop`, `continue`） | `stop` |
 | `--filter <pattern>` | 出力フィルタ（フィールドパスパターン、複数指定可） | — |
 
 ### 終了コード
@@ -29,9 +30,25 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [-
 | `0` | 正常終了 |
 | `1` | エラー（ファイル未検出、フォーマット定義エラー、デコードエラー等） |
 
+### エラー回復
+
+`--on-error` オプションでデコードエラー時の動作を制御します:
+
+| モード | 動作 |
+|--------|------|
+| `stop` | エラー発生時に解析を中断する（デフォルト） |
+| `continue` | エラー箇所をスキップして解析を継続する |
+
+`continue` モードではエラー箇所が `DecodedError` ノードとしてツリーに含まれ、赤色で表示されます。全エラーのサマリーが解析後にstderrに出力されます。
+
+```bash
+# エラーを無視して解析を継続
+dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml --on-error continue
+```
+
 ### バリデーション
 
-デフォルトではデコード前にフォーマット定義の静的検証が実行されます。エラー（VAL001〜VAL010）が検出された場合、解析は中断されます。警告（VAL101〜VAL110）はstderrに表示されますが解析は継続します。
+デフォルトではデコード前にフォーマット定義の静的検証が実行されます。エラー（VAL001〜VAL011）が検出された場合、解析は中断されます。警告（VAL101〜VAL112）はstderrに表示されますが解析は継続します。
 
 `--no-validate` を指定するとバリデーションをスキップします。
 
@@ -41,6 +58,8 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [-
 - サイズ指定が必要な型のサイズ未指定
 - alignの値が正の整数であること
 - virtual型フィールドのvalue未指定
+- seek_restoreがseekなしで指定されている
+- string_tableが整数型以外に指定されている（警告）
 - 未使用のenum/flags/struct定義（警告）
 
 ## 出力形式
@@ -104,7 +123,7 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 ### csv
 
-デコード結果をCSV形式で出力します。カラムは `path,type,offset,size,value` です。リーフフィールドのみ出力します（構造体・配列ノードは行を出力しません）。RFC 4180準拠のエスケープに対応しています。
+デコード結果をCSV形式で出力します。カラムは `path,type,offset,size,value,validation` です。リーフフィールドのみ出力します（構造体・配列ノードは行を出力しません）。RFC 4180準拠のエスケープに対応しています。
 
 ```bash
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv
@@ -238,6 +257,9 @@ dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bd
 
 # バリデーションをスキップして解析
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --no-validate
+
+# エラーを無視して解析を継続
+dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml --on-error continue
 
 # 出力フィルタで特定フィールドのみ表示
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --filter "PNG.chunks.*.type"

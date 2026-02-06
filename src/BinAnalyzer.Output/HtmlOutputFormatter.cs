@@ -81,6 +81,9 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
             case DecodedVirtual virtualNode:
                 WriteVirtualNode(sb, virtualNode);
                 break;
+            case DecodedError errorNode:
+                WriteErrorNode(sb, errorNode);
+                break;
         }
     }
 
@@ -178,8 +181,19 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
             else
                 sb.Append(" <span class=\"invalid\">✗ (expected: 0x").Append(node.ChecksumExpected?.ToString("X") ?? "?").Append(")</span>");
         }
+        AppendValidationHtml(sb, node);
         sb.AppendLine();
         sb.AppendLine("</div>");
+    }
+
+    private static void AppendValidationHtml(StringBuilder sb, DecodedNode node)
+    {
+        if (node.Validation is { } v)
+        {
+            sb.Append(v.Passed
+                ? " <span class=\"valid\">✓</span>"
+                : " <span class=\"invalid\">✗</span>");
+        }
     }
 
     private static void WriteBytesNode(StringBuilder sb, DecodedBytes node)
@@ -308,6 +322,16 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
         sb.Append("<div class=\"node virtual\"").Append(SearchAttr($"{node.Name} {node.Value}")).AppendLine(">");
         sb.Append("  <span class=\"name\">").Append(E(node.Name)).Append("</span>: ");
         sb.Append("<span class=\"value int\">= ").Append(E(node.Value.ToString() ?? "")).Append("</span>");
+        sb.AppendLine();
+        sb.AppendLine("</div>");
+    }
+
+    private static void WriteErrorNode(StringBuilder sb, DecodedError node)
+    {
+        sb.Append("<div class=\"node error\"").Append(SearchAttr($"{node.Name} ERROR {node.ErrorMessage}")).AppendLine(">");
+        sb.Append("  <span class=\"invalid\">✗ ").Append(E(node.Name)).Append("</span>");
+        sb.Append(" <span class=\"meta\">[ERROR at 0x").Append(node.Offset.ToString("X8")).Append("]: </span>");
+        sb.Append("<span class=\"invalid\">").Append(E(node.ErrorMessage)).Append("</span>");
         sb.AppendLine();
         sb.AppendLine("</div>");
     }

@@ -1,0 +1,55 @@
+name: ICO
+endianness: little
+root: ico
+
+enums:
+  ico_type:
+    - value: 1
+      label: ICO
+      description: "Icon"
+    - value: 2
+      label: CUR
+      description: "Cursor"
+
+structs:
+  ico:
+    - name: reserved
+      type: uint16
+      expected: [0x00, 0x00]
+    - name: type
+      type: uint16
+      enum: ico_type
+    - name: count
+      type: uint16
+    - name: entries
+      type: struct
+      struct: ico_entry
+      repeat_count: "{count}"
+    - name: image_data
+      type: bytes
+      size: remaining
+      description: "Embedded image data (BMP or PNG)"
+
+  ico_entry:
+    - name: width
+      type: uint8
+      description: "Width in pixels (0 means 256)"
+    - name: height
+      type: uint8
+      description: "Height in pixels (0 means 256)"
+    - name: color_count
+      type: uint8
+      description: "Number of colors in palette (0 if more than 256)"
+    - name: reserved
+      type: uint8
+    - name: planes
+      type: uint16
+      description: "Color planes (ICO) or hotspot X (CUR)"
+    - name: bpp
+      type: uint16
+      description: "Bits per pixel (ICO) or hotspot Y (CUR)"
+    - name: bytes_in_res
+      type: uint32
+    - name: image_offset
+      type: uint32
+      description: "Offset from beginning of file to image data"

@@ -55,4 +55,19 @@ public sealed class FieldDefinition
 
     /// <summary>virtual型フィールドの値を計算する式。</summary>
     public Expression? ValueExpression { get; init; }
+
+    /// <summary>フィールドデコード前にジャンプする絶対オフセットの式。</summary>
+    public Expression? SeekExpression { get; init; }
+
+    /// <summary>trueの場合、seekしたフィールドのデコード後に元の位置に復帰する。</summary>
+    public bool SeekRestore { get; init; }
+
+    /// <summary>このフィールドに適用するエンディアン。nullの場合は構造体またはフォーマットデフォルトを使用。</summary>
+    public Endianness? Endianness { get; init; }
+
+    /// <summary>デコード後に評価するバリデーション式。</summary>
+    public Expression? ValidationExpression { get; init; }
+
+    /// <summary>参照する文字列テーブル名。整数値をオフセットとして文字列を解決する。</summary>
+    public string? StringTableRef { get; init; }
 }

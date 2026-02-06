@@ -9,21 +9,47 @@ public sealed class DecodeContext
     private readonly ReadOnlyMemory<byte> _data;
     private int _position;
     private readonly Stack<Scope> _scopeStack = new();
+    private readonly Endianness _defaultEndianness;
+    private readonly Dictionary<string, ReadOnlyMemory<byte>> _stringTables = new();
 
     public DecodeContext(ReadOnlyMemory<byte> data, Endianness endianness)
     {
         _data = data;
-        Endianness = endianness;
+        _defaultEndianness = endianness;
         // データ全体をカバーするルートスコープをプッシュ
         _scopeStack.Push(new Scope(0, data.Length));
     }
 
-    public Endianness Endianness { get; }
+    public Endianness Endianness
+    {
+        get
+        {
+            foreach (var scope in _scopeStack)
+            {
+                if (scope.ScopeEndianness.HasValue)
+                    return scope.ScopeEndianness.Value;
+            }
+            return _defaultEndianness;
+        }
+    }
     public int Position => _position;
+    public int DataLength => _data.Length;
     public int Remaining => CurrentScope.End - _position;
     public bool IsEof => _position >= CurrentScope.End;
 
     public ReadOnlyMemory<byte> SliceOriginal(int offset, int length) => _data.Slice(offset, length);
+
+    public void Seek(int absoluteOffset)
+    {
+        if (absoluteOffset < 0 || absoluteOffset > _data.Length)
+            throw new InvalidOperationException(
+                $"Seek offset {absoluteOffset} (0x{absoluteOffset:X}) is out of range: valid range is 0..{_data.Length} (0x{_data.Length:X})");
+        _position = absoluteOffset;
+    }
+
+    public int SavePosition() => _position;
+
+    public void RestorePosition(int savedPosition) => _position = savedPosition;
 
     private Scope CurrentScope => _scopeStack.Peek();
 
@@ -36,13 +62,22 @@ public sealed class DecodeContext
         _scopeStack.Push(new Scope(_position, end));
     }
 
+    /// <summary>
+    /// 境界変更なし、エンディアンのみ切り替えるオーバーレイスコープをプッシュする。
+    /// </summary>
+    public void PushEndiannessScope(Endianness endianness)
+    {
+        _scopeStack.Push(new Scope(_position, CurrentScope.End, endianness, isOverlay: true));
+    }
+
     public void PopScope()
     {
         if (_scopeStack.Count <= 1)
             throw new InvalidOperationException("Cannot pop the root scope");
         var scope = _scopeStack.Pop();
-        // スコープ末尾まで位置を進める（未読バイトを消費）
-        _position = scope.End;
+        // オーバーレイスコープの場合はpositionを進めない
+        if (!scope.IsOverlay)
+            _position = scope.End;
     }
 
     /// <summary>
@@ -64,6 +99,25 @@ public sealed class DecodeContext
             _position += padding;
         }
         return padding;
+    }
+
+    public void RegisterStringTable(string name, int offset, int size)
+    {
+        _stringTables[name] = _data.Slice(offset, size);
+    }
+
+    public string? LookupString(string tableName, int offset)
+    {
+        if (!_stringTables.TryGetValue(tableName, out var table))
+            return null;
+        if (offset < 0 || offset >= table.Length)
+            return null;
+
+        var span = table.Span;
+        var end = offset;
+        while (end < span.Length && span[end] != 0)
+            end++;
+        return System.Text.Encoding.ASCII.GetString(span[offset..end]);
     }
 
     public void SetVariable(string name, object value)
@@ -234,10 +288,12 @@ public sealed class DecodeContext
                 $"Cannot read {count} bytes at position 0x{_position:X}: only {CurrentScope.End - _position} bytes remaining in scope");
     }
 
-    private sealed class Scope(int start, int end)
+    private sealed class Scope(int start, int end, Endianness? endianness = null, bool isOverlay = false)
     {
         public int Start { get; } = start;
         public int End { get; } = end;
+        public Endianness? ScopeEndianness { get; } = endianness;
+        public bool IsOverlay { get; } = isOverlay;
         public Dictionary<string, object> Variables { get; } = new();
     }
 }

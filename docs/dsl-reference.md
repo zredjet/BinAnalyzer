@@ -374,6 +374,163 @@ structs:
 - 既存の式システム（フィールド参照、算術、比較等）をそのまま利用可能
 - ツリー出力では `= 値` 形式で表示され、計算値であることが視覚的に区別できる
 
+## オフセットジャンプ（seek）
+
+`seek` を指定すると、フィールドのデコード前に指定された絶対オフセットにジャンプします。ポインタベースのフォーマット（PE/ELF/ZIP/TIFF等）の解析に有用です。
+
+### 基本的な使い方
+
+```yaml
+# 固定オフセットにジャンプして読み取り
+- name: pe_header
+  type: struct
+  struct: pe_header
+  seek: "0x3C"
+```
+
+### フィールド値によるオフセット指定
+
+```yaml
+- name: e_lfanew
+  type: uint32
+  description: "PEヘッダへのオフセット"
+- name: pe_signature
+  type: uint32
+  seek: "{e_lfanew}"
+```
+
+### 算術式によるオフセット指定
+
+```yaml
+- name: header_offset
+  type: uint32
+- name: data
+  type: bytes
+  size: "16"
+  seek: "{header_offset + 4}"
+```
+
+### seek_restore（位置復帰）
+
+`seek_restore: true` を指定すると、seekしたフィールドのデコード後に元の読み取り位置に復帰します。これにより、シーケンシャルな読み取りを中断せずにポインタ先のデータを参照できます。
+
+```yaml
+- name: name_offset
+  type: uint32
+- name: name
+  type: asciiz
+  seek: "{name_offset}"
+  seek_restore: true       # デコード後、name_offsetの次の位置に復帰
+- name: next_field
+  type: uint32             # name_offset直後から続けて読み取り
+```
+
+- `seek` は絶対オフセット（ファイル先頭からのバイト位置）を式で指定
+- `seek_restore` は `seek` と組み合わせて使用（`seek` なしで `seek_restore` を指定するとバリデーションエラー VAL011）
+- `seek` は `if`（条件フィールド）と組み合わせ可能
+- `seek` は `repeat`（繰り返し）と組み合わせ可能
+
+## エンディアン切り替え
+
+構造体レベルまたはフィールドレベルでエンディアンを上書きできます。優先順位: フィールド > 構造体 > トップレベル。
+
+### 構造体レベル
+
+```yaml
+structs:
+  le_header:
+    endianness: little
+    fields:
+      - name: magic
+        type: uint32
+      - name: version
+        type: uint16
+```
+
+構造体をオブジェクト形式（`endianness`/`align`/`fields` キー）で定義します。旧形式（フィールドリスト直接）との混在も可能です。
+
+### フィールドレベル
+
+```yaml
+structs:
+  mixed:
+    - name: be_value
+      type: uint32
+    - name: le_value
+      type: uint32
+      endianness: little
+```
+
+### ネスト構造体の継承
+
+子構造体にエンディアン指定がない場合、親構造体のエンディアンを継承します。
+
+```yaml
+structs:
+  parent:
+    endianness: little
+    fields:
+      - name: child
+        type: struct
+        struct: child_struct
+  child_struct:
+    # endianness 未指定 → parent の little を継承
+    - name: value
+      type: uint16
+```
+
+## 文字列テーブル参照（string_table）
+
+ELF `.strtab` のような文字列テーブルを定義し、整数フィールドからオフセットで文字列を参照できます。
+
+### 文字列テーブルの定義
+
+構造体に `string_table: true` を指定すると、そのデコード結果のバイト列が文字列テーブルとして登録されます。
+
+```yaml
+structs:
+  strtab:
+    string_table: true
+    fields:
+      - name: data
+        type: bytes
+        size: remaining
+```
+
+### 文字列テーブルの参照
+
+整数フィールドに `string_table` で参照先テーブル名を指定すると、整数値をオフセットとして文字列を解決します。
+
+```yaml
+- name: name_offset
+  type: uint32
+  string_table: strtab   # strtab テーブルの offset 位置の文字列を解決
+```
+
+- 文字列テーブルはヌル終端文字列（ASCII）として解釈
+- テーブルは参照元より前にデコードされている必要あり
+- 出力には `→ "解決済み文字列"` が表示される
+
+## カスタムバリデーション（validate）
+
+フィールドに `validate` を指定すると、デコード後に式を評価し、結果を ✓/✗ で表示します。
+
+```yaml
+- name: magic
+  type: uint16
+  validate: "{magic == 42}"
+
+- name: byte_order
+  type: ascii
+  size: "2"
+  validate: "{byte_order == 'II'}"
+```
+
+- 式はフィールドのデコード後に評価される（フィールド自身の値を参照可能）
+- 既存の式システム（比較、算術、論理演算）をそのまま利用可能
+- ツリー出力では ✓（緑）/ ✗（赤）で表示
+- JSON出力では `_validation` オブジェクト（`passed`, `expression`）
+
 ## アライメントとパディング
 
 ### フィールドレベルアライメント

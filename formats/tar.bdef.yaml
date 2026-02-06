@@ -1,0 +1,107 @@
+name: TAR
+endianness: big
+root: tar
+
+enums:
+  tar_typeflag:
+    - value: 0x30
+      label: regular_file
+      description: "'0' - Regular file"
+    - value: 0x31
+      label: hard_link
+      description: "'1' - Hard link"
+    - value: 0x32
+      label: symbolic_link
+      description: "'2' - Symbolic link"
+    - value: 0x33
+      label: character_device
+      description: "'3' - Character device"
+    - value: 0x34
+      label: block_device
+      description: "'4' - Block device"
+    - value: 0x35
+      label: directory
+      description: "'5' - Directory"
+    - value: 0x00
+      label: regular_file_legacy
+      description: "Legacy regular file (null byte)"
+
+structs:
+  tar:
+    - name: entries
+      type: struct
+      struct: tar_header
+      repeat: eof
+      element_size: "512"
+      description: "TAR 512-byte blocks (headers and data blocks read uniformly)"
+
+  tar_header:
+    - name: name
+      type: ascii
+      size: "100"
+      description: "File name"
+    - name: mode
+      type: ascii
+      size: "8"
+      description: "File mode (octal ASCII)"
+    - name: uid
+      type: ascii
+      size: "8"
+      description: "Owner user ID (octal ASCII)"
+    - name: gid
+      type: ascii
+      size: "8"
+      description: "Owner group ID (octal ASCII)"
+    - name: size
+      type: ascii
+      size: "12"
+      description: "File size in bytes (octal ASCII)"
+    - name: mtime
+      type: ascii
+      size: "12"
+      description: "Modification time (octal ASCII, Unix timestamp)"
+    - name: checksum
+      type: ascii
+      size: "8"
+      description: "Header checksum (octal ASCII)"
+    - name: typeflag
+      type: uint8
+      enum: tar_typeflag
+      description: "File type flag"
+    - name: linkname
+      type: ascii
+      size: "100"
+      description: "Name of linked file"
+    - name: magic
+      type: ascii
+      size: "6"
+      description: "UStar magic ('ustar' + null)"
+    - name: version
+      type: ascii
+      size: "2"
+      description: "UStar version ('00')"
+    - name: uname
+      type: ascii
+      size: "32"
+      description: "Owner user name"
+    - name: gname
+      type: ascii
+      size: "32"
+      description: "Owner group name"
+    - name: devmajor
+      type: ascii
+      size: "8"
+      description: "Device major number"
+    - name: devminor
+      type: ascii
+      size: "8"
+      description: "Device minor number"
+    - name: prefix
+      type: ascii
+      size: "155"
+      description: "Filename prefix for long names"
+    - name: header_padding
+      type: bytes
+      size: "12"
+      padding: true
+      description: "Padding to fill 512-byte block"

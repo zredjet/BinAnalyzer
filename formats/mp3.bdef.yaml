@@ -1,0 +1,154 @@
+name: MP3
+endianness: big
+root: mp3
+
+enums:
+  mpeg_version:
+    - value: 0
+      label: MPEG2.5
+    - value: 2
+      label: MPEG2
+    - value: 3
+      label: MPEG1
+
+  mpeg_layer:
+    - value: 1
+      label: Layer_III
+    - value: 2
+      label: Layer_II
+    - value: 3
+      label: Layer_I
+
+  mp3_bitrate:
+    - value: 1
+      label: 32kbps
+    - value: 2
+      label: 40kbps
+    - value: 3
+      label: 48kbps
+    - value: 4
+      label: 56kbps
+    - value: 5
+      label: 64kbps
+    - value: 6
+      label: 80kbps
+    - value: 7
+      label: 96kbps
+    - value: 8
+      label: 112kbps
+    - value: 9
+      label: 128kbps
+    - value: 10
+      label: 160kbps
+    - value: 11
+      label: 192kbps
+    - value: 12
+      label: 224kbps
+    - value: 13
+      label: 256kbps
+    - value: 14
+      label: 320kbps
+
+  mp3_sample_rate:
+    - value: 0
+      label: 44100Hz
+    - value: 1
+      label: 48000Hz
+    - value: 2
+      label: 32000Hz
+
+  channel_mode:
+    - value: 0
+      label: stereo
+    - value: 1
+      label: joint_stereo
+    - value: 2
+      label: dual_channel
+    - value: 3
+      label: mono
+
+structs:
+  mp3:
+    - name: id3v2_header
+      type: struct
+      struct: id3v2_header
+    - name: id3v2_body
+      type: bytes
+      size: "{tag_size}"
+      description: "ID3v2タグ本体（生バイト）"
+    - name: mpeg_frame_header
+      type: struct
+      struct: mpeg_frame_header
+
+  id3v2_header:
+    - name: magic
+      type: ascii
+      size: "3"
+      description: "ID3"
+    - name: version
+      type: uint8
+      description: "ID3v2バージョン（3=v2.3, 4=v2.4）"
+    - name: revision
+      type: uint8
+    - name: flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: unsynchronisation
+          bits: "7"
+        - name: extended_header
+          bits: "6"
+        - name: experimental
+          bits: "5"
+        - name: footer
+          bits: "4"
+    - name: size_b0
+      type: uint8
+    - name: size_b1
+      type: uint8
+    - name: size_b2
+      type: uint8
+    - name: size_b3
+      type: uint8
+    - name: tag_size
+      type: virtual
+      value: "{(size_b0 << 21) | (size_b1 << 14) | (size_b2 << 7) | size_b3}"
+      description: "シンクセーフ整数から算出したタグサイズ"
+
+  mpeg_frame_header:
+    - name: header
+      type: bitfield
+      size: "4"
+      fields:
+        - name: sync
+          bits: "31:21"
+          description: "同期ワード（0x7FF）"
+        - name: version
+          bits: "20:19"
+          enum: mpeg_version
+        - name: layer
+          bits: "18:17"
+          enum: mpeg_layer
+        - name: protection
+          bits: "16"
+        - name: bitrate_index
+          bits: "15:12"
+          enum: mp3_bitrate
+        - name: sample_rate_index
+          bits: "11:10"
+          enum: mp3_sample_rate
+        - name: padding
+          bits: "9"
+        - name: private_bit
+          bits: "8"
+        - name: channel_mode
+          bits: "7:6"
+          enum: channel_mode
+        - name: mode_extension
+          bits: "5:4"
+        - name: copyright
+          bits: "3"
+        - name: original
+          bits: "2"
+        - name: emphasis
+          bits: "1:0"

@@ -212,6 +212,7 @@ public static class DiffEngine
             DecodedStruct st => $"({st.StructType})",
             DecodedArray a => $"[{a.Elements.Count} items]",
             DecodedCompressed c => $"[{c.Algorithm}: {c.CompressedSize}→{c.DecompressedSize} bytes]",
+            DecodedError e => $"[ERROR: {e.ErrorMessage}]",
             _ => node.ToString() ?? "",
         };
     }
@@ -228,6 +229,7 @@ public static class DiffEngine
             DecodedCompressed c => $"compressed({c.Algorithm})",
             DecodedStruct s => $"struct({s.StructType})",
             DecodedArray => "array",
+            DecodedError => "error",
             _ => node.GetType().Name,
         };
     }
