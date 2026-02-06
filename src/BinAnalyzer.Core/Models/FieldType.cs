@@ -26,4 +26,5 @@ public enum FieldType
     Bitfield,
     Zlib,
     Deflate,
+    Virtual,
 }

@@ -47,6 +47,9 @@ public sealed class JsonOutputFormatter : IOutputFormatter
             case DecodedCompressed compressedNode:
                 WriteCompressedNode(writer, compressedNode);
                 break;
+            case DecodedVirtual virtualNode:
+                WriteVirtualNode(writer, virtualNode);
+                break;
         }
     }
 
@@ -232,6 +235,38 @@ public sealed class JsonOutputFormatter : IOutputFormatter
         }
         writer.WriteEndArray();
 
+        writer.WriteEndObject();
+    }
+
+    private static void WriteVirtualNode(Utf8JsonWriter writer, DecodedVirtual node)
+    {
+        writer.WriteStartObject();
+        WriteCommonProperties(writer, node, "virtual");
+        writer.WriteString("name", node.Name);
+        switch (node.Value)
+        {
+            case long l:
+                writer.WriteNumber("value", l);
+                break;
+            case int i:
+                writer.WriteNumber("value", i);
+                break;
+            case double d:
+                if (double.IsNaN(d) || double.IsInfinity(d))
+                    writer.WriteString("value", d.ToString());
+                else
+                    writer.WriteNumber("value", d);
+                break;
+            case bool b:
+                writer.WriteBoolean("value", b);
+                break;
+            case string s:
+                writer.WriteString("value", s);
+                break;
+            default:
+                writer.WriteString("value", node.Value.ToString());
+                break;
+        }
         writer.WriteEndObject();
     }
 

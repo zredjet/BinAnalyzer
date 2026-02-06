@@ -19,7 +19,7 @@ var formatOption = new Option<FileInfo>("-f", "--format")
 
 var outputOption = new Option<string>("-o", "--output")
 {
-    Description = "出力形式 (tree, json, hexdump, html, map)",
+    Description = "出力形式 (tree, json, hexdump, html, map, csv, tsv)",
     DefaultValueFactory = _ => "tree",
 };
 
@@ -34,6 +34,11 @@ var noValidateOption = new Option<bool>("--no-validate")
     Description = "フォーマット定義のバリデーションをスキップする",
 };
 
+var filterOption = new Option<string[]>("--filter")
+{
+    Description = "出力フィルタ（フィールドパスパターン、複数指定可）",
+};
+
 var rootCommand = new RootCommand("BinAnalyzer - 汎用バイナリ構造解析ツール")
 {
     fileArg,
@@ -41,6 +46,7 @@ var rootCommand = new RootCommand("BinAnalyzer - 汎用バイナリ構造解析�
     outputOption,
     colorOption,
     noValidateOption,
+    filterOption,
 };
 
 rootCommand.SetAction((parseResult) =>
@@ -50,6 +56,7 @@ rootCommand.SetAction((parseResult) =>
     var outputFormat = parseResult.GetValue(outputOption)!;
     var colorSetting = parseResult.GetValue(colorOption)!;
     var noValidate = parseResult.GetValue(noValidateOption);
+    var filterPatterns = parseResult.GetValue(filterOption);
 
     if (!file.Exists)
     {
@@ -89,6 +96,19 @@ rootCommand.SetAction((parseResult) =>
         var decoder = new BinaryDecoder();
         var decoded = decoder.Decode(data, format);
 
+        // フィルタ適用
+        if (filterPatterns is { Length: > 0 })
+        {
+            var pathFilter = new PathFilter(filterPatterns);
+            var filtered = NodeFilterHelper.FilterTree(decoded, pathFilter);
+            if (filtered is null)
+            {
+                // マッチなし: 空出力で正常終了
+                return 0;
+            }
+            decoded = filtered;
+        }
+
         var colorMode = colorSetting switch
         {
             "always" => ColorMode.Always,
@@ -113,6 +133,8 @@ rootCommand.SetAction((parseResult) =>
             {
                 "json" => new JsonOutputFormatter(),
                 "html" => new HtmlOutputFormatter(),
+                "csv" => new CsvOutputFormatter(),
+                "tsv" => new CsvOutputFormatter(useTsv: true),
                 _ => new TreeOutputFormatter(colorMode),
             };
             output = formatter.Format(decoded);

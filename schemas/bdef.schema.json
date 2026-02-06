@@ -174,7 +174,8 @@
             "latin1", "iso-8859-1",
             "asciiz", "utf8z",
             "struct", "switch", "bitfield",
-            "zlib", "deflate"
+            "zlib", "deflate",
+            "virtual"
           ]
         },
         "size": {
@@ -205,6 +206,10 @@
         "repeat_until": {
           "type": "string",
           "description": "繰り返し終了条件の式。式が真になるまで繰り返す。"
+        },
+        "element_size": {
+          "type": ["string", "integer"],
+          "description": "繰り返しフィールドの各要素のバイトサイズ。固定値（\"40\"）または式（\"{entry_size}\"）。要素デコード後、未読バイトは自動スキップされる。"
         },
         "switch_on": {
           "type": "string",
@@ -257,6 +262,10 @@
         "padding": {
           "type": "boolean",
           "description": "true の場合、パディングフィールドとしてツリー出力で非表示にする。"
+        },
+        "value": {
+          "type": "string",
+          "description": "virtual型フィールドの値を計算する式。type が virtual のとき必須。"
         }
       }
     },

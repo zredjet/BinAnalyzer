@@ -63,6 +63,7 @@ structs:
 | `bitfield` | 可変 | ビットフィールド（個々のビット範囲を抽出） |
 | `struct` | 可変 | ネスト構造体参照 |
 | `switch` | 可変 | 条件付き構造体選択 |
+| `virtual` | 0バイト | 計算フィールド（バイナリデータを読み取らず、式の評価結果を表示） |
 
 ## サイズ指定
 
@@ -193,6 +194,24 @@ flags:
   struct: entry
   repeat_until: "{type == 0}"
 ```
+
+### 要素サイズ指定（element_size）
+
+繰り返しフィールドで `element_size` を指定すると、各要素のデコード時にバウンダリスコープが設定されます。要素のフィールドが `element_size` より小さい場合、残りバイトは自動的にスキップされます。
+
+```yaml
+# 固定サイズレコードの繰り返し（各要素40バイト）
+- name: sections
+  type: struct
+  struct: section_header
+  repeat_count: "{num_sections}"
+  element_size: "{section_size}"
+```
+
+- 固定値（`element_size: "40"`）と式（`element_size: "{entry_size}"`）の両方に対応
+- 要素のデコード後、`element_size` の末尾まで未読バイトを自動スキップ
+- 要素のデコードが `element_size` を超えた場合はデコードエラー
+- `repeat`, `repeat_count`, `repeat_until` のいずれとも組み合わせ可能
 
 ## Switch（条件分岐構造体）
 
@@ -335,6 +354,25 @@ structs:
 - インポートは再帰的に解決（推移的インポート対応）
 - 循環インポートはエラー
 - 同名の定義が複数ファイルに存在する場合はエラー（名前衝突禁止）
+
+## 計算フィールド（Virtual）
+
+`virtual` 型はバイナリデータを読み取らず、式の評価結果を表示する計算フィールドです。サイズは常に0バイトです。
+
+```yaml
+- name: pixel_count
+  type: virtual
+  value: "{width * height}"
+  description: "総ピクセル数"
+
+- name: compression_ratio
+  type: virtual
+  value: "{compressed_size * 100 / original_size}"
+```
+
+- `value` プロパティで式を指定（必須）
+- 既存の式システム（フィールド参照、算術、比較等）をそのまま利用可能
+- ツリー出力では `= 値` 形式で表示され、計算値であることが視覚的に区別できる
 
 ## アライメントとパディング
 

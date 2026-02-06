@@ -1,0 +1,27 @@
+name: PDF
+endianness: big
+root: pdf
+structs:
+  pdf:
+    - name: magic
+      type: bytes
+      size: "5"
+      expected: [0x25, 0x50, 0x44, 0x46, 0x2D]
+      description: "%PDF-"
+    - name: version
+      type: ascii
+      size: "3"
+      description: "バージョン番号 (例: 1.7)"
+    - name: eol
+      type: bytes
+      size: "1"
+      description: "行末"
+    - name: binary_marker
+      type: bytes
+      size: "1"
+      expected: [0x25]
+      description: "% (バイナリコメント開始)"
+    - name: binary_hint
+      type: bytes
+      size: "4"
+      description: "高バイト文字 (例: 0xE2 0xE3 0xCF 0xD3)"

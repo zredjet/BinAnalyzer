@@ -92,6 +92,7 @@ public static class YamlToIrMapper
         var (size, sizeExpr, sizeRemaining) = ParseSize(yaml.Size);
         var repeat = ParseRepeatMode(yaml);
         var (switchOn, switchCases, switchDefault) = ParseSwitch(yaml);
+        var (elementSize, elementSizeExpr) = ParseElementSize(yaml.ElementSize);
 
         return new FieldDefinition
         {
@@ -114,6 +115,9 @@ public static class YamlToIrMapper
             Description = yaml.Description,
             Align = yaml.Align,
             IsPadding = yaml.Padding ?? false,
+            ElementSize = elementSize,
+            ElementSizeExpression = elementSizeExpr,
+            ValueExpression = yaml.Value is not null ? ExpressionParser.Parse(yaml.Value) : null,
         };
     }
 
@@ -145,6 +149,7 @@ public static class YamlToIrMapper
             "bitfield" => FieldType.Bitfield,
             "zlib" => FieldType.Zlib,
             "deflate" => FieldType.Deflate,
+            "virtual" => FieldType.Virtual,
             _ => throw new InvalidOperationException($"Unknown field type: {type}"),
         };
     }
@@ -163,6 +168,18 @@ public static class YamlToIrMapper
         // Expression: e.g. "{length}" or "{length - 4}"
         var expr = ExpressionParser.Parse(sizeStr);
         return (null, expr, false);
+    }
+
+    private static (int? size, Expression? sizeExpr) ParseElementSize(string? sizeStr)
+    {
+        if (sizeStr is null)
+            return (null, null);
+
+        if (int.TryParse(sizeStr, out var fixedSize))
+            return (fixedSize, null);
+
+        var expr = ExpressionParser.Parse(sizeStr);
+        return (null, expr);
     }
 
     private static RepeatMode ParseRepeatMode(YamlFieldModel yaml)

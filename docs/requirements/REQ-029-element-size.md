@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | draft |
+| ステータス | done |
 | 優先度 | 高 |
 | 依存 | なし |
 | 作成日 | 2026-02-06 |
@@ -79,20 +79,33 @@
 
 ## 設計メモ
 
-> 設計Phaseで記入する。
+- 既存の `PushScope()` / `PopScope()` をそのまま利用。`PopScope()` がスコープ末尾まで位置を進める既存機能で未読バイトの自動スキップを実現。
+- `ParseElementSize()` は `ParseSize()` と類似だが `remaining` キーワードは不要（要素サイズに「残り全部」は意味をなさない）。
+- `DecodeElementWithScope()` ヘルパーを追加し、各繰り返しモードから統一的に呼び出す。
 
 ---
 
 ## 実装メモ
 
-> 実装Phaseで記入する。
-
 ### 実装中の設計変更
+
+なし。計画通りに実装。
 
 ### 追加したテスト
 
 | テストクラス | テスト名 | 対応する受入条件 |
 |---|---|---|
-| | | |
+| ElementSizeTests | FixedElementSize_SkipsRemainingBytes | AC1, AC3 |
+| ElementSizeTests | ExpressionElementSize_UsesEvaluatedValue | AC2 |
+| ElementSizeTests | ElementSize_Overflow_ThrowsError | AC4 |
+| ElementSizeTests | ElementSize_WithRepeatUntilEof | AC1 |
+| ElementSizeTests | ElementSize_WithRepeatUntil | AC1 |
+| ElementSizeParsingTests | ParseElementSize_FixedValue | AC6 |
+| ElementSizeParsingTests | ParseElementSize_Expression | AC6 |
+| ElementSizeParsingTests | ParseElementSize_NotSpecified | AC6 |
+| ElementSizeValidationTests | VAL110_NonRepeatField_ReportsWarning | AC5 |
+| ElementSizeValidationTests | VAL110_RepeatField_NoWarning | AC5 |
 
 ### 気づき・今後の課題
+
+- 要素サイズが動的に変わるケース（各要素のヘッダにサイズが含まれる等）は現在のスコープ外。将来的に検討の余地あり。

@@ -129,6 +129,12 @@ public sealed class YamlFieldModel
 
     [YamlMember(Alias = "padding")]
     public bool? Padding { get; set; }
+
+    [YamlMember(Alias = "element_size")]
+    public string? ElementSize { get; set; }
+
+    [YamlMember(Alias = "value")]
+    public string? Value { get; set; }
 }
 
 public sealed class YamlChecksumModel

@@ -46,4 +46,13 @@ public sealed class FieldDefinition
 
     /// <summary>パディングフィールドとして扱い、出力時にデフォルト非表示とする。</summary>
     public bool IsPadding { get; init; }
+
+    /// <summary>繰り返しフィールドの各要素の固定バイトサイズ。式で決定される場合はnull。</summary>
+    public int? ElementSize { get; init; }
+
+    /// <summary>繰り返しフィールドの各要素サイズの動的式（例: "{entry_size}"）。</summary>
+    public Expression? ElementSizeExpression { get; init; }
+
+    /// <summary>virtual型フィールドの値を計算する式。</summary>
+    public Expression? ValueExpression { get; init; }
 }

@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using BinAnalyzer.Core;
 using BinAnalyzer.Core.Decoded;
+using BinAnalyzer.Core.Expressions;
 using BinAnalyzer.Core.Interfaces;
 using BinAnalyzer.Core.Models;
 
@@ -118,6 +119,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.Struct => DecodeStructField(field, format, context),
             FieldType.Switch => DecodeSwitchField(field, format, context),
             FieldType.Bitfield => DecodeBitfieldField(field, format, context),
+            FieldType.Virtual => DecodeVirtualField(field, context),
             _ => throw new InvalidOperationException($"Unknown field type: {field.Type}"),
         };
     }
@@ -429,6 +431,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var startOffset = context.Position;
         var elements = new List<DecodedNode>();
         var singleField = WithoutRepeat(field);
+        var elementSize = ResolveElementSize(field, context);
 
         // 構造体レベルアライメントの取得
         int? structAlign = null;
@@ -444,7 +447,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 {
                     if (structAlign is { } sa && i > 0)
                         context.AlignTo(sa);
-                    var element = DecodeSingleField(singleField, format, context);
+                    var element = DecodeElementWithScope(singleField, format, context, elementSize);
                     elements.Add(element);
                 }
                 break;
@@ -460,7 +463,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                         context.AlignTo(sa);
                         if (context.IsEof) break;
                     }
-                    var element = DecodeSingleField(singleField, format, context);
+                    var element = DecodeElementWithScope(singleField, format, context, elementSize);
                     elements.Add(element);
                     idx++;
                 }
@@ -474,9 +477,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 {
                     if (structAlign is { } sa && idx > 0)
                         context.AlignTo(sa);
-                    var element = DecodeSingleField(singleField, format, context);
+                    var (element, conditionMet) = DecodeElementWithScopeAndCondition(
+                        singleField, format, context, elementSize, untilMode.Condition);
                     elements.Add(element);
-                    if (ExpressionEvaluator.EvaluateAsBool(untilMode.Condition, context))
+                    if (conditionMet)
                         break;
                     if (context.IsEof)
                         break;
@@ -493,6 +497,42 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Size = context.Position - startOffset,
             Elements = elements,
         };
+    }
+
+    private DecodedNode DecodeElementWithScope(
+        FieldDefinition singleField,
+        FormatDefinition format,
+        DecodeContext context,
+        int? elementSize)
+    {
+        if (elementSize is not { } size)
+            return DecodeSingleField(singleField, format, context);
+
+        context.PushScope(size);
+        var element = DecodeSingleField(singleField, format, context);
+        context.PopScope();
+        return element;
+    }
+
+    private (DecodedNode element, bool conditionMet) DecodeElementWithScopeAndCondition(
+        FieldDefinition singleField,
+        FormatDefinition format,
+        DecodeContext context,
+        int? elementSize,
+        Expression condition)
+    {
+        if (elementSize is not { } size)
+        {
+            var elem = DecodeSingleField(singleField, format, context);
+            return (elem, ExpressionEvaluator.EvaluateAsBool(condition, context));
+        }
+
+        context.PushScope(size);
+        var element = DecodeSingleField(singleField, format, context);
+        // repeat_untilの条件はスコープ内で評価（要素内の変数を参照するため）
+        var met = ExpressionEvaluator.EvaluateAsBool(condition, context);
+        context.PopScope();
+        return (element, met);
     }
 
     private static FieldDefinition WithoutRepeat(FieldDefinition field)
@@ -518,6 +558,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Description = field.Description,
             Align = field.Align,
             IsPadding = field.IsPadding,
+            ElementSize = field.ElementSize,
+            ElementSizeExpression = field.ElementSizeExpression,
+            ValueExpression = field.ValueExpression,
         };
     }
 
@@ -541,6 +584,17 @@ public sealed class BinaryDecoder : IBinaryDecoder
             return (int)ExpressionEvaluator.EvaluateAsLong(field.SizeExpression, context);
 
         throw new InvalidOperationException($"Field '{field.Name}' has no size specification");
+    }
+
+    private int? ResolveElementSize(FieldDefinition field, DecodeContext context)
+    {
+        if (field.ElementSize.HasValue)
+            return field.ElementSize.Value;
+
+        if (field.ElementSizeExpression is not null)
+            return (int)ExpressionEvaluator.EvaluateAsLong(field.ElementSizeExpression, context);
+
+        return null;
     }
 
     private DecodedBitfield DecodeBitfieldField(
@@ -597,6 +651,25 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Size = size,
             RawValue = rawValue,
             Fields = fields,
+            Description = field.Description,
+        };
+    }
+
+    private DecodedVirtual DecodeVirtualField(
+        FieldDefinition field,
+        DecodeContext context)
+    {
+        if (field.ValueExpression is null)
+            throw new InvalidOperationException($"Virtual field '{field.Name}' has no value expression");
+
+        var value = ExpressionEvaluator.Evaluate(field.ValueExpression, context);
+
+        return new DecodedVirtual
+        {
+            Name = field.Name,
+            Offset = context.Position,
+            Size = 0,
+            Value = value,
             Description = field.Description,
         };
     }

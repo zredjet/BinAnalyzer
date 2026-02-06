@@ -22,6 +22,8 @@ public static class FormatValidator
                 ValidateFlagsRef(field, structName, format, diagnostics);
                 ValidateTypeRefCombination(field, structName, diagnostics);
                 ValidateAlign(field, structName, diagnostics);
+                ValidateElementSize(field, structName, diagnostics);
+                ValidateVirtualField(field, structName, diagnostics);
             }
 
             ValidateStructAlign(structDef, diagnostics);
@@ -123,11 +125,14 @@ public static class FormatValidator
         }
     }
 
-    /// <summary>VAL007: サイズ指定が必要な型でサイズ未指定</summary>
+    /// <summary>VAL007: サイズ指定が必要な型でサイズ未指定（Virtual型は除外）</summary>
     private static void ValidateSizeSpec(
         FieldDefinition field, string structName,
         List<ValidationDiagnostic> diagnostics)
     {
+        if (field.Type == FieldType.Virtual)
+            return;
+
         if (field.Type is FieldType.Bytes or FieldType.Ascii or FieldType.Utf8
                 or FieldType.Utf16Le or FieldType.Utf16Be or FieldType.ShiftJis or FieldType.Latin1
                 or FieldType.Bitfield or FieldType.Zlib or FieldType.Deflate)
@@ -325,6 +330,38 @@ public static class FormatValidator
             diagnostics.Add(Error("VAL009",
                 $"struct '{structDef.Name}' の align 値は正の整数が必要です: {align}",
                 structDef.Name, null));
+        }
+    }
+
+    /// <summary>VAL110: element_size が繰り返しフィールド以外に指定されている</summary>
+    private static void ValidateElementSize(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.ElementSize is null && field.ElementSizeExpression is null)
+            return;
+
+        if (field.Repeat is RepeatMode.None)
+        {
+            diagnostics.Add(Warning("VAL110",
+                $"フィールド '{field.Name}' に element_size が指定されていますが、繰り返しフィールドでのみ有効です",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL010: virtual型フィールドに value が未指定</summary>
+    private static void ValidateVirtualField(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.Type != FieldType.Virtual)
+            return;
+
+        if (field.ValueExpression is null)
+        {
+            diagnostics.Add(Error("VAL010",
+                $"virtual型フィールド '{field.Name}' に value が指定されていません",
+                structName, field.Name));
         }
     }
 

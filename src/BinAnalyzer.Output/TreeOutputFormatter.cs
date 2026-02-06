@@ -67,6 +67,9 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             case DecodedCompressed compressedNode:
                 FormatCompressed(sb, compressedNode, prefix, indent, isLast);
                 break;
+            case DecodedVirtual virtualNode:
+                FormatVirtual(sb, virtualNode, prefix);
+                break;
         }
     }
 
@@ -280,6 +283,15 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             sb.Append(flag.Meaning ?? (flag.IsSet ? "set" : "clear"));
         }
         sb.Append(']');
+        sb.AppendLine();
+    }
+
+    private void FormatVirtual(StringBuilder sb, DecodedVirtual node, string prefix)
+    {
+        sb.Append(prefix);
+        sb.Append(node.Name);
+        sb.Append(": ");
+        sb.Append(C($"= {node.Value}", AnsiColors.Cyan));
         sb.AppendLine();
     }
 

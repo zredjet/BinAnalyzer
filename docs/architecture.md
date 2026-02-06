@@ -28,7 +28,8 @@ BinAnalyzer/
     ├── bmp.bdef.yaml
     ├── wav.bdef.yaml
     ├── zip.bdef.yaml
-    └── elf.bdef.yaml
+    ├── elf.bdef.yaml
+    └── pdf.bdef.yaml
 ```
 
 ## 依存関係
@@ -49,7 +50,7 @@ IRはバイナリフォーマットの正規表現。YAML構文から独立し�
 
 - **FormatDefinition** — 最上位: 名前、エンディアン、列挙型、フラグ、構造体、ルート構造体
 - **StructDefinition** — 名前付きフィールドの集合
-- **FieldDefinition** — 型、サイズ、enum/flags参照、繰り返しモード、switch、期待値、条件式、アライメント、パディング
+- **FieldDefinition** — 型、サイズ、enum/flags参照、繰り返しモード、switch、期待値、条件式、アライメント、パディング、値式（virtual用）
 - **EnumDefinition / FlagsDefinition** — 値のマッピング
 - **ChecksumSpec** — チェックサム検証仕様（アルゴリズム名とフィールド名リスト）
 - **SwitchCase / BitfieldEntry / RepeatMode** — switch分岐、ビットフィールド、繰り返しモードの定義
@@ -68,9 +69,14 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 フォーマット定義の静的検証。デコード前にエラーと警告を検出。
 
-- **FormatValidator** — 全フィールド・struct定義の整合性チェック（VAL001〜VAL009: エラー、VAL101〜VAL109: 警告）
+- **FormatValidator** — 全フィールド・struct定義の整合性チェック（VAL001〜VAL010: エラー、VAL101〜VAL110: 警告）
 - **ValidationResult** — 診断結果コレクション（IsValid, Errors, Warnings）
 - **ValidationDiagnostic** — 個別診断: 重大度、コード、メッセージ、struct名、フィールド名
+
+### 出力フィルタ — Core/
+
+- **PathFilter** — ドット区切りパスパターンマッチャー。`*`（1階層）、`**`（0階層以上）ワイルドカード対応
+- **NodeFilterHelper** — DecodedNodeツリーをPathFilterで刈り込み、マッチしたリーフとその祖先のみ保持
 
 ### エラーハンドリング — Core/
 
@@ -95,6 +101,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **DecodedBitfield** — ビットフィールドと抽出値
 - **DecodedFlags** — ビットレベルのフラグ状態
 - **DecodedCompressed** — 圧縮データ（zlib/deflate）。展開サイズ、アルゴリズム名、オプションのネスト解析結果を保持
+- **DecodedVirtual** — 計算フィールド（バイナリデータを消費しない、式の評価結果を保持）
 
 ### バイナリデコーダー — Engine/
 
@@ -120,6 +127,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **HexDumpOutputFormatter** — フィールド注釈付きヘックスダンプ
 - **HtmlOutputFormatter** — インタラクティブHTML（折りたたみ/展開、ダークテーマ、検索・フィルタ機能）
 - **MapOutputFormatter** — バイナリフィールドレイアウトのビジュアルマップ
+- **CsvOutputFormatter** — CSV / TSV形式（フラットなフィールド一覧、RFC 4180準拠エスケープ）
 - **DiffOutputFormatter** — 2つのバイナリの構造的差分表示
 
 各フォーマッターはANSIカラー出力に対応（ColorMode: Auto / Always / Never）。

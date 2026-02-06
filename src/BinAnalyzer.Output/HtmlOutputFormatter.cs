@@ -78,6 +78,9 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
             case DecodedCompressed compressedNode:
                 WriteCompressedNode(sb, compressedNode, depth);
                 break;
+            case DecodedVirtual virtualNode:
+                WriteVirtualNode(sb, virtualNode);
+                break;
         }
     }
 
@@ -297,6 +300,15 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
             sb.AppendLine("</div>");
         }
         sb.AppendLine("  </div>");
+        sb.AppendLine("</div>");
+    }
+
+    private static void WriteVirtualNode(StringBuilder sb, DecodedVirtual node)
+    {
+        sb.Append("<div class=\"node virtual\"").Append(SearchAttr($"{node.Name} {node.Value}")).AppendLine(">");
+        sb.Append("  <span class=\"name\">").Append(E(node.Name)).Append("</span>: ");
+        sb.Append("<span class=\"value int\">= ").Append(E(node.Value.ToString() ?? "")).Append("</span>");
+        sb.AppendLine();
         sb.AppendLine("</div>");
     }
 

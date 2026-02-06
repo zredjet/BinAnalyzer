@@ -6,9 +6,10 @@
 
 ## 機能一覧
 
-- **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch
+- **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
 - **圧縮データ対応** — zlib / deflate 圧縮フィールドの展開・ネスト解析
-- **5種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map
+- **7種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv
+- **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）
 - **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示
 - **カラー出力** — 端末でのANSIカラー表示（auto / always / never）
 - **式・演算子** — 算術・比較・論理演算に加え、ビット演算（`&`, `|`, `^`, `<<`, `>>`）をサポート
@@ -70,6 +71,12 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 # ビジュアルマップ表示
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o map
 
+# CSV形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv
+
+# 出力フィルタで特定フィールドのみ抽出
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv --filter "**.width" --filter "**.height"
+
 # 2つのファイルの差分比較
 dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml
 
@@ -83,7 +90,7 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。
 
-サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（PNG, BMP, WAV, ZIP, ELF）。
+サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（PNG, BMP, WAV, ZIP, ELF, PDF）。
 
 ### エディタ補完（JSON Schema）
 

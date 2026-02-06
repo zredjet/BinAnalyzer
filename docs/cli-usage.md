@@ -3,7 +3,7 @@
 ## 基本コマンド
 
 ```
-binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate]
+binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [--filter <pattern>...]
 ```
 
 ### 引数
@@ -17,9 +17,10 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate]
 | オプション | 説明 | デフォルト |
 |------------|------|-----------|
 | `-f, --format <file>` | フォーマット定義ファイル（`.bdef.yaml`）**必須** | — |
-| `-o, --output <format>` | 出力形式（`tree`, `json`, `hexdump`, `html`, `map`） | `tree` |
+| `-o, --output <format>` | 出力形式（`tree`, `json`, `hexdump`, `html`, `map`, `csv`, `tsv`） | `tree` |
 | `--color <mode>` | カラー出力（`auto`, `always`, `never`） | `auto` |
 | `--no-validate` | フォーマット定義のバリデーションをスキップ | — |
+| `--filter <pattern>` | 出力フィルタ（フィールドパスパターン、複数指定可） | — |
 
 ### 終了コード
 
@@ -30,7 +31,7 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate]
 
 ### バリデーション
 
-デフォルトではデコード前にフォーマット定義の静的検証が実行されます。エラー（VAL001〜VAL009）が検出された場合、解析は中断されます。警告（VAL101〜VAL109）はstderrに表示されますが解析は継続します。
+デフォルトではデコード前にフォーマット定義の静的検証が実行されます。エラー（VAL001〜VAL010）が検出された場合、解析は中断されます。警告（VAL101〜VAL110）はstderrに表示されますが解析は継続します。
 
 `--no-validate` を指定するとバリデーションをスキップします。
 
@@ -39,6 +40,7 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate]
 - switch型フィールドの必須プロパティ
 - サイズ指定が必要な型のサイズ未指定
 - alignの値が正の整数であること
+- virtual型フィールドのvalue未指定
 - 未使用のenum/flags/struct定義（警告）
 
 ## 出力形式
@@ -98,6 +100,52 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 ```bash
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o map
+```
+
+### csv
+
+デコード結果をCSV形式で出力します。カラムは `path,type,offset,size,value` です。リーフフィールドのみ出力します（構造体・配列ノードは行を出力しません）。RFC 4180準拠のエスケープに対応しています。
+
+```bash
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv
+```
+
+### tsv
+
+CSV と同じ構造でタブ区切りの出力です。
+
+```bash
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tsv
+```
+
+## 出力フィルタ
+
+`--filter` オプションでフィールドパスパターンを指定して、出力を絞り込むことができます。
+
+### パスパターン
+
+- パス区切りは `.`（ドット）
+- `*` は任意の1階層にマッチ
+- `**` は任意の0階層以上にマッチ
+- 複数指定はOR結合（`--filter "a.b" --filter "c.d"`）
+
+### パスパターンの例
+
+| パターン | マッチ対象 |
+|----------|-----------|
+| `chunks.*.type` | 全チャンクのtypeフィールド |
+| `**.width` | 任意の深さのwidthフィールド |
+| `chunks.0.data` | 最初のチャンクのdata |
+| `header.*` | header直下の全フィールド |
+
+### 使用例
+
+```bash
+# 全チャンクのtype名だけを一覧
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --filter "PNG.chunks.*.type"
+
+# CSV出力と組み合わせてデータ抽出
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv --filter "**.width" --filter "**.height"
 ```
 
 ## diff サブコマンド
@@ -176,6 +224,12 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 # ビジュアルマップ表示
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o map
 
+# CSV形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv
+
+# TSV形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tsv
+
 # カラー出力を強制
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always
 
@@ -184,4 +238,10 @@ dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bd
 
 # バリデーションをスキップして解析
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --no-validate
+
+# 出力フィルタで特定フィールドのみ表示
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --filter "PNG.chunks.*.type"
+
+# フィルタとCSVを組み合わせてデータ抽出
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv --filter "**.width" --filter "**.height"
 ```
