@@ -141,6 +141,8 @@ public static class YamlToIrMapper
             "struct" => FieldType.Struct,
             "switch" => FieldType.Switch,
             "bitfield" => FieldType.Bitfield,
+            "zlib" => FieldType.Zlib,
+            "deflate" => FieldType.Deflate,
             _ => throw new InvalidOperationException($"Unknown field type: {type}"),
         };
     }

@@ -110,4 +110,67 @@ public class ColorOutputTests
         var output = new TreeOutputFormatter().Format(decoded);
         output.Should().NotContain("\x1b[");
     }
+
+    [Fact]
+    public void HexDump_ColorAlways_ContainsAnsiCodes()
+    {
+        var data = BmpTestDataGenerator.CreateMinimalBmp();
+        var format = new YamlFormatLoader().Load(BmpFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+        var output = new HexDumpOutputFormatter(ColorMode.Always).Format(decoded, data);
+
+        output.Should().Contain("\x1b[");
+        output.Should().Contain("\x1b[33m"); // Yellow for hex
+        output.Should().Contain("\x1b[36m"); // Cyan for field path
+    }
+
+    [Fact]
+    public void HexDump_ColorNever_NoAnsiCodes()
+    {
+        var data = BmpTestDataGenerator.CreateMinimalBmp();
+        var format = new YamlFormatLoader().Load(BmpFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+        var output = new HexDumpOutputFormatter(ColorMode.Never).Format(decoded, data);
+
+        output.Should().NotContain("\x1b[");
+    }
+
+    [Fact]
+    public void Diff_ColorAlways_ContainsAnsiCodes()
+    {
+        var decoded1 = new BinAnalyzer.Core.Decoded.DecodedStruct
+        {
+            Name = "root", StructType = "root", Offset = 0, Size = 4,
+            Children = [new BinAnalyzer.Core.Decoded.DecodedInteger { Name = "value", Offset = 0, Size = 4, Value = 100 }],
+        };
+        var decoded2 = new BinAnalyzer.Core.Decoded.DecodedStruct
+        {
+            Name = "root", StructType = "root", Offset = 0, Size = 4,
+            Children = [new BinAnalyzer.Core.Decoded.DecodedInteger { Name = "value", Offset = 0, Size = 4, Value = 200 }],
+        };
+        var diff = DiffEngine.Compare(decoded1, decoded2);
+        var output = new DiffOutputFormatter(ColorMode.Always).Format(diff);
+
+        output.Should().Contain("\x1b[");
+        output.Should().Contain("\x1b[33m"); // Yellow for changed
+    }
+
+    [Fact]
+    public void Diff_ColorNever_NoAnsiCodes()
+    {
+        var decoded1 = new BinAnalyzer.Core.Decoded.DecodedStruct
+        {
+            Name = "root", StructType = "root", Offset = 0, Size = 4,
+            Children = [new BinAnalyzer.Core.Decoded.DecodedInteger { Name = "value", Offset = 0, Size = 4, Value = 100 }],
+        };
+        var decoded2 = new BinAnalyzer.Core.Decoded.DecodedStruct
+        {
+            Name = "root", StructType = "root", Offset = 0, Size = 4,
+            Children = [new BinAnalyzer.Core.Decoded.DecodedInteger { Name = "value", Offset = 0, Size = 4, Value = 200 }],
+        };
+        var diff = DiffEngine.Compare(decoded1, decoded2);
+        var output = new DiffOutputFormatter(ColorMode.Never).Format(diff);
+
+        output.Should().NotContain("\x1b[");
+    }
 }

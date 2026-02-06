@@ -24,4 +24,6 @@ public enum FieldType
     Struct,
     Switch,
     Bitfield,
+    Zlib,
+    Deflate,
 }

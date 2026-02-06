@@ -43,6 +43,9 @@ public static class DiffEngine
             case DecodedArray la when right is DecodedArray ra:
                 CompareArray(la, ra, path, entries);
                 break;
+            case DecodedCompressed lc when right is DecodedCompressed rc:
+                CompareCompressed(lc, rc, path, entries);
+                break;
         }
     }
 
@@ -149,6 +152,33 @@ public static class DiffEngine
         }
     }
 
+    private static void CompareCompressed(DecodedCompressed left, DecodedCompressed right, string path, List<DiffEntry> entries)
+    {
+        if (left.Algorithm != right.Algorithm)
+        {
+            entries.Add(new DiffEntry(DiffKind.Changed, $"{path}.algorithm", left.Algorithm, right.Algorithm));
+        }
+
+        if (left.DecompressedSize != right.DecompressedSize)
+        {
+            entries.Add(new DiffEntry(DiffKind.Changed, $"{path}.decompressed_size",
+                left.DecompressedSize.ToString(), right.DecompressedSize.ToString()));
+        }
+
+        if (left.DecodedContent is not null && right.DecodedContent is not null)
+        {
+            CompareStruct(left.DecodedContent, right.DecodedContent, path, entries);
+        }
+        else if (left.RawDecompressed is { } leftRaw && right.RawDecompressed is { } rightRaw)
+        {
+            if (!leftRaw.Span.SequenceEqual(rightRaw.Span))
+            {
+                entries.Add(new DiffEntry(DiffKind.Changed, path,
+                    FormatBytesValue(leftRaw), FormatBytesValue(rightRaw)));
+            }
+        }
+    }
+
     private static string FormatIntegerValue(DecodedInteger node)
     {
         var result = node.Value.ToString();
@@ -181,6 +211,7 @@ public static class DiffEngine
             DecodedBitfield bf => $"0x{bf.RawValue:X}",
             DecodedStruct st => $"({st.StructType})",
             DecodedArray a => $"[{a.Elements.Count} items]",
+            DecodedCompressed c => $"[{c.Algorithm}: {c.CompressedSize}→{c.DecompressedSize} bytes]",
             _ => node.ToString() ?? "",
         };
     }
@@ -194,6 +225,7 @@ public static class DiffEngine
             DecodedBytes => "bytes",
             DecodedFloat => "float",
             DecodedBitfield => "bitfield",
+            DecodedCompressed c => $"compressed({c.Algorithm})",
             DecodedStruct s => $"struct({s.StructType})",
             DecodedArray => "array",
             _ => node.GetType().Name,

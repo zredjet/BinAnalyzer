@@ -5,6 +5,22 @@ namespace BinAnalyzer.Output;
 
 public sealed class HexDumpOutputFormatter
 {
+    private readonly bool _useColor;
+
+    public HexDumpOutputFormatter(ColorMode mode = ColorMode.Never)
+    {
+        _useColor = mode switch
+        {
+            ColorMode.Always => true,
+            ColorMode.Never => false,
+            ColorMode.Auto => !Console.IsOutputRedirected,
+            _ => false,
+        };
+    }
+
+    private string C(string text, string color)
+        => _useColor ? $"{color}{text}{AnsiColors.Reset}" : text;
+
     public string Format(DecodedStruct root, ReadOnlyMemory<byte> data)
     {
         var fields = new List<FieldRegion>();
@@ -14,8 +30,8 @@ public sealed class HexDumpOutputFormatter
         var sb = new StringBuilder();
 
         // ヘッダー行
-        sb.AppendLine("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ASCII            Field");
-        sb.AppendLine("────────  ─────────────────────────────────────────────────  ───────────────  ─────────────────────");
+        sb.AppendLine(C("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ASCII            Field", AnsiColors.Dim));
+        sb.AppendLine(C("────────  ─────────────────────────────────────────────────  ───────────────  ─────────────────────", AnsiColors.Dim));
 
         var span = data.Span;
         var fieldIndex = 0;
@@ -49,52 +65,56 @@ public sealed class HexDumpOutputFormatter
         return sb.ToString();
     }
 
-    private static void FormatLine(StringBuilder sb, ReadOnlySpan<byte> data, int offset, int count, string fieldPath)
+    private void FormatLine(StringBuilder sb, ReadOnlySpan<byte> data, int offset, int count, string fieldPath)
     {
         // オフセット
-        sb.Append(offset.ToString("X8"));
+        sb.Append(C(offset.ToString("X8"), AnsiColors.Dim));
         sb.Append("  ");
 
         // 16バイト行内の開始位置
         var lineStart = offset % 16;
 
         // Hex部分（16カラム分のスペースを確保）
+        var hexBuilder = new StringBuilder();
         for (var col = 0; col < 16; col++)
         {
-            if (col == 8) sb.Append(' ');
+            if (col == 8) hexBuilder.Append(' ');
 
             if (col >= lineStart && col < lineStart + count)
             {
-                sb.Append(data[offset + col - lineStart].ToString("X2"));
-                sb.Append(' ');
+                hexBuilder.Append(data[offset + col - lineStart].ToString("X2"));
+                hexBuilder.Append(' ');
             }
             else
             {
-                sb.Append("   ");
+                hexBuilder.Append("   ");
             }
         }
+        sb.Append(C(hexBuilder.ToString(), AnsiColors.Yellow));
 
         sb.Append(' ');
 
         // ASCII部分（16カラム分）
+        var asciiBuilder = new StringBuilder();
         for (var col = 0; col < 16; col++)
         {
             if (col >= lineStart && col < lineStart + count)
             {
                 var b = data[offset + col - lineStart];
-                sb.Append(b is >= 0x20 and <= 0x7E ? (char)b : '.');
+                asciiBuilder.Append(b is >= 0x20 and <= 0x7E ? (char)b : '.');
             }
             else
             {
-                sb.Append(' ');
+                asciiBuilder.Append(' ');
             }
         }
+        sb.Append(C(asciiBuilder.ToString(), AnsiColors.Green));
 
         // フィールド名
         if (fieldPath.Length > 0)
         {
             sb.Append("  ");
-            sb.Append(fieldPath);
+            sb.Append(C(fieldPath, AnsiColors.Cyan));
         }
 
         sb.AppendLine();

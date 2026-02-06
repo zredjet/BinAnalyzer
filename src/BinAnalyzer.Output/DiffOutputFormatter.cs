@@ -5,13 +5,29 @@ namespace BinAnalyzer.Output;
 
 public sealed class DiffOutputFormatter
 {
+    private readonly bool _useColor;
+
+    public DiffOutputFormatter(ColorMode mode = ColorMode.Never)
+    {
+        _useColor = mode switch
+        {
+            ColorMode.Always => true,
+            ColorMode.Never => false,
+            ColorMode.Auto => !Console.IsOutputRedirected,
+            _ => false,
+        };
+    }
+
+    private string C(string text, string color)
+        => _useColor ? $"{color}{text}{AnsiColors.Reset}" : text;
+
     public string Format(DiffResult result)
     {
         if (!result.HasDifferences)
-            return "差分なし\n";
+            return C("差分なし", AnsiColors.Green) + "\n";
 
         var sb = new StringBuilder();
-        sb.AppendLine($"差分: {result.Entries.Count} 件");
+        sb.AppendLine(C($"差分: {result.Entries.Count} 件", AnsiColors.Cyan));
         sb.AppendLine();
 
         foreach (var entry in result.Entries)
@@ -19,13 +35,13 @@ public sealed class DiffOutputFormatter
             switch (entry.Kind)
             {
                 case DiffKind.Changed:
-                    sb.AppendLine($"  ~ {entry.FieldPath}: {entry.OldValue} → {entry.NewValue}");
+                    sb.AppendLine(C($"  ~ {entry.FieldPath}: {entry.OldValue} → {entry.NewValue}", AnsiColors.Yellow));
                     break;
                 case DiffKind.Added:
-                    sb.AppendLine($"  + {entry.FieldPath}: {entry.NewValue}");
+                    sb.AppendLine(C($"  + {entry.FieldPath}: {entry.NewValue}", AnsiColors.Green));
                     break;
                 case DiffKind.Removed:
-                    sb.AppendLine($"  - {entry.FieldPath}: {entry.OldValue}");
+                    sb.AppendLine(C($"  - {entry.FieldPath}: {entry.OldValue}", AnsiColors.Red));
                     break;
             }
         }

@@ -44,6 +44,9 @@ public sealed class JsonOutputFormatter : IOutputFormatter
             case DecodedBitfield bitfieldNode:
                 WriteBitfieldNode(writer, bitfieldNode);
                 break;
+            case DecodedCompressed compressedNode:
+                WriteCompressedNode(writer, compressedNode);
+                break;
         }
     }
 
@@ -228,6 +231,35 @@ public sealed class JsonOutputFormatter : IOutputFormatter
             writer.WriteEndObject();
         }
         writer.WriteEndArray();
+
+        writer.WriteEndObject();
+    }
+
+    private static void WriteCompressedNode(Utf8JsonWriter writer, DecodedCompressed node)
+    {
+        writer.WriteStartObject();
+        WriteCommonProperties(writer, node, "compressed");
+        writer.WriteString("name", node.Name);
+        writer.WriteString("algorithm", node.Algorithm);
+        writer.WriteNumber("compressed_size", node.CompressedSize);
+        writer.WriteNumber("decompressed_size", node.DecompressedSize);
+
+        if (node.DecodedContent is not null)
+        {
+            writer.WritePropertyName("content");
+            WriteStructNode(writer, node.DecodedContent);
+        }
+        else if (node.RawDecompressed is { } raw)
+        {
+            var span = raw.Span;
+            var sb = new StringBuilder(span.Length * 3);
+            for (var i = 0; i < span.Length; i++)
+            {
+                if (i > 0) sb.Append(' ');
+                sb.Append(span[i].ToString("X2"));
+            }
+            writer.WriteString("decompressed_hex", sb.ToString());
+        }
 
         writer.WriteEndObject();
     }

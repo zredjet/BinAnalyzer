@@ -12,4 +12,7 @@
     <Project Path="tests/BinAnalyzer.Engine.Tests/BinAnalyzer.Engine.Tests.csproj" />
     <Project Path="tests/BinAnalyzer.Integration.Tests/BinAnalyzer.Integration.Tests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/BinAnalyzer.Benchmarks/BinAnalyzer.Benchmarks.csproj" />
+  </Folder>
 </Solution>

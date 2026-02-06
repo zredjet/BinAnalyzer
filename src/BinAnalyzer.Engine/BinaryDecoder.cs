@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using BinAnalyzer.Core;
 using BinAnalyzer.Core.Decoded;
@@ -103,6 +104,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.AsciiZ => DecodeNullTerminatedStringField(field, context, Encoding.ASCII, "asciiz"),
             FieldType.Utf8Z => DecodeNullTerminatedStringField(field, context, Encoding.UTF8, "utf8z"),
             FieldType.Float32 or FieldType.Float64 => DecodeFloatField(field, context),
+            FieldType.Zlib or FieldType.Deflate => DecodeCompressedField(field, format, context),
             FieldType.Struct => DecodeStructField(field, format, context),
             FieldType.Switch => DecodeSwitchField(field, format, context),
             FieldType.Bitfield => DecodeBitfieldField(field, format, context),
@@ -289,6 +291,57 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Size = size,
             Value = value,
             IsSinglePrecision = isSingle,
+            Description = field.Description,
+        };
+    }
+
+    private DecodedCompressed DecodeCompressedField(
+        FieldDefinition field,
+        FormatDefinition format,
+        DecodeContext context)
+    {
+        var offset = context.Position;
+        var compressedSize = ResolveSize(field, context);
+        var compressedBytes = context.ReadBytes(compressedSize);
+        var algorithm = field.Type == FieldType.Zlib ? "zlib" : "deflate";
+
+        byte[] decompressed;
+        try
+        {
+            using var input = new MemoryStream(compressedBytes.ToArray());
+            using var decompressor = field.Type == FieldType.Zlib
+                ? (Stream)new ZLibStream(input, CompressionMode.Decompress)
+                : new DeflateStream(input, CompressionMode.Decompress);
+            using var output = new MemoryStream();
+            decompressor.CopyTo(output);
+            decompressed = output.ToArray();
+        }
+        catch (InvalidDataException ex)
+        {
+            throw new DecodeException(
+                $"Failed to decompress {algorithm} data: {ex.Message}",
+                offset, CurrentPath, algorithm, inner: ex);
+        }
+
+        DecodedStruct? decodedContent = null;
+        ReadOnlyMemory<byte>? rawDecompressed = decompressed;
+        if (field.StructRef is not null && format.Structs.TryGetValue(field.StructRef, out var structDef))
+        {
+            var innerContext = new DecodeContext(decompressed, format.Endianness);
+            decodedContent = DecodeStruct(structDef, format, innerContext, field.Name);
+            rawDecompressed = null;
+        }
+
+        return new DecodedCompressed
+        {
+            Name = field.Name,
+            Offset = offset,
+            Size = compressedSize,
+            CompressedSize = compressedSize,
+            DecompressedSize = decompressed.Length,
+            Algorithm = algorithm,
+            DecodedContent = decodedContent,
+            RawDecompressed = rawDecompressed,
             Description = field.Description,
         };
     }

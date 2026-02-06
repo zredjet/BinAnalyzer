@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.*" />
+    <ProjectReference Include="../../src/BinAnalyzer.Core/BinAnalyzer.Core.csproj" />
+    <ProjectReference Include="../../src/BinAnalyzer.Dsl/BinAnalyzer.Dsl.csproj" />
+    <ProjectReference Include="../../src/BinAnalyzer.Engine/BinAnalyzer.Engine.csproj" />
+    <ProjectReference Include="../../src/BinAnalyzer.Output/BinAnalyzer.Output.csproj" />
+  </ItemGroup>
+</Project>

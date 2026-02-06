@@ -60,6 +60,9 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             case DecodedBitfield bitfieldNode:
                 FormatBitfield(sb, bitfieldNode, prefix, indent, isLast);
                 break;
+            case DecodedCompressed compressedNode:
+                FormatCompressed(sb, compressedNode, prefix, indent, isLast);
+                break;
         }
     }
 
@@ -274,5 +277,44 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         }
         sb.Append(']');
         sb.AppendLine();
+    }
+
+    private void FormatCompressed(
+        StringBuilder sb, DecodedCompressed node, string prefix, string indent, bool isLast)
+    {
+        sb.Append(prefix);
+        sb.Append(node.Name);
+        sb.Append(C($" [{node.Algorithm}] ({node.CompressedSize} bytes → {node.DecompressedSize} bytes)", AnsiColors.Dim));
+        sb.AppendLine();
+
+        if (node.DecodedContent is not null)
+        {
+            var childIndent = indent + (isLast ? "    " : (_useColor ? C("│   ", AnsiColors.Dim) : "│   "));
+            for (var i = 0; i < node.DecodedContent.Children.Count; i++)
+            {
+                FormatNode(sb, node.DecodedContent.Children[i], childIndent,
+                    i == node.DecodedContent.Children.Count - 1, false);
+            }
+        }
+        else if (node.RawDecompressed is { } raw)
+        {
+            var childIndent = indent + (isLast ? "    " : (_useColor ? C("│   ", AnsiColors.Dim) : "│   "));
+            var connector = "└── ";
+            sb.Append(childIndent);
+            sb.Append(_useColor ? C(connector, AnsiColors.Dim) : connector);
+
+            var span = raw.Span;
+            var displayCount = Math.Min(span.Length, 16);
+            var hexBuilder = new StringBuilder();
+            for (var i = 0; i < displayCount; i++)
+            {
+                if (i > 0) hexBuilder.Append(' ');
+                hexBuilder.Append(span[i].ToString("X2"));
+            }
+            if (span.Length > 16)
+                hexBuilder.Append(" ...");
+            sb.Append(C(hexBuilder.ToString(), AnsiColors.Yellow));
+            sb.AppendLine();
+        }
     }
 }

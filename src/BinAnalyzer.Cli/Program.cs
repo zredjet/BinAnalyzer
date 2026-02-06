@@ -19,7 +19,7 @@ var formatOption = new Option<FileInfo>("-f", "--format")
 
 var outputOption = new Option<string>("-o", "--output")
 {
-    Description = "出力形式 (tree, json, hexdump)",
+    Description = "出力形式 (tree, json, hexdump, html, map)",
     DefaultValueFactory = _ => "tree",
 };
 
@@ -89,24 +89,30 @@ rootCommand.SetAction((parseResult) =>
         var decoder = new BinaryDecoder();
         var decoded = decoder.Decode(data, format);
 
+        var colorMode = colorSetting switch
+        {
+            "always" => ColorMode.Always,
+            "never" => ColorMode.Never,
+            _ => ColorMode.Auto,
+        };
+
         string output;
         if (outputFormat == "hexdump")
         {
-            var hexFormatter = new HexDumpOutputFormatter();
+            var hexFormatter = new HexDumpOutputFormatter(colorMode);
             output = hexFormatter.Format(decoded, data);
+        }
+        else if (outputFormat == "map")
+        {
+            var mapFormatter = new MapOutputFormatter(colorMode);
+            output = mapFormatter.Format(decoded, data);
         }
         else
         {
-            var colorMode = colorSetting switch
-            {
-                "always" => ColorMode.Always,
-                "never" => ColorMode.Never,
-                _ => ColorMode.Auto,
-            };
-
             IOutputFormatter formatter = outputFormat switch
             {
                 "json" => new JsonOutputFormatter(),
+                "html" => new HtmlOutputFormatter(),
                 _ => new TreeOutputFormatter(colorMode),
             };
             output = formatter.Format(decoded);
@@ -142,11 +148,18 @@ var diffFormatOption = new Option<FileInfo>("-f", "--format")
     Required = true,
 };
 
+var diffColorOption = new Option<string>("--color")
+{
+    Description = "カラー出力 (auto, always, never)",
+    DefaultValueFactory = _ => "auto",
+};
+
 var diffCommand = new Command("diff", "2つのバイナリファイルの構造的差分を表示")
 {
     file1Arg,
     file2Arg,
     diffFormatOption,
+    diffColorOption,
 };
 
 diffCommand.SetAction((parseResult) =>
@@ -181,7 +194,14 @@ diffCommand.SetAction((parseResult) =>
         var decoded2 = decoder.Decode(File.ReadAllBytes(f2.FullName), format);
 
         var diffResult = DiffEngine.Compare(decoded1, decoded2);
-        var formatter = new DiffOutputFormatter();
+        var diffColorSetting = parseResult.GetValue(diffColorOption)!;
+        var diffColorMode = diffColorSetting switch
+        {
+            "always" => ColorMode.Always,
+            "never" => ColorMode.Never,
+            _ => ColorMode.Auto,
+        };
+        var formatter = new DiffOutputFormatter(diffColorMode);
         Console.Write(formatter.Format(diffResult));
         return diffResult.HasDifferences ? 1 : 0;
     }

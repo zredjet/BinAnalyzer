@@ -127,7 +127,7 @@ public static class FormatValidator
     {
         if (field.Type is FieldType.Bytes or FieldType.Ascii or FieldType.Utf8
                 or FieldType.Utf16Le or FieldType.Utf16Be or FieldType.ShiftJis or FieldType.Latin1
-                or FieldType.Bitfield)
+                or FieldType.Bitfield or FieldType.Zlib or FieldType.Deflate)
         {
             if (!field.Size.HasValue && field.SizeExpression is null && !field.SizeRemaining)
             {
