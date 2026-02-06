@@ -112,6 +112,8 @@ public static class YamlToIrMapper
             Expected = yaml.Expected?.Select(b => (byte)b).ToArray(),
             Condition = yaml.If is not null ? ExpressionParser.Parse(yaml.If) : null,
             Description = yaml.Description,
+            Align = yaml.Align,
+            IsPadding = yaml.Padding ?? false,
         };
     }
 

@@ -4,6 +4,19 @@
 
 汎用バイナリ構造解析ツール。YAML-DSL（`.bdef.yaml`）でバイナリフォーマットを定義し、任意のバイナリファイルを構造的に解析・ツリー表示します。
 
+## 機能一覧
+
+- **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch
+- **圧縮データ対応** — zlib / deflate 圧縮フィールドの展開・ネスト解析
+- **5種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map
+- **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示
+- **カラー出力** — 端末でのANSIカラー表示（auto / always / never）
+- **式・演算子** — 算術・比較・論理演算に加え、ビット演算（`&`, `|`, `^`, `<<`, `>>`）をサポート
+- **enum / flags / bitfield** — 値のラベルマッピング、ビットフラグ解析
+- **条件フィールド / チェックサム** — `if` による条件スキップ、CRC-32チェックサム検証
+- **DSLインポート** — 共通定義を別ファイルに分離し `imports` で再利用
+- **アライメント / パディング** — フィールド・構造体レベルのバイト境界調整、パディング非表示
+
 ## クイックスタート
 
 ```bash
@@ -39,11 +52,38 @@ PNG [0x00000000] (45 bytes)
         └── crc: 2923585666 (0xAE426082)
 ```
 
+## 使用方法
+
+```bash
+# 基本的な解析（ツリー表示）
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml
+
+# JSON形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o json
+
+# ヘックスダンプ表示
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o hexdump
+
+# HTMLレポート生成
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o html > report.html
+
+# ビジュアルマップ表示
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o map
+
+# 2つのファイルの差分比較
+dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml
+
+# カラー出力を強制
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always
+```
+
+全コマンド・オプションの詳細は [CLIリファレンス](docs/cli-usage.md) を参照してください。
+
 ## フォーマット定義
 
 バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。
 
-PNGフォーマット定義が `formats/png.bdef.yaml` に同梱されています。
+サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（PNG, BMP, WAV, ZIP, ELF）。
 
 ## アーキテクチャ
 

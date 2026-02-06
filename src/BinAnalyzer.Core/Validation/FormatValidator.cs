@@ -21,7 +21,10 @@ public static class FormatValidator
                 ValidateEnumRef(field, structName, format, diagnostics);
                 ValidateFlagsRef(field, structName, format, diagnostics);
                 ValidateTypeRefCombination(field, structName, diagnostics);
+                ValidateAlign(field, structName, diagnostics);
             }
+
+            ValidateStructAlign(structDef, diagnostics);
         }
 
         ValidateUnusedEnums(format, diagnostics);
@@ -296,6 +299,32 @@ public static class FormatValidator
                     $"struct '{structName}' はルート '{format.RootStruct}' から到達できません",
                     structName, null));
             }
+        }
+    }
+
+    /// <summary>VAL008: フィールドの align 値が正の整数であること</summary>
+    private static void ValidateAlign(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.Align is { } align && align <= 0)
+        {
+            diagnostics.Add(Error("VAL008",
+                $"フィールド '{field.Name}' の align 値は正の整数が必要です: {align}",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL009: 構造体の align 値が正の整数であること</summary>
+    private static void ValidateStructAlign(
+        StructDefinition structDef,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (structDef.Align is { } align && align <= 0)
+        {
+            diagnostics.Add(Error("VAL009",
+                $"struct '{structDef.Name}' の align 値は正の整数が必要です: {align}",
+                structDef.Name, null));
         }
     }
 

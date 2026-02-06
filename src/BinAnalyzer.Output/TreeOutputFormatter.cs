@@ -31,6 +31,10 @@ public sealed class TreeOutputFormatter : IOutputFormatter
 
     private void FormatNode(StringBuilder sb, DecodedNode node, string indent, bool isLast, bool isRoot)
     {
+        // パディングフィールドはツリー出力で非表示
+        if (node.IsPadding)
+            return;
+
         var connector = isRoot ? "" : isLast ? "└── " : "├── ";
         var prefix = isRoot ? "" : indent + (_useColor ? C(connector, AnsiColors.Dim) : connector);
 

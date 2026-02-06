@@ -65,7 +65,17 @@ public sealed class BinaryDecoder : IBinaryDecoder
             if (field.Repeat is not RepeatMode.None)
                 return DecodeRepeatedField(field, format, context);
 
-            return DecodeSingleField(field, format, context, siblings);
+            var node = DecodeSingleField(field, format, context, siblings);
+
+            // フィールドレベルアライメント
+            if (field.Align is { } align)
+                context.AlignTo(align);
+
+            // パディングフラグを伝搬
+            if (field.IsPadding)
+                return SetPaddingFlag(node);
+
+            return node;
         }
         catch (DecodeException)
         {
@@ -420,6 +430,11 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var elements = new List<DecodedNode>();
         var singleField = WithoutRepeat(field);
 
+        // 構造体レベルアライメントの取得
+        int? structAlign = null;
+        if (field.StructRef is not null && format.Structs.TryGetValue(field.StructRef, out var repeatStructDef))
+            structAlign = repeatStructDef.Align;
+
         switch (field.Repeat)
         {
             case RepeatMode.Count countMode:
@@ -427,6 +442,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 var count = ExpressionEvaluator.EvaluateAsLong(countMode.CountExpression, context);
                 for (var i = 0; i < count; i++)
                 {
+                    if (structAlign is { } sa && i > 0)
+                        context.AlignTo(sa);
                     var element = DecodeSingleField(singleField, format, context);
                     elements.Add(element);
                 }
@@ -435,24 +452,35 @@ public sealed class BinaryDecoder : IBinaryDecoder
 
             case RepeatMode.UntilEof:
             {
+                var idx = 0;
                 while (!context.IsEof)
                 {
+                    if (structAlign is { } sa && idx > 0)
+                    {
+                        context.AlignTo(sa);
+                        if (context.IsEof) break;
+                    }
                     var element = DecodeSingleField(singleField, format, context);
                     elements.Add(element);
+                    idx++;
                 }
                 break;
             }
 
             case RepeatMode.UntilValue untilMode:
             {
+                var idx = 0;
                 while (true)
                 {
+                    if (structAlign is { } sa && idx > 0)
+                        context.AlignTo(sa);
                     var element = DecodeSingleField(singleField, format, context);
                     elements.Add(element);
                     if (ExpressionEvaluator.EvaluateAsBool(untilMode.Condition, context))
                         break;
                     if (context.IsEof)
                         break;
+                    idx++;
                 }
                 break;
             }
@@ -488,8 +516,18 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Expected = field.Expected,
             Condition = field.Condition,
             Description = field.Description,
+            Align = field.Align,
+            IsPadding = field.IsPadding,
         };
     }
+
+    private static DecodedNode SetPaddingFlag(DecodedNode node) => node switch
+    {
+        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true },
+        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, Description = i.Description, IsPadding = true },
+        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = true },
+        _ => node, // struct/array等はパディングとしてマークしない
+    };
 
     private int ResolveSize(FieldDefinition field, DecodeContext context)
     {

@@ -10,6 +10,9 @@ public sealed class YamlFormatModel
     [YamlMember(Alias = "endianness")]
     public string? Endianness { get; set; }
 
+    [YamlMember(Alias = "imports")]
+    public List<YamlImportModel>? Imports { get; set; }
+
     [YamlMember(Alias = "enums")]
     public Dictionary<string, List<YamlEnumEntry>>? Enums { get; set; }
 
@@ -21,6 +24,12 @@ public sealed class YamlFormatModel
 
     [YamlMember(Alias = "root")]
     public string Root { get; set; } = "";
+}
+
+public sealed class YamlImportModel
+{
+    [YamlMember(Alias = "path")]
+    public string Path { get; set; } = "";
 }
 
 public sealed class YamlEnumEntry
@@ -114,6 +123,12 @@ public sealed class YamlFieldModel
 
     [YamlMember(Alias = "description")]
     public string? Description { get; set; }
+
+    [YamlMember(Alias = "align")]
+    public int? Align { get; set; }
+
+    [YamlMember(Alias = "padding")]
+    public bool? Padding { get; set; }
 }
 
 public sealed class YamlChecksumModel

@@ -45,6 +45,27 @@ public sealed class DecodeContext
         _position = scope.End;
     }
 
+    /// <summary>
+    /// 現在の位置を指定バイト境界にアラインする。すでに境界上にある場合は何もしない。
+    /// </summary>
+    /// <returns>スキップしたパディングバイト数。</returns>
+    public int AlignTo(int alignment)
+    {
+        if (alignment <= 0)
+            throw new ArgumentOutOfRangeException(nameof(alignment),
+                $"アライメント値は正の整数が必要です: {alignment}");
+        var padding = (alignment - (_position % alignment)) % alignment;
+        if (padding > 0)
+        {
+            if (_position + padding > CurrentScope.End)
+                throw new InvalidOperationException(
+                    $"アライメント {alignment} バイト境界に揃えるために {padding} バイトのパディングが必要ですが、" +
+                    $"スコープ内の残りは {Remaining} バイトです");
+            _position += padding;
+        }
+        return padding;
+    }
+
     public void SetVariable(string name, object value)
     {
         CurrentScope.Variables[name] = value;

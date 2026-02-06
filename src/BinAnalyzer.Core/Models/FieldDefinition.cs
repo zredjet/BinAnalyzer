@@ -40,4 +40,10 @@ public sealed class FieldDefinition
     public Expression? Condition { get; init; }
 
     public string? Description { get; init; }
+
+    /// <summary>フィールドデコード後、次フィールドの開始位置を指定バイト境界にアラインする。</summary>
+    public int? Align { get; init; }
+
+    /// <summary>パディングフィールドとして扱い、出力時にデフォルト非表示とする。</summary>
+    public bool IsPadding { get; init; }
 }
