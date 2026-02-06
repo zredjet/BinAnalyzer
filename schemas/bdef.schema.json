@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zredjet/BinAnalyzer/schemas/bdef.schema.json",
+  "title": "BinAnalyzer Format Definition",
+  "description": "BinAnalyzer のバイナリフォーマット定義ファイル (.bdef.yaml) のスキーマ",
+  "type": "object",
+  "required": ["name", "root", "structs"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "フォーマットの名前（例: \"PNG\", \"BMP\"）"
+    },
+    "endianness": {
+      "type": "string",
+      "enum": ["big", "little", "be", "le"],
+      "description": "デフォルトのバイトオーダー。省略時は big。",
+      "default": "big"
+    },
+    "root": {
+      "type": "string",
+      "description": "ルート構造体の名前。structs 内で定義されている名前を指定する。"
+    },
+    "imports": {
+      "type": "array",
+      "description": "外部 .bdef.yaml ファイルのインポート。structs/enums/flags を取り込む。",
+      "items": {
+        "$ref": "#/$defs/import"
+      }
+    },
+    "enums": {
+      "type": "object",
+      "description": "列挙型の定義。整数値とラベルのマッピング。",
+      "additionalProperties": {
+        "type": "array",
+        "description": "列挙型のエントリリスト",
+        "items": {
+          "$ref": "#/$defs/enumEntry"
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "description": "フラグ型の定義。ビットフラグの名前付き展開。",
+      "additionalProperties": {
+        "$ref": "#/$defs/flagsDefinition"
+      }
+    },
+    "structs": {
+      "type": "object",
+      "description": "構造体の定義。キーが構造体名、値がフィールドの配列。",
+      "additionalProperties": {
+        "type": "array",
+        "description": "構造体のフィールドリスト",
+        "items": {
+          "$ref": "#/$defs/field"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "import": {
+      "type": "object",
+      "description": "インポート定義",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "インポートする .bdef.yaml ファイルへの相対パス"
+        }
+      }
+    },
+    "enumEntry": {
+      "type": "object",
+      "description": "列挙型の1エントリ（整数値とラベル）",
+      "required": ["value", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "integer",
+          "description": "列挙値（整数）"
+        },
+        "label": {
+          "type": "string",
+          "description": "列挙ラベル名"
+        },
+        "description": {
+          "type": "string",
+          "description": "列挙値の説明テキスト"
+        }
+      }
+    },
+    "flagsDefinition": {
+      "type": "object",
+      "description": "フラグ型の定義",
+      "required": ["bit_size", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "bit_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "フラグ全体のビット幅（例: 8, 16, 32）"
+        },
+        "fields": {
+          "type": "array",
+          "description": "フラグフィールドのリスト",
+          "items": {
+            "$ref": "#/$defs/flagField"
+          }
+        }
+      }
+    },
+    "flagField": {
+      "type": "object",
+      "description": "フラグの1ビット（または複数ビット）フィールド",
+      "required": ["name", "bit"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "フラグフィールドの名前"
+        },
+        "bit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "ビット位置（0始まり、LSBが0）"
+        },
+        "bit_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "ビット幅。省略時は1。"
+        },
+        "set": {
+          "type": "string",
+          "description": "ビットが1の時に表示するラベル"
+        },
+        "clear": {
+          "type": "string",
+          "description": "ビットが0の時に表示するラベル"
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "description": "構造体内のフィールド定義",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "フィールド名"
+        },
+        "type": {
+          "type": "string",
+          "description": "フィールドの型。整数型（uint8, u8 等）、文字列型（ascii, utf8 等）、複合型（struct, switch, bitfield）、圧縮型（zlib, deflate）。",
+          "enum": [
+            "uint8", "u8",
+            "uint16", "u16",
+            "uint32", "u32",
+            "uint64", "u64",
+            "int8", "i8",
+            "int16", "i16",
+            "int32", "i32",
+            "int64", "i64",
+            "float32", "f32",
+            "float64", "f64",
+            "bytes",
+            "ascii", "utf8",
+            "utf16le", "utf16-le",
+            "utf16be", "utf16-be",
+            "sjis", "shift_jis", "shift-jis",
+            "latin1", "iso-8859-1",
+            "asciiz", "utf8z",
+            "struct", "switch", "bitfield",
+            "zlib", "deflate"
+          ]
+        },
+        "size": {
+          "type": ["string", "integer"],
+          "description": "フィールドのバイトサイズ。固定値（\"4\"）、式（\"{length}\"）、または \"remaining\"（現在のスコープ内の残りバイト数）。整数型・浮動小数点型は省略可。"
+        },
+        "enum": {
+          "type": "string",
+          "description": "参照する列挙型の名前。整数値をラベルに変換する。"
+        },
+        "flags": {
+          "type": "string",
+          "description": "参照するフラグ型の名前。整数値をビットフラグとして展開する。"
+        },
+        "struct": {
+          "type": "string",
+          "description": "参照する構造体の名前。type が struct のとき必須。"
+        },
+        "repeat": {
+          "type": "string",
+          "enum": ["eof"],
+          "description": "繰り返しモード。\"eof\" でスコープ末尾まで繰り返す。"
+        },
+        "repeat_count": {
+          "type": "string",
+          "description": "繰り返し回数を指定する式（例: \"{num_entries}\"）"
+        },
+        "repeat_until": {
+          "type": "string",
+          "description": "繰り返し終了条件の式。式が真になるまで繰り返す。"
+        },
+        "switch_on": {
+          "type": "string",
+          "description": "分岐条件の式。type が switch のとき必須。式の評価結果で cases を選択する。"
+        },
+        "cases": {
+          "type": "object",
+          "description": "switch の分岐先マップ。キーが条件値（整数/文字列リテラル）、値が構造体名。",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "default": {
+          "type": "string",
+          "description": "switch で cases にマッチしない場合のデフォルト構造体名"
+        },
+        "fields": {
+          "type": "array",
+          "description": "ビットフィールドのエントリリスト。type が bitfield のとき使用。",
+          "items": {
+            "$ref": "#/$defs/bitfieldEntry"
+          }
+        },
+        "if": {
+          "type": "string",
+          "description": "条件式。式が真の場合のみこのフィールドをデコードする。"
+        },
+        "checksum": {
+          "$ref": "#/$defs/checksum",
+          "description": "チェックサム検証の設定"
+        },
+        "expected": {
+          "type": "array",
+          "description": "期待されるバイト値のリスト。マジックナンバーやシグネチャの検証に使用。",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "description": {
+          "type": "string",
+          "description": "フィールドの説明テキスト。出力やエディタのホバーに表示される。"
+        },
+        "align": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "フィールドのアライメント（バイト単位）。デコード前に指定バウンダリまでスキップする。"
+        },
+        "padding": {
+          "type": "boolean",
+          "description": "true の場合、パディングフィールドとしてツリー出力で非表示にする。"
+        }
+      }
+    },
+    "bitfieldEntry": {
+      "type": "object",
+      "description": "ビットフィールドの1エントリ",
+      "required": ["name", "bits"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "ビットフィールドの名前"
+        },
+        "bits": {
+          "type": "string",
+          "description": "ビット位置。単一ビット（\"3\"）またはビット範囲（\"7:4\" = ビット7からビット4）。",
+          "pattern": "^\\d+(:\\d+)?$"
+        },
+        "enum": {
+          "type": "string",
+          "description": "参照する列挙型の名前"
+        },
+        "description": {
+          "type": "string",
+          "description": "ビットフィールドの説明テキスト"
+        }
+      }
+    },
+    "checksum": {
+      "type": "object",
+      "description": "チェックサム検証の設定",
+      "required": ["algorithm", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["crc32"],
+          "description": "チェックサムアルゴリズム。現在は crc32 のみ対応。"
+        },
+        "fields": {
+          "type": "array",
+          "description": "チェックサムの計算対象となるフィールド名のリスト",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

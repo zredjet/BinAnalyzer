@@ -2,6 +2,8 @@
 
 BinAnalyzerのフォーマット定義は `.bdef.yaml` 拡張子のYAMLファイルを使用します。
 
+> **エディタ補完**: `schemas/bdef.schema.json` にJSON Schemaが提供されています。VS Code + YAML拡張で自動的にオートコンプリートとバリデーションが有効になります。
+
 ## トップレベル構造
 
 ```yaml

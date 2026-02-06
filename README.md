@@ -85,6 +85,18 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（PNG, BMP, WAV, ZIP, ELF）。
 
+### エディタ補完（JSON Schema）
+
+`schemas/bdef.schema.json` にJSON Schemaが含まれています。VS Code + [YAML拡張](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) をお使いの場合、`.vscode/settings.json` に以下を追加すると `*.bdef.yaml` ファイルでオートコンプリート・バリデーションが有効になります:
+
+```json
+{
+  "yaml.schemas": {
+    "./schemas/bdef.schema.json": "*.bdef.yaml"
+  }
+}
+```
+
 ## アーキテクチャ
 
 設計の詳細は [アーキテクチャ](docs/architecture.md) を参照してください。
