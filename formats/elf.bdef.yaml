@@ -1,0 +1,164 @@
+name: ELF
+endianness: little
+root: elf
+
+enums:
+  ei_class:
+    - value: 1
+      label: ELFCLASS32
+    - value: 2
+      label: ELFCLASS64
+
+  ei_data:
+    - value: 1
+      label: ELFDATA2LSB
+      description: "リトルエンディアン"
+    - value: 2
+      label: ELFDATA2MSB
+      description: "ビッグエンディアン"
+
+  ei_osabi:
+    - value: 0
+      label: ELFOSABI_NONE
+      description: "System V"
+    - value: 3
+      label: ELFOSABI_LINUX
+      description: "Linux"
+
+  e_type:
+    - value: 0
+      label: ET_NONE
+    - value: 1
+      label: ET_REL
+    - value: 2
+      label: ET_EXEC
+    - value: 3
+      label: ET_DYN
+    - value: 4
+      label: ET_CORE
+
+  e_machine:
+    - value: 3
+      label: EM_386
+    - value: 40
+      label: EM_ARM
+    - value: 62
+      label: EM_X86_64
+    - value: 183
+      label: EM_AARCH64
+
+  p_type:
+    - value: 0
+      label: PT_NULL
+    - value: 1
+      label: PT_LOAD
+    - value: 2
+      label: PT_DYNAMIC
+    - value: 3
+      label: PT_INTERP
+    - value: 4
+      label: PT_NOTE
+    - value: 6
+      label: PT_PHDR
+
+  sh_type:
+    - value: 0
+      label: SHT_NULL
+    - value: 1
+      label: SHT_PROGBITS
+    - value: 2
+      label: SHT_SYMTAB
+    - value: 3
+      label: SHT_STRTAB
+
+structs:
+  elf:
+    - name: e_ident
+      type: struct
+      struct: elf_ident
+    - name: header
+      type: switch
+      switch_on: "{ei_class}"
+      cases:
+        "2": elf64_header
+      default: raw_data
+    - name: program_headers
+      type: struct
+      struct: elf64_phdr
+      repeat_count: "{e_phnum}"
+
+  elf_ident:
+    - name: magic
+      type: bytes
+      size: "4"
+      expected: [0x7F, 0x45, 0x4C, 0x46]
+    - name: ei_class
+      type: uint8
+      enum: ei_class
+    - name: ei_data
+      type: uint8
+      enum: ei_data
+    - name: ei_version
+      type: uint8
+    - name: ei_osabi
+      type: uint8
+      enum: ei_osabi
+    - name: ei_abiversion
+      type: uint8
+    - name: ei_pad
+      type: bytes
+      size: "7"
+
+  elf64_header:
+    - name: e_type
+      type: uint16
+      enum: e_type
+    - name: e_machine
+      type: uint16
+      enum: e_machine
+    - name: e_version
+      type: uint32
+    - name: e_entry
+      type: uint64
+    - name: e_phoff
+      type: uint64
+    - name: e_shoff
+      type: uint64
+    - name: e_flags
+      type: uint32
+    - name: e_ehsize
+      type: uint16
+    - name: e_phentsize
+      type: uint16
+    - name: e_phnum
+      type: uint16
+    - name: e_shentsize
+      type: uint16
+    - name: e_shnum
+      type: uint16
+    - name: e_shstrndx
+      type: uint16
+
+  elf64_phdr:
+    - name: p_type
+      type: uint32
+      enum: p_type
+    - name: p_flags
+      type: uint32
+    - name: p_offset
+      type: uint64
+    - name: p_vaddr
+      type: uint64
+    - name: p_paddr
+      type: uint64
+    - name: p_filesz
+      type: uint64
+    - name: p_memsz
+      type: uint64
+    - name: p_align
+      type: uint64
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

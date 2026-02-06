@@ -1,0 +1,65 @@
+name: WAV
+endianness: little
+root: wav
+
+enums:
+  audio_format:
+    - value: 1
+      label: PCM
+    - value: 3
+      label: IEEE_Float
+    - value: 6
+      label: A-law
+    - value: 7
+      label: mu-law
+
+structs:
+  wav:
+    - name: riff_id
+      type: ascii
+      size: "4"
+      expected: [0x52, 0x49, 0x46, 0x46]
+    - name: file_size
+      type: uint32
+    - name: wave_id
+      type: ascii
+      size: "4"
+      expected: [0x57, 0x41, 0x56, 0x45]
+    - name: chunks
+      type: struct
+      struct: riff_chunk
+      repeat: eof
+
+  riff_chunk:
+    - name: chunk_id
+      type: ascii
+      size: "4"
+    - name: chunk_size
+      type: uint32
+    - name: data
+      type: switch
+      size: "{chunk_size}"
+      switch_on: "{chunk_id}"
+      cases:
+        "'fmt '": fmt_chunk
+      default: raw_data
+
+  fmt_chunk:
+    - name: audio_format
+      type: uint16
+      enum: audio_format
+    - name: num_channels
+      type: uint16
+    - name: sample_rate
+      type: uint32
+    - name: byte_rate
+      type: uint32
+    - name: block_align
+      type: uint16
+    - name: bits_per_sample
+      type: uint16
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

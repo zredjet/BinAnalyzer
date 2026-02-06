@@ -1,0 +1,131 @@
+name: ZIP
+endianness: little
+root: zip
+
+enums:
+  compression_method:
+    - value: 0
+      label: stored
+    - value: 8
+      label: deflated
+    - value: 14
+      label: LZMA
+
+structs:
+  zip:
+    - name: records
+      type: struct
+      struct: pk_record
+      repeat: eof
+
+  pk_record:
+    - name: signature
+      type: uint32
+    - name: body
+      type: switch
+      switch_on: "{signature}"
+      cases:
+        "0x04034B50": local_file_header
+        "0x02014B50": central_directory_entry
+        "0x06054B50": end_of_central_dir
+      default: raw_data
+
+  local_file_header:
+    - name: version_needed
+      type: uint16
+    - name: flags
+      type: uint16
+    - name: compression
+      type: uint16
+      enum: compression_method
+    - name: mod_time
+      type: uint16
+    - name: mod_date
+      type: uint16
+    - name: crc32
+      type: uint32
+    - name: compressed_size
+      type: uint32
+    - name: uncompressed_size
+      type: uint32
+    - name: filename_length
+      type: uint16
+    - name: extra_length
+      type: uint16
+    - name: filename
+      type: ascii
+      size: "{filename_length}"
+    - name: extra
+      type: bytes
+      size: "{extra_length}"
+    - name: data
+      type: bytes
+      size: "{compressed_size}"
+
+  central_directory_entry:
+    - name: version_made_by
+      type: uint16
+    - name: version_needed
+      type: uint16
+    - name: flags
+      type: uint16
+    - name: compression
+      type: uint16
+      enum: compression_method
+    - name: mod_time
+      type: uint16
+    - name: mod_date
+      type: uint16
+    - name: crc32
+      type: uint32
+    - name: compressed_size
+      type: uint32
+    - name: uncompressed_size
+      type: uint32
+    - name: filename_length
+      type: uint16
+    - name: extra_length
+      type: uint16
+    - name: comment_length
+      type: uint16
+    - name: disk_number_start
+      type: uint16
+    - name: internal_attributes
+      type: uint16
+    - name: external_attributes
+      type: uint32
+    - name: local_header_offset
+      type: uint32
+    - name: filename
+      type: ascii
+      size: "{filename_length}"
+    - name: extra
+      type: bytes
+      size: "{extra_length}"
+    - name: comment
+      type: ascii
+      size: "{comment_length}"
+
+  end_of_central_dir:
+    - name: disk_number
+      type: uint16
+    - name: start_disk
+      type: uint16
+    - name: entries_on_disk
+      type: uint16
+    - name: total_entries
+      type: uint16
+    - name: directory_size
+      type: uint32
+    - name: directory_offset
+      type: uint32
+    - name: comment_length
+      type: uint16
+    - name: comment
+      type: ascii
+      size: "{comment_length}"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

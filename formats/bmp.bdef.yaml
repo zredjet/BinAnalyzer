@@ -1,0 +1,69 @@
+name: BMP
+endianness: little
+root: bmp
+
+enums:
+  compression:
+    - value: 0
+      label: BI_RGB
+      description: "無圧縮"
+    - value: 1
+      label: BI_RLE8
+      description: "8bit RLE圧縮"
+    - value: 2
+      label: BI_RLE4
+      description: "4bit RLE圧縮"
+    - value: 3
+      label: BI_BITFIELDS
+      description: "ビットフィールドマスク"
+
+structs:
+  bmp:
+    - name: file_header
+      type: struct
+      struct: bmp_file_header
+    - name: dib_header
+      type: struct
+      struct: bitmapinfoheader
+    - name: pixel_data
+      type: bytes
+      size: remaining
+
+  bmp_file_header:
+    - name: signature
+      type: bytes
+      size: "2"
+      expected: [0x42, 0x4D]
+    - name: file_size
+      type: uint32
+    - name: reserved1
+      type: uint16
+    - name: reserved2
+      type: uint16
+    - name: pixel_offset
+      type: uint32
+
+  bitmapinfoheader:
+    - name: header_size
+      type: uint32
+    - name: width
+      type: int32
+    - name: height
+      type: int32
+    - name: planes
+      type: uint16
+    - name: bits_per_pixel
+      type: uint16
+    - name: compression
+      type: uint32
+      enum: compression
+    - name: image_size
+      type: uint32
+    - name: x_pixels_per_meter
+      type: int32
+    - name: y_pixels_per_meter
+      type: int32
+    - name: colors_used
+      type: uint32
+    - name: colors_important
+      type: uint32

@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj" />
+    <Project Path="src/BinAnalyzer.Core/BinAnalyzer.Core.csproj" />
+    <Project Path="src/BinAnalyzer.Dsl/BinAnalyzer.Dsl.csproj" />
+    <Project Path="src/BinAnalyzer.Engine/BinAnalyzer.Engine.csproj" />
+    <Project Path="src/BinAnalyzer.Output/BinAnalyzer.Output.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BinAnalyzer.Core.Tests/BinAnalyzer.Core.Tests.csproj" />
+    <Project Path="tests/BinAnalyzer.Dsl.Tests/BinAnalyzer.Dsl.Tests.csproj" />
+    <Project Path="tests/BinAnalyzer.Engine.Tests/BinAnalyzer.Engine.Tests.csproj" />
+    <Project Path="tests/BinAnalyzer.Integration.Tests/BinAnalyzer.Integration.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,161 @@
+name: PNG
+endianness: big
+root: png
+
+enums:
+  color_type:
+    - value: 0
+      label: grayscale
+    - value: 2
+      label: truecolor
+    - value: 3
+      label: indexed
+    - value: 4
+      label: grayscale_alpha
+    - value: 6
+      label: truecolor_alpha
+
+  compression_method:
+    - value: 0
+      label: deflate
+
+  filter_method:
+    - value: 0
+      label: adaptive
+
+  interlace_method:
+    - value: 0
+      label: none
+    - value: 1
+      label: adam7
+
+  srgb_rendering_intent:
+    - value: 0
+      label: perceptual
+    - value: 1
+      label: relative_colorimetric
+    - value: 2
+      label: saturation
+    - value: 3
+      label: absolute_colorimetric
+
+  phys_unit:
+    - value: 0
+      label: unknown
+    - value: 1
+      label: meter
+
+flags:
+  chunk_type_flags:
+    bit_size: 32
+    fields:
+      - name: ancillary
+        bit: 5
+        set: "yes"
+        clear: "no"
+      - name: private
+        bit: 13
+        set: "yes"
+        clear: "no"
+      - name: reserved
+        bit: 21
+        set: "yes"
+        clear: "no"
+      - name: safe_to_copy
+        bit: 29
+        set: "yes"
+        clear: "no"
+
+structs:
+  png:
+    - name: signature
+      type: bytes
+      size: "8"
+      expected: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+    - name: chunks
+      type: struct
+      struct: chunk
+      repeat: eof
+
+  chunk:
+    - name: length
+      type: uint32
+    - name: type
+      type: ascii
+      size: "4"
+      flags: chunk_type_flags
+    - name: data
+      type: switch
+      size: "{length}"
+      switch_on: "{type}"
+      cases:
+        "'IHDR'": ihdr
+        "'tEXt'": text_chunk
+        "'tIME'": time_chunk
+        "'pHYs'": phys_chunk
+        "'sRGB'": srgb_chunk
+      default: raw_data
+    - name: crc
+      type: uint32
+      checksum:
+        algorithm: crc32
+        fields: [type, data]
+
+  ihdr:
+    - name: width
+      type: uint32
+    - name: height
+      type: uint32
+    - name: bit_depth
+      type: uint8
+    - name: color_type
+      type: uint8
+      enum: color_type
+    - name: compression
+      type: uint8
+      enum: compression_method
+    - name: filter
+      type: uint8
+      enum: filter_method
+    - name: interlace
+      type: uint8
+      enum: interlace_method
+
+  text_chunk:
+    - name: keyword
+      type: ascii
+      size: remaining
+      description: "ヌル終端キーワード + テキスト"
+
+  time_chunk:
+    - name: year
+      type: uint16
+    - name: month
+      type: uint8
+    - name: day
+      type: uint8
+    - name: hour
+      type: uint8
+    - name: minute
+      type: uint8
+    - name: second
+      type: uint8
+
+  phys_chunk:
+    - name: pixels_per_unit_x
+      type: uint32
+    - name: pixels_per_unit_y
+      type: uint32
+    - name: unit
+      type: uint8
+      enum: phys_unit
+
+  srgb_chunk:
+    - name: rendering_intent
+      type: uint8
+      enum: srgb_rendering_intent
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

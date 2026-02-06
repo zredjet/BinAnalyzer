@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Output\BinAnalyzer.Output.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,128 @@
+using BinAnalyzer.Core.Expressions;
+
+namespace BinAnalyzer.Engine;
+
+public static class ExpressionEvaluator
+{
+    public static object Evaluate(Expression expression, DecodeContext context)
+    {
+        return EvaluateNode(expression.Root, context);
+    }
+
+    public static long EvaluateAsLong(Expression expression, DecodeContext context)
+    {
+        var result = Evaluate(expression, context);
+        return ConvertToLong(result);
+    }
+
+    public static string EvaluateAsString(Expression expression, DecodeContext context)
+    {
+        var result = Evaluate(expression, context);
+        return result.ToString() ?? "";
+    }
+
+    public static bool EvaluateAsBool(Expression expression, DecodeContext context)
+    {
+        var result = Evaluate(expression, context);
+        return result switch
+        {
+            bool b => b,
+            long l => l != 0,
+            int i => i != 0,
+            _ => throw new InvalidOperationException($"Cannot convert {result.GetType().Name} to boolean"),
+        };
+    }
+
+    private static object EvaluateNode(ExpressionNode node, DecodeContext context)
+    {
+        return node switch
+        {
+            ExpressionNode.LiteralInt lit => lit.Value,
+            ExpressionNode.LiteralString lit => lit.Value,
+            ExpressionNode.FieldReference field => ResolveField(field.FieldName, context),
+            ExpressionNode.BinaryOp binOp => EvaluateBinaryOp(binOp, context),
+            ExpressionNode.UnaryOp unOp => EvaluateUnaryOp(unOp, context),
+            _ => throw new InvalidOperationException($"Unknown expression node type: {node.GetType().Name}"),
+        };
+    }
+
+    private static object ResolveField(string fieldName, DecodeContext context)
+    {
+        var value = context.GetVariable(fieldName);
+        if (value is null)
+            throw new InvalidOperationException($"Variable '{fieldName}' not found in current scope");
+        return value;
+    }
+
+    private static object EvaluateBinaryOp(ExpressionNode.BinaryOp binOp, DecodeContext context)
+    {
+        var left = EvaluateNode(binOp.Left, context);
+        var right = EvaluateNode(binOp.Right, context);
+
+        return binOp.Operator switch
+        {
+            BinaryOperator.Add => (object)(ConvertToLong(left) + ConvertToLong(right)),
+            BinaryOperator.Subtract => ConvertToLong(left) - ConvertToLong(right),
+            BinaryOperator.Multiply => ConvertToLong(left) * ConvertToLong(right),
+            BinaryOperator.Divide => ConvertToLong(left) / ConvertToLong(right),
+            BinaryOperator.Modulo => ConvertToLong(left) % ConvertToLong(right),
+            BinaryOperator.Equal => AreEqual(left, right),
+            BinaryOperator.NotEqual => !AreEqual(left, right),
+            BinaryOperator.LessThan => ConvertToLong(left) < ConvertToLong(right),
+            BinaryOperator.LessThanOrEqual => ConvertToLong(left) <= ConvertToLong(right),
+            BinaryOperator.GreaterThan => ConvertToLong(left) > ConvertToLong(right),
+            BinaryOperator.GreaterThanOrEqual => ConvertToLong(left) >= ConvertToLong(right),
+            BinaryOperator.And => ConvertToBool(left) && ConvertToBool(right),
+            BinaryOperator.Or => ConvertToBool(left) || ConvertToBool(right),
+            _ => throw new InvalidOperationException($"Unknown binary operator: {binOp.Operator}"),
+        };
+    }
+
+    private static object EvaluateUnaryOp(ExpressionNode.UnaryOp unOp, DecodeContext context)
+    {
+        var operand = EvaluateNode(unOp.Operand, context);
+        return unOp.Operator switch
+        {
+            UnaryOperator.Negate => -ConvertToLong(operand),
+            UnaryOperator.Not => !ConvertToBool(operand),
+            _ => throw new InvalidOperationException($"Unknown unary operator: {unOp.Operator}"),
+        };
+    }
+
+    private static long ConvertToLong(object value) => value switch
+    {
+        long l => l,
+        int i => i,
+        uint u => u,
+        byte b => b,
+        sbyte sb => sb,
+        short s => s,
+        ushort us => us,
+        ulong ul => (long)ul,
+        _ => throw new InvalidOperationException($"Cannot convert {value.GetType().Name} ('{value}') to integer"),
+    };
+
+    private static bool ConvertToBool(object value) => value switch
+    {
+        bool b => b,
+        long l => l != 0,
+        int i => i != 0,
+        _ => throw new InvalidOperationException($"Cannot convert {value.GetType().Name} to boolean"),
+    };
+
+    private static bool AreEqual(object left, object right)
+    {
+        if (left is string ls && right is string rs)
+            return ls == rs;
+
+        // Try numeric comparison
+        try
+        {
+            return ConvertToLong(left) == ConvertToLong(right);
+        }
+        catch
+        {
+            return Equals(left, right);
+        }
+    }
+}
