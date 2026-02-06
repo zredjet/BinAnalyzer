@@ -150,6 +150,50 @@ public sealed class DecodeContext
         return result;
     }
 
+    public float ReadFloat32()
+    {
+        EnsureAvailable(4);
+        var span = _data.Span.Slice(_position, 4);
+        var value = Endianness == Endianness.Big
+            ? BinaryPrimitives.ReadSingleBigEndian(span)
+            : BinaryPrimitives.ReadSingleLittleEndian(span);
+        _position += 4;
+        return value;
+    }
+
+    public double ReadFloat64()
+    {
+        EnsureAvailable(8);
+        var span = _data.Span.Slice(_position, 8);
+        var value = Endianness == Endianness.Big
+            ? BinaryPrimitives.ReadDoubleBigEndian(span)
+            : BinaryPrimitives.ReadDoubleLittleEndian(span);
+        _position += 8;
+        return value;
+    }
+
+    public string ReadAsciiUntilNull()
+    {
+        var start = _position;
+        while (_position < CurrentScope.End && _data.Span[_position] != 0)
+            _position++;
+        var value = Encoding.ASCII.GetString(_data.Span[start.._position]);
+        if (_position < CurrentScope.End)
+            _position++; // consume NUL
+        return value;
+    }
+
+    public string ReadStringUntilNull(Encoding encoding)
+    {
+        var start = _position;
+        while (_position < CurrentScope.End && _data.Span[_position] != 0)
+            _position++;
+        var value = encoding.GetString(_data.Span[start.._position]);
+        if (_position < CurrentScope.End)
+            _position++; // consume NUL
+        return value;
+    }
+
     public string ReadAscii(int count) => ReadString(count, Encoding.ASCII);
 
     public string ReadUtf8(int count) => ReadString(count, Encoding.UTF8);

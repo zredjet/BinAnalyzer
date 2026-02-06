@@ -26,6 +26,11 @@ public enum BinaryOperator
     GreaterThanOrEqual,
     And,
     Or,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    LeftShift,
+    RightShift,
 }
 
 public enum UnaryOperator

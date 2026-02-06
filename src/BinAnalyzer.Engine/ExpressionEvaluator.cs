@@ -74,6 +74,11 @@ public static class ExpressionEvaluator
             BinaryOperator.GreaterThanOrEqual => ConvertToLong(left) >= ConvertToLong(right),
             BinaryOperator.And => ConvertToBool(left) && ConvertToBool(right),
             BinaryOperator.Or => ConvertToBool(left) || ConvertToBool(right),
+            BinaryOperator.BitwiseAnd => (object)(ConvertToLong(left) & ConvertToLong(right)),
+            BinaryOperator.BitwiseOr => ConvertToLong(left) | ConvertToLong(right),
+            BinaryOperator.BitwiseXor => ConvertToLong(left) ^ ConvertToLong(right),
+            BinaryOperator.LeftShift => ConvertToLong(left) << (int)ConvertToLong(right),
+            BinaryOperator.RightShift => ConvertToLong(left) >> (int)ConvertToLong(right),
             _ => throw new InvalidOperationException($"Unknown binary operator: {binOp.Operator}"),
         };
     }

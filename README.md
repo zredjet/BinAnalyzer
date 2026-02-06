@@ -1,5 +1,7 @@
 # BinAnalyzer
 
+[![CI](https://github.com/zredjet/BinAnalyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/zredjet/BinAnalyzer/actions/workflows/ci.yml)
+
 汎用バイナリ構造解析ツール。YAML-DSL（`.bdef.yaml`）でバイナリフォーマットを定義し、任意のバイナリファイルを構造的に解析・ツリー表示します。
 
 ## クイックスタート

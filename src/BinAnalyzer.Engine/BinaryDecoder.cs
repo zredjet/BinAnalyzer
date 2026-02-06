@@ -100,6 +100,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.Utf16Be => DecodeStringField(field, context, Encoding.BigEndianUnicode, "utf16be"),
             FieldType.ShiftJis => DecodeStringField(field, context, EncodingHelper.ShiftJis, "sjis"),
             FieldType.Latin1 => DecodeStringField(field, context, Encoding.Latin1, "latin1"),
+            FieldType.AsciiZ => DecodeNullTerminatedStringField(field, context, Encoding.ASCII, "asciiz"),
+            FieldType.Utf8Z => DecodeNullTerminatedStringField(field, context, Encoding.UTF8, "utf8z"),
+            FieldType.Float32 or FieldType.Float64 => DecodeFloatField(field, context),
             FieldType.Struct => DecodeStructField(field, format, context),
             FieldType.Switch => DecodeSwitchField(field, format, context),
             FieldType.Bitfield => DecodeBitfieldField(field, format, context),
@@ -241,6 +244,51 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Size = size,
             Value = value,
             Encoding = encodingName,
+            Description = field.Description,
+        };
+    }
+
+    private DecodedString DecodeNullTerminatedStringField(
+        FieldDefinition field,
+        DecodeContext context,
+        Encoding encoding,
+        string encodingName)
+    {
+        var offset = context.Position;
+        var value = encoding == Encoding.ASCII
+            ? context.ReadAsciiUntilNull()
+            : context.ReadStringUntilNull(encoding);
+        var size = context.Position - offset;
+        context.SetVariable(field.Name, value);
+
+        return new DecodedString
+        {
+            Name = field.Name,
+            Offset = offset,
+            Size = size,
+            Value = value,
+            Encoding = encodingName,
+            Description = field.Description,
+        };
+    }
+
+    private DecodedFloat DecodeFloatField(
+        FieldDefinition field,
+        DecodeContext context)
+    {
+        var offset = context.Position;
+        var isSingle = field.Type == FieldType.Float32;
+        double value = isSingle ? context.ReadFloat32() : context.ReadFloat64();
+        var size = context.Position - offset;
+        context.SetVariable(field.Name, value);
+
+        return new DecodedFloat
+        {
+            Name = field.Name,
+            Offset = offset,
+            Size = size,
+            Value = value,
+            IsSinglePrecision = isSingle,
             Description = field.Description,
         };
     }

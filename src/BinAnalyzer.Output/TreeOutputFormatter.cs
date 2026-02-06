@@ -51,6 +51,9 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             case DecodedString stringNode:
                 FormatString(sb, stringNode, prefix);
                 break;
+            case DecodedFloat floatNode:
+                FormatFloat(sb, floatNode, prefix);
+                break;
             case DecodedFlags flagsNode:
                 FormatFlags(sb, flagsNode, prefix);
                 break;
@@ -242,6 +245,15 @@ public sealed class TreeOutputFormatter : IOutputFormatter
 
             sb.AppendLine();
         }
+    }
+
+    private void FormatFloat(StringBuilder sb, DecodedFloat node, string prefix)
+    {
+        sb.Append(prefix);
+        sb.Append(node.Name);
+        sb.Append(": ");
+        sb.Append(C(node.Value.ToString("G"), AnsiColors.Cyan));
+        sb.AppendLine();
     }
 
     private void FormatFlags(StringBuilder sb, DecodedFlags node, string prefix)

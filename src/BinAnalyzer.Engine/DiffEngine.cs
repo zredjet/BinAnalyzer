@@ -31,6 +31,9 @@ public static class DiffEngine
             case DecodedBytes lb when right is DecodedBytes rb:
                 CompareBytes(lb, rb, path, entries);
                 break;
+            case DecodedFloat lf when right is DecodedFloat rf:
+                CompareFloat(lf, rf, path, entries);
+                break;
             case DecodedBitfield lbf when right is DecodedBitfield rbf:
                 CompareBitfield(lbf, rbf, path, entries);
                 break;
@@ -66,6 +69,15 @@ public static class DiffEngine
         if (!left.RawBytes.Span.SequenceEqual(right.RawBytes.Span))
         {
             entries.Add(new DiffEntry(DiffKind.Changed, path, FormatBytesValue(left.RawBytes), FormatBytesValue(right.RawBytes)));
+        }
+    }
+
+    private static void CompareFloat(DecodedFloat left, DecodedFloat right, string path, List<DiffEntry> entries)
+    {
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (left.Value != right.Value)
+        {
+            entries.Add(new DiffEntry(DiffKind.Changed, path, left.Value.ToString("G"), right.Value.ToString("G")));
         }
     }
 
@@ -165,6 +177,7 @@ public static class DiffEngine
             DecodedInteger i => FormatIntegerValue(i),
             DecodedString s => $"\"{s.Value}\"",
             DecodedBytes b => FormatBytesValue(b.RawBytes),
+            DecodedFloat f => f.Value.ToString("G"),
             DecodedBitfield bf => $"0x{bf.RawValue:X}",
             DecodedStruct st => $"({st.StructType})",
             DecodedArray a => $"[{a.Elements.Count} items]",
@@ -179,6 +192,7 @@ public static class DiffEngine
             DecodedInteger => "integer",
             DecodedString => "string",
             DecodedBytes => "bytes",
+            DecodedFloat => "float",
             DecodedBitfield => "bitfield",
             DecodedStruct s => $"struct({s.StructType})",
             DecodedArray => "array",

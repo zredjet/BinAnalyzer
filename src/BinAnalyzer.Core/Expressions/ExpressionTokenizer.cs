@@ -104,17 +104,37 @@ public static class ExpressionTokenizer
                     tokens.Add(new ExpressionToken(ExpressionTokenType.NotEqual, "!=", i));
                     i += 2;
                     break;
-                case '<' when Peek(input, i + 1) == '=':
-                    tokens.Add(new ExpressionToken(ExpressionTokenType.LessThanOrEqual, "<=", i));
+                case '&':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.Ampersand, "&", i));
+                    i++;
+                    break;
+                case '|':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.Pipe, "|", i));
+                    i++;
+                    break;
+                case '^':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.Caret, "^", i));
+                    i++;
+                    break;
+                case '<' when Peek(input, i + 1) == '<':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.LessLess, "<<", i));
                     i += 2;
                     break;
-                case '>' when Peek(input, i + 1) == '=':
-                    tokens.Add(new ExpressionToken(ExpressionTokenType.GreaterThanOrEqual, ">=", i));
+                case '<' when Peek(input, i + 1) == '=':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.LessThanOrEqual, "<=", i));
                     i += 2;
                     break;
                 case '<':
                     tokens.Add(new ExpressionToken(ExpressionTokenType.LessThan, "<", i));
                     i++;
+                    break;
+                case '>' when Peek(input, i + 1) == '>':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.GreaterGreater, ">>", i));
+                    i += 2;
+                    break;
+                case '>' when Peek(input, i + 1) == '=':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.GreaterThanOrEqual, ">=", i));
+                    i += 2;
                     break;
                 case '>':
                     tokens.Add(new ExpressionToken(ExpressionTokenType.GreaterThan, ">", i));

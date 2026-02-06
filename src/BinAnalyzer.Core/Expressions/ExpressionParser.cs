@@ -5,13 +5,17 @@ namespace BinAnalyzer.Core.Expressions;
 /// "{...}" DSL文字列から式をパースする。
 ///
 /// 文法（優先順位: 低→高）:
-///   or_expr     → and_expr ("or" and_expr)*
-///   and_expr    → compare_expr ("and" compare_expr)*
-///   compare_expr → add_expr (("==" | "!=" | "&lt;" | "&lt;=" | "&gt;" | "&gt;=") add_expr)?
-///   add_expr    → mul_expr (("+" | "-") mul_expr)*
-///   mul_expr    → unary_expr (("*" | "/" | "%") unary_expr)*
-///   unary_expr  → ("-" | "not") unary_expr | primary
-///   primary     → INTEGER | STRING | IDENTIFIER | "(" or_expr ")"
+///   or_expr      → and_expr ("or" and_expr)*
+///   and_expr     → bitor_expr ("and" bitor_expr)*
+///   bitor_expr   → bitxor_expr ("|" bitxor_expr)*
+///   bitxor_expr  → bitand_expr ("^" bitand_expr)*
+///   bitand_expr  → compare_expr ("&amp;" compare_expr)*
+///   compare_expr → shift_expr (("==" | "!=" | "&lt;" | "&lt;=" | "&gt;" | "&gt;=") shift_expr)?
+///   shift_expr   → add_expr (("&lt;&lt;" | "&gt;&gt;") add_expr)*
+///   add_expr     → mul_expr (("+" | "-") mul_expr)*
+///   mul_expr     → unary_expr (("*" | "/" | "%") unary_expr)*
+///   unary_expr   → ("-" | "not") unary_expr | primary
+///   primary      → INTEGER | STRING | IDENTIFIER | "(" or_expr ")"
 /// </summary>
 public sealed class ExpressionParser
 {
@@ -72,19 +76,55 @@ public sealed class ExpressionParser
 
     private ExpressionNode ParseAndExpr()
     {
-        var left = ParseCompareExpr();
+        var left = ParseBitOrExpr();
         while (Current.Type == ExpressionTokenType.And)
         {
             Advance();
-            var right = ParseCompareExpr();
+            var right = ParseBitOrExpr();
             left = new ExpressionNode.BinaryOp(left, BinaryOperator.And, right);
+        }
+        return left;
+    }
+
+    private ExpressionNode ParseBitOrExpr()
+    {
+        var left = ParseBitXorExpr();
+        while (Current.Type == ExpressionTokenType.Pipe)
+        {
+            Advance();
+            var right = ParseBitXorExpr();
+            left = new ExpressionNode.BinaryOp(left, BinaryOperator.BitwiseOr, right);
+        }
+        return left;
+    }
+
+    private ExpressionNode ParseBitXorExpr()
+    {
+        var left = ParseBitAndExpr();
+        while (Current.Type == ExpressionTokenType.Caret)
+        {
+            Advance();
+            var right = ParseBitAndExpr();
+            left = new ExpressionNode.BinaryOp(left, BinaryOperator.BitwiseXor, right);
+        }
+        return left;
+    }
+
+    private ExpressionNode ParseBitAndExpr()
+    {
+        var left = ParseCompareExpr();
+        while (Current.Type == ExpressionTokenType.Ampersand)
+        {
+            Advance();
+            var right = ParseCompareExpr();
+            left = new ExpressionNode.BinaryOp(left, BinaryOperator.BitwiseAnd, right);
         }
         return left;
     }
 
     private ExpressionNode ParseCompareExpr()
     {
-        var left = ParseAddExpr();
+        var left = ParseShiftExpr();
 
         var op = Current.Type switch
         {
@@ -100,10 +140,24 @@ public sealed class ExpressionParser
         if (op is not null)
         {
             Advance();
-            var right = ParseAddExpr();
+            var right = ParseShiftExpr();
             left = new ExpressionNode.BinaryOp(left, op.Value, right);
         }
 
+        return left;
+    }
+
+    private ExpressionNode ParseShiftExpr()
+    {
+        var left = ParseAddExpr();
+        while (Current.Type is ExpressionTokenType.LessLess or ExpressionTokenType.GreaterGreater)
+        {
+            var op = Advance().Type == ExpressionTokenType.LessLess
+                ? BinaryOperator.LeftShift
+                : BinaryOperator.RightShift;
+            var right = ParseAddExpr();
+            left = new ExpressionNode.BinaryOp(left, op, right);
+        }
         return left;
     }
 
