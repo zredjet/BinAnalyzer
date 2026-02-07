@@ -279,7 +279,7 @@ public class YamlFormatLoaderTests
         var chunkFields = format.Structs["chunk"].Fields;
         chunkFields.Should().HaveCount(4);
         chunkFields[2].Type.Should().Be(FieldType.Switch);
-        chunkFields[2].SwitchCases.Should().HaveCount(5);
+        chunkFields[2].SwitchCases.Should().HaveCount(13);
     }
 
     [Fact]

@@ -1,0 +1,169 @@
+name: ICC
+endianness: big
+root: icc
+
+enums:
+  device_class:
+    - value: 0x73636E72
+      label: Scanner
+      description: "scnr"
+    - value: 0x6D6E7472
+      label: Monitor
+      description: "mntr"
+    - value: 0x70727472
+      label: Printer
+      description: "prtr"
+    - value: 0x6C696E6B
+      label: DeviceLink
+      description: "link"
+    - value: 0x73706163
+      label: ColorSpace
+      description: "spac"
+    - value: 0x61627374
+      label: Abstract
+      description: "abst"
+    - value: 0x6E6D636C
+      label: NamedColor
+      description: "nmcl"
+
+  color_space:
+    - value: 0x58595A20
+      label: XYZ
+    - value: 0x4C616220
+      label: Lab
+    - value: 0x4C757620
+      label: Luv
+    - value: 0x59436272
+      label: YCbr
+    - value: 0x59787920
+      label: Yxy
+    - value: 0x52474220
+      label: RGB
+    - value: 0x47524159
+      label: GRAY
+    - value: 0x48535620
+      label: HSV
+    - value: 0x484C5320
+      label: HLS
+    - value: 0x434D594B
+      label: CMYK
+    - value: 0x434D5920
+      label: CMY
+
+  primary_platform:
+    - value: 0x4150504C
+      label: Apple
+      description: "APPL"
+    - value: 0x4D534654
+      label: Microsoft
+      description: "MSFT"
+    - value: 0x53474920
+      label: SiliconGraphics
+      description: "SGI"
+    - value: 0x53554E57
+      label: SunMicrosystems
+      description: "SUNW"
+
+  rendering_intent:
+    - value: 0
+      label: Perceptual
+    - value: 1
+      label: RelativeColorimetric
+    - value: 2
+      label: Saturation
+    - value: 3
+      label: AbsoluteColorimetric
+
+structs:
+  icc:
+    - name: header
+      type: struct
+      struct: profile_header
+    - name: tag_table
+      type: struct
+      struct: tag_table
+
+  profile_header:
+    - name: profile_size
+      type: uint32
+      description: "プロファイルデータサイズ（バイト）"
+    - name: preferred_cmm
+      type: uint32
+      description: "優先CMMタイプ"
+    - name: version
+      type: bytes
+      size: "4"
+      description: "プロファイルバージョン（major.minor.bugfix）"
+    - name: device_class
+      type: uint32
+      enum: device_class
+    - name: color_space
+      type: uint32
+      enum: color_space
+    - name: pcs
+      type: ascii
+      size: "4"
+      description: "プロファイル接続空間（XYZまたはLab）"
+    - name: creation_date
+      type: bytes
+      size: "12"
+      description: "プロファイル作成日時"
+    - name: signature
+      type: ascii
+      size: "4"
+      expected: [0x61, 0x63, 0x73, 0x70]
+      description: "プロファイルファイルシグネチャ（'acsp'）"
+    - name: primary_platform
+      type: uint32
+      enum: primary_platform
+    - name: flags
+      type: uint32
+      description: "プロファイルフラグ"
+    - name: device_manufacturer
+      type: uint32
+      description: "デバイス製造者シグネチャ"
+    - name: device_model
+      type: uint32
+      description: "デバイスモデルシグネチャ"
+    - name: attributes
+      type: uint64
+      description: "デバイス属性"
+    - name: rendering_intent
+      type: uint32
+      enum: rendering_intent
+    - name: pcs_illuminant
+      type: bytes
+      size: "12"
+      description: "PCS照明体のXYZ値（s15Fixed16Number x 3）"
+    - name: creator
+      type: uint32
+      description: "プロファイル作成者シグネチャ"
+    - name: id
+      type: bytes
+      size: "16"
+      description: "プロファイルID（MD5フィンガープリント）"
+    - name: reserved
+      type: bytes
+      size: "28"
+      description: "予約領域（ゼロ）"
+
+  tag_table:
+    - name: tag_count
+      type: uint32
+      description: "タグ数"
+    - name: tags
+      type: struct
+      struct: tag_entry
+      repeat_count: "{tag_count}"
+
+  tag_entry:
+    - name: signature
+      type: ascii
+      size: "4"
+      description: "タグシグネチャ"
+    - name: offset
+      type: uint32
+      description: "プロファイル先頭からのタグデータオフセット"
+    - name: size
+      type: uint32
+      description: "タグデータサイズ（バイト）"

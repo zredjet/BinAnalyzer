@@ -18,6 +18,34 @@ enums:
       label: Leaflet
     - value: 6
       label: Media
+    - value: 7
+      label: Lead_Artist
+    - value: 8
+      label: Artist
+    - value: 9
+      label: Conductor
+    - value: 10
+      label: Band
+    - value: 11
+      label: Composer
+    - value: 12
+      label: Lyricist
+    - value: 13
+      label: Recording_Location
+    - value: 14
+      label: During_Recording
+    - value: 15
+      label: During_Performance
+    - value: 16
+      label: Movie_Screen_Capture
+    - value: 17
+      label: A_Bright_Coloured_Fish
+    - value: 18
+      label: Illustration
+    - value: 19
+      label: Band_Logotype
+    - value: 20
+      label: Publisher_Logotype
 
 structs:
   flac:
@@ -41,7 +69,7 @@ structs:
     - name: block_type
       type: virtual
       value: "{header_byte & 127}"
-      description: "ブロックタイプ（0=STREAMINFO, 1=PADDING, 2=APPLICATION, 3=SEEKTABLE, 4=VORBIS_COMMENT, 6=PICTURE）"
+      description: "ブロックタイプ（0=STREAMINFO, 1=PADDING, 2=APPLICATION, 3=SEEKTABLE, 4=VORBIS_COMMENT, 5=CUESHEET, 6=PICTURE）"
     - name: length_b0
       type: uint8
     - name: length_b1
@@ -62,6 +90,7 @@ structs:
         "2": application_block
         "3": seektable_block
         "4": vorbis_comment_block
+        "5": cuesheet_block
         "6": picture_block
       default: raw_data
 
@@ -92,10 +121,22 @@ structs:
       type: virtual
       value: "{(max_frame_size_b0 << 16) | (max_frame_size_b1 << 8) | max_frame_size_b2}"
       description: "最大フレームサイズ（バイト、0=不明）"
-    - name: stream_info_bits
-      type: bytes
+    - name: sample_rate_channels_bps_samples
+      type: bitfield
       size: "8"
-      description: "sample_rate(20bit) + channels(3bit) + bps(5bit) + total_samples(36bit) パック領域"
+      fields:
+        - name: sample_rate
+          bits: "63:44"
+          description: "サンプルレート（Hz）"
+        - name: channels
+          bits: "43:41"
+          description: "チャンネル数 - 1（実値は+1）"
+        - name: bps
+          bits: "40:36"
+          description: "ビット/サンプル - 1（実値は+1）"
+        - name: total_samples
+          bits: "35:0"
+          description: "総サンプル数（0=不明）"
     - name: md5
       type: bytes
       size: "16"
@@ -133,10 +174,96 @@ structs:
       description: "ターゲットフレームのサンプル数"
 
   vorbis_comment_block:
-    - name: data
+    endianness: little
+    fields:
+      - name: vendor_length
+        type: uint32
+        endianness: little
+        description: "ベンダー文字列長"
+      - name: vendor_string
+        type: utf8
+        size: "{vendor_length}"
+        description: "ベンダー文字列"
+      - name: comment_count
+        type: uint32
+        endianness: little
+        description: "コメント数"
+      - name: comments
+        type: struct
+        struct: vorbis_comment_entry
+        repeat_count: "{comment_count}"
+
+  vorbis_comment_entry:
+    endianness: little
+    fields:
+      - name: length
+        type: uint32
+        endianness: little
+        description: "コメント文字列長"
+      - name: value
+        type: utf8
+        size: "{length}"
+        description: "コメント文字列（KEY=VALUE形式）"
+
+  cuesheet_block:
+    - name: media_catalog
+      type: ascii
+      size: "128"
+      description: "メディアカタログ番号"
+    - name: lead_in_samples
+      type: uint64
+      description: "リードインサンプル数"
+    - name: cuesheet_flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: is_cd
+          bits: "7"
+          description: "CDフラグ（1=コンパクトディスク）"
+    - name: reserved
       type: bytes
-      size: remaining
-      description: "Vorbisコメント（リトルエンディアン制約のため生バイト出力）"
+      size: "258"
+      description: "予約領域"
+    - name: num_tracks
+      type: uint8
+      description: "トラック数"
+    - name: tracks
+      type: struct
+      struct: cuesheet_track
+      repeat_count: "{num_tracks}"
+
+  cuesheet_track:
+    - name: track_offset
+      type: uint64
+      description: "トラックオフセット（サンプル数）"
+    - name: track_number
+      type: uint8
+      description: "トラック番号"
+    - name: isrc
+      type: ascii
+      size: "12"
+      description: "トラックISRC"
+    - name: track_flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: track_type
+          bits: "7"
+          description: "トラックタイプ（0=オーディオ、1=非オーディオ）"
+        - name: pre_emphasis
+          bits: "6"
+          description: "プリエンファシス（0=なし、1=あり）"
+    - name: track_reserved
+      type: bytes
+      size: "13"
+      description: "予約領域"
+    - name: num_indices
+      type: uint8
+      description: "インデックスポイント数"
+    - name: indices
+      type: bytes
+      size: "{num_indices * 12}"
+      description: "インデックスポイント（各12バイト）"
 
   picture_block:
     - name: picture_type

@@ -1,0 +1,94 @@
+name: GZIP
+endianness: little
+root: gzip
+
+enums:
+  compression_method:
+    - value: 8
+      label: deflate
+
+  os:
+    - value: 0
+      label: FAT
+    - value: 1
+      label: Amiga
+    - value: 2
+      label: VMS
+    - value: 3
+      label: Unix
+    - value: 4
+      label: "VM/CMS"
+    - value: 5
+      label: Atari
+    - value: 6
+      label: HPFS
+    - value: 7
+      label: Macintosh
+    - value: 8
+      label: Z-System
+    - value: 9
+      label: "CP/M"
+    - value: 10
+      label: TOPS-20
+    - value: 11
+      label: NTFS
+    - value: 12
+      label: QDOS
+    - value: 13
+      label: Acorn
+    - value: 255
+      label: unknown
+
+structs:
+  gzip:
+    - name: magic
+      type: bytes
+      size: "2"
+      expected: [0x1F, 0x8B]
+    - name: compression_method
+      type: uint8
+      enum: compression_method
+    - name: flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: FTEXT
+          bits: "0"
+        - name: FHCRC
+          bits: "1"
+        - name: FEXTRA
+          bits: "2"
+        - name: FNAME
+          bits: "3"
+        - name: FCOMMENT
+          bits: "4"
+    - name: mtime
+      type: uint32
+      description: "更新日時（UNIXタイムスタンプ）"
+    - name: xfl
+      type: uint8
+      description: "追加フラグ（2=最高圧縮、4=最速圧縮）"
+    - name: os
+      type: uint8
+      enum: os
+    - name: extra_length
+      type: uint16
+      if: "{FEXTRA == 1}"
+      description: "拡張フィールドの長さ"
+    - name: extra_data
+      type: bytes
+      size: "{extra_length}"
+      if: "{FEXTRA == 1}"
+      description: "拡張フィールドデータ"
+    - name: original_name
+      type: asciiz
+      if: "{FNAME == 1}"
+      description: "元ファイル名（NULL終端）"
+    - name: comment
+      type: asciiz
+      if: "{FCOMMENT == 1}"
+      description: "ファイルコメント（NULL終端）"
+    - name: compressed_data
+      type: deflate
+      size: remaining
+      description: "圧縮データ（deflate）。末尾8バイトにCRC32（u32le）と元データサイズISIZE（u32le）のフッタを含む（DSL制約により分離不可）"

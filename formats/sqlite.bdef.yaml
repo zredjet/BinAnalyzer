@@ -14,16 +14,24 @@ enums:
   btree_page_type:
     - value: 2
       label: INDEX_INTERIOR
-      description: "Interior index b-tree page"
+      description: "内部インデックスB-Treeページ"
     - value: 5
       label: TABLE_INTERIOR
-      description: "Interior table b-tree page"
+      description: "内部テーブルB-Treeページ"
     - value: 10
       label: INDEX_LEAF
-      description: "Leaf index b-tree page"
+      description: "リーフインデックスB-Treeページ"
     - value: 13
       label: TABLE_LEAF
-      description: "Leaf table b-tree page"
+      description: "リーフテーブルB-Treeページ"
+
+  file_format_version:
+    - value: 1
+      label: legacy
+      description: "レガシーロールバックジャーナル"
+    - value: 2
+      label: WAL
+      description: "先行書き込みログ"
 
 structs:
   sqlite:
@@ -38,33 +46,39 @@ structs:
     - name: magic
       type: ascii
       size: "16"
-      description: "Header string: 'SQLite format 3\\000'"
+      description: "ヘッダ文字列: 'SQLite format 3\\000'"
     - name: page_size
       type: uint16
-      description: "Database page size in bytes (512-65536, or 1 for 65536)"
+      description: "ページサイズ（バイト）。1の場合は65536を意味する。512から65536の間の2の累乗であること"
     - name: write_version
       type: uint8
-      description: "File format write version (1=legacy, 2=WAL)"
+      description: "ファイルフォーマット書き込みバージョン（1=レガシー、2=WAL）"
+      enum: file_format_version
     - name: read_version
       type: uint8
-      description: "File format read version (1=legacy, 2=WAL)"
+      description: "ファイルフォーマット読み取りバージョン（1=レガシー、2=WAL）"
+      enum: file_format_version
     - name: reserved_space
       type: uint8
-      description: "Bytes of unused space at end of each page"
+      description: "各ページ末尾の未使用バイト数"
     - name: max_embedded_payload_fraction
       type: uint8
       description: "Must be 64"
+      validate: "{max_embedded_payload_fraction == 64}"
     - name: min_embedded_payload_fraction
       type: uint8
       description: "Must be 32"
+      validate: "{min_embedded_payload_fraction == 32}"
     - name: leaf_payload_fraction
       type: uint8
       description: "Must be 32"
+      validate: "{leaf_payload_fraction == 32}"
     - name: file_change_counter
       type: uint32
+      description: "トランザクションコミットごとにインクリメント。データベース変更の検出に使用"
     - name: database_size_pages
       type: uint32
-      description: "Size of database in pages"
+      description: "データベースサイズ（ページ数）"
     - name: first_freelist_trunk_page
       type: uint32
     - name: total_freelist_pages
@@ -74,11 +88,12 @@ structs:
     - name: schema_format_number
       type: uint32
       description: "1, 2, 3, or 4"
+      validate: "{schema_format_number >= 1 and schema_format_number <= 4}"
     - name: default_page_cache_size
       type: uint32
     - name: largest_root_btree_page
       type: uint32
-      description: "Largest root b-tree page number (auto-vacuum/incremental-vacuum mode)"
+      description: "最大ルートB-Treeページ番号（自動バキューム/増分バキュームモード）"
     - name: text_encoding
       type: uint32
       enum: text_encoding
@@ -86,12 +101,13 @@ structs:
       type: uint32
     - name: incremental_vacuum_mode
       type: uint32
-      description: "Non-zero for incremental-vacuum mode"
+      description: "増分バキュームモードの場合は非ゼロ"
     - name: application_id
       type: uint32
     - name: reserved_for_expansion
       type: bytes
       size: "20"
+      description: "拡張用予約領域（ゼロであること）"
     - name: version_valid_for
       type: uint32
     - name: sqlite_version_number
@@ -108,10 +124,14 @@ structs:
       type: uint16
     - name: cell_content_offset
       type: uint16
-      description: "Offset to first byte of cell content area (0 means 65536)"
+      description: "セルコンテンツ領域の先頭バイトへのオフセット（0は65536を意味する）"
     - name: fragmented_free_bytes
       type: uint8
     - name: right_most_pointer
       type: uint32
       if: "{page_type == 2 or page_type == 5}"
-      description: "Right-most pointer (interior pages only)"
+      description: "最右ポインタ（内部ページのみ）"
+    - name: cell_pointer_array
+      type: uint16
+      repeat_count: "{number_of_cells}"
+      description: "ページ内のセルコンテンツへのオフセット配列"

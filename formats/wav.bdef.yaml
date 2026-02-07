@@ -6,12 +6,16 @@ enums:
   audio_format:
     - value: 1
       label: PCM
+    - value: 2
+      label: ADPCM
     - value: 3
-      label: IEEE_Float
+      label: IEEE_FLOAT
     - value: 6
-      label: A-law
+      label: ALAW
     - value: 7
-      label: mu-law
+      label: MULAW
+    - value: 0xFFFE
+      label: EXTENSIBLE
 
 structs:
   wav:
@@ -42,6 +46,9 @@ structs:
       switch_on: "{chunk_id}"
       cases:
         "'fmt '": fmt_chunk
+        "'data'": data_chunk
+        "'fact'": fact_chunk
+        "'LIST'": list_chunk
       default: raw_data
 
   fmt_chunk:
@@ -58,6 +65,36 @@ structs:
       type: uint16
     - name: bits_per_sample
       type: uint16
+    - name: cb_size
+      type: uint16
+      if: "{audio_format != 1}"
+      description: "拡張フォーマットデータのサイズ"
+    - name: extra_format_bytes
+      type: bytes
+      size: "{cb_size}"
+      if: "{audio_format != 1}"
+      description: "非PCMフォーマット向けの拡張データ"
+
+  data_chunk:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "オーディオサンプルデータ"
+
+  fact_chunk:
+    - name: num_samples
+      type: uint32
+      description: "チャンネルあたりのサンプル数"
+
+  list_chunk:
+    - name: list_type
+      type: ascii
+      size: "4"
+      description: "リストタイプ識別子（例: INFO）"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "サブチャンク生データ"
 
   raw_data:
     - name: data

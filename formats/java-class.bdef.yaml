@@ -78,8 +78,14 @@ enums:
       label: MethodHandle
     - value: 16
       label: MethodType
+    - value: 17
+      label: Dynamic
     - value: 18
       label: InvokeDynamic
+    - value: 19
+      label: Module
+    - value: 20
+      label: Package
 
 flags:
   class_access_flags:
@@ -168,7 +174,7 @@ structs:
       type: bytes
       size: "4"
       expected: [0xCA, 0xFE, 0xBA, 0xBE]
-      description: "Java class file magic (0xCAFEBABE)"
+      description: "Javaクラスファイルマジック（0xCAFEBABE）"
     - name: minor_version
       type: uint16
     - name: major_version
@@ -180,22 +186,22 @@ structs:
       type: struct
       struct: cp_entry
       repeat_count: "{constant_pool_count - 1}"
-      description: "Constant pool (count - 1 entries; Long/Double take 2 slots - known limitation)"
+      description: "コンスタントプール（count - 1エントリ。Long/Doubleは2スロット占有 - 既知の制限事項）"
     - name: access_flags
       type: uint16
       flags: class_access_flags
     - name: this_class
       type: uint16
-      description: "Constant pool index of this class"
+      description: "このクラスのコンスタントプールインデックス"
     - name: super_class
       type: uint16
-      description: "Constant pool index of super class"
+      description: "スーパークラスのコンスタントプールインデックス"
     - name: interfaces_count
       type: uint16
     - name: interfaces
       type: uint16
       repeat_count: "{interfaces_count}"
-      description: "Constant pool indices of interfaces"
+      description: "インタフェースのコンスタントプールインデックス"
     - name: fields_count
       type: uint16
     - name: fields
@@ -236,7 +242,10 @@ structs:
         "12": cp_name_and_type
         "15": cp_method_handle
         "16": cp_method_type
+        "17": cp_dynamic
         "18": cp_invoke_dynamic
+        "19": cp_module
+        "20": cp_package
       default: raw_data
 
   cp_utf8:
@@ -245,7 +254,7 @@ structs:
     - name: value
       type: bytes
       size: "{length}"
-      description: "UTF-8 encoded string bytes"
+      description: "UTF-8エンコード文字列バイト列"
 
   cp_integer:
     - name: value
@@ -258,30 +267,30 @@ structs:
   cp_long:
     - name: value
       type: int64
-      description: "Long value (takes 2 constant pool slots)"
+      description: "Long値（コンスタントプール2スロット占有）"
 
   cp_double:
     - name: value
       type: float64
-      description: "Double value (takes 2 constant pool slots)"
+      description: "Double値（コンスタントプール2スロット占有）"
 
   cp_class:
     - name: name_index
       type: uint16
-      description: "Constant pool index of class name (CONSTANT_Utf8)"
+      description: "クラス名のコンスタントプールインデックス（CONSTANT_Utf8）"
 
   cp_string:
     - name: string_index
       type: uint16
-      description: "Constant pool index of string value (CONSTANT_Utf8)"
+      description: "文字列値のコンスタントプールインデックス（CONSTANT_Utf8）"
 
   cp_fieldref:
     - name: class_index
       type: uint16
-      description: "Constant pool index of class (CONSTANT_Class)"
+      description: "クラスのコンスタントプールインデックス（CONSTANT_Class）"
     - name: name_and_type_index
       type: uint16
-      description: "Constant pool index of name and type (CONSTANT_NameAndType)"
+      description: "名前と型のコンスタントプールインデックス（CONSTANT_NameAndType）"
 
   cp_methodref:
     - name: class_index
@@ -298,15 +307,15 @@ structs:
   cp_name_and_type:
     - name: name_index
       type: uint16
-      description: "Constant pool index of field/method name"
+      description: "フィールド/メソッド名のコンスタントプールインデックス"
     - name: descriptor_index
       type: uint16
-      description: "Constant pool index of field/method descriptor"
+      description: "フィールド/メソッドディスクリプタのコンスタントプールインデックス"
 
   cp_method_handle:
     - name: reference_kind
       type: uint8
-      description: "Reference kind (1-9)"
+      description: "参照種別（1-9）"
     - name: reference_index
       type: uint16
 
@@ -317,9 +326,27 @@ structs:
   cp_invoke_dynamic:
     - name: bootstrap_method_attr_index
       type: uint16
-      description: "Index into bootstrap_methods array of BootstrapMethods attribute"
+      description: "BootstrapMethods属性のbootstrap_methods配列へのインデックス"
     - name: name_and_type_index
       type: uint16
+
+  cp_dynamic:
+    - name: bootstrap_method_attr_index
+      type: uint16
+      description: "BootstrapMethods属性のbootstrap_methods配列へのインデックス"
+    - name: name_and_type_index
+      type: uint16
+      description: "名前と型のコンスタントプールインデックス（CONSTANT_NameAndType）"
+
+  cp_module:
+    - name: name_index
+      type: uint16
+      description: "モジュール名のコンスタントプールインデックス（CONSTANT_Utf8）"
+
+  cp_package:
+    - name: name_index
+      type: uint16
+      description: "パッケージ名のコンスタントプールインデックス（CONSTANT_Utf8）"
 
   member_info:
     - name: access_flags
@@ -327,10 +354,10 @@ structs:
       flags: member_access_flags
     - name: name_index
       type: uint16
-      description: "Constant pool index of member name"
+      description: "メンバー名のコンスタントプールインデックス"
     - name: descriptor_index
       type: uint16
-      description: "Constant pool index of member descriptor"
+      description: "メンバーディスクリプタのコンスタントプールインデックス"
     - name: attributes_count
       type: uint16
     - name: attributes
@@ -341,13 +368,67 @@ structs:
   attribute_info:
     - name: attribute_name_index
       type: uint16
-      description: "Constant pool index of attribute name"
+      description: "属性名のコンスタントプールインデックス（CONSTANT_Utf8）。attribute_name_indexが指すcp_utf8エントリの文字列値によりinfoの内部構造が決まる: 'Code' → code_attribute_body, 'ConstantValue' → constantvalue_attribute_body, 'Exceptions' → exceptions_attribute_body等"
     - name: attribute_length
       type: uint32
     - name: info
       type: bytes
       size: "{attribute_length}"
-      description: "Attribute data (raw bytes)"
+      description: "属性データ（生バイト列）。内部構造はattribute_name_indexで解決される属性名に依存する。Code: [max_stack:u16, max_locals:u16, code_length:u32, code:bytes[code_length], exception_table_length:u16, exception_table:exception_entry[exception_table_length], attributes_count:u16, attributes:attribute_info[attributes_count]]。ConstantValue: [constantvalue_index:u16]。Exceptions: [number_of_exceptions:u16, exception_index_table:u16[number_of_exceptions]]"
+
+  code_attribute_body:
+    - name: max_stack
+      type: uint16
+      description: "オペランドスタックの最大深度"
+    - name: max_locals
+      type: uint16
+      description: "ローカル変数数（パラメータを含む）"
+    - name: code_length
+      type: uint32
+    - name: code
+      type: bytes
+      size: "{code_length}"
+      description: "バイトコード命令"
+    - name: exception_table_length
+      type: uint16
+    - name: exception_table
+      type: struct
+      struct: exception_entry
+      repeat_count: "{exception_table_length}"
+    - name: attributes_count
+      type: uint16
+    - name: attributes
+      type: struct
+      struct: attribute_info
+      repeat_count: "{attributes_count}"
+      description: "Codeサブ属性（例: LineNumberTable, StackMapTable）"
+
+  exception_entry:
+    - name: start_pc
+      type: uint16
+      description: "例外ハンドラ範囲の開始位置（含む）"
+    - name: end_pc
+      type: uint16
+      description: "例外ハンドラ範囲の終了位置（含まない）"
+    - name: handler_pc
+      type: uint16
+      description: "例外ハンドラコードの開始位置"
+    - name: catch_type
+      type: uint16
+      description: "例外クラスのコンスタントプールインデックス（0 = 全捕捉）"
+
+  constantvalue_attribute_body:
+    - name: constantvalue_index
+      type: uint16
+      description: "定数値のコンスタントプールインデックス（CONSTANT_Long, CONSTANT_Float, CONSTANT_Double, CONSTANT_Integer, CONSTANT_String）"
+
+  exceptions_attribute_body:
+    - name: number_of_exceptions
+      type: uint16
+    - name: exception_index_table
+      type: uint16
+      repeat_count: "{number_of_exceptions}"
+      description: "例外クラスのコンスタントプールインデックス（CONSTANT_Class）"
 
   raw_data:
     - name: data

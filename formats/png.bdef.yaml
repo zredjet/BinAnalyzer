@@ -90,10 +90,18 @@ structs:
       switch_on: "{type}"
       cases:
         "'IHDR'": ihdr
+        "'PLTE'": plte_chunk
         "'tEXt'": text_chunk
+        "'zTXt'": ztxt_chunk
+        "'iTXt'": itxt_chunk
         "'tIME'": time_chunk
         "'pHYs'": phys_chunk
         "'sRGB'": srgb_chunk
+        "'gAMA'": gama_chunk
+        "'cHRM'": chrm_chunk
+        "'tRNS'": trns_chunk
+        "'bKGD'": bkgd_chunk
+        "'sBIT'": sbit_chunk
       default: raw_data
     - name: crc
       type: uint32
@@ -121,11 +129,62 @@ structs:
       type: uint8
       enum: interlace_method
 
+  plte_chunk:
+    - name: entries
+      type: struct
+      struct: plte_entry
+      repeat_count: "{length / 3}"
+      description: "パレットエントリ（R, G, B）"
+
+  plte_entry:
+    - name: red
+      type: uint8
+    - name: green
+      type: uint8
+    - name: blue
+      type: uint8
+
   text_chunk:
     - name: keyword
+      type: asciiz
+      description: "キーワード（例: Title, Author, Description）"
+    - name: text
       type: ascii
       size: remaining
-      description: "ヌル終端キーワード + テキスト"
+      description: "テキスト値"
+
+  ztxt_chunk:
+    - name: keyword
+      type: asciiz
+      description: "キーワード"
+    - name: compression_method
+      type: uint8
+      enum: compression_method
+    - name: compressed_data
+      type: bytes
+      size: remaining
+      description: "zlib圧縮テキストデータ"
+
+  itxt_chunk:
+    - name: keyword
+      type: asciiz
+      description: "キーワード"
+    - name: compression_flag
+      type: uint8
+      description: "0 = 非圧縮、1 = 圧縮"
+    - name: compression_method
+      type: uint8
+      enum: compression_method
+    - name: language_tag
+      type: asciiz
+      description: "言語タグ（例: en, ja）"
+    - name: translated_keyword
+      type: asciiz
+      description: "翻訳済みキーワード"
+    - name: text
+      type: bytes
+      size: remaining
+      description: "テキストデータ（圧縮または非圧縮）"
 
   time_chunk:
     - name: year
@@ -154,6 +213,55 @@ structs:
     - name: rendering_intent
       type: uint8
       enum: srgb_rendering_intent
+
+  gama_chunk:
+    - name: gamma
+      type: uint32
+      description: "ガンマ値 × 100000"
+
+  chrm_chunk:
+    - name: white_point_x
+      type: uint32
+      description: "白色点X（CIE xy × 100000）"
+    - name: white_point_y
+      type: uint32
+      description: "白色点Y（CIE xy × 100000）"
+    - name: red_x
+      type: uint32
+      description: "赤X（CIE xy × 100000）"
+    - name: red_y
+      type: uint32
+      description: "赤Y（CIE xy × 100000）"
+    - name: green_x
+      type: uint32
+      description: "緑X（CIE xy × 100000）"
+    - name: green_y
+      type: uint32
+      description: "緑Y（CIE xy × 100000）"
+    - name: blue_x
+      type: uint32
+      description: "青X（CIE xy × 100000）"
+    - name: blue_y
+      type: uint32
+      description: "青Y（CIE xy × 100000）"
+
+  trns_chunk:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "透明度データ（カラータイプにより形式が異なる）"
+
+  bkgd_chunk:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "背景色データ（カラータイプにより形式が異なる）"
+
+  sbit_chunk:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "有効ビット数データ（カラータイプにより形式が異なる）"
 
   raw_data:
     - name: data

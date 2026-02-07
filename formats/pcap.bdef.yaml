@@ -5,8 +5,8 @@ root: pcap
 enums:
   link_type:
     - value: 0
-      label: NULL
-      description: "BSD loopback"
+      label: "NULL"
+      description: "BSDループバック"
     - value: 1
       label: ETHERNET
       description: "IEEE 802.3 Ethernet"
@@ -14,20 +14,51 @@ enums:
       label: TOKEN_RING
       description: "IEEE 802.5 Token Ring"
     - value: 101
-      label: RAW
+      label: RAW_IP
       description: "Raw IP"
     - value: 105
       label: IEEE802_11
-      description: "IEEE 802.11 wireless"
+      description: "IEEE 802.11無線LAN"
+    - value: 108
+      label: LOOP
+      description: "OpenBSDループバック"
     - value: 113
       label: LINUX_SLL
-      description: "Linux cooked capture"
+      description: "Linuxクックドキャプチャ"
     - value: 228
       label: IPV4
       description: "Raw IPv4"
     - value: 229
       label: IPV6
       description: "Raw IPv6"
+    - value: 276
+      label: LINUX_SLL2
+      description: "Linuxクックドキャプチャv2"
+
+  ether_type:
+    - value: 0x0800
+      label: IPv4
+      description: "インターネットプロトコルv4"
+    - value: 0x0806
+      label: ARP
+      description: "アドレス解決プロトコル"
+    - value: 0x8100
+      label: VLAN
+      description: "IEEE 802.1Q VLANタギング"
+    - value: 0x86DD
+      label: IPv6
+      description: "インターネットプロトコルv6"
+
+  protocol:
+    - value: 1
+      label: ICMP
+      description: "インターネット制御メッセージプロトコル"
+    - value: 6
+      label: TCP
+      description: "伝送制御プロトコル"
+    - value: 17
+      label: UDP
+      description: "ユーザデータグラムプロトコル"
 
 structs:
   pcap:
@@ -41,23 +72,22 @@ structs:
 
   pcap_header:
     - name: magic
-      type: bytes
-      size: "4"
-      expected: [0xD4, 0xC3, 0xB2, 0xA1]
-      description: "PCAP magic number (little-endian)"
+      type: uint32
+      description: "PCAPマジックナンバー（リトルエンディアン: 0xA1B2C3D4）"
+      validate: "{magic == 0xA1B2C3D4}"
     - name: version_major
       type: uint16
     - name: version_minor
       type: uint16
     - name: thiszone
       type: int32
-      description: "GMT to local time zone correction"
+      description: "GMTからローカルタイムゾーンへの補正"
     - name: sigfigs
       type: uint32
-      description: "Accuracy of timestamps (typically 0)"
+      description: "タイムスタンプの精度（通常0）"
     - name: snaplen
       type: uint32
-      description: "Max length of captured packets"
+      description: "キャプチャパケットの最大長"
     - name: network
       type: uint32
       enum: link_type
@@ -65,17 +95,104 @@ structs:
   pcap_packet:
     - name: ts_sec
       type: uint32
-      description: "Timestamp seconds"
+      description: "タイムスタンプ（秒）"
     - name: ts_usec
       type: uint32
-      description: "Timestamp microseconds"
+      description: "タイムスタンプ（マイクロ秒）"
     - name: incl_len
       type: uint32
-      description: "Number of bytes captured"
+      description: "キャプチャされたバイト数"
     - name: orig_len
       type: uint32
-      description: "Original packet length"
+      description: "元のパケット長"
+    - name: data
+      type: switch
+      size: "{incl_len}"
+      switch_on: "{network}"
+      cases:
+        "1": ethernet_frame
+      default: raw_data
+
+  ethernet_frame:
+    endianness: big
+    fields:
+      - name: dst_mac
+        type: bytes
+        size: "6"
+        description: "宛先MACアドレス"
+      - name: src_mac
+        type: bytes
+        size: "6"
+        description: "送信元MACアドレス"
+      - name: ether_type
+        type: uint16
+        enum: ether_type
+        description: "EtherType"
+      - name: payload
+        type: switch
+        switch_on: "{ether_type}"
+        cases:
+          "2048": ipv4_packet
+        default: raw_data
+
+  ipv4_packet:
+    endianness: big
+    fields:
+      - name: version_ihl
+        type: uint8
+        description: "バージョン（4ビット）+ IHL（4ビット）"
+      - name: version
+        type: virtual
+        value: "{version_ihl >> 4}"
+        description: "IPバージョン（4 = IPv4）"
+      - name: ihl
+        type: virtual
+        value: "{version_ihl & 0x0F}"
+        description: "インターネットヘッダ長（32ビットワード単位）"
+      - name: tos
+        type: uint8
+        description: "サービスタイプ"
+      - name: total_length
+        type: uint16
+        description: "パケット全長"
+      - name: identification
+        type: uint16
+        description: "識別子"
+      - name: flags_fragment
+        type: uint16
+        description: "フラグ（3ビット）+ フラグメントオフセット（13ビット）"
+      - name: flags
+        type: virtual
+        value: "{flags_fragment >> 13}"
+        description: "フラグ（bit 0=予約、bit 1=DF、bit 2=MF）"
+      - name: fragment_offset
+        type: virtual
+        value: "{flags_fragment & 0x1FFF}"
+        description: "フラグメントオフセット（8バイト単位）"
+      - name: ttl
+        type: uint8
+        description: "生存時間"
+      - name: protocol
+        type: uint8
+        enum: protocol
+        description: "プロトコル番号"
+      - name: header_checksum
+        type: uint16
+        description: "ヘッダチェックサム"
+      - name: src_ip
+        type: bytes
+        size: "4"
+        description: "送信元IPアドレス"
+      - name: dst_ip
+        type: bytes
+        size: "4"
+        description: "宛先IPアドレス"
+      - name: body
+        type: bytes
+        size: remaining
+        description: "IPペイロード（オプション + データ）"
+
+  raw_data:
     - name: data
       type: bytes
-      size: "{incl_len}"
-      description: "Packet data"
+      size: remaining

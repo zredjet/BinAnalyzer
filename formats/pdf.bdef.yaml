@@ -1,27 +1,31 @@
+# PDF（Portable Document Format）
+#
+# PDFは主にテキストベースのフォーマット。オブジェクト（n 0 obj ... endobj）、
+# クロスリファレンステーブル（xref）、トレーラ（trailer << ... >>）は
+# すべてテキスト構文であり、バイナリフィールドレベルの解析では解析不可。
+#
+# また、xrefテーブルの検索にはファイル末尾からの逆方向解析（startxref）が必要で、
+# シーケンシャルなバイナリリーダーでは対応不可。
+# ストリームコンテンツ（stream ... endstream）もバイナリペイロード抽出前に
+# テキスト解析によるストリーム位置の特定が必要。
+#
+# そのため、この定義はバイナリヘッダ（バージョン + バイナリコメントマーカー）に
+# 限定し、残りは生バイト列としてキャプチャする。
+
 name: PDF
 endianness: big
 root: pdf
 structs:
   pdf:
-    - name: magic
-      type: bytes
-      size: "5"
-      expected: [0x25, 0x50, 0x44, 0x46, 0x2D]
-      description: "%PDF-"
     - name: version
       type: ascii
-      size: "3"
-      description: "バージョン番号 (例: 1.7)"
-    - name: eol
+      size: "8"
+      description: "PDFバージョンヘッダ（例: %PDF-1.7）"
+    - name: binary_comment
       type: bytes
-      size: "1"
-      description: "行末"
-    - name: binary_marker
+      size: "5"
+      description: "バイナリマーカー: % の後に127超の4バイトが続き、バイナリコンテンツを示す"
+    - name: body
       type: bytes
-      size: "1"
-      expected: [0x25]
-      description: "% (バイナリコメント開始)"
-    - name: binary_hint
-      type: bytes
-      size: "4"
-      description: "高バイト文字 (例: 0xE2 0xE3 0xCF 0xD3)"
+      size: remaining
+      description: "PDF本体: オブジェクト、ストリーム、xref、トレーラ。テキストベース構造のためバイナリフィールドレベルの解析には不適"

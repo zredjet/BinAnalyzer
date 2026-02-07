@@ -1,0 +1,58 @@
+name: WASM
+endianness: little
+root: wasm
+
+enums:
+  section_id:
+    - value: 0
+      label: custom
+    - value: 1
+      label: type
+    - value: 2
+      label: import
+    - value: 3
+      label: function
+    - value: 4
+      label: table
+    - value: 5
+      label: memory
+    - value: 6
+      label: global
+    - value: 7
+      label: export
+    - value: 8
+      label: start
+    - value: 9
+      label: element
+    - value: 10
+      label: code
+    - value: 11
+      label: data
+
+structs:
+  wasm:
+    - name: magic
+      type: bytes
+      size: "4"
+      expected: [0x00, 0x61, 0x73, 0x6D]
+      description: "WASMマジック（'\\0asm'）"
+    - name: version
+      type: uint32
+      validate: "{version == 1}"
+      description: "WASMバイナリフォーマットバージョン"
+    - name: sections
+      type: struct
+      struct: section
+      repeat: eof
+
+  section:
+    - name: section_id
+      type: uint8
+      enum: section_id
+    - name: section_size
+      type: uint32
+      description: "セクションサイズ（バイト）。実際のWASMではLEB128エンコーディングを使用するため、u32は近似値"
+    - name: section_data
+      type: bytes
+      size: "{section_size}"
+      description: "セクションデータ"

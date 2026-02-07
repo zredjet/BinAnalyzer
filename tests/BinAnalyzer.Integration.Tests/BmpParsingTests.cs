@@ -30,10 +30,11 @@ public class BmpParsingTests
         var decoded = new BinaryDecoder().Decode(bmpData, format);
 
         decoded.Name.Should().Be("BMP");
-        decoded.Children.Should().HaveCount(3);
+        decoded.Children.Should().HaveCount(4);
         decoded.Children[0].Name.Should().Be("file_header");
-        decoded.Children[1].Name.Should().Be("dib_header");
-        decoded.Children[2].Name.Should().Be("pixel_data");
+        decoded.Children[1].Name.Should().Be("header_size");
+        decoded.Children[2].Name.Should().Be("dib_header");
+        decoded.Children[3].Name.Should().Be("pixel_data");
     }
 
     [Fact]
@@ -61,21 +62,21 @@ public class BmpParsingTests
         var format = new YamlFormatLoader().Load(BmpFormatPath);
         var decoded = new BinaryDecoder().Decode(bmpData, format);
 
-        var dibHeader = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-
-        var headerSize = dibHeader.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        var headerSize = decoded.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         headerSize.Value.Should().Be(40);
 
-        var width = dibHeader.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        var dibHeader = decoded.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+
+        var width = dibHeader.Children[0].Should().BeOfType<DecodedInteger>().Subject;
         width.Value.Should().Be(1);
 
-        var height = dibHeader.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        var height = dibHeader.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         height.Value.Should().Be(1);
 
-        var bitsPerPixel = dibHeader.Children[4].Should().BeOfType<DecodedInteger>().Subject;
+        var bitsPerPixel = dibHeader.Children[3].Should().BeOfType<DecodedInteger>().Subject;
         bitsPerPixel.Value.Should().Be(24);
 
-        var compression = dibHeader.Children[5].Should().BeOfType<DecodedInteger>().Subject;
+        var compression = dibHeader.Children[4].Should().BeOfType<DecodedInteger>().Subject;
         compression.Value.Should().Be(0);
         compression.EnumLabel.Should().Be("BI_RGB");
     }

@@ -8,15 +8,15 @@ structs:
       type: bytes
       size: "4"
       expected: [0x52, 0x49, 0x46, 0x46]
-      description: "RIFF container magic"
+      description: "RIFFコンテナマジック"
     - name: file_size
       type: uint32
-      description: "File size minus 8 bytes (RIFF header)"
+      description: "ファイルサイズ - 8バイト（RIFFヘッダ分）"
     - name: webp_magic
       type: bytes
       size: "4"
       expected: [0x57, 0x45, 0x42, 0x50]
-      description: "WEBP form type"
+      description: "WEBPフォームタイプ"
     - name: chunks
       type: struct
       struct: webp_chunk
@@ -34,13 +34,20 @@ structs:
       switch_on: "{chunk_id}"
       cases:
         "'VP8X'": vp8x_data
+        "'VP8 '": vp8_data
+        "'VP8L'": vp8l_data
+        "'ALPH'": alph_data
+        "'ANIM'": anim_data
+        "'ANMF'": anmf_data
+        "'ICCP'": iccp_data
+        "'EXIF'": exif_data
       default: raw_data
     - name: padding
       type: bytes
       size: "{chunk_size % 2}"
       if: "{chunk_size % 2 != 0}"
       padding: true
-      description: "Padding byte for 2-byte alignment"
+      description: "2バイトアライメント用パディング"
 
   vp8x_data:
     - name: flags
@@ -67,30 +74,193 @@ structs:
       padding: true
     - name: canvas_width_minus_one_b0
       type: uint8
-      description: "Canvas width minus 1 (byte 0, LSB)"
+      description: "キャンバス幅-1（バイト0、LSB）"
     - name: canvas_width_minus_one_b1
       type: uint8
-      description: "Canvas width minus 1 (byte 1)"
+      description: "キャンバス幅-1（バイト1）"
     - name: canvas_width_minus_one_b2
       type: uint8
-      description: "Canvas width minus 1 (byte 2, MSB)"
+      description: "キャンバス幅-1（バイト2、MSB）"
     - name: canvas_width
       type: virtual
       value: "{(canvas_width_minus_one_b0 | (canvas_width_minus_one_b1 << 8) | (canvas_width_minus_one_b2 << 16)) + 1}"
-      description: "Canvas width (computed from 24-bit LE value + 1)"
+      description: "キャンバス幅（24ビットLE値 + 1から算出）"
     - name: canvas_height_minus_one_b0
       type: uint8
-      description: "Canvas height minus 1 (byte 0, LSB)"
+      description: "キャンバス高さ-1（バイト0、LSB）"
     - name: canvas_height_minus_one_b1
       type: uint8
-      description: "Canvas height minus 1 (byte 1)"
+      description: "キャンバス高さ-1（バイト1）"
     - name: canvas_height_minus_one_b2
       type: uint8
-      description: "Canvas height minus 1 (byte 2, MSB)"
+      description: "キャンバス高さ-1（バイト2、MSB）"
     - name: canvas_height
       type: virtual
       value: "{(canvas_height_minus_one_b0 | (canvas_height_minus_one_b1 << 8) | (canvas_height_minus_one_b2 << 16)) + 1}"
-      description: "Canvas height (computed from 24-bit LE value + 1)"
+      description: "キャンバス高さ（24ビットLE値 + 1から算出）"
+
+  vp8_data:
+    - name: frame_tag
+      type: bitfield
+      size: "3"
+      fields:
+        - name: frame_type
+          bits: "0"
+          description: "0 = キーフレーム、1 = インターフレーム"
+        - name: version
+          bits: "3:1"
+          description: "VP8バージョン（0-3）"
+        - name: show_frame
+          bits: "4"
+          description: "1 = このフレームを表示"
+        - name: partition_size
+          bits: "23:5"
+          description: "最初のデータパーティションのサイズ（バイト）"
+    - name: start_code
+      type: bytes
+      size: "3"
+      expected: [0x9D, 0x01, 0x2A]
+      description: "VP8スタートコード"
+    - name: width_and_scale
+      type: uint16
+      description: "幅と水平スケール（下位14ビット = 幅、上位2ビット = スケール）"
+    - name: height_and_scale
+      type: uint16
+      description: "高さと垂直スケール（下位14ビット = 高さ、上位2ビット = スケール）"
+
+  vp8l_data:
+    - name: signature
+      type: uint8
+      expected: [0x2F]
+      description: "VP8Lシグネチャバイト（期待値0x2F）"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "VP8Lロスレスビットストリームデータ"
+
+  alph_data:
+    - name: flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: reserved
+          bits: "7:6"
+        - name: preprocessing
+          bits: "5:4"
+          description: "0 = 前処理なし、1 = レベル削減"
+        - name: filtering
+          bits: "3:2"
+          description: "0 = なし、1 = 水平、2 = 垂直、3 = グラデーション"
+        - name: compression
+          bits: "1:0"
+          description: "0 = 無圧縮、1 = WebPロスレス"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "アルファチャンネルデータ"
+
+  anim_data:
+    - name: background_color
+      type: uint32
+      description: "背景色（BGRA形式）"
+    - name: loop_count
+      type: uint16
+      description: "ループ回数（0 = 無限）"
+
+  anmf_data:
+    - name: frame_x_b0
+      type: uint8
+      description: "フレームXオフセット（バイト0、LSB）"
+    - name: frame_x_b1
+      type: uint8
+      description: "フレームXオフセット（バイト1）"
+    - name: frame_x_b2
+      type: uint8
+      description: "フレームXオフセット（バイト2、MSB）"
+    - name: frame_x
+      type: virtual
+      value: "{(frame_x_b0 | (frame_x_b1 << 8) | (frame_x_b2 << 16)) * 2}"
+      description: "フレームXオフセット（ピクセル、24ビット値 × 2）"
+    - name: frame_y_b0
+      type: uint8
+      description: "フレームYオフセット（バイト0、LSB）"
+    - name: frame_y_b1
+      type: uint8
+      description: "フレームYオフセット（バイト1）"
+    - name: frame_y_b2
+      type: uint8
+      description: "フレームYオフセット（バイト2、MSB）"
+    - name: frame_y
+      type: virtual
+      value: "{(frame_y_b0 | (frame_y_b1 << 8) | (frame_y_b2 << 16)) * 2}"
+      description: "フレームYオフセット（ピクセル、24ビット値 × 2）"
+    - name: width_minus_one_b0
+      type: uint8
+      description: "フレーム幅-1（バイト0、LSB）"
+    - name: width_minus_one_b1
+      type: uint8
+      description: "フレーム幅-1（バイト1）"
+    - name: width_minus_one_b2
+      type: uint8
+      description: "フレーム幅-1（バイト2、MSB）"
+    - name: width_minus_one
+      type: virtual
+      value: "{(width_minus_one_b0 | (width_minus_one_b1 << 8) | (width_minus_one_b2 << 16)) + 1}"
+      description: "フレーム幅（ピクセル、24ビット値 + 1）"
+    - name: height_minus_one_b0
+      type: uint8
+      description: "フレーム高さ-1（バイト0、LSB）"
+    - name: height_minus_one_b1
+      type: uint8
+      description: "フレーム高さ-1（バイト1）"
+    - name: height_minus_one_b2
+      type: uint8
+      description: "フレーム高さ-1（バイト2、MSB）"
+    - name: height_minus_one
+      type: virtual
+      value: "{(height_minus_one_b0 | (height_minus_one_b1 << 8) | (height_minus_one_b2 << 16)) + 1}"
+      description: "フレーム高さ（ピクセル、24ビット値 + 1）"
+    - name: duration_b0
+      type: uint8
+      description: "フレーム表示時間（バイト0、LSB）"
+    - name: duration_b1
+      type: uint8
+      description: "フレーム表示時間（バイト1）"
+    - name: duration_b2
+      type: uint8
+      description: "フレーム表示時間（バイト2、MSB）"
+    - name: duration
+      type: virtual
+      value: "{duration_b0 | (duration_b1 << 8) | (duration_b2 << 16)}"
+      description: "フレーム表示時間（ミリ秒、24ビット値）"
+    - name: flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: reserved
+          bits: "7:2"
+        - name: blending_method
+          bits: "1"
+          description: "0 = アルファブレンディング、1 = ブレンドなし"
+        - name: disposal_method
+          bits: "0"
+          description: "0 = 破棄しない、1 = 背景に戻す"
+    - name: frame_data
+      type: bytes
+      size: remaining
+      description: "フレーム画像データ（VP8またはVP8Lビットストリーム）"
+
+  iccp_data:
+    - name: icc_data
+      type: bytes
+      size: remaining
+      description: "ICCカラープロファイルデータ"
+
+  exif_data:
+    - name: exif_data
+      type: bytes
+      size: remaining
+      description: "EXIFメタデータ"
 
   raw_data:
     - name: data

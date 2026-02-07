@@ -1,0 +1,86 @@
+name: FLV
+endianness: big
+root: flv
+
+enums:
+  tag_type:
+    - value: 8
+      label: audio
+    - value: 9
+      label: video
+    - value: 18
+      label: script
+
+structs:
+  flv:
+    - name: signature
+      type: ascii
+      size: "3"
+      expected: [0x46, 0x4C, 0x56]
+      description: "FLV"
+    - name: version
+      type: uint8
+      description: "FLVバージョン（通常1）"
+    - name: flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: has_video
+          bits: "0"
+        - name: reserved_a
+          bits: "1"
+        - name: has_audio
+          bits: "2"
+        - name: reserved_b
+          bits: "7:3"
+    - name: data_offset
+      type: uint32
+      description: "ヘッダサイズ（通常9）"
+    - name: prev_tag_size_0
+      type: uint32
+      description: "先頭エントリの前タグサイズ（常に0）"
+    - name: tags
+      type: struct
+      struct: flv_tag
+      repeat: eof
+
+  flv_tag:
+    - name: tag_type
+      type: uint8
+      enum: tag_type
+    - name: data_size_b0
+      type: uint8
+      description: "データサイズ バイト0（MSB）"
+    - name: data_size_b1
+      type: uint8
+      description: "データサイズ バイト1"
+    - name: data_size_b2
+      type: uint8
+      description: "データサイズ バイト2（LSB）"
+    - name: data_size
+      type: virtual
+      value: "{(data_size_b0 << 16) | (data_size_b1 << 8) | data_size_b2}"
+      description: "タグデータサイズ（24ビット）"
+    - name: timestamp_b0
+      type: uint8
+      description: "タイムスタンプ バイト0（下位24ビットのMSB）"
+    - name: timestamp_b1
+      type: uint8
+      description: "タイムスタンプ バイト1"
+    - name: timestamp_b2
+      type: uint8
+      description: "タイムスタンプ バイト2（下位24ビットのLSB）"
+    - name: timestamp_ext
+      type: uint8
+      description: "タイムスタンプ拡張（上位8ビット）"
+    - name: stream_id
+      type: bytes
+      size: "3"
+      description: "ストリームID（常に0）"
+    - name: data
+      type: bytes
+      size: "{data_size}"
+      description: "タグデータ"
+    - name: prev_tag_size
+      type: uint32
+      description: "前タグの全体サイズ（ヘッダ含む）"

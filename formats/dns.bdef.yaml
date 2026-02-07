@@ -1,0 +1,73 @@
+name: DNS
+endianness: big
+root: dns
+
+enums:
+  rcode:
+    - value: 0
+      label: NoError
+    - value: 1
+      label: FormErr
+    - value: 2
+      label: ServFail
+    - value: 3
+      label: NXDomain
+    - value: 4
+      label: NotImp
+    - value: 5
+      label: Refused
+
+structs:
+  dns:
+    - name: header
+      type: struct
+      struct: dns_header
+    - name: payload
+      type: bytes
+      size: remaining
+      description: "Questions、Answers、Authority、Additionalセクション。DNS名エンコーディング（長さプレフィックス付きラベル + 0xC0xx圧縮ポインタ）はDSLの表現力を超えるため構造化不可"
+
+  dns_header:
+    - name: transaction_id
+      type: uint16
+      description: "トランザクションID"
+    - name: flags
+      type: bitfield
+      size: "2"
+      fields:
+        - name: qr
+          bits: "15"
+          description: "クエリ(0) / レスポンス(1)"
+        - name: opcode
+          bits: "14:11"
+          description: "標準クエリ(0)、逆クエリ(1)、ステータス(2)"
+        - name: aa
+          bits: "10"
+          description: "権威ある応答"
+        - name: tc
+          bits: "9"
+          description: "切り捨て"
+        - name: rd
+          bits: "8"
+          description: "再帰要求"
+        - name: ra
+          bits: "7"
+          description: "再帰利用可能"
+        - name: z
+          bits: "6:4"
+          description: "予約（常に0）"
+        - name: rcode
+          bits: "3:0"
+          enum: rcode
+    - name: qd_count
+      type: uint16
+      description: "Questionセクションのエントリ数"
+    - name: an_count
+      type: uint16
+      description: "Answerセクションのエントリ数"
+    - name: ns_count
+      type: uint16
+      description: "Authorityセクションのエントリ数"
+    - name: ar_count
+      type: uint16
+      description: "Additionalセクションのエントリ数"

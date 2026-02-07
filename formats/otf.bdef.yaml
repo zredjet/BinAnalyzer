@@ -1,0 +1,193 @@
+name: OTF
+endianness: big
+root: otf
+
+enums:
+  sf_version:
+    - value: 0x00010000
+      label: TrueType
+    - value: 0x4F54544F
+      label: CFF
+      description: "OTTO"
+
+  name_id:
+    - value: 0
+      label: Copyright
+    - value: 1
+      label: FontFamily
+    - value: 2
+      label: FontSubfamily
+    - value: 3
+      label: UniqueID
+    - value: 4
+      label: FullName
+    - value: 5
+      label: VersionString
+    - value: 6
+      label: PostScriptName
+    - value: 7
+      label: Trademark
+    - value: 8
+      label: Manufacturer
+    - value: 9
+      label: Designer
+    - value: 10
+      label: Description
+    - value: 11
+      label: URLVendor
+    - value: 12
+      label: URLDesigner
+    - value: 13
+      label: License
+    - value: 14
+      label: LicenseURL
+    - value: 16
+      label: PreferredFamily
+    - value: 17
+      label: PreferredSubfamily
+    - value: 19
+      label: SampleText
+
+structs:
+  otf:
+    - name: offset_table
+      type: struct
+      struct: offset_table
+    - name: table_records
+      type: struct
+      struct: table_record
+      repeat_count: "{numTables}"
+
+  offset_table:
+    - name: sfVersion
+      type: uint32
+      enum: sf_version
+      description: "TrueType: 0x00010000、CFF: 'OTTO'"
+    - name: numTables
+      type: uint16
+      description: "テーブル数"
+    - name: searchRange
+      type: uint16
+    - name: entrySelector
+      type: uint16
+    - name: rangeShift
+      type: uint16
+
+  table_record:
+    - name: tag
+      type: ascii
+      size: "4"
+      description: "テーブル識別子（head, name, cmap等）"
+    - name: checksum
+      type: uint32
+    - name: offset
+      type: uint32
+      description: "フォントファイル先頭からのオフセット"
+    - name: length
+      type: uint32
+      description: "テーブルデータの長さ"
+    - name: table_data
+      type: switch
+      size: "{length}"
+      seek: "{offset}"
+      switch_on: "{tag}"
+      cases:
+        "'head'": head_table
+        "'name'": name_table
+      default: raw_data
+
+  head_table:
+    - name: majorVersion
+      type: uint16
+    - name: minorVersion
+      type: uint16
+    - name: fontRevision
+      type: uint32
+      description: "フォントリビジョン（Fixed 16.16）"
+    - name: checksumAdjustment
+      type: uint32
+    - name: magicNumber
+      type: uint32
+      expected: [0x5F, 0x0F, 0x3C, 0xF5]
+      description: "マジックナンバー 0x5F0F3CF5"
+    - name: flags
+      type: uint16
+    - name: unitsPerEm
+      type: uint16
+    - name: created
+      type: int64
+      description: "作成日時（1904-01-01 00:00:00からの秒数）"
+    - name: modified
+      type: int64
+      description: "更新日時（1904-01-01 00:00:00からの秒数）"
+    - name: xMin
+      type: int16
+    - name: yMin
+      type: int16
+    - name: xMax
+      type: int16
+    - name: yMax
+      type: int16
+    - name: macStyle
+      type: bitfield
+      size: "2"
+      fields:
+        - name: Bold
+          bits: "0"
+        - name: Italic
+          bits: "1"
+        - name: Underline
+          bits: "2"
+        - name: Outline
+          bits: "3"
+        - name: Shadow
+          bits: "4"
+        - name: Condensed
+          bits: "5"
+        - name: Extended
+          bits: "6"
+    - name: lowestRecPPEM
+      type: uint16
+      description: "最小可読サイズ（ピクセル）"
+    - name: fontDirectionHint
+      type: int16
+    - name: indexToLocFormat
+      type: int16
+      description: "0=短いオフセット、1=長いオフセット"
+    - name: glyphDataFormat
+      type: int16
+
+  name_table:
+    - name: format
+      type: uint16
+    - name: count
+      type: uint16
+      description: "ネームレコード数"
+    - name: stringOffset
+      type: uint16
+      description: "テーブル先頭からの文字列ストレージオフセット"
+    - name: records
+      type: struct
+      struct: name_record
+      repeat_count: "{count}"
+
+  name_record:
+    - name: platformID
+      type: uint16
+    - name: encodingID
+      type: uint16
+    - name: languageID
+      type: uint16
+    - name: nameID
+      type: uint16
+      enum: name_id
+    - name: length
+      type: uint16
+    - name: offset
+      type: uint16
+      description: "文字列ストレージ先頭からのオフセット"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

@@ -21,9 +21,18 @@ enums:
     - value: 0
       label: ELFOSABI_NONE
       description: "System V"
+    - value: 2
+      label: ELFOSABI_NETBSD
+      description: "NetBSD"
     - value: 3
       label: ELFOSABI_LINUX
       description: "Linux"
+    - value: 6
+      label: ELFOSABI_SOLARIS
+      description: "Solaris"
+    - value: 9
+      label: ELFOSABI_FREEBSD
+      description: "FreeBSD"
 
   e_type:
     - value: 0
@@ -38,14 +47,24 @@ enums:
       label: ET_CORE
 
   e_machine:
+    - value: 2
+      label: EM_SPARC
     - value: 3
       label: EM_386
+    - value: 8
+      label: EM_MIPS
+    - value: 20
+      label: EM_PPC
+    - value: 22
+      label: EM_S390
     - value: 40
       label: EM_ARM
     - value: 62
       label: EM_X86_64
     - value: 183
       label: EM_AARCH64
+    - value: 243
+      label: EM_RISCV
 
   p_type:
     - value: 0
@@ -60,6 +79,14 @@ enums:
       label: PT_NOTE
     - value: 6
       label: PT_PHDR
+    - value: 7
+      label: PT_TLS
+    - value: 0x6474E550
+      label: PT_GNU_EH_FRAME
+    - value: 0x6474E551
+      label: PT_GNU_STACK
+    - value: 0x6474E552
+      label: PT_GNU_RELRO
 
   sh_type:
     - value: 0
@@ -70,22 +97,46 @@ enums:
       label: SHT_SYMTAB
     - value: 3
       label: SHT_STRTAB
+    - value: 4
+      label: SHT_RELA
+    - value: 6
+      label: SHT_DYNAMIC
+    - value: 7
+      label: SHT_NOTE
+    - value: 8
+      label: SHT_NOBITS
+    - value: 9
+      label: SHT_REL
+    - value: 11
+      label: SHT_DYNSYM
+    - value: 14
+      label: SHT_INIT_ARRAY
+    - value: 15
+      label: SHT_FINI_ARRAY
+
+flags:
+  p_flags:
+    bit_size: 32
+    fields:
+      - name: PF_X
+        bit: 0
+      - name: PF_W
+        bit: 1
+      - name: PF_R
+        bit: 2
 
 structs:
   elf:
     - name: e_ident
       type: struct
       struct: elf_ident
-    - name: header
+    - name: body
       type: switch
       switch_on: "{ei_class}"
       cases:
-        "2": elf64_header
+        "1": elf32_body
+        "2": elf64_body
       default: raw_data
-    - name: program_headers
-      type: struct
-      struct: elf64_phdr
-      repeat_count: "{e_phnum}"
 
   elf_ident:
     - name: magic
@@ -108,6 +159,21 @@ structs:
     - name: ei_pad
       type: bytes
       size: "7"
+
+  # 64ビットELF本体: ヘッダ + プログラムヘッダ + セクションヘッダ
+  elf64_body:
+    - name: header
+      type: struct
+      struct: elf64_header
+    - name: program_headers
+      type: struct
+      struct: elf64_phdr
+      repeat_count: "{e_phnum}"
+    - name: section_headers
+      type: struct
+      struct: elf64_shdr
+      seek: "{e_shoff}"
+      repeat_count: "{e_shnum}"
 
   elf64_header:
     - name: e_type
@@ -145,6 +211,7 @@ structs:
       enum: p_type
     - name: p_flags
       type: uint32
+      flags: p_flags
     - name: p_offset
       type: uint64
     - name: p_vaddr
@@ -157,6 +224,119 @@ structs:
       type: uint64
     - name: p_align
       type: uint64
+
+  elf64_shdr:
+    - name: sh_name
+      type: uint32
+      description: "セクション名（文字列テーブルへのオフセット）"
+    - name: sh_type
+      type: uint32
+      enum: sh_type
+    - name: sh_flags
+      type: uint64
+    - name: sh_addr
+      type: uint64
+    - name: sh_offset
+      type: uint64
+    - name: sh_size
+      type: uint64
+    - name: sh_link
+      type: uint32
+    - name: sh_info
+      type: uint32
+    - name: sh_addralign
+      type: uint64
+    - name: sh_entsize
+      type: uint64
+
+  # 32ビットELF本体: ヘッダ + プログラムヘッダ + セクションヘッダ
+  elf32_body:
+    - name: header
+      type: struct
+      struct: elf32_header
+    - name: program_headers
+      type: struct
+      struct: elf32_phdr
+      repeat_count: "{e_phnum}"
+    - name: section_headers
+      type: struct
+      struct: elf32_shdr
+      seek: "{e_shoff}"
+      repeat_count: "{e_shnum}"
+
+  elf32_header:
+    - name: e_type
+      type: uint16
+      enum: e_type
+    - name: e_machine
+      type: uint16
+      enum: e_machine
+    - name: e_version
+      type: uint32
+    - name: e_entry
+      type: uint32
+    - name: e_phoff
+      type: uint32
+    - name: e_shoff
+      type: uint32
+    - name: e_flags
+      type: uint32
+    - name: e_ehsize
+      type: uint16
+    - name: e_phentsize
+      type: uint16
+    - name: e_phnum
+      type: uint16
+    - name: e_shentsize
+      type: uint16
+    - name: e_shnum
+      type: uint16
+    - name: e_shstrndx
+      type: uint16
+
+  elf32_phdr:
+    - name: p_type
+      type: uint32
+      enum: p_type
+    - name: p_offset
+      type: uint32
+    - name: p_vaddr
+      type: uint32
+    - name: p_paddr
+      type: uint32
+    - name: p_filesz
+      type: uint32
+    - name: p_memsz
+      type: uint32
+    - name: p_flags
+      type: uint32
+      flags: p_flags
+    - name: p_align
+      type: uint32
+
+  elf32_shdr:
+    - name: sh_name
+      type: uint32
+      description: "セクション名（文字列テーブルへのオフセット）"
+    - name: sh_type
+      type: uint32
+      enum: sh_type
+    - name: sh_flags
+      type: uint32
+    - name: sh_addr
+      type: uint32
+    - name: sh_offset
+      type: uint32
+    - name: sh_size
+      type: uint32
+    - name: sh_link
+      type: uint32
+    - name: sh_info
+      type: uint32
+    - name: sh_addralign
+      type: uint32
+    - name: sh_entsize
+      type: uint32
 
   raw_data:
     - name: data

@@ -7,23 +7,32 @@ enums:
     - value: 0x14C
       label: IMAGE_FILE_MACHINE_I386
       description: "Intel 386"
-    - value: 0x8664
-      label: IMAGE_FILE_MACHINE_AMD64
-      description: "AMD64 (x86-64)"
-    - value: 0xAA64
-      label: IMAGE_FILE_MACHINE_ARM64
-      description: "ARM64"
+    - value: 0x200
+      label: IMAGE_FILE_MACHINE_IA64
+      description: "Intel Itanium"
     - value: 0x1C0
       label: IMAGE_FILE_MACHINE_ARM
       description: "ARM"
+    - value: 0x5064
+      label: IMAGE_FILE_MACHINE_RISCV64
+      description: "RISC-V 64-bit"
+    - value: 0x8664
+      label: IMAGE_FILE_MACHINE_AMD64
+      description: "AMD64 (x86-64)"
+    - value: 0xA641
+      label: IMAGE_FILE_MACHINE_ARM64EC
+      description: "ARM64EC"
+    - value: 0xAA64
+      label: IMAGE_FILE_MACHINE_ARM64
+      description: "ARM64"
 
   pe_magic:
     - value: 0x10B
       label: PE32
-      description: "32-bit executable"
+      description: "32ビット実行ファイル"
     - value: 0x20B
       label: PE32+
-      description: "64-bit executable"
+      description: "64ビット実行ファイル"
 
   subsystem:
     - value: 0
@@ -38,6 +47,12 @@ enums:
       label: IMAGE_SUBSYSTEM_POSIX_CUI
     - value: 10
       label: IMAGE_SUBSYSTEM_EFI_APPLICATION
+    - value: 11
+      label: IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER
+    - value: 12
+      label: IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
+    - value: 14
+      label: IMAGE_SUBSYSTEM_XBOX
 
 flags:
   pe_characteristics:
@@ -47,12 +62,34 @@ flags:
         bit: 0
       - name: EXECUTABLE_IMAGE
         bit: 1
+      - name: LINE_NUMS_STRIPPED
+        bit: 2
+      - name: LOCAL_SYMS_STRIPPED
+        bit: 3
       - name: LARGE_ADDRESS_AWARE
         bit: 5
       - name: 32BIT_MACHINE
         bit: 8
+      - name: DEBUG_STRIPPED
+        bit: 9
+      - name: SYSTEM
+        bit: 12
       - name: DLL
         bit: 13
+
+  dll_characteristics:
+    bit_size: 16
+    fields:
+      - name: DYNAMIC_BASE
+        bit: 6
+      - name: NX_COMPAT
+        bit: 8
+      - name: NO_SEH
+        bit: 10
+      - name: GUARD_CF
+        bit: 14
+      - name: TERMINAL_SERVER_AWARE
+        bit: 15
 
   section_characteristics:
     bit_size: 32
@@ -63,6 +100,16 @@ flags:
         bit: 6
       - name: CNT_UNINITIALIZED_DATA
         bit: 7
+      - name: LNK_NRELOC_OVFL
+        bit: 24
+      - name: MEM_DISCARDABLE
+        bit: 25
+      - name: MEM_NOT_CACHED
+        bit: 26
+      - name: MEM_NOT_PAGED
+        bit: 27
+      - name: MEM_SHARED
+        bit: 28
       - name: MEM_EXECUTE
         bit: 29
       - name: MEM_READ
@@ -80,7 +127,7 @@ structs:
       size: "4"
       expected: [0x50, 0x45, 0x00, 0x00]
       seek: "{e_lfanew}"
-      description: "PE signature ('PE\\0\\0')"
+      description: "PEシグネチャ（'PE\\0\\0'）"
     - name: coff_header
       type: struct
       struct: coff_header
@@ -101,7 +148,7 @@ structs:
       type: bytes
       size: "2"
       expected: [0x4D, 0x5A]
-      description: "DOS magic number ('MZ')"
+      description: "DOSマジックナンバー（'MZ'）"
     - name: e_cblp
       type: uint16
     - name: e_cp
@@ -131,7 +178,7 @@ structs:
     - name: e_res
       type: bytes
       size: "8"
-      description: "Reserved words"
+      description: "予約領域"
     - name: e_oemid
       type: uint16
     - name: e_oeminfo
@@ -139,10 +186,10 @@ structs:
     - name: e_res2
       type: bytes
       size: "20"
-      description: "Reserved words"
+      description: "予約領域"
     - name: e_lfanew
       type: uint32
-      description: "Offset to PE header"
+      description: "PEヘッダへのオフセット"
 
   coff_header:
     - name: machine
@@ -213,6 +260,7 @@ structs:
       enum: subsystem
     - name: dll_characteristics
       type: uint16
+      flags: dll_characteristics
     - name: size_of_stack_reserve
       type: uint32
     - name: size_of_stack_commit
@@ -279,6 +327,7 @@ structs:
       enum: subsystem
     - name: dll_characteristics
       type: uint16
+      flags: dll_characteristics
     - name: size_of_stack_reserve
       type: uint64
     - name: size_of_stack_commit

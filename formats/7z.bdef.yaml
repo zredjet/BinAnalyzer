@@ -1,0 +1,44 @@
+name: 7z
+endianness: little
+root: sevenz
+
+structs:
+  sevenz:
+    - name: signature_header
+      type: struct
+      struct: signature_header
+    - name: next_header
+      type: struct
+      struct: next_header
+      seek: "{next_header_offset + 32}"
+
+  signature_header:
+    - name: signature
+      type: bytes
+      size: "6"
+      expected: [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]
+      description: "7zシグネチャ"
+    - name: major_version
+      type: uint8
+      description: "メジャーバージョン（通常0）"
+    - name: minor_version
+      type: uint8
+      description: "マイナーバージョン（通常4）"
+    - name: start_header_crc
+      type: uint32
+      description: "StartHeaderのCRC32"
+    - name: next_header_offset
+      type: uint64
+      description: "NextHeaderのオフセット（SignatureHeader末尾からの相対位置、バイト32基準）"
+    - name: next_header_size
+      type: uint64
+      description: "NextHeaderのサイズ"
+    - name: next_header_crc
+      type: uint32
+      description: "NextHeaderのCRC32"
+
+  next_header:
+    - name: header_data
+      type: bytes
+      size: "{next_header_size}"
+      description: "7zエンコード済みヘッダ。内部構造は可変長エンコーディングを使用しており、DSLの表現力を超えるため構造化不可"

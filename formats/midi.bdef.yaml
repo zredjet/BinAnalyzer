@@ -6,13 +6,13 @@ enums:
   midi_format:
     - value: 0
       label: single_track
-      description: "Single track"
+      description: "シングルトラック"
     - value: 1
       label: multi_track_sync
-      description: "Multiple tracks, synchronous"
+      description: "マルチトラック（同期）"
     - value: 2
       label: multi_track_async
-      description: "Multiple tracks, asynchronous"
+      description: "マルチトラック（独立）"
 
 structs:
   midi:
@@ -23,16 +23,25 @@ structs:
       description: "MThd"
     - name: header_length
       type: uint32
-      description: "Header data length (always 6)"
+      description: "ヘッダデータ長（常に6）"
+      validate: "{header_length == 6}"
     - name: format
       type: uint16
       enum: midi_format
     - name: ntrks
       type: uint16
-      description: "Number of tracks"
+      description: "トラック数"
     - name: division
       type: uint16
-      description: "Ticks per quarter note or SMPTE timing"
+      description: "4分音符あたりのティック数（PPQN）またはSMPTEタイミング。ビット15がタイミングモードを選択: 0=PPQN（4分音符あたりのティック数）、1=SMPTE。PPQNモードではビット14:0が4分音符あたりのティック数を表す"
+    - name: timing_mode
+      type: virtual
+      value: "{division >> 15}"
+      description: "タイミングモード（0=PPQN 4分音符あたりのティック数、1=SMPTE）"
+    - name: ticks_per_quarter_note
+      type: virtual
+      value: "{division & 32767}"
+      description: "PPQNモード: 4分音符あたりのティック数。SMPTEモード: ビット14:0にフレームレートとフレームあたりのティック数がエンコードされる"
     - name: tracks
       type: struct
       struct: mtrk
@@ -49,4 +58,4 @@ structs:
     - name: data
       type: bytes
       size: "{length}"
-      description: "MIDI event data"
+      description: "MIDIイベント（ノートオン/オフ、コントロールチェンジ等）、メタイベント（テンポ、拍子記号等）、SysExイベントのシーケンスを含むトラックデータ。各イベントの前に可変長数値（VLQ）エンコードされたデルタタイムが付加される"

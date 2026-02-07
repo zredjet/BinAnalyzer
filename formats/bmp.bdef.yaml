@@ -16,15 +16,52 @@ enums:
     - value: 3
       label: BI_BITFIELDS
       description: "ビットフィールドマスク"
+    - value: 4
+      label: BI_JPEG
+      description: "JPEG圧縮"
+    - value: 5
+      label: BI_PNG
+      description: "PNG圧縮"
+    - value: 6
+      label: BI_ALPHABITFIELDS
+      description: "アルファ付きビットフィールドマスク"
+
+  rendering_intent:
+    - value: 1
+      label: LCS_GM_BUSINESS
+      description: "彩度維持 (Saturation)"
+    - value: 2
+      label: LCS_GM_GRAPHICS
+      description: "相対的な色域マッピング (Relative Colorimetric)"
+    - value: 4
+      label: LCS_GM_IMAGES
+      description: "知覚的 (Perceptual)"
+    - value: 8
+      label: LCS_GM_ABS_COLORIMETRIC
+      description: "絶対的な色域マッピング (Absolute Colorimetric)"
 
 structs:
   bmp:
     - name: file_header
       type: struct
       struct: bmp_file_header
+    - name: header_size
+      type: uint32
+      description: "DIBヘッダサイズ (40=V1, 108=V4, 124=V5)"
     - name: dib_header
+      type: switch
+      switch_on: "{header_size}"
+      cases:
+        "40": bitmapinfoheader
+        "108": bitmapv4header
+        "124": bitmapv5header
+      default: unknown_dib_header
+    - name: color_table
       type: struct
-      struct: bitmapinfoheader
+      struct: color_table_entry
+      repeat_count: "{colors_used}"
+      if: "{bits_per_pixel <= 8}"
+      description: "カラーテーブル"
     - name: pixel_data
       type: bytes
       size: remaining
@@ -44,8 +81,6 @@ structs:
       type: uint32
 
   bitmapinfoheader:
-    - name: header_size
-      type: uint32
     - name: width
       type: int32
     - name: height
@@ -67,3 +102,134 @@ structs:
       type: uint32
     - name: colors_important
       type: uint32
+
+  bitmapv4header:
+    - name: width
+      type: int32
+    - name: height
+      type: int32
+    - name: planes
+      type: uint16
+    - name: bits_per_pixel
+      type: uint16
+    - name: compression
+      type: uint32
+      enum: compression
+    - name: image_size
+      type: uint32
+    - name: x_pixels_per_meter
+      type: int32
+    - name: y_pixels_per_meter
+      type: int32
+    - name: colors_used
+      type: uint32
+    - name: colors_important
+      type: uint32
+    - name: red_mask
+      type: uint32
+      description: "赤チャンネルのビットマスク"
+    - name: green_mask
+      type: uint32
+      description: "緑チャンネルのビットマスク"
+    - name: blue_mask
+      type: uint32
+      description: "青チャンネルのビットマスク"
+    - name: alpha_mask
+      type: uint32
+      description: "アルファチャンネルのビットマスク"
+    - name: cs_type
+      type: uint32
+      description: "色空間タイプ"
+    - name: endpoints
+      type: bytes
+      size: "36"
+      description: "CIEXYZTRIPLE構造体 (3x3座標)"
+    - name: gamma_red
+      type: uint32
+      description: "赤チャンネルのガンマ値"
+    - name: gamma_green
+      type: uint32
+      description: "緑チャンネルのガンマ値"
+    - name: gamma_blue
+      type: uint32
+      description: "青チャンネルのガンマ値"
+
+  bitmapv5header:
+    - name: width
+      type: int32
+    - name: height
+      type: int32
+    - name: planes
+      type: uint16
+    - name: bits_per_pixel
+      type: uint16
+    - name: compression
+      type: uint32
+      enum: compression
+    - name: image_size
+      type: uint32
+    - name: x_pixels_per_meter
+      type: int32
+    - name: y_pixels_per_meter
+      type: int32
+    - name: colors_used
+      type: uint32
+    - name: colors_important
+      type: uint32
+    - name: red_mask
+      type: uint32
+      description: "赤チャンネルのビットマスク"
+    - name: green_mask
+      type: uint32
+      description: "緑チャンネルのビットマスク"
+    - name: blue_mask
+      type: uint32
+      description: "青チャンネルのビットマスク"
+    - name: alpha_mask
+      type: uint32
+      description: "アルファチャンネルのビットマスク"
+    - name: cs_type
+      type: uint32
+      description: "色空間タイプ"
+    - name: endpoints
+      type: bytes
+      size: "36"
+      description: "CIEXYZTRIPLE構造体 (3x3座標)"
+    - name: gamma_red
+      type: uint32
+      description: "赤チャンネルのガンマ値"
+    - name: gamma_green
+      type: uint32
+      description: "緑チャンネルのガンマ値"
+    - name: gamma_blue
+      type: uint32
+      description: "青チャンネルのガンマ値"
+    - name: intent
+      type: uint32
+      enum: rendering_intent
+      description: "レンダリングインテント"
+    - name: profile_data
+      type: uint32
+      description: "ICCプロファイルデータのオフセット"
+    - name: profile_size
+      type: uint32
+      description: "ICCプロファイルデータのサイズ"
+    - name: reserved
+      type: uint32
+      description: "予約領域"
+
+  color_table_entry:
+    - name: blue
+      type: uint8
+    - name: green
+      type: uint8
+    - name: red
+      type: uint8
+    - name: reserved
+      type: uint8
+
+  unknown_dib_header:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "未対応のDIBヘッダ"

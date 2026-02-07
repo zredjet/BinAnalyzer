@@ -1,0 +1,15 @@
+name: Parquet
+endianness: little
+root: parquet
+
+structs:
+  parquet:
+    - name: magic
+      type: ascii
+      size: "4"
+      expected: [0x50, 0x41, 0x52, 0x31]
+      description: "Parquetマジック（'PAR1'）"
+    - name: row_groups
+      type: bytes
+      size: remaining
+      description: "Row Groups（カラムチャンク群）。内部メタデータはApache Thriftコンパクトプロトコルでエンコードされており、DSLの表現力を超えるため構造化不可。末尾にThriftエンコードされたフッタメタデータ + 4バイトフッタサイズ + 'PAR1'マジックを含む"

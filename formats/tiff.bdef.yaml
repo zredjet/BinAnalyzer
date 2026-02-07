@@ -48,6 +48,28 @@ enums:
       label: Artist
     - value: 320
       label: ColorMap
+    - value: 322
+      label: TileWidth
+    - value: 323
+      label: TileLength
+    - value: 324
+      label: TileOffsets
+    - value: 325
+      label: TileByteCounts
+    - value: 330
+      label: SubIFDs
+    - value: 513
+      label: JPEGInterchangeFormat
+    - value: 514
+      label: JPEGInterchangeFormatLength
+    - value: 529
+      label: YCbCrCoefficients
+    - value: 530
+      label: YCbCrSubSampling
+    - value: 531
+      label: YCbCrPositioning
+    - value: 532
+      label: ReferenceBlackWhite
     - value: 34665
       label: ExifIFD
     - value: 34853
@@ -98,6 +120,12 @@ enums:
       label: Deflate
     - value: 32773
       label: PackBits
+    - value: 34661
+      label: JBIG
+    - value: 34712
+      label: JPEG2000
+    - value: 34892
+      label: WebP
 
 structs:
   tiff:
@@ -108,33 +136,33 @@ structs:
       type: struct
       struct: ifd
       seek: "{ifd_offset}"
-      description: "First IFD"
+      description: "最初のIFD"
 
   tiff_header:
     - name: byte_order
       type: ascii
       size: "2"
-      description: "Byte order ('II'=little-endian, 'MM'=big-endian)"
+      description: "II = リトルエンディアン（Intel）、MM = ビッグエンディアン（Motorola）。どちらも有効なTIFFバイトオーダー"
       validate: "{byte_order == 'II'}"
     - name: magic
       type: uint16
-      description: "TIFF magic number (42)"
+      description: "TIFFマジックナンバー（42）"
       validate: "{magic == 42}"
     - name: ifd_offset
       type: uint32
-      description: "Offset to first IFD"
+      description: "最初のIFDへのオフセット"
 
   ifd:
     - name: entry_count
       type: uint16
-      description: "Number of directory entries"
+      description: "ディレクトリエントリ数"
     - name: entries
       type: struct
       struct: ifd_entry
       repeat_count: "{entry_count}"
     - name: next_ifd_offset
       type: uint32
-      description: "Offset to next IFD (0 if none)"
+      description: "次のIFDへのオフセット（0の場合はなし）"
 
   ifd_entry:
     - name: tag
@@ -143,9 +171,10 @@ structs:
     - name: field_type
       type: uint16
       enum: tiff_field_type
+      description: "フィールドタイプとバイトサイズ: BYTE=1, ASCII=1, SHORT=2, LONG=4, RATIONAL=8, SBYTE=1, UNDEFINED=1, SSHORT=2, SLONG=4, SRATIONAL=8, FLOAT=4, DOUBLE=8"
     - name: count
       type: uint32
-      description: "Number of values"
+      description: "値の数"
     - name: value_offset
       type: uint32
-      description: "Value or offset to value (if > 4 bytes)"
+      description: "合計サイズ（type_size × count）が4バイト以下の場合は値そのもの、それ以外は値データへのオフセット"

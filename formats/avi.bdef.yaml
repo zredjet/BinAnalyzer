@@ -1,0 +1,95 @@
+name: AVI
+endianness: little
+root: avi
+
+structs:
+  avi:
+    - name: magic
+      type: ascii
+      size: "4"
+      expected: [0x52, 0x49, 0x46, 0x46]
+      description: "RIFF"
+    - name: file_size
+      type: uint32
+      description: "ファイルサイズ - 8バイト（RIFFヘッダ分）"
+    - name: form_type
+      type: ascii
+      size: "4"
+      expected: [0x41, 0x56, 0x49, 0x20]
+      description: "AVIフォームタイプ（'AVI '）"
+    - name: chunks
+      type: struct
+      struct: riff_chunk
+      repeat: eof
+
+  riff_chunk:
+    - name: chunk_id
+      type: ascii
+      size: "4"
+    - name: chunk_size
+      type: uint32
+    - name: data
+      type: switch
+      size: "{chunk_size}"
+      switch_on: "{chunk_id}"
+      cases:
+        "'LIST'": list_chunk
+        "'avih'": main_avi_header
+      default: raw_data
+    - name: padding
+      type: bytes
+      size: "{chunk_size % 2}"
+      if: "{chunk_size % 2 != 0}"
+      padding: true
+      description: "2バイト境界アライメント用パディング"
+
+  list_chunk:
+    - name: list_type
+      type: ascii
+      size: "4"
+      description: "リストタイプ識別子（hdrl, strl, movi等）"
+    - name: sub_chunks
+      type: struct
+      struct: riff_chunk
+      repeat: eof
+
+  main_avi_header:
+    - name: dwMicroSecPerFrame
+      type: uint32
+      description: "フレーム表示間隔（マイクロ秒）"
+    - name: dwMaxBytesPerSec
+      type: uint32
+      description: "最大データレート"
+    - name: dwPaddingGranularity
+      type: uint32
+      description: "パディング粒度"
+    - name: dwFlags
+      type: uint32
+      description: "AVIフラグ"
+    - name: dwTotalFrames
+      type: uint32
+      description: "総フレーム数"
+    - name: dwInitialFrames
+      type: uint32
+      description: "インターリーブファイルの初期フレーム数"
+    - name: dwStreams
+      type: uint32
+      description: "ストリーム数"
+    - name: dwSuggestedBufferSize
+      type: uint32
+      description: "推奨バッファサイズ"
+    - name: dwWidth
+      type: uint32
+      description: "動画幅（ピクセル）"
+    - name: dwHeight
+      type: uint32
+      description: "動画高さ（ピクセル）"
+    - name: dwReserved
+      type: bytes
+      size: "16"
+      description: "予約領域"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

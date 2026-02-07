@@ -30,10 +30,15 @@ public class ElfParsingTests
         var decoded = new BinaryDecoder().Decode(elfData, format);
 
         decoded.Name.Should().Be("ELF");
-        decoded.Children.Should().HaveCount(3);
+        decoded.Children.Should().HaveCount(2);
         decoded.Children[0].Name.Should().Be("e_ident");
-        decoded.Children[1].Name.Should().Be("header");
-        decoded.Children[2].Name.Should().Be("program_headers");
+        decoded.Children[1].Name.Should().Be("body");
+
+        // body is elf64_body with header, program_headers, section_headers
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        body.Children[0].Name.Should().Be("header");
+        body.Children[1].Name.Should().Be("program_headers");
+        body.Children[2].Name.Should().Be("section_headers");
     }
 
     [Fact]
@@ -64,7 +69,8 @@ public class ElfParsingTests
         var format = new YamlFormatLoader().Load(ElfFormatPath);
         var decoded = new BinaryDecoder().Decode(elfData, format);
 
-        var header = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
 
         var eType = header.Children[0].Should().BeOfType<DecodedInteger>().Subject;
         eType.Value.Should().Be(2);
@@ -85,7 +91,8 @@ public class ElfParsingTests
         var format = new YamlFormatLoader().Load(ElfFormatPath);
         var decoded = new BinaryDecoder().Decode(elfData, format);
 
-        var phdrArray = decoded.Children[2].Should().BeOfType<DecodedArray>().Subject;
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var phdrArray = body.Children[1].Should().BeOfType<DecodedArray>().Subject;
         phdrArray.Elements.Should().HaveCount(1);
 
         var phdr = phdrArray.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
@@ -94,6 +101,7 @@ public class ElfParsingTests
         pType.Value.Should().Be(1);
         pType.EnumLabel.Should().Be("PT_LOAD");
 
+        // p_flags has flags: p_flags annotation, but still decodes as DecodedInteger
         var pFlags = phdr.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         pFlags.Value.Should().Be(5);
     }

@@ -6,25 +6,40 @@ enums:
   tar_typeflag:
     - value: 0x30
       label: regular_file
-      description: "'0' - Regular file"
+      description: "'0' - 通常ファイル"
     - value: 0x31
       label: hard_link
-      description: "'1' - Hard link"
+      description: "'1' - ハードリンク"
     - value: 0x32
       label: symbolic_link
-      description: "'2' - Symbolic link"
+      description: "'2' - シンボリックリンク"
     - value: 0x33
       label: character_device
-      description: "'3' - Character device"
+      description: "'3' - キャラクタデバイス"
     - value: 0x34
       label: block_device
-      description: "'4' - Block device"
+      description: "'4' - ブロックデバイス"
     - value: 0x35
       label: directory
-      description: "'5' - Directory"
+      description: "'5' - ディレクトリ"
+    - value: 0x36
+      label: fifo
+      description: "'6' - FIFO（名前付きパイプ）"
+    - value: 0x4C
+      label: gnu_longname
+      description: "'L' - GNU拡張: 長いファイル名"
+    - value: 0x4B
+      label: gnu_longlink
+      description: "'K' - GNU拡張: 長いリンク名"
+    - value: 0x78
+      label: pax_extended
+      description: "'x' - PAX拡張ヘッダ（次のエントリに適用）"
+    - value: 0x67
+      label: pax_global
+      description: "'g' - PAXグローバル拡張ヘッダ（以降の全エントリに適用）"
     - value: 0x00
       label: regular_file_legacy
-      description: "Legacy regular file (null byte)"
+      description: "レガシー通常ファイル（NULLバイト）"
 
 structs:
   tar:
@@ -33,75 +48,76 @@ structs:
       struct: tar_header
       repeat: eof
       element_size: "512"
-      description: "TAR 512-byte blocks (headers and data blocks read uniformly)"
+      description: "TAR 512バイトブロック（ヘッダとデータブロックを均一に読み込み）"
 
   tar_header:
     - name: name
       type: ascii
       size: "100"
-      description: "File name"
+      description: "ファイル名"
     - name: mode
       type: ascii
       size: "8"
-      description: "File mode (octal ASCII)"
+      description: "ファイルモード（8進ASCII）"
     - name: uid
       type: ascii
       size: "8"
-      description: "Owner user ID (octal ASCII)"
+      description: "所有者ユーザID（8進ASCII）"
     - name: gid
       type: ascii
       size: "8"
-      description: "Owner group ID (octal ASCII)"
+      description: "所有者グループID（8進ASCII）"
     - name: size
       type: ascii
       size: "12"
-      description: "File size in bytes (octal ASCII)"
+      description: "ファイルサイズ（バイト、8進ASCII）"
     - name: mtime
       type: ascii
       size: "12"
-      description: "Modification time (octal ASCII, Unix timestamp)"
+      description: "更新日時（8進ASCII、Unixタイムスタンプ）"
     - name: checksum
       type: ascii
       size: "8"
-      description: "Header checksum (octal ASCII)"
+      description: "ヘッダ全バイトの合計値（チェックサムフィールドはスペースとして計算）"
     - name: typeflag
       type: uint8
       enum: tar_typeflag
-      description: "File type flag"
+      description: "ファイルタイプフラグ"
     - name: linkname
       type: ascii
       size: "100"
-      description: "Name of linked file"
+      description: "リンク先ファイル名"
     - name: magic
       type: ascii
       size: "6"
-      description: "UStar magic ('ustar' + null)"
+      description: "UStarマジック（'ustar' + null）"
+      validate: "{magic == 'ustar'}"
     - name: version
       type: ascii
       size: "2"
-      description: "UStar version ('00')"
+      description: "UStarバージョン（'00'）"
     - name: uname
       type: ascii
       size: "32"
-      description: "Owner user name"
+      description: "所有者ユーザ名"
     - name: gname
       type: ascii
       size: "32"
-      description: "Owner group name"
+      description: "所有者グループ名"
     - name: devmajor
       type: ascii
       size: "8"
-      description: "Device major number"
+      description: "デバイスメジャー番号"
     - name: devminor
       type: ascii
       size: "8"
-      description: "Device minor number"
+      description: "デバイスマイナー番号"
     - name: prefix
       type: ascii
       size: "155"
-      description: "Filename prefix for long names"
+      description: "長いファイル名用プレフィックス"
     - name: header_padding
       type: bytes
       size: "12"
       padding: true
-      description: "Padding to fill 512-byte block"
+      description: "512バイトブロックへのパディング"

@@ -51,13 +51,13 @@ public class ZipParsingTests
         // body (switch → local_file_header struct)
         var body = record0.Children[1].Should().BeOfType<DecodedStruct>().Subject;
 
-        // compression = stored (0)
-        var compression = body.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        // compression = stored (0) — index shifted by virtual fields (version_needed_os, encrypted, has_data_descriptor, utf8_encoding)
+        var compression = body.Children[6].Should().BeOfType<DecodedInteger>().Subject;
         compression.Value.Should().Be(0);
         compression.EnumLabel.Should().Be("stored");
 
-        // filename
-        var filename = body.Children[10].Should().BeOfType<DecodedString>().Subject;
+        // filename — index shifted by virtual fields
+        var filename = body.Children[14].Should().BeOfType<DecodedString>().Subject;
         filename.Value.Should().Be("hello.txt");
     }
 
@@ -76,8 +76,8 @@ public class ZipParsingTests
 
         var body = record1.Children[1].Should().BeOfType<DecodedStruct>().Subject;
 
-        // filename (index 16: 0-15が整数フィールド、16がfilename)
-        var filename = body.Children[16].Should().BeOfType<DecodedString>().Subject;
+        // filename (index 21: virtual fields for version_made_by_os, version_needed_os, encrypted, has_data_descriptor, utf8_encoding added)
+        var filename = body.Children[21].Should().BeOfType<DecodedString>().Subject;
         filename.Value.Should().Be("hello.txt");
     }
 

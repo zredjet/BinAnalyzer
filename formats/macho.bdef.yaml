@@ -8,37 +8,51 @@ enums:
       label: CPU_TYPE_X86
     - value: 12
       label: CPU_TYPE_ARM
+    - value: 18
+      label: CPU_TYPE_POWERPC
     - value: 16777223
       label: CPU_TYPE_X86_64
       description: "x86-64 (0x01000007)"
     - value: 16777228
       label: CPU_TYPE_ARM64
       description: "ARM64 (0x0100000C)"
+    - value: 16777234
+      label: CPU_TYPE_POWERPC64
+      description: "PowerPC64 (0x01000012)"
 
   file_type:
     - value: 1
       label: MH_OBJECT
-      description: "Relocatable object"
+      description: "リロケータブルオブジェクト"
     - value: 2
       label: MH_EXECUTE
-      description: "Executable"
+      description: "実行ファイル"
     - value: 3
       label: MH_FVMLIB
-      description: "Fixed VM shared library"
+      description: "固定VM共有ライブラリ"
     - value: 4
       label: MH_CORE
-      description: "Core dump"
+      description: "コアダンプ"
     - value: 5
       label: MH_PRELOAD
     - value: 6
       label: MH_DYLIB
-      description: "Dynamic library"
+      description: "ダイナミックライブラリ"
     - value: 7
       label: MH_DYLINKER
-      description: "Dynamic linker"
+      description: "ダイナミックリンカ"
     - value: 8
       label: MH_BUNDLE
-      description: "Bundle"
+      description: "バンドル"
+    - value: 10
+      label: MH_DSYM
+      description: "デバッグシンボル"
+    - value: 11
+      label: MH_KEXT_BUNDLE
+      description: "カーネル拡張バンドル"
+    - value: 12
+      label: MH_FILESET
+      description: "ファイルセット"
 
   lc_type:
     - value: 1
@@ -59,9 +73,13 @@ enums:
       label: LC_LOAD_DYLINKER
     - value: 25
       label: LC_SEGMENT_64
-      description: "64-bit segment"
+      description: "64ビットセグメント"
     - value: 27
       label: LC_UUID
+    - value: 29
+      label: LC_CODE_SIGNATURE
+    - value: 30
+      label: LC_SEGMENT_SPLIT_INFO
     - value: 34
       label: LC_SOURCE_VERSION
     - value: 36
@@ -70,9 +88,37 @@ enums:
       label: LC_FUNCTION_STARTS
     - value: 44
       label: LC_BUILD_VERSION
+    - value: 2147483676
+      label: LC_RPATH
+      description: "ランパス検索パス（0x8000001C）"
+    - value: 2147483682
+      label: LC_DYLD_INFO_ONLY
+      description: "Dyld情報（0x80000022）"
     - value: 2147483688
       label: LC_MAIN
-      description: "Entry point (0x80000028)"
+      description: "エントリポイント（0x80000028）"
+    - value: 2147483699
+      label: LC_DYLD_EXPORTS_TRIE
+      description: "Dyldエクスポートトライ（0x80000033）"
+    - value: 2147483700
+      label: LC_DYLD_CHAINED_FIXUPS
+      description: "Dyldチェインフィクスアップ（0x80000034）"
+
+  platform:
+    - value: 1
+      label: MACOS
+    - value: 2
+      label: IOS
+    - value: 3
+      label: TVOS
+    - value: 4
+      label: WATCHOS
+    - value: 5
+      label: BRIDGEOS
+    - value: 6
+      label: MACCATALYST
+    - value: 7
+      label: IOSSIMULATOR
 
 flags:
   mh_flags:
@@ -89,20 +135,19 @@ flags:
 
 structs:
   macho:
-    - name: header
-      type: struct
-      struct: mach_header_64
-    - name: load_commands
-      type: struct
-      struct: load_command
-      repeat_count: "{ncmds}"
-
-  mach_header_64:
     - name: magic
-      type: bytes
-      size: "4"
-      expected: [0xCF, 0xFA, 0xED, 0xFE]
-      description: "Mach-O 64-bit magic (0xFEEDFACF, little-endian)"
+      type: uint32
+      description: "Mach-Oマジックナンバー"
+    - name: body
+      type: switch
+      switch_on: "{magic}"
+      cases:
+        "0xFEEDFACE": mach_header_32_body
+        "0xFEEDFACF": mach_header_64_body
+      default: generic_body
+
+  # 64ビットヘッダ本体（マジック以降）
+  mach_header_64_body:
     - name: cputype
       type: uint32
       enum: cpu_type
@@ -113,15 +158,43 @@ structs:
       enum: file_type
     - name: ncmds
       type: uint32
-      description: "Number of load commands"
+      description: "ロードコマンド数"
     - name: sizeofcmds
       type: uint32
-      description: "Total size of load commands"
+      description: "ロードコマンドの合計サイズ"
     - name: flags
       type: uint32
       flags: mh_flags
     - name: reserved
       type: uint32
+    - name: load_commands
+      type: struct
+      struct: load_command
+      repeat_count: "{ncmds}"
+
+  # 32ビットヘッダ本体（マジック以降）
+  mach_header_32_body:
+    - name: cputype
+      type: uint32
+      enum: cpu_type
+    - name: cpusubtype
+      type: uint32
+    - name: filetype
+      type: uint32
+      enum: file_type
+    - name: ncmds
+      type: uint32
+      description: "ロードコマンド数"
+    - name: sizeofcmds
+      type: uint32
+      description: "ロードコマンドの合計サイズ"
+    - name: flags
+      type: uint32
+      flags: mh_flags
+    - name: load_commands
+      type: struct
+      struct: load_command
+      repeat_count: "{ncmds}"
 
   load_command:
     endianness: little
@@ -131,15 +204,22 @@ structs:
         enum: lc_type
       - name: cmdsize
         type: uint32
-        description: "Total size of this load command"
+        description: "このロードコマンドの合計サイズ"
       - name: body
         type: switch
         switch_on: "{cmd}"
         size: "{cmdsize - 8}"
         cases:
+          "1": segment_32_body
+          "2": symtab_body
+          "12": load_dylib_body
           "25": segment_64_body
+          "27": uuid_body
+          "44": build_version_body
+          "0x80000028": main_body
         default: generic_body
 
+  # LC_SEGMENT_64 (cmd=25)
   segment_64_body:
     - name: segname
       type: ascii
@@ -192,6 +272,122 @@ structs:
       type: uint32
     - name: reserved3
       type: uint32
+
+  # LC_SEGMENT (cmd=1) - 32ビットセグメント
+  segment_32_body:
+    - name: segname
+      type: ascii
+      size: "16"
+    - name: vmaddr
+      type: uint32
+    - name: vmsize
+      type: uint32
+    - name: fileoff
+      type: uint32
+    - name: filesize
+      type: uint32
+    - name: maxprot
+      type: uint32
+    - name: initprot
+      type: uint32
+    - name: nsects
+      type: uint32
+    - name: flags
+      type: uint32
+    - name: sections
+      type: struct
+      struct: section_32
+      repeat_count: "{nsects}"
+
+  section_32:
+    - name: sectname
+      type: ascii
+      size: "16"
+    - name: segname
+      type: ascii
+      size: "16"
+    - name: addr
+      type: uint32
+    - name: size
+      type: uint32
+    - name: offset
+      type: uint32
+    - name: align
+      type: uint32
+    - name: reloff
+      type: uint32
+    - name: nreloc
+      type: uint32
+    - name: flags
+      type: uint32
+    - name: reserved1
+      type: uint32
+    - name: reserved2
+      type: uint32
+
+  # LC_SYMTAB (cmd=2)
+  symtab_body:
+    - name: symoff
+      type: uint32
+      description: "シンボルテーブルオフセット"
+    - name: nsyms
+      type: uint32
+      description: "シンボル数"
+    - name: stroff
+      type: uint32
+      description: "文字列テーブルオフセット"
+    - name: strsize
+      type: uint32
+      description: "文字列テーブルサイズ"
+
+  # LC_UUID (cmd=27)
+  uuid_body:
+    - name: uuid
+      type: bytes
+      size: "16"
+
+  # LC_LOAD_DYLIB (cmd=12)
+  load_dylib_body:
+    - name: name_offset
+      type: uint32
+      description: "ライブラリ名文字列のオフセット"
+    - name: timestamp
+      type: uint32
+    - name: current_version
+      type: uint32
+    - name: compat_version
+      type: uint32
+    - name: name
+      type: ascii
+      size: remaining
+      description: "ライブラリ名"
+
+  # LC_MAIN (cmd=0x80000028)
+  main_body:
+    - name: entryoff
+      type: uint64
+      description: "エントリポイントのファイルオフセット"
+    - name: stacksize
+      type: uint64
+
+  # LC_BUILD_VERSION (cmd=44)
+  build_version_body:
+    - name: platform
+      type: uint32
+      enum: platform
+    - name: minos
+      type: uint32
+      description: "最小OSバージョン"
+    - name: sdk
+      type: uint32
+      description: "SDKバージョン"
+    - name: ntools
+      type: uint32
+      description: "ビルドツール数"
+    - name: tools_data
+      type: bytes
+      size: remaining
+      description: "ビルドツールエントリ"
 
   generic_body:
     - name: data

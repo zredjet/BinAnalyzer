@@ -59,7 +59,7 @@ public class HexDumpOutputTests
 
         output.Should().Contain("file_header.signature");
         output.Should().Contain("file_header.file_size");
-        output.Should().Contain("dib_header.header_size");
+        output.Should().Contain("header_size");
     }
 
     [Fact]

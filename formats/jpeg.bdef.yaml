@@ -6,31 +6,87 @@ enums:
   jpeg_marker:
     - value: 0xC0
       label: SOF0
-      description: "Baseline DCT"
+      description: "ベースラインDCT"
     - value: 0xC2
       label: SOF2
-      description: "Progressive DCT"
+      description: "プログレッシブDCT"
     - value: 0xC4
       label: DHT
-      description: "Define Huffman Table"
+      description: "ハフマンテーブル定義"
     - value: 0xD9
       label: EOI
-      description: "End of Image"
+      description: "画像終端"
     - value: 0xDA
       label: SOS
-      description: "Start of Scan"
+      description: "スキャン開始"
     - value: 0xDB
       label: DQT
-      description: "Define Quantization Table"
+      description: "量子化テーブル定義"
+    - value: 0xDD
+      label: DRI
+      description: "リスタートインターバル定義"
     - value: 0xE0
       label: APP0
       description: "JFIF"
     - value: 0xE1
       label: APP1
       description: "Exif"
+    - value: 0xE2
+      label: APP2
+      description: "アプリケーションセグメント2"
+    - value: 0xE3
+      label: APP3
+      description: "アプリケーションセグメント3"
+    - value: 0xE4
+      label: APP4
+      description: "アプリケーションセグメント4"
+    - value: 0xE5
+      label: APP5
+      description: "アプリケーションセグメント5"
+    - value: 0xE6
+      label: APP6
+      description: "アプリケーションセグメント6"
+    - value: 0xE7
+      label: APP7
+      description: "アプリケーションセグメント7"
+    - value: 0xE8
+      label: APP8
+      description: "アプリケーションセグメント8"
+    - value: 0xE9
+      label: APP9
+      description: "アプリケーションセグメント9"
+    - value: 0xEA
+      label: APP10
+      description: "アプリケーションセグメント10"
+    - value: 0xEB
+      label: APP11
+      description: "アプリケーションセグメント11"
+    - value: 0xEC
+      label: APP12
+      description: "アプリケーションセグメント12"
+    - value: 0xED
+      label: APP13
+      description: "アプリケーションセグメント13"
+    - value: 0xEE
+      label: APP14
+      description: "アプリケーションセグメント14"
+    - value: 0xEF
+      label: APP15
+      description: "アプリケーションセグメント15"
     - value: 0xFE
       label: COM
-      description: "Comment"
+      description: "コメント"
+
+  density_units:
+    - value: 0
+      label: no_units
+      description: "アスペクト比のみ"
+    - value: 1
+      label: dots_per_inch
+      description: "ドット/インチ"
+    - value: 2
+      label: dots_per_cm
+      description: "ドット/センチメートル"
 
 structs:
   jpeg:
@@ -38,7 +94,7 @@ structs:
       type: bytes
       size: "2"
       expected: [0xFF, 0xD8]
-      description: "Start of Image marker"
+      description: "画像開始マーカー"
     - name: segments
       type: struct
       struct: marker_segment
@@ -56,8 +112,12 @@ structs:
       switch_on: "{marker_type}"
       cases:
         "0xC0": sof0_segment
+        "0xC4": dht_segment
         "0xDA": sos_segment
         "0xD9": eoi_marker
+        "0xDB": dqt_segment
+        "0xDD": dri_segment
+        "0xE0": app0_segment
       default: generic_segment
 
   generic_segment:
@@ -67,6 +127,7 @@ structs:
       type: bytes
       size: "{length - 2}"
 
+  # --- SOF0（フレーム開始、ベースラインDCT） ---
   sof0_segment:
     - name: length
       type: uint16
@@ -97,6 +158,108 @@ structs:
     - name: qt_id
       type: uint8
 
+  # --- DQT（量子化テーブル定義） ---
+  dqt_segment:
+    - name: length
+      type: uint16
+    - name: body
+      type: struct
+      struct: dqt_body
+      size: "{length - 2}"
+
+  dqt_body:
+    - name: precision_and_table_id
+      type: uint8
+      description: "上位ニブル: 精度（0=8bit、1=16bit）、下位ニブル: テーブルID"
+    - name: precision
+      type: virtual
+      value: "{precision_and_table_id >> 4}"
+      description: "量子化精度（0=8bit、1=16bit）"
+    - name: table_id
+      type: virtual
+      value: "{precision_and_table_id & 0x0F}"
+      description: "量子化テーブルID（0-3）"
+    - name: table_data
+      type: bytes
+      size: "{64 + 64 * precision}"
+      description: "量子化テーブル値（8bitで64バイト、16bitで128バイト）"
+
+  # --- DHT（ハフマンテーブル定義） ---
+  dht_segment:
+    - name: length
+      type: uint16
+    - name: body
+      type: struct
+      struct: dht_body
+      size: "{length - 2}"
+
+  dht_body:
+    - name: class_and_id
+      type: uint8
+      description: "上位ニブル: テーブルクラス（0=DC、1=AC）、下位ニブル: テーブルID"
+    - name: table_class
+      type: virtual
+      value: "{class_and_id >> 4}"
+      description: "テーブルクラス（0=DC、1=AC）"
+    - name: table_id
+      type: virtual
+      value: "{class_and_id & 0x0F}"
+      description: "ハフマンテーブルID（0-3）"
+    - name: num_codes
+      type: bytes
+      size: "16"
+      description: "各符号長（1-16）の符号数"
+    - name: values
+      type: bytes
+      size: remaining
+      description: "ハフマン値テーブル"
+
+  # --- APP0（JFIF） ---
+  app0_segment:
+    - name: length
+      type: uint16
+    - name: body
+      type: struct
+      struct: app0_body
+      size: "{length - 2}"
+
+  app0_body:
+    - name: identifier
+      type: ascii
+      size: "5"
+      description: "JFIF識別子（'JFIF\\0'）"
+    - name: version_major
+      type: uint8
+      description: "JFIFメジャーバージョン"
+    - name: version_minor
+      type: uint8
+      description: "JFIFマイナーバージョン"
+    - name: density_units
+      type: uint8
+      enum: density_units
+      description: "密度単位（0=単位なし、1=dpi、2=dpcm）"
+    - name: x_density
+      type: uint16
+      description: "水平ピクセル密度"
+    - name: y_density
+      type: uint16
+      description: "垂直ピクセル密度"
+    - name: thumbnail_width
+      type: uint8
+      description: "サムネイル幅（ピクセル）"
+    - name: thumbnail_height
+      type: uint8
+      description: "サムネイル高さ（ピクセル）"
+
+  # --- DRI（リスタートインターバル定義） ---
+  dri_segment:
+    - name: length
+      type: uint16
+    - name: restart_interval
+      type: uint16
+      description: "リスタートインターバル（リスタートマーカー間のMCU数）"
+
+  # --- SOS（スキャン開始） ---
   sos_segment:
     - name: length
       type: uint16
@@ -106,6 +269,6 @@ structs:
     - name: compressed_data
       type: bytes
       size: remaining
-      description: "Entropy-coded data (includes embedded EOI marker)"
+      description: "エントロピー符号化データ（埋め込みEOIマーカーを含む）"
 
   eoi_marker: []

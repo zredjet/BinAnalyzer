@@ -37,11 +37,11 @@ structs:
       type: ascii
       size: "3"
       expected: [0x47, 0x49, 0x46]
-      description: "GIF signature ('GIF')"
+      description: "GIFシグネチャ（'GIF'）"
     - name: version
       type: ascii
       size: "3"
-      description: "Version ('87a' or '89a')"
+      description: "バージョン（'87a'または'89a'）"
     - name: logical_screen_desc
       type: struct
       struct: logical_screen_desc
@@ -49,7 +49,7 @@ structs:
       type: bytes
       size: "{3 * (1 << (size_of_global_color_table + 1))}"
       if: "{global_color_table_flag == 1}"
-      description: "Global Color Table (3 bytes per entry)"
+      description: "グローバルカラーテーブル（1エントリ3バイト）"
     - name: blocks
       type: struct
       struct: gif_block
@@ -74,7 +74,7 @@ structs:
           bits: "2:0"
     - name: bg_color_index
       type: uint8
-      description: "Background Color Index"
+      description: "背景色インデックス"
     - name: pixel_aspect_ratio
       type: uint8
 
@@ -120,14 +120,14 @@ structs:
       type: bytes
       size: "{3 * (1 << (size_of_local_color_table + 1))}"
       if: "{local_color_table_flag == 1}"
-      description: "Local Color Table"
+      description: "ローカルカラーテーブル"
     - name: lzw_min_code_size
       type: uint8
-      description: "LZW Minimum Code Size"
+      description: "LZW最小符号サイズ"
     - name: sub_block_data
       type: bytes
       size: remaining
-      description: "LZW compressed sub-blocks (raw bytes)"
+      description: "LZW圧縮サブブロック（生データ）"
 
   extension_block:
     - name: label
@@ -140,12 +140,13 @@ structs:
         "0xF9": graphic_control_ext
         "0xFE": comment_ext
         "0xFF": application_ext
+        "0x01": plain_text_ext
       default: generic_ext
 
   graphic_control_ext:
     - name: block_size
       type: uint8
-      description: "Block size (always 4)"
+      description: "ブロックサイズ（常に4）"
     - name: packed
       type: bitfield
       size: "1"
@@ -161,41 +162,96 @@ structs:
           bits: "0"
     - name: delay_time
       type: uint16
-      description: "Delay time in 1/100 seconds"
+      description: "遅延時間（1/100秒単位）"
     - name: transparent_color_index
       type: uint8
     - name: terminator
       type: uint8
-      description: "Block terminator (always 0x00)"
+      description: "ブロックターミネータ（常に0x00）"
 
   comment_ext:
     - name: data
       type: bytes
       size: remaining
-      description: "Comment sub-blocks (raw bytes)"
+      description: "コメントサブブロック（生データ）"
 
   application_ext:
     - name: block_size
       type: uint8
-      description: "Block size (always 11)"
+      description: "ブロックサイズ（常に11）"
     - name: app_identifier
       type: ascii
       size: "8"
-      description: "Application Identifier"
+      description: "アプリケーション識別子"
     - name: auth_code
       type: bytes
       size: "3"
-      description: "Application Authentication Code"
+      description: "アプリケーション認証コード"
+    - name: app_data
+      type: switch
+      switch_on: "{app_identifier}"
+      cases:
+        "'NETSCAPE'": netscape_ext_data
+      default: generic_app_ext_data
+
+  netscape_ext_data:
+    - name: sub_block_size
+      type: uint8
+      description: "サブブロックサイズ（通常3）"
+    - name: sub_block_id
+      type: uint8
+      description: "サブブロックID（通常1）"
+    - name: loop_count
+      type: uint16
+      description: "ループ回数（0 = 無限ループ）"
+    - name: terminator
+      type: uint8
+      description: "ブロックターミネータ（常に0x00）"
+
+  generic_app_ext_data:
     - name: sub_block_data
       type: bytes
       size: remaining
-      description: "Application sub-block data (raw bytes)"
+      description: "アプリケーションサブブロックデータ（生データ）"
+
+  plain_text_ext:
+    - name: block_size
+      type: uint8
+      description: "ブロックサイズ（常に12）"
+    - name: text_grid_left
+      type: uint16
+      description: "テキストグリッド左位置"
+    - name: text_grid_top
+      type: uint16
+      description: "テキストグリッド上位置"
+    - name: text_grid_width
+      type: uint16
+      description: "テキストグリッド幅"
+    - name: text_grid_height
+      type: uint16
+      description: "テキストグリッド高さ"
+    - name: cell_width
+      type: uint8
+      description: "文字セル幅"
+    - name: cell_height
+      type: uint8
+      description: "文字セル高さ"
+    - name: fg_color_index
+      type: uint8
+      description: "テキスト前景色インデックス"
+    - name: bg_color_index
+      type: uint8
+      description: "テキスト背景色インデックス"
+    - name: text_data
+      type: bytes
+      size: remaining
+      description: "プレーンテキストデータサブブロック（生データ）"
 
   generic_ext:
     - name: data
       type: bytes
       size: remaining
-      description: "Extension sub-blocks (raw bytes)"
+      description: "拡張サブブロック（生データ）"
 
   raw_data:
     - name: data

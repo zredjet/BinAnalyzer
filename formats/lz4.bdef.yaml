@@ -1,0 +1,72 @@
+name: LZ4
+endianness: little
+root: lz4
+
+enums:
+  block_max_size:
+    - value: 4
+      label: 64KB
+    - value: 5
+      label: 256KB
+    - value: 6
+      label: 1MB
+    - value: 7
+      label: 4MB
+
+structs:
+  lz4:
+    - name: magic
+      type: uint32
+      validate: "{magic == 0x184D2204}"
+      description: "LZ4フレームマジックナンバー（0x184D2204）"
+    - name: flg
+      type: bitfield
+      size: "1"
+      fields:
+        - name: dict_id
+          bits: "0"
+          description: "辞書IDフィールド有無"
+        - name: reserved
+          bits: "1"
+        - name: content_checksum
+          bits: "2"
+          description: "コンテンツチェックサムフラグ"
+        - name: content_size
+          bits: "3"
+          description: "コンテンツサイズフィールド有無"
+        - name: b_checksum
+          bits: "4"
+          description: "ブロックチェックサムフラグ"
+        - name: b_independence
+          bits: "5"
+          description: "ブロック独立フラグ"
+        - name: version
+          bits: "7:6"
+          description: "バージョン（常に01）"
+    - name: bd
+      type: bitfield
+      size: "1"
+      fields:
+        - name: reserved_bd
+          bits: "3:0"
+        - name: block_max_size
+          bits: "6:4"
+          enum: block_max_size
+          description: "最大ブロックサイズ"
+        - name: reserved_bd_high
+          bits: "7"
+    - name: content_size_value
+      type: uint64
+      if: "{content_size == 1}"
+      description: "元データの非圧縮サイズ"
+    - name: dict_id_value
+      type: uint32
+      if: "{dict_id == 1}"
+      description: "辞書ID"
+    - name: header_checksum
+      type: uint8
+      description: "ヘッダチェックサム（xxHash-32の第2バイト）"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "データブロック群（block_size u32le + ブロックデータの繰り返し、block_size=0で終了）。末尾にオプションのコンテンツチェックサムを含む場合がある"

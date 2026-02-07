@@ -73,12 +73,21 @@ structs:
       type: struct
       struct: id3v2_header
     - name: id3v2_body
-      type: bytes
+      type: switch
       size: "{tag_size}"
-      description: "ID3v2タグ本体（生バイト）"
+      switch_on: "1"
+      cases:
+        "1": id3v2_frames
+      description: "ID3v2タグ本体（フレーム群）"
     - name: mpeg_frame_header
       type: struct
       struct: mpeg_frame_header
+    - name: audio_properties
+      type: struct
+      struct: audio_properties
+    - name: channel_mode_and_extension
+      type: struct
+      struct: channel_mode_and_extension
 
   id3v2_header:
     - name: magic
@@ -115,40 +124,91 @@ structs:
       value: "{(size_b0 << 21) | (size_b1 << 14) | (size_b2 << 7) | size_b3}"
       description: "シンクセーフ整数から算出したタグサイズ"
 
-  mpeg_frame_header:
-    - name: header
-      type: bitfield
+  id3v2_frames:
+    - name: frames
+      type: struct
+      struct: id3v2_frame
+      repeat: eof
+
+  id3v2_frame:
+    - name: frame_id
+      type: ascii
       size: "4"
-      fields:
-        - name: sync
-          bits: "31:21"
-          description: "同期ワード（0x7FF）"
-        - name: version
-          bits: "20:19"
-          enum: mpeg_version
-        - name: layer
-          bits: "18:17"
-          enum: mpeg_layer
-        - name: protection
-          bits: "16"
-        - name: bitrate_index
-          bits: "15:12"
-          enum: mp3_bitrate
-        - name: sample_rate_index
-          bits: "11:10"
-          enum: mp3_sample_rate
-        - name: padding
-          bits: "9"
-        - name: private_bit
-          bits: "8"
-        - name: channel_mode
-          bits: "7:6"
-          enum: channel_mode
-        - name: mode_extension
-          bits: "5:4"
-        - name: copyright
-          bits: "3"
-        - name: original
-          bits: "2"
-        - name: emphasis
-          bits: "1:0"
+      description: "フレーム識別子（TIT2, TPE1, TALB等）"
+    - name: frame_size
+      type: uint32
+      description: "フレームデータサイズ"
+    - name: frame_flags
+      type: uint16
+      description: "フレームフラグ"
+    - name: frame_data
+      type: bytes
+      size: "{frame_size}"
+      description: "フレームデータ本体"
+
+  mpeg_frame_header:
+    - name: raw
+      type: uint16
+      description: "MPEGフレームヘッダ前半2バイト"
+    - name: sync
+      type: virtual
+      value: "{raw >> 5}"
+      description: "同期ワード（0x7FF）"
+    - name: mpeg_version
+      type: virtual
+      value: "{(raw >> 3) & 3}"
+      description: "MPEGバージョン（0=MPEG2.5, 2=MPEG2, 3=MPEG1）"
+    - name: layer
+      type: virtual
+      value: "{(raw >> 1) & 3}"
+      description: "レイヤー（1=Layer III, 2=Layer II, 3=Layer I）"
+    - name: protection
+      type: virtual
+      value: "{raw & 1}"
+      description: "CRC保護（0=あり, 1=なし）"
+
+  audio_properties:
+    - name: raw
+      type: uint8
+      description: "オーディオプロパティバイト"
+    - name: bitrate_index
+      type: virtual
+      value: "{raw >> 4}"
+      description: "ビットレートインデックス"
+    - name: sample_rate_index
+      type: virtual
+      value: "{(raw >> 2) & 3}"
+      description: "サンプリングレートインデックス"
+    - name: padding
+      type: virtual
+      value: "{(raw >> 1) & 1}"
+      description: "パディングビット"
+    - name: private
+      type: virtual
+      value: "{raw & 1}"
+      description: "プライベートビット"
+
+  channel_mode_and_extension:
+    - name: raw
+      type: uint8
+      description: "チャンネルモード・拡張バイト"
+    - name: channel_mode
+      type: virtual
+      value: "{raw >> 6}"
+      description: "チャンネルモード（0=ステレオ, 1=ジョイントステレオ, 2=デュアルチャンネル, 3=モノラル）"
+    - name: mode_extension
+      type: virtual
+      value: "{(raw >> 4) & 3}"
+      description: "モード拡張（ジョイントステレオ時のみ有効）"
+    - name: copyright
+      type: virtual
+      value: "{(raw >> 3) & 1}"
+      description: "コピーライトフラグ"
+    - name: original
+      type: virtual
+      value: "{(raw >> 2) & 1}"
+      description: "オリジナルフラグ"
+    - name: emphasis
+      type: virtual
+      value: "{raw & 3}"
+      description: "エンファシス（0=なし, 1=50/15ms, 2=reserved, 3=CCITT J.17）"
