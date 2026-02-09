@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | draft |
+| ステータス | done |
 | 優先度 | 高 |
 | 依存 | なし |
 | 作成日 | 2026-02-07 |
@@ -22,26 +22,26 @@ REQ-046で実装されたPEフォーマット定義（`formats/pe.bdef.yaml`）�
 
 ### 追加する機能
 
-- [ ] dll_characteristics のflags化（bitfield）
+- [x] dll_characteristics のflags化（bitfield）
   - DYNAMIC_BASE = 0x40（ASLR対応）
   - NX_COMPAT = 0x100（DEP/NX対応）
   - NO_SEH = 0x400（SEH不使用）
   - GUARD_CF = 0x4000（Control Flow Guard）
   - TERMINAL_SERVER_AWARE = 0x8000（ターミナルサーバー対応）
-- [ ] machine_type enum拡充
+- [x] machine_type enum拡充
   - IA64 = 0x200 (IMAGE_FILE_MACHINE_IA64)
   - RISCV64 = 0x5064 (IMAGE_FILE_MACHINE_RISCV64)
   - ARM64EC = 0xA641 (IMAGE_FILE_MACHINE_ARM64EC)
-- [ ] subsystem enum拡充
+- [x] subsystem enum拡充
   - EFI_BOOT = 11 (IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
   - EFI_RUNTIME = 12 (IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
   - XBOX = 14 (IMAGE_SUBSYSTEM_XBOX)
-- [ ] pe_characteristics flags拡充
+- [x] pe_characteristics flags拡充
   - LINE_NUMS_STRIPPED = 0x4 (IMAGE_FILE_LINE_NUMS_STRIPPED)
   - LOCAL_SYMS_STRIPPED = 0x8 (IMAGE_FILE_LOCAL_SYMS_STRIPPED)
   - DEBUG_STRIPPED = 0x200 (IMAGE_FILE_DEBUG_STRIPPED)
   - SYSTEM = 0x1000 (IMAGE_FILE_SYSTEM)
-- [ ] section_characteristics flags拡充
+- [x] section_characteristics flags拡充
   - LNK_NRELOC_OVFL = 0x1000000 (IMAGE_SCN_LNK_NRELOC_OVFL)
   - MEM_DISCARDABLE = 0x2000000 (IMAGE_SCN_MEM_DISCARDABLE)
   - MEM_NOT_CACHED = 0x4000000 (IMAGE_SCN_MEM_NOT_CACHED)
@@ -50,7 +50,7 @@ REQ-046で実装されたPEフォーマット定義（`formats/pe.bdef.yaml`）�
 
 ### 変更する既存機能
 
-- [ ] `formats/pe.bdef.yaml` — dll_characteristicsをenumからflags(bitfield)に変更、各enum定義にエントリ追加、section_characteristicsにフラグ追加
+- [x] `formats/pe.bdef.yaml` — dll_characteristicsをenumからflags(bitfield)に変更、各enum定義にエントリ追加、section_characteristicsにフラグ追加
 
 ### 変更しないもの（スコープ外）
 
@@ -62,13 +62,13 @@ REQ-046で実装されたPEフォーマット定義（`formats/pe.bdef.yaml`）�
 
 ## 受入条件
 
-1. [ ] dll_characteristicsがflags（bitfield）として表示され、DYNAMIC_BASE/NX_COMPAT/NO_SEH/GUARD_CF/TERMINAL_SERVER_AWAREの各ビットが個別に識別可能であること
-2. [ ] machine_typeにIA64(0x200), RISCV64(0x5064), ARM64EC(0xA641)が追加されていること
-3. [ ] subsystemにEFI_BOOT(11), EFI_RUNTIME(12), XBOX(14)が追加されていること
-4. [ ] pe_characteristicsにLINE_NUMS_STRIPPED(0x4), LOCAL_SYMS_STRIPPED(0x8), DEBUG_STRIPPED(0x200), SYSTEM(0x1000)が追加されていること
-5. [ ] section_characteristicsにLNK_NRELOC_OVFL(0x1000000), MEM_DISCARDABLE(0x2000000), MEM_NOT_CACHED(0x4000000), MEM_NOT_PAGED(0x8000000), MEM_SHARED(0x10000000)が追加されていること
-6. [ ] 既存のPE解析機能（DOS Header、COFF Header、Optional Header、Section Table）に回帰がないこと
-7. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [x] dll_characteristicsがflags（bitfield）として表示され、DYNAMIC_BASE/NX_COMPAT/NO_SEH/GUARD_CF/TERMINAL_SERVER_AWAREの各ビットが個別に識別可能であること
+2. [x] machine_typeにIA64(0x200), RISCV64(0x5064), ARM64EC(0xA641)が追加されていること
+3. [x] subsystemにEFI_BOOT(11), EFI_RUNTIME(12), XBOX(14)が追加されていること
+4. [x] pe_characteristicsにLINE_NUMS_STRIPPED(0x4), LOCAL_SYMS_STRIPPED(0x8), DEBUG_STRIPPED(0x200), SYSTEM(0x1000)が追加されていること
+5. [x] section_characteristicsにLNK_NRELOC_OVFL(0x1000000), MEM_DISCARDABLE(0x2000000), MEM_NOT_CACHED(0x4000000), MEM_NOT_PAGED(0x8000000), MEM_SHARED(0x10000000)が追加されていること
+6. [x] 既存のPE解析機能（DOS Header、COFF Header、Optional Header、Section Table）に回帰がないこと
+7. [x] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -84,37 +84,40 @@ REQ-046で実装されたPEフォーマット定義（`formats/pe.bdef.yaml`）�
 
 ### 変更が必要なファイル
 
-- [ ] formats/pe.bdef.yaml — dll_characteristicsのflags化、各enum/flags定義の拡充
-- [ ] docs/architecture.md — フォーマット一覧の説明更新（PE flags対応を明記）
+- [x] formats/pe.bdef.yaml — dll_characteristicsのflags化、各enum/flags定義の拡充
+- [x] docs/architecture.md — フォーマット一覧の説明更新（PE flags対応を明記）
 
 ---
 
 ## 設計メモ
 
-> 設計Phase（Phase 2）で記入する。要望定義時点では空欄でよい。
-
-### 設計方針
-
-### モデル変更
-
-### インタフェース変更
-
-### 代替案
-
-### 懸念事項
+YAML DSLのみの変更。dll_characteristicsをenumからbitfieldに変更し、各セキュリティフラグを個別ビットとして定義。machine_type、subsystem、pe_characteristics、section_characteristicsの各enum/flags定義にエントリ追加。
 
 ---
 
 ## 実装メモ
 
-> 実装Phase（Phase 3-4）で記入する。設計時点では空欄でよい。
-
 ### 実装中の設計変更
+
+なし。YAML DSLの拡充のみで全受入条件を充足。
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `formats/pe.bdef.yaml` | dll_characteristicsのbitfield化、enum/flags拡充 |
 
 ### 追加したテスト
 
 | テストクラス | テスト名 | 対応する受入条件 |
 |---|---|---|
-| | | |
+| PeParsingTests | PeFormat_LoadsWithoutErrors | 7 |
+| PeParsingTests | PeFormat_DecodesWithRecovery | 6 |
+| PeParsingTests | PeFormat_DosHeader_DecodesCorrectly | 6 |
+| PeParsingTests | PeFormat_CoffHeader_DecodesCorrectly | 2, 6 |
+| PeParsingTests | PeFormat_TreeOutput_ContainsExpectedElements | 7 |
 
 ### 気づき・今後の課題
+
+- Data Directoryの詳細解析（Import/Export/Resource等）はRVA解決が必要で未対応
+- dll_characteristicsのbitfield化により、NX_COMPAT, ASLR等のセキュリティフラグが可読性高く表示可能に

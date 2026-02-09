@@ -96,6 +96,10 @@ public static class ExpressionTokenizer
                     tokens.Add(new ExpressionToken(ExpressionTokenType.RightParen, ")", i));
                     i++;
                     break;
+                case ',':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.Comma, ",", i));
+                    i++;
+                    break;
                 case '=' when Peek(input, i + 1) == '=':
                     tokens.Add(new ExpressionToken(ExpressionTokenType.EqualEqual, "==", i));
                     i += 2;

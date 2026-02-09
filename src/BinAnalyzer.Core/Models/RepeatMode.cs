@@ -10,4 +10,6 @@ public abstract record RepeatMode
     public sealed record Count(Expression CountExpression) : RepeatMode;
     public sealed record UntilEof : RepeatMode;
     public sealed record UntilValue(Expression Condition) : RepeatMode;
+    public sealed record While(Expression Condition) : RepeatMode;
+    public sealed record LengthPrefixed(int PrefixSize) : RepeatMode;
 }

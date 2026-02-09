@@ -76,6 +76,21 @@ public class WasmParsingTests
     }
 
     [Fact]
+    public void WasmFormat_SectionSize_DecodesAsULeb128()
+    {
+        var data = WasmTestDataGenerator.CreateMinimalWasm();
+        var format = new YamlFormatLoader().Load(WasmFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var sections = decoded.Children[2].Should().BeOfType<DecodedArray>().Subject;
+        var section = sections.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var sectionSize = section.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        sectionSize.Name.Should().Be("section_size");
+        sectionSize.Value.Should().Be(4);
+        sectionSize.Size.Should().Be(1); // 1-byte LEB128
+    }
+
+    [Fact]
     public void WasmFormat_TreeOutput_ContainsExpectedElements()
     {
         var data = WasmTestDataGenerator.CreateMinimalWasm();

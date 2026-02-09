@@ -5,12 +5,12 @@ namespace BinAnalyzer.Integration.Tests;
 public static class WasmTestDataGenerator
 {
     /// <summary>
-    /// 最小WASMバイナリ: magic(4B) + version(4B) + 1 section(section_id(1B) + section_size(4B) + section_data(4B)) = 17バイト
+    /// 最小WASMバイナリ: magic(4B) + version(4B) + 1 section(section_id(1B) + section_size(1B LEB128) + section_data(4B)) = 14バイト
     /// Type section (id=1) を1つ含む
     /// </summary>
     public static byte[] CreateMinimalWasm()
     {
-        var data = new byte[17];
+        var data = new byte[14];
         var span = data.AsSpan();
         var pos = 0;
 
@@ -27,8 +27,8 @@ public static class WasmTestDataGenerator
         // section: type section (id=1)
         data[pos] = 1; pos += 1; // section_id = type
 
-        // section_size: 4 bytes (uint32 LE)
-        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 4); pos += 4;
+        // section_size: 4 bytes (LEB128, value 4 fits in 1 byte)
+        data[pos] = 0x04; pos += 1;
 
         // section_data: 4 dummy bytes
         data[pos] = 0x01; pos += 1; // count = 1

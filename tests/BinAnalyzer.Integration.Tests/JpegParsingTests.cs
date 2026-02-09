@@ -75,4 +75,42 @@ public class JpegParsingTests
         output.Should().Contain("segments");
         output.Should().Contain("APP0");
     }
+
+    [Fact]
+    public void JpegFormat_WithEntropyData_SeparatesCompressedDataAndEoi()
+    {
+        var data = JpegTestDataGenerator.CreateJpegWithEntropyData();
+        var format = new YamlFormatLoader().Load(JpegFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var segments = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
+
+        // Find the SOS segment (marker_type == 0xDA)
+        var sosSegment = segments.Elements
+            .Cast<DecodedStruct>()
+            .First(s =>
+            {
+                var markerType = s.Children[1] as DecodedInteger;
+                return markerType?.Value == 0xDA;
+            });
+
+        // body → sos_segment struct
+        var sosBody = sosSegment.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+
+        // compressed_data should be 5 bytes (entropy data only, not including EOI)
+        var compressedData = sosBody.Children
+            .OfType<DecodedBytes>()
+            .First(b => b.Name == "compressed_data");
+        compressedData.RawBytes.Length.Should().Be(5);
+
+        // EOI marker should be a separate segment after SOS
+        var eoiSegment = segments.Elements
+            .Cast<DecodedStruct>()
+            .First(s =>
+            {
+                var markerType = s.Children[1] as DecodedInteger;
+                return markerType?.Value == 0xD9;
+            });
+        eoiSegment.Should().NotBeNull();
+    }
 }

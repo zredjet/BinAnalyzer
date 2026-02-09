@@ -247,6 +247,71 @@ public sealed class DecodeContext
         return value;
     }
 
+    public ulong ReadULeb128()
+    {
+        ulong result = 0;
+        int shift = 0;
+        for (int i = 0; i < 10; i++)
+        {
+            EnsureAvailable(1);
+            byte b = _data.Span[_position];
+            _position++;
+            result |= (ulong)(b & 0x7F) << shift;
+            if ((b & 0x80) == 0)
+                return result;
+            shift += 7;
+        }
+        throw new InvalidOperationException(
+            $"ULEB128 value exceeds 10 bytes at position 0x{_position:X}");
+    }
+
+    public long ReadSLeb128()
+    {
+        long result = 0;
+        int shift = 0;
+        byte b;
+        for (int i = 0; i < 10; i++)
+        {
+            EnsureAvailable(1);
+            b = _data.Span[_position];
+            _position++;
+            result |= (long)(b & 0x7F) << shift;
+            shift += 7;
+            if ((b & 0x80) == 0)
+            {
+                // Sign extend if the sign bit (bit 6) of the last byte is set
+                if (shift < 64 && (b & 0x40) != 0)
+                    result |= -(1L << shift);
+                return result;
+            }
+        }
+        throw new InvalidOperationException(
+            $"SLEB128 value exceeds 10 bytes at position 0x{_position:X}");
+    }
+
+    public ulong ReadVlq()
+    {
+        ulong result = 0;
+        for (int i = 0; i < 10; i++)
+        {
+            EnsureAvailable(1);
+            byte b = _data.Span[_position];
+            _position++;
+            result = (result << 7) | (uint)(b & 0x7F);
+            if ((b & 0x80) == 0)
+                return result;
+        }
+        throw new InvalidOperationException(
+            $"VLQ value exceeds 10 bytes at position 0x{_position:X}");
+    }
+
+    public int FindMarker(ReadOnlySpan<byte> marker)
+    {
+        var searchSpan = _data.Span[_position..CurrentScope.End];
+        var index = searchSpan.IndexOf(marker);
+        return index >= 0 ? _position + index : -1;
+    }
+
     public string ReadAsciiUntilNull()
     {
         var start = _position;

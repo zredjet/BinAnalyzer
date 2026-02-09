@@ -49,27 +49,27 @@ public static class FlacTestDataGenerator
         data[pos] = 0; pos += 1; // max_frame_size_b1
         data[pos] = 0; pos += 1; // max_frame_size_b2
 
-        // sample_rate_channels_bps_samples: 8 bytes bitfield (64 bits)
-        // sample_rate(20 bits) = 44100 = 0xAC44
+        // sample_rate_channels_bps_samples: 8 bytes bitfield (64 bits, big-endian)
+        // sample_rate(20 bits) = 44100 = 0x0AC44
         // channels(3 bits) = 1 (stereo = 2 channels, stored as channels-1)
-        // bps(5 bits) = 15 (16 bits, stored as bps-1)
+        // bps(5 bits) = 15 (16 bits, stored as bps-1)  → 0b01111
         // total_samples(36 bits) = 0
         //
         // Bit layout (63 downto 0):
-        // [63:44] sample_rate = 44100 = 0xAC44 (20 bits)
+        // [63:44] sample_rate = 44100 (20 bits)
         // [43:41] channels = 1 (3 bits)
         // [40:36] bps = 15 (5 bits)
         // [35:0] total_samples = 0 (36 bits)
         //
-        // Byte 0: bits 63:56 = sample_rate[19:12] = 0xAC
-        data[pos] = 0xAC; pos += 1;
-        // Byte 1: bits 55:48 = sample_rate[11:4] = 0x44
-        data[pos] = 0x44; pos += 1;
-        // Byte 2: bits 47:40 = sample_rate[3:0] | channels[2:0] | bps[4]
-        //       = 0000 | 001 | 1 = 0x03
-        data[pos] = 0x03; pos += 1;
-        // Byte 3: bits 39:32 = bps[3:0] | total_samples[35:32]
-        //       = 1110 | 0000 = 0xF0
+        // Byte 0 (bits 63:56): sample_rate[19:12] = 0x0AC44 >> 12 = 0x0A
+        data[pos] = 0x0A; pos += 1;
+        // Byte 1 (bits 55:48): sample_rate[11:4] = (0x0AC44 >> 4) & 0xFF = 0xC4
+        data[pos] = 0xC4; pos += 1;
+        // Byte 2 (bits 47:40): sample_rate[3:0]=0100 | channels=001 | bps[4]=0
+        //       = 0100_0010 = 0x42
+        data[pos] = 0x42; pos += 1;
+        // Byte 3 (bits 39:32): bps[3:0]=1111 | total_samples[35:32]=0000
+        //       = 1111_0000 = 0xF0
         data[pos] = 0xF0; pos += 1;
         // Bytes 4-7: total_samples[31:0] = 0
         data[pos] = 0; pos += 1;

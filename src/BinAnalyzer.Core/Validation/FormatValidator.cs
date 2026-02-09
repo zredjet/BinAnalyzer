@@ -18,6 +18,7 @@ public static class FormatValidator
                 ValidateStructRef(field, structName, format, diagnostics);
                 ValidateSwitchSpec(field, structName, format, diagnostics);
                 ValidateSizeSpec(field, structName, diagnostics);
+                ValidateBitfieldSize(field, structName, diagnostics);
                 ValidateEnumRef(field, structName, format, diagnostics);
                 ValidateFlagsRef(field, structName, format, diagnostics);
                 ValidateTypeRefCombination(field, structName, diagnostics);
@@ -26,6 +27,7 @@ public static class FormatValidator
                 ValidateVirtualField(field, structName, diagnostics);
                 ValidateSeek(field, structName, diagnostics);
                 ValidateStringTable(field, structName, diagnostics);
+                ValidateLengthPrefixed(field, structName, diagnostics);
             }
 
             ValidateStructAlign(structDef, diagnostics);
@@ -127,12 +129,15 @@ public static class FormatValidator
         }
     }
 
-    /// <summary>VAL007: サイズ指定が必要な型でサイズ未指定（Virtual型は除外）</summary>
+    /// <summary>VAL007: サイズ指定が必要な型でサイズ未指定（Virtual型、LengthPrefixed繰り返しは除外）</summary>
     private static void ValidateSizeSpec(
         FieldDefinition field, string structName,
         List<ValidationDiagnostic> diagnostics)
     {
         if (field.Type == FieldType.Virtual)
+            return;
+
+        if (field.Repeat is RepeatMode.LengthPrefixed)
             return;
 
         if (field.Type is FieldType.Bytes or FieldType.Ascii or FieldType.Utf8
@@ -145,6 +150,22 @@ public static class FormatValidator
                     $"フィールド '{field.Name}' ({field.Type}) にサイズ指定がありません（size, size式, remaining のいずれかが必要です）",
                     structName, field.Name));
             }
+        }
+    }
+
+    /// <summary>VAL013: bitfieldのサイズが1〜8バイトの範囲外</summary>
+    private static void ValidateBitfieldSize(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.Type != FieldType.Bitfield)
+            return;
+
+        if (field.Size is { } size && (size < 1 || size > 8))
+        {
+            diagnostics.Add(Error("VAL013",
+                $"bitfieldフィールド '{field.Name}' のサイズは1〜8バイトが必要です: {size}",
+                structName, field.Name));
         }
     }
 
@@ -395,11 +416,36 @@ public static class FormatValidator
         }
     }
 
+    /// <summary>VAL014: LengthPrefixedのPrefixSizeが範囲外</summary>
+    /// <summary>VAL111: LengthPrefixedがbytes以外の型に指定</summary>
+    private static void ValidateLengthPrefixed(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.Repeat is not RepeatMode.LengthPrefixed lp)
+            return;
+
+        if (lp.PrefixSize < 1 || lp.PrefixSize > 4)
+        {
+            diagnostics.Add(Error("VAL014",
+                $"フィールド '{field.Name}' の length_prefix_size は1〜4の範囲が必要です: {lp.PrefixSize}",
+                structName, field.Name));
+        }
+
+        if (field.Type != FieldType.Bytes)
+        {
+            diagnostics.Add(Warning("VAL111",
+                $"フィールド '{field.Name}' ({field.Type}) に repeat: length_prefixed が指定されていますが、bytes型でのみ有効です",
+                structName, field.Name));
+        }
+    }
+
     // --- ヘルパー ---
 
     private static bool IsIntegerType(FieldType type) =>
         type is FieldType.UInt8 or FieldType.UInt16 or FieldType.UInt32 or FieldType.UInt64
-            or FieldType.Int8 or FieldType.Int16 or FieldType.Int32 or FieldType.Int64;
+            or FieldType.Int8 or FieldType.Int16 or FieldType.Int32 or FieldType.Int64
+            or FieldType.ULeb128 or FieldType.SLeb128 or FieldType.Vlq;
 
     private static ValidationDiagnostic Error(string code, string message, string? structName, string? fieldName) =>
         new(DiagnosticSeverity.Error, code, message, structName, fieldName);

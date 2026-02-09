@@ -208,6 +208,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.Switch => DecodeSwitchField(field, format, context),
             FieldType.Bitfield => DecodeBitfieldField(field, format, context),
             FieldType.Virtual => DecodeVirtualField(field, context),
+            FieldType.ULeb128 or FieldType.SLeb128 or FieldType.Vlq
+                => DecodeVariableLengthIntegerField(field, format, context),
             _ => throw new InvalidOperationException($"Unknown field type: {field.Type}"),
         };
 
@@ -589,6 +591,41 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 }
                 break;
             }
+
+            case RepeatMode.While whileMode:
+            {
+                var idx = 0;
+                while (ExpressionEvaluator.EvaluateAsBool(whileMode.Condition, context))
+                {
+                    if (structAlign is { } sa && idx > 0)
+                        context.AlignTo(sa);
+                    var element = DecodeElementWithScope(singleField, format, context, elementSize);
+                    elements.Add(element);
+                    idx++;
+                }
+                break;
+            }
+
+            case RepeatMode.LengthPrefixed lp:
+            {
+                while (!context.IsEof)
+                {
+                    var prefixValue = ReadLengthPrefix(context, lp.PrefixSize);
+                    if (prefixValue == 0)
+                        break;
+                    var elementOffset = context.Position;
+                    var bytes = context.ReadBytes((int)prefixValue);
+                    elements.Add(new DecodedBytes
+                    {
+                        Name = field.Name,
+                        Offset = elementOffset,
+                        Size = (int)prefixValue,
+                        RawBytes = bytes,
+                        Description = field.Description,
+                    });
+                }
+                break;
+            }
         }
 
         return new DecodedArray
@@ -737,6 +774,26 @@ public sealed class BinaryDecoder : IBinaryDecoder
         return null;
     }
 
+    private static long ReadLengthPrefix(DecodeContext context, int prefixSize) =>
+        prefixSize switch
+        {
+            1 => context.ReadUInt8(),
+            2 => context.ReadUInt16(),
+            4 => context.ReadUInt32(),
+            3 => ReadUInt24(context),
+            _ => throw new InvalidOperationException(
+                $"Unsupported length prefix size: {prefixSize}. Must be 1-4."),
+        };
+
+    private static long ReadUInt24(DecodeContext context)
+    {
+        var bytes = context.ReadBytes(3);
+        var span = bytes.Span;
+        return context.Endianness == Endianness.Big
+            ? (span[0] << 16) | (span[1] << 8) | span[2]
+            : span[0] | (span[1] << 8) | (span[2] << 16);
+    }
+
     private DecodedBitfield DecodeBitfieldField(
         FieldDefinition field,
         FormatDefinition format,
@@ -750,8 +807,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
             1 => context.ReadUInt8(),
             2 => context.ReadUInt16(),
             4 => context.ReadUInt32(),
+            8 => (long)context.ReadUInt64(),
+            >= 3 and <= 7 => ReadBitfieldBytes(context, size),
             _ => throw new InvalidOperationException(
-                $"Bitfield size must be 1, 2, or 4 bytes, got {size}"),
+                $"Bitfield size must be 1-8 bytes, got {size}"),
         };
 
         context.SetVariable(field.Name, rawValue);
@@ -778,6 +837,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     }
                 }
 
+                context.SetVariable(entry.Name, value);
+
                 fields.Add(new BitfieldValue(
                     entry.Name, entry.BitHigh, entry.BitLow,
                     value, enumLabel, enumDesc));
@@ -795,6 +856,23 @@ public sealed class BinaryDecoder : IBinaryDecoder
         };
     }
 
+    private static long ReadBitfieldBytes(DecodeContext context, int size)
+    {
+        var bytes = context.ReadBytes(size);
+        long value = 0;
+        if (context.Endianness == Endianness.Big)
+        {
+            for (int i = 0; i < size; i++)
+                value = (value << 8) | bytes.Span[i];
+        }
+        else
+        {
+            for (int i = size - 1; i >= 0; i--)
+                value = (value << 8) | bytes.Span[i];
+        }
+        return value;
+    }
+
     private DecodedVirtual DecodeVirtualField(
         FieldDefinition field,
         DecodeContext context)
@@ -803,6 +881,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             throw new InvalidOperationException($"Virtual field '{field.Name}' has no value expression");
 
         var value = ExpressionEvaluator.Evaluate(field.ValueExpression, context);
+        context.SetVariable(field.Name, value);
 
         return new DecodedVirtual
         {
@@ -810,6 +889,54 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Offset = context.Position,
             Size = 0,
             Value = value,
+            Description = field.Description,
+        };
+    }
+
+    private DecodedInteger DecodeVariableLengthIntegerField(
+        FieldDefinition field,
+        FormatDefinition format,
+        DecodeContext context)
+    {
+        var offset = context.Position;
+        long value = field.Type switch
+        {
+            FieldType.ULeb128 => (long)context.ReadULeb128(),
+            FieldType.SLeb128 => context.ReadSLeb128(),
+            FieldType.Vlq => (long)context.ReadVlq(),
+            _ => throw new InvalidOperationException($"Not a variable-length integer type: {field.Type}"),
+        };
+
+        var size = context.Position - offset;
+        context.SetVariable(field.Name, value);
+
+        string? enumLabel = null;
+        string? enumDesc = null;
+        if (field.EnumRef is not null && format.Enums.TryGetValue(field.EnumRef, out var enumDef))
+        {
+            var entry = enumDef.FindByValue(value);
+            if (entry is not null)
+            {
+                enumLabel = entry.Label;
+                enumDesc = entry.Description;
+            }
+        }
+
+        string? stringTableValue = null;
+        if (field.StringTableRef is not null)
+        {
+            stringTableValue = context.LookupString(field.StringTableRef, (int)value);
+        }
+
+        return new DecodedInteger
+        {
+            Name = field.Name,
+            Offset = offset,
+            Size = size,
+            Value = value,
+            EnumLabel = enumLabel,
+            EnumDescription = enumDesc,
+            StringTableValue = stringTableValue,
             Description = field.Description,
         };
     }

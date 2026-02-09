@@ -42,12 +42,16 @@ public static class ExpressionEvaluator
             ExpressionNode.FieldReference field => ResolveField(field.FieldName, context),
             ExpressionNode.BinaryOp binOp => EvaluateBinaryOp(binOp, context),
             ExpressionNode.UnaryOp unOp => EvaluateUnaryOp(unOp, context),
+            ExpressionNode.FunctionCall func => EvaluateFunction(func, context),
             _ => throw new InvalidOperationException($"Unknown expression node type: {node.GetType().Name}"),
         };
     }
 
     private static object ResolveField(string fieldName, DecodeContext context)
     {
+        if (fieldName == "remaining")
+            return (long)context.Remaining;
+
         var value = context.GetVariable(fieldName);
         if (value is null)
             throw new InvalidOperationException($"Variable '{fieldName}' not found in current scope");
@@ -92,6 +96,36 @@ public static class ExpressionEvaluator
             UnaryOperator.Not => !ConvertToBool(operand),
             _ => throw new InvalidOperationException($"Unknown unary operator: {unOp.Operator}"),
         };
+    }
+
+    private static object EvaluateFunction(ExpressionNode.FunctionCall func, DecodeContext context)
+    {
+        return func.Name switch
+        {
+            "until_marker" => EvaluateUntilMarker(func.Arguments, context),
+            _ => throw new InvalidOperationException($"Unknown function: '{func.Name}'"),
+        };
+    }
+
+    private static object EvaluateUntilMarker(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count == 0)
+            throw new InvalidOperationException(
+                "until_marker requires at least 1 argument");
+
+        var marker = new byte[args.Count];
+        for (var i = 0; i < args.Count; i++)
+        {
+            var val = EvaluateNode(args[i], context);
+            marker[i] = (byte)ConvertToLong(val);
+        }
+
+        var markerPos = context.FindMarker(marker);
+        if (markerPos < 0)
+            return (long)context.Remaining;
+
+        return (long)(markerPos - context.Position);
     }
 
     private static long ConvertToLong(object value) => value switch

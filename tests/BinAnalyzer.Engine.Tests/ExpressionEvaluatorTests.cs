@@ -82,4 +82,36 @@ public class ExpressionEvaluatorTests
         var act = () => ExpressionEvaluator.Evaluate(expr, ctx);
         act.Should().Throw<InvalidOperationException>().WithMessage("*missing*");
     }
+
+    [Fact]
+    public void Evaluate_Remaining_ReturnsCurrentScopeRemaining()
+    {
+        // 10バイトデータ、1バイト読み進めた後 → remaining = 9
+        var data = new byte[10];
+        var ctx = new DecodeContext(data, Endianness.Big);
+        ctx.ReadUInt8(); // position = 1
+
+        var expr = ExpressionParser.Parse("{remaining}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(9);
+    }
+
+    [Fact]
+    public void Evaluate_RemainingSubtract_ReturnsCorrectValue()
+    {
+        var data = new byte[20];
+        var ctx = new DecodeContext(data, Endianness.Big);
+
+        var expr = ExpressionParser.Parse("{remaining - 8}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(12);
+    }
+
+    [Fact]
+    public void Evaluate_RemainingComparison_Works()
+    {
+        var data = new byte[10];
+        var ctx = new DecodeContext(data, Endianness.Big);
+
+        var expr = ExpressionParser.Parse("{remaining > 0}");
+        ExpressionEvaluator.EvaluateAsBool(expr, ctx).Should().BeTrue();
+    }
 }

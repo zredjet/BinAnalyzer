@@ -26,6 +26,7 @@ public enum ExpressionTokenType
     GreaterGreater,
     LeftParen,
     RightParen,
+    Comma,
     Eof,
 }
 

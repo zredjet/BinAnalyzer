@@ -15,7 +15,8 @@ namespace BinAnalyzer.Core.Expressions;
 ///   add_expr     → mul_expr (("+" | "-") mul_expr)*
 ///   mul_expr     → unary_expr (("*" | "/" | "%") unary_expr)*
 ///   unary_expr   → ("-" | "not") unary_expr | primary
-///   primary      → INTEGER | STRING | IDENTIFIER | "(" or_expr ")"
+///   primary      → INTEGER | STRING | IDENTIFIER | IDENTIFIER "(" arg_list? ")" | "(" or_expr ")"
+///   arg_list     → or_expr ("," or_expr)*
 /// </summary>
 public sealed class ExpressionParser
 {
@@ -233,6 +234,20 @@ public sealed class ExpressionParser
             case ExpressionTokenType.Identifier:
             {
                 var token = Advance();
+                if (Current.Type == ExpressionTokenType.LeftParen)
+                {
+                    Advance(); // consume '('
+                    var args = new List<ExpressionNode>();
+                    if (Current.Type != ExpressionTokenType.RightParen)
+                    {
+                        args.Add(ParseOrExpr());
+                        while (Match(ExpressionTokenType.Comma))
+                            args.Add(ParseOrExpr());
+                    }
+                    if (!Match(ExpressionTokenType.RightParen))
+                        throw new FormatException($"Expected ')' at position {Current.Position}");
+                    return new ExpressionNode.FunctionCall(token.Value, args);
+                }
                 return new ExpressionNode.FieldReference(token.Value);
             }
 

@@ -169,6 +169,9 @@ public static class YamlToIrMapper
             "zlib" => FieldType.Zlib,
             "deflate" => FieldType.Deflate,
             "virtual" => FieldType.Virtual,
+            "uleb128" or "leb128u" => FieldType.ULeb128,
+            "sleb128" or "leb128s" => FieldType.SLeb128,
+            "vlq" => FieldType.Vlq,
             _ => throw new InvalidOperationException($"Unknown field type: {type}"),
         };
     }
@@ -206,6 +209,24 @@ public static class YamlToIrMapper
         if (yaml.Repeat?.Equals("eof", StringComparison.OrdinalIgnoreCase) == true)
             return new RepeatMode.UntilEof();
 
+        if (yaml.Repeat?.Equals("while", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            if (yaml.RepeatWhile is null)
+                throw new InvalidOperationException(
+                    $"Field with 'repeat: while' requires 'repeat_while' expression");
+            var expr = ExpressionParser.Parse(yaml.RepeatWhile);
+            return new RepeatMode.While(expr);
+        }
+
+        if (yaml.Repeat?.Equals("length_prefixed", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var prefixSize = yaml.LengthPrefixSize ?? 1;
+            if (prefixSize < 1 || prefixSize > 4)
+                throw new InvalidOperationException(
+                    $"Field with 'repeat: length_prefixed' requires 'length_prefix_size' between 1 and 4, got {prefixSize}");
+            return new RepeatMode.LengthPrefixed(prefixSize);
+        }
+
         if (yaml.RepeatCount is not null)
         {
             var expr = ExpressionParser.Parse(yaml.RepeatCount);
@@ -216,6 +237,12 @@ public static class YamlToIrMapper
         {
             var expr = ExpressionParser.Parse(yaml.RepeatUntil);
             return new RepeatMode.UntilValue(expr);
+        }
+
+        if (yaml.RepeatWhile is not null)
+        {
+            var expr = ExpressionParser.Parse(yaml.RepeatWhile);
+            return new RepeatMode.While(expr);
         }
 
         return new RepeatMode.None();

@@ -83,6 +83,59 @@ public static class JpegTestDataGenerator
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// SOS後にエントロピーデータ（5バイト）+ EOI マーカーを含むJPEG。
+    /// until_marker によりエントロピーデータとEOIが分離されることを検証するためのテストデータ。
+    /// </summary>
+    public static byte[] CreateJpegWithEntropyData()
+    {
+        using var ms = new MemoryStream();
+
+        // SOI
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xD8);
+
+        // === APP0 segment (JFIF) ===
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xE0);
+        WriteBE16(ms, 16);
+        ms.Write(Encoding.ASCII.GetBytes("JFIF\0"));
+        ms.WriteByte(1);
+        ms.WriteByte(1);
+        ms.WriteByte(0);
+        WriteBE16(ms, 1);
+        WriteBE16(ms, 1);
+        ms.WriteByte(0);
+        ms.WriteByte(0);
+
+        // === SOF0 segment ===
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xC0);
+        WriteBE16(ms, 11);
+        ms.WriteByte(8);
+        WriteBE16(ms, 1);
+        WriteBE16(ms, 1);
+        ms.WriteByte(1);
+        ms.WriteByte(1);
+        ms.WriteByte(0x11);
+        ms.WriteByte(0);
+
+        // === SOS segment ===
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xDA);
+        WriteBE16(ms, 3);
+        ms.WriteByte(0x00); // sos_header: 1 byte
+
+        // Entropy-coded data: 5 bytes
+        ms.Write(new byte[] { 0xAA, 0xBB, 0xCC, 0xDD, 0xEE });
+
+        // === EOI marker ===
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xD9);
+
+        return ms.ToArray();
+    }
+
     private static void WriteBE16(MemoryStream ms, ushort value)
     {
         ms.WriteByte((byte)(value >> 8));

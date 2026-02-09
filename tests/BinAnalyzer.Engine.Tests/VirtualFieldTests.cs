@@ -105,6 +105,77 @@ public class VirtualFieldTests
         virtualNode.Value.Should().Be(42L);
     }
 
+    [Fact]
+    public void VirtualField_ValueAvailableInSizeExpression()
+    {
+        // virtual値が後続フィールドのsize式で参照可能なことを確認
+        var format = CreateFormat("main",
+            new FieldDefinition
+            {
+                Name = "raw_len",
+                Type = FieldType.UInt8,
+            },
+            new FieldDefinition
+            {
+                Name = "actual_len",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{raw_len - 1}"),
+            },
+            new FieldDefinition
+            {
+                Name = "payload",
+                Type = FieldType.Bytes,
+                SizeExpression = ExpressionParser.Parse("{actual_len}"),
+            });
+
+        // raw_len=4, actual_len=3, payload=3 bytes
+        var data = new byte[] { 0x04, 0xAA, 0xBB, 0xCC };
+        var result = _decoder.Decode(data, format);
+
+        result.Children.Should().HaveCount(3);
+        var payload = result.Children[2].Should().BeOfType<DecodedBytes>().Subject;
+        payload.Name.Should().Be("payload");
+        payload.Size.Should().Be(3);
+    }
+
+    [Fact]
+    public void VirtualField_ValueAvailableInCondition()
+    {
+        // virtual値がif条件で参照可能なことを確認
+        var format = CreateFormat("main",
+            new FieldDefinition
+            {
+                Name = "a",
+                Type = FieldType.UInt8,
+            },
+            new FieldDefinition
+            {
+                Name = "b",
+                Type = FieldType.UInt8,
+            },
+            new FieldDefinition
+            {
+                Name = "sum",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{a + b}"),
+            },
+            new FieldDefinition
+            {
+                Name = "overflow_marker",
+                Type = FieldType.UInt8,
+                Condition = ExpressionParser.Parse("{sum > 200}"),
+            });
+
+        // a=100, b=150 → sum=250 > 200 → overflow_marker included
+        var data = new byte[] { 100, 150, 0xFF };
+        var result = _decoder.Decode(data, format);
+
+        result.Children.Should().HaveCount(4);
+        var marker = result.Children[3].Should().BeOfType<DecodedInteger>().Subject;
+        marker.Name.Should().Be("overflow_marker");
+        marker.Value.Should().Be(0xFF);
+    }
+
     private static FormatDefinition CreateFormat(string rootName, params FieldDefinition[] fields)
     {
         return new FormatDefinition

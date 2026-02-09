@@ -27,4 +27,7 @@ public enum FieldType
     Zlib,
     Deflate,
     Virtual,
+    ULeb128,
+    SLeb128,
+    Vlq,
 }

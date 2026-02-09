@@ -66,7 +66,22 @@ structs:
     - name: header_checksum
       type: uint8
       description: "ヘッダチェックサム（xxHash-32の第2バイト）"
-    - name: data
+    - name: blocks
+      type: struct
+      struct: lz4_data_block
+      repeat_until: "{block_size_raw == 0}"
+      description: "データブロック列（block_size=0のEndMarkで終了）"
+    - name: content_checksum_value
+      type: uint32
+      if: "{content_checksum == 1}"
+      description: "コンテンツチェックサム（xxHash-32）"
+
+  lz4_data_block:
+    - name: block_size_raw
+      type: uint32
+      description: "ブロックサイズ（最上位ビットは非圧縮フラグ、0=EndMark）"
+    - name: block_data
       type: bytes
-      size: remaining
-      description: "データブロック群（block_size u32le + ブロックデータの繰り返し、block_size=0で終了）。末尾にオプションのコンテンツチェックサムを含む場合がある"
+      size: "{block_size_raw & 0x7FFFFFFF}"
+      if: "{block_size_raw != 0}"
+      description: "ブロックデータ（圧縮または非圧縮）"

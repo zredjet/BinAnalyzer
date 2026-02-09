@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
+    <ProjectReference Include="..\..\src\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
   </ItemGroup>
 
 </Project>

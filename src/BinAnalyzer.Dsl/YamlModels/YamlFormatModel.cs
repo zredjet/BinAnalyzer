@@ -100,6 +100,12 @@ public sealed class YamlFieldModel
     [YamlMember(Alias = "repeat_until")]
     public string? RepeatUntil { get; set; }
 
+    [YamlMember(Alias = "repeat_while")]
+    public string? RepeatWhile { get; set; }
+
+    [YamlMember(Alias = "length_prefix_size")]
+    public int? LengthPrefixSize { get; set; }
+
     [YamlMember(Alias = "switch_on")]
     public string? SwitchOn { get; set; }
 

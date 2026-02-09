@@ -90,5 +90,11 @@ structs:
       description: "ファイルコメント（NULL終端）"
     - name: compressed_data
       type: deflate
-      size: remaining
-      description: "圧縮データ（deflate）。末尾8バイトにCRC32（u32le）と元データサイズISIZE（u32le）のフッタを含む（DSL制約により分離不可）"
+      size: "{remaining - 8}"
+      description: "圧縮データ（deflate）"
+    - name: crc32
+      type: uint32
+      description: "CRC-32（元データのCRC）"
+    - name: isize
+      type: uint32
+      description: "ISIZE（元データのサイズ mod 2^32）"

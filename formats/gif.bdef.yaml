@@ -124,10 +124,10 @@ structs:
     - name: lzw_min_code_size
       type: uint8
       description: "LZW最小符号サイズ"
-    - name: sub_block_data
+    - name: sub_blocks
       type: bytes
-      size: remaining
-      description: "LZW圧縮サブブロック（生データ）"
+      repeat: length_prefixed
+      description: "LZW圧縮サブブロック"
 
   extension_block:
     - name: label
@@ -170,10 +170,10 @@ structs:
       description: "ブロックターミネータ（常に0x00）"
 
   comment_ext:
-    - name: data
+    - name: sub_blocks
       type: bytes
-      size: remaining
-      description: "コメントサブブロック（生データ）"
+      repeat: length_prefixed
+      description: "コメントサブブロック"
 
   application_ext:
     - name: block_size
@@ -209,10 +209,10 @@ structs:
       description: "ブロックターミネータ（常に0x00）"
 
   generic_app_ext_data:
-    - name: sub_block_data
+    - name: sub_blocks
       type: bytes
-      size: remaining
-      description: "アプリケーションサブブロックデータ（生データ）"
+      repeat: length_prefixed
+      description: "アプリケーションサブブロックデータ"
 
   plain_text_ext:
     - name: block_size
@@ -242,16 +242,16 @@ structs:
     - name: bg_color_index
       type: uint8
       description: "テキスト背景色インデックス"
-    - name: text_data
+    - name: sub_blocks
       type: bytes
-      size: remaining
-      description: "プレーンテキストデータサブブロック（生データ）"
+      repeat: length_prefixed
+      description: "プレーンテキストデータサブブロック"
 
   generic_ext:
-    - name: data
+    - name: sub_blocks
       type: bytes
-      size: remaining
-      description: "拡張サブブロック（生データ）"
+      repeat: length_prefixed
+      description: "拡張サブブロック"
 
   raw_data:
     - name: data

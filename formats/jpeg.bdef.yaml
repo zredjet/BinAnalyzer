@@ -268,7 +268,7 @@ structs:
       size: "{length - 2}"
     - name: compressed_data
       type: bytes
-      size: remaining
-      description: "エントロピー符号化データ（埋め込みEOIマーカーを含む）"
+      size: "{until_marker(0xFF, 0xD9)}"
+      description: "エントロピー符号化データ"
 
   eoi_marker: []

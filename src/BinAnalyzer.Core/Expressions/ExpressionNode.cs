@@ -9,6 +9,7 @@ public abstract record ExpressionNode
     public sealed record FieldReference(string FieldName) : ExpressionNode;
     public sealed record BinaryOp(ExpressionNode Left, BinaryOperator Operator, ExpressionNode Right) : ExpressionNode;
     public sealed record UnaryOp(UnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;
+    public sealed record FunctionCall(string Name, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 }
 
 public enum BinaryOperator

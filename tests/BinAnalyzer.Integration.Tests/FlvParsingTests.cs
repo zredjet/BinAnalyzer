@@ -1,5 +1,4 @@
 using BinAnalyzer.Core.Decoded;
-using BinAnalyzer.Core.Models;
 using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl;
 using BinAnalyzer.Engine;
@@ -24,12 +23,11 @@ public class FlvParsingTests
     }
 
     [Fact]
-    public void FlvFormat_DecodesWithRecovery()
+    public void FlvFormat_DecodesSuccessfully()
     {
         var data = FlvTestDataGenerator.CreateMinimalFlv();
         var format = new YamlFormatLoader().Load(FlvFormatPath);
-        var result = new BinaryDecoder().DecodeWithRecovery(data, format, ErrorMode.Continue);
-        var decoded = result.Root;
+        var decoded = new BinaryDecoder().Decode(data, format);
 
         decoded.Name.Should().Be("FLV");
         decoded.Children.Should().HaveCountGreaterThanOrEqualTo(5);
@@ -45,8 +43,7 @@ public class FlvParsingTests
     {
         var data = FlvTestDataGenerator.CreateMinimalFlv();
         var format = new YamlFormatLoader().Load(FlvFormatPath);
-        var result = new BinaryDecoder().DecodeWithRecovery(data, format, ErrorMode.Continue);
-        var decoded = result.Root;
+        var decoded = new BinaryDecoder().Decode(data, format);
 
         var sig = decoded.Children[0].Should().BeOfType<DecodedString>().Subject;
         sig.Value.Should().Be("FLV");
@@ -57,8 +54,7 @@ public class FlvParsingTests
     {
         var data = FlvTestDataGenerator.CreateMinimalFlv();
         var format = new YamlFormatLoader().Load(FlvFormatPath);
-        var result = new BinaryDecoder().DecodeWithRecovery(data, format, ErrorMode.Continue);
-        var decoded = result.Root;
+        var decoded = new BinaryDecoder().Decode(data, format);
 
         var version = decoded.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         version.Value.Should().Be(1);
@@ -72,8 +68,8 @@ public class FlvParsingTests
     {
         var data = FlvTestDataGenerator.CreateMinimalFlv();
         var format = new YamlFormatLoader().Load(FlvFormatPath);
-        var result = new BinaryDecoder().DecodeWithRecovery(data, format, ErrorMode.Continue);
-        var output = new TreeOutputFormatter().Format(result.Root);
+        var decoded = new BinaryDecoder().Decode(data, format);
+        var output = new TreeOutputFormatter().Format(decoded);
 
         output.Should().Contain("FLV");
         output.Should().Contain("signature");

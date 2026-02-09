@@ -602,6 +602,113 @@ public class FormatValidatorTests
         result.Errors.Should().BeEmpty();
     }
 
+    // --- VAL013: bitfieldサイズが1〜8バイト範囲外 ---
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(8)]
+    public void VAL013_BitfieldSizeValid_NoError(int size)
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition { Name = "flags", Type = FieldType.Bitfield, Size = size }),
+        });
+
+        var result = FormatValidator.Validate(format);
+
+        result.Errors.Should().NotContain(d => d.Code == "VAL013");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(9)]
+    [InlineData(16)]
+    public void VAL013_BitfieldSizeInvalid_ReportsError(int size)
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition { Name = "flags", Type = FieldType.Bitfield, Size = size }),
+        });
+
+        var result = FormatValidator.Validate(format);
+
+        result.Errors.Should().Contain(d => d.Code == "VAL013" && d.FieldName == "flags");
+    }
+
+    // --- 可変長整数型にsize指定不要 ---
+
+    [Theory]
+    [InlineData(FieldType.ULeb128)]
+    [InlineData(FieldType.SLeb128)]
+    [InlineData(FieldType.Vlq)]
+    public void VAL007_VariableLengthIntegerWithoutSize_NoError(FieldType type)
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition { Name = "field1", Type = type }),
+        });
+
+        var result = FormatValidator.Validate(format);
+
+        result.Errors.Should().NotContain(d => d.Code == "VAL007");
+    }
+
+    // --- 可変長整数型のenum参照 ---
+
+    [Fact]
+    public void VAL103_EnumRefOnULeb128Field_NoWarning()
+    {
+        var format = CreateFormat(
+            new Dictionary<string, StructDefinition>
+            {
+                ["root"] = Struct("root",
+                    new FieldDefinition { Name = "value", Type = FieldType.ULeb128, EnumRef = "my_enum" }),
+            },
+            enums: new Dictionary<string, EnumDefinition>
+            {
+                ["my_enum"] = new()
+                {
+                    Name = "my_enum",
+                    Entries = [new EnumEntry(0, "zero")],
+                },
+            });
+
+        var result = FormatValidator.Validate(format);
+
+        result.Warnings.Should().NotContain(d => d.Code == "VAL103");
+    }
+
+    // --- VAL110: repeat_while + element_size は有効 ---
+
+    [Fact]
+    public void VAL110_RepeatWhileWithElementSize_NoWarning()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "items",
+                    Type = FieldType.UInt8,
+                    Repeat = new RepeatMode.While(ExpressionParser.Parse("{remaining > 0}")),
+                    ElementSize = 4,
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+
+        result.Warnings.Should().NotContain(d => d.Code == "VAL110");
+    }
+
     // --- エラーメッセージにstruct名・フィールド名が含まれること ---
 
     [Fact]

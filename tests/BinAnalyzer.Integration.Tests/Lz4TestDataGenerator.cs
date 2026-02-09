@@ -5,7 +5,7 @@ namespace BinAnalyzer.Integration.Tests;
 public static class Lz4TestDataGenerator
 {
     /// <summary>
-    /// 最小LZ4フレーム: magic(4B) + FLG(1B) + BD(1B) + header_checksum(1B) + data(4B: EndMark) = 11バイト
+    /// 最小LZ4フレーム: magic(4B) + FLG(1B) + BD(1B) + header_checksum(1B) + EndMark(4B) = 11バイト
     /// content_size=0, dict_id=0, block_max_size=4(64KB), version=01
     /// </summary>
     public static byte[] CreateMinimalLz4()
@@ -29,7 +29,43 @@ public static class Lz4TestDataGenerator
         // header_checksum: xxHash-32 second byte (dummy valid-ish value)
         data[pos] = 0x82; pos += 1;
 
-        // data: EndMark (block_size=0, 4 bytes LE)
+        // EndMark (block_size=0, 4 bytes LE)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0);
+
+        return data;
+    }
+
+    /// <summary>
+    /// データブロック1個 + EndMark の LZ4フレーム
+    /// magic(4B) + FLG(1B) + BD(1B) + header_checksum(1B) + block_size(4B) + block_data(3B) + EndMark(4B) = 18バイト
+    /// </summary>
+    public static byte[] CreateLz4WithDataBlock()
+    {
+        var data = new byte[18];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // magic: 0x184D2204 (LE)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0x184D2204); pos += 4;
+
+        // FLG byte: same as minimal
+        data[pos] = 0x60; pos += 1;
+
+        // BD byte: same as minimal
+        data[pos] = 0x40; pos += 1;
+
+        // header_checksum
+        data[pos] = 0x82; pos += 1;
+
+        // Data block: block_size=3 (LE)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 3); pos += 4;
+
+        // block_data: 3 bytes of dummy data
+        data[pos] = 0xAA; pos += 1;
+        data[pos] = 0xBB; pos += 1;
+        data[pos] = 0xCC; pos += 1;
+
+        // EndMark (block_size=0)
         BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0);
 
         return data;

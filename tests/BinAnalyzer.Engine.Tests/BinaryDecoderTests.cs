@@ -301,6 +301,30 @@ public class BinaryDecoderTests
         rest.RawBytes.Length.Should().Be(4);
     }
 
+    [Fact]
+    public void Decode_SizeRemainingExpression_DecodesCorrectly()
+    {
+        // 1バイトタグ + 残り(7バイト) のうち size: "{remaining - 2}" → 5バイト + 末尾2バイト
+        var format = CreateFormat("main",
+            new FieldDefinition { Name = "tag", Type = FieldType.UInt8 },
+            new FieldDefinition
+            {
+                Name = "body",
+                Type = FieldType.Bytes,
+                SizeExpression = ExpressionParser.Parse("{remaining - 2}"),
+            },
+            new FieldDefinition { Name = "footer", Type = FieldType.UInt16 });
+        var data = new byte[] { 0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x06 };
+
+        var result = _decoder.Decode(data, format);
+
+        result.Children.Should().HaveCount(3);
+        var body = result.Children[1].Should().BeOfType<DecodedBytes>().Subject;
+        body.RawBytes.Length.Should().Be(5);
+        var footer = result.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        footer.Name.Should().Be("footer");
+    }
+
     private static FormatDefinition CreateFormat(string rootName, params FieldDefinition[] fields)
     {
         return new FormatDefinition

@@ -50,8 +50,8 @@ structs:
       type: uint8
       enum: section_id
     - name: section_size
-      type: uint32
-      description: "セクションサイズ（バイト）。実際のWASMではLEB128エンコーディングを使用するため、u32は近似値"
+      type: uleb128
+      description: "セクションサイズ（バイト）"
     - name: section_data
       type: bytes
       size: "{section_size}"

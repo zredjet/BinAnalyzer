@@ -187,7 +187,7 @@
         },
         "size": {
           "type": ["string", "integer"],
-          "description": "フィールドのバイトサイズ。固定値（\"4\"）、式（\"{length}\"）、または \"remaining\"（現在のスコープ内の残りバイト数）。整数型・浮動小数点型は省略可。"
+          "description": "フィールドのバイトサイズ。固定値（\"4\"）、式（\"{length}\"）、\"remaining\"（現在のスコープ内の残りバイト数）、または組み込み関数（\"{until_marker(0xFF, 0xD9)}\"）。整数型・浮動小数点型は省略可。"
         },
         "enum": {
           "type": "string",
@@ -203,8 +203,15 @@
         },
         "repeat": {
           "type": "string",
-          "enum": ["eof"],
-          "description": "繰り返しモード。\"eof\" でスコープ末尾まで繰り返す。"
+          "enum": ["eof", "while", "length_prefixed"],
+          "description": "繰り返しモード。\"eof\" でスコープ末尾まで繰り返す。\"while\" で条件が真の間繰り返す。\"length_prefixed\" で長さプレフィックス付きサブブロックを繰り返す。"
+        },
+        "length_prefix_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 1,
+          "description": "repeat: length_prefixed 時のプレフィックスのバイト数。省略時は1。"
         },
         "repeat_count": {
           "type": "string",
@@ -213,6 +220,10 @@
         "repeat_until": {
           "type": "string",
           "description": "繰り返し終了条件の式。式が真になるまで繰り返す。"
+        },
+        "repeat_while": {
+          "type": "string",
+          "description": "繰り返し継続条件の式。式が真の間、要素のデコード前に評価して繰り返す。"
         },
         "element_size": {
           "type": ["string", "integer"],
