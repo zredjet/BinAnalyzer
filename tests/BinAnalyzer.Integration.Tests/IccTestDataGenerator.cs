@@ -84,4 +84,69 @@ public static class IccTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// タグ付きICCプロファイル:
+    /// profile_header(128B) + tag_table(4B + 2*12B = 28B) + desc_tag(40B) + xyz_tag(20B) = 216バイト
+    /// </summary>
+    public static byte[] CreateIccWithTags()
+    {
+        var data = new byte[216];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // === profile_header (128 bytes) — same as minimal but with updated size ===
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 216); pos += 4; // profile_size
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // preferred_cmm
+        data[pos] = 0x04; data[pos + 1] = 0x00; pos += 4; // version 4.0.0
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0x6D6E7472); pos += 4; // Monitor
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0x52474220); pos += 4; // RGB
+        Encoding.ASCII.GetBytes("XYZ ").CopyTo(span[pos..]); pos += 4; // pcs
+        pos += 12; // creation_date
+        Encoding.ASCII.GetBytes("acsp").CopyTo(span[pos..]); pos += 4; // signature
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0x4D534654); pos += 4; // MSFT
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // flags
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // device_manufacturer
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // device_model
+        BinaryPrimitives.WriteUInt64BigEndian(span[pos..], 0); pos += 8; // attributes
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // rendering_intent
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0x0000F6D6); pos += 4; // pcs X
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0x00010000); pos += 4; // pcs Y
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0x0000D32D); pos += 4; // pcs Z
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // creator
+        pos += 16; // id
+        pos += 28; // reserved
+        // pos = 128
+
+        // === tag_table ===
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 2); pos += 4; // tag_count=2
+
+        // tag 1: desc, offset=156, size=40
+        Encoding.ASCII.GetBytes("desc").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 156); pos += 4; // offset
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 40); pos += 4; // size
+
+        // tag 2: XYZ , offset=196, size=20
+        Encoding.ASCII.GetBytes("XYZ ").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 196); pos += 4; // offset
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 20); pos += 4; // size
+        // pos = 156
+
+        // === desc_tag_data at offset 156 (40 bytes) ===
+        Encoding.ASCII.GetBytes("desc").CopyTo(span[pos..]); pos += 4; // type_signature
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // reserved
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 12); pos += 4; // ascii_length=12
+        Encoding.ASCII.GetBytes("Test Profile").CopyTo(span[pos..]); pos += 12; // ascii_description
+        pos += 16; // extra_data (remaining = 40-4-4-4-12 = 16)
+        // pos = 196
+
+        // === xyz_tag_data at offset 196 (20 bytes) ===
+        Encoding.ASCII.GetBytes("XYZ ").CopyTo(span[pos..]); pos += 4; // type_signature
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // reserved
+        BinaryPrimitives.WriteInt32BigEndian(span[pos..], 0x0000F6D6); pos += 4; // x
+        BinaryPrimitives.WriteInt32BigEndian(span[pos..], 0x00010000); pos += 4; // y
+        BinaryPrimitives.WriteInt32BigEndian(span[pos..], 0x0000D32D); // z
+
+        return data;
+    }
 }

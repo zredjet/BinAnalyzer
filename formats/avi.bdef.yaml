@@ -35,6 +35,9 @@ structs:
       cases:
         "'LIST'": list_chunk
         "'avih'": main_avi_header
+        "'strh'": stream_header
+        "'strf'": stream_format
+        "'idx1'": avi_old_index
       default: raw_data
     - name: padding
       type: bytes
@@ -88,6 +91,72 @@ structs:
       type: bytes
       size: "16"
       description: "予約領域"
+
+  stream_header:
+    - name: fccType
+      type: ascii
+      size: "4"
+      description: "ストリームタイプ（'vids'=映像, 'auds'=音声）"
+    - name: fccHandler
+      type: ascii
+      size: "4"
+      description: "コーデック識別子（FourCC）"
+    - name: dwFlags
+      type: uint32
+    - name: wPriority
+      type: uint16
+    - name: wLanguage
+      type: uint16
+    - name: dwInitialFrames
+      type: uint32
+    - name: dwScale
+      type: uint32
+      description: "タイムスケール"
+    - name: dwRate
+      type: uint32
+      description: "レート（fps = dwRate / dwScale）"
+    - name: dwStart
+      type: uint32
+    - name: dwLength
+      type: uint32
+      description: "ストリーム長（dwScaleの単位）"
+    - name: dwSuggestedBufferSize
+      type: uint32
+    - name: dwQuality
+      type: uint32
+    - name: dwSampleSize
+      type: uint32
+    - name: rcFrame
+      type: bytes
+      size: "8"
+      description: "表示矩形（left, top, right, bottom 各 int16）"
+
+  stream_format:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "ストリームフォーマットデータ"
+
+  avi_old_index:
+    - name: entries
+      type: struct
+      struct: avi_index_entry
+      repeat: eof
+
+  avi_index_entry:
+    - name: dwChunkId
+      type: ascii
+      size: "4"
+      description: "チャンクID（'00dc'=映像, '01wb'=音声等）"
+    - name: dwFlags
+      type: uint32
+      description: "フラグ（0x10=AVIIF_KEYFRAME）"
+    - name: dwOffset
+      type: uint32
+      description: "moviリスト先頭からのオフセット"
+    - name: dwSize
+      type: uint32
+      description: "チャンクデータサイズ"
 
   raw_data:
     - name: data

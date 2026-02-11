@@ -307,6 +307,28 @@ flags:
   default: raw_data
 ```
 
+### バウンダリスコープ
+
+`size` を指定すると、switch 内部にバウンダリスコープが設定されます。選択された構造体はそのサイズ範囲内でデコードされ、構造体内の `size: remaining` はスコープ内の残りバイト数を参照します。
+
+### seek との組み合わせ
+
+`seek` と `size` を組み合わせることで、オフセット先のデータを型に応じて構造体選択できます。`seek_restore: true` を指定すると、デコード後に元の位置に復帰します。
+
+```yaml
+# ICCプロファイルのタグデータ参照（offset先のデータをsignatureで分岐）
+- name: data
+  type: switch
+  size: "{size}"
+  seek: "{offset}"
+  seek_restore: true
+  switch_on: "{signature}"
+  cases:
+    "'desc'": desc_tag_data
+    "'XYZ '": xyz_tag_data
+  default: raw_data
+```
+
 ## 条件フィールド
 
 `if` を指定すると、式の評価結果が真の場合のみフィールドをデコードします。偽の場合はスキップされます。
@@ -481,6 +503,24 @@ structs:
 - `value` プロパティで式を指定（必須）
 - 既存の式システム（フィールド参照、算術、比較等）をそのまま利用可能
 - ツリー出力では `= 値` 形式で表示され、計算値であることが視覚的に区別できる
+- `if` と組み合わせて条件付き計算フィールドを定義可能
+
+### 条件付き virtual フィールド
+
+```yaml
+# TIFFのIFDエントリ: 型とカウントに応じたインライン値解釈
+- name: is_inline
+  type: virtual
+  value: "{(field_type == 3 and count <= 2) or (field_type == 4 and count == 1)}"
+  description: "値がインラインかどうか"
+- name: inline_short_value
+  type: virtual
+  value: "{value_offset & 0xFFFF}"
+  if: "{field_type == 3 and count == 1}"
+  description: "SHORT型のインライン値"
+```
+
+**注意**: `or`/`and` を含む論理式は `bool` 型を返します（`long` ではない）。テスト等で評価結果を比較する際は型に注意してください。
 
 ## オフセットジャンプ（seek）
 

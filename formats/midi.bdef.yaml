@@ -55,7 +55,83 @@ structs:
       description: "MTrk"
     - name: length
       type: uint32
+    - name: track_data
+      type: switch
+      size: "{length}"
+      switch_on: "1"
+      cases:
+        "1": midi_event_list
+
+  midi_event_list:
+    - name: events
+      type: struct
+      struct: midi_event
+      repeat: eof
+
+  midi_event:
+    - name: delta_time
+      type: vlq
+      description: "デルタタイム（VLQエンコード）"
+    - name: status
+      type: uint8
+      description: "ステータスバイト"
+    - name: event_data
+      type: switch
+      switch_on: "{status >> 4}"
+      cases:
+        "8": two_param_event
+        "9": two_param_event
+        "10": two_param_event
+        "11": two_param_event
+        "12": one_param_event
+        "13": one_param_event
+        "14": two_param_event
+        "15": system_event_data
+      default: raw_event_data
+
+  two_param_event:
+    - name: param1
+      type: uint8
+    - name: param2
+      type: uint8
+
+  one_param_event:
+    - name: param1
+      type: uint8
+
+  system_event_data:
+    - name: system_body
+      type: switch
+      switch_on: "{status}"
+      cases:
+        "255": meta_event_body
+        "240": sysex_event_body
+        "247": sysex_event_body
+      default: raw_event_data
+
+  meta_event_body:
+    - name: meta_type
+      type: uint8
+      description: "メタイベントタイプ（0x2F=End of Track, 0x51=テンポ, 0x58=拍子記号）"
+    - name: meta_length
+      type: vlq
+    - name: meta_data
+      type: bytes
+      size: "{meta_length}"
+
+  sysex_event_body:
+    - name: sysex_length
+      type: vlq
+    - name: sysex_data
+      type: bytes
+      size: "{sysex_length}"
+
+  raw_event_data:
     - name: data
       type: bytes
-      size: "{length}"
-      description: "MIDIイベント（ノートオン/オフ、コントロールチェンジ等）、メタイベント（テンポ、拍子記号等）、SysExイベントのシーケンスを含むトラックデータ。各イベントの前に可変長数値（VLQ）エンコードされたデルタタイムが付加される"
+      size: remaining
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

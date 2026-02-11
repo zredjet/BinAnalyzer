@@ -76,6 +76,32 @@ public class TiffParsingTests
     }
 
     [Fact]
+    public void TiffFormat_InlineValues_DecodesCorrectly()
+    {
+        var data = TiffTestDataGenerator.CreateMinimalTiff();
+        var format = new YamlFormatLoader().Load(TiffFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var ifd = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var entries = ifd.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        var entry = entries.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        // entry: tag=256(ImageWidth), field_type=3(SHORT), count=1, value_offset=64
+        // is_inline should be true (field_type==3 and count<=2)
+        var isInline = entry.Children.First(c => c.Name == "is_inline")
+            .Should().BeOfType<DecodedVirtual>().Subject;
+        isInline.Value.Should().Be(true);
+
+        // inline_short_value should be 64 (value_offset & 0xFFFF = 64)
+        var inlineShort = entry.Children.First(c => c.Name == "inline_short_value")
+            .Should().BeOfType<DecodedVirtual>().Subject;
+        ((long)inlineShort.Value).Should().Be(64);
+
+        // inline_long_value should NOT be present (field_type==3, not 4)
+        entry.Children.Should().NotContain(c => c.Name == "inline_long_value");
+    }
+
+    [Fact]
     public void TiffFormat_TreeOutput_ContainsExpectedElements()
     {
         var data = TiffTestDataGenerator.CreateMinimalTiff();

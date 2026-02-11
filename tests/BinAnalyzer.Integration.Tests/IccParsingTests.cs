@@ -66,6 +66,63 @@ public class IccParsingTests
     }
 
     [Fact]
+    public void IccFormat_DescTag_DecodesCorrectly()
+    {
+        var data = IccTestDataGenerator.CreateIccWithTags();
+        var format = new YamlFormatLoader().Load(IccFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var tagTable = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var tags = tagTable.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        tags.Elements.Should().HaveCount(2);
+
+        // tags[0] = desc tag_entry
+        var descEntry = tags.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var sig = descEntry.Children[0].Should().BeOfType<DecodedString>().Subject;
+        sig.Value.Should().Be("desc");
+
+        // data → switch → desc_tag_data
+        var descData = descEntry.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+        var typeSig = descData.Children[0].Should().BeOfType<DecodedString>().Subject;
+        typeSig.Value.Should().Be("desc");
+
+        var asciiLength = descData.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        asciiLength.Value.Should().Be(12);
+
+        var asciiDesc = descData.Children[3].Should().BeOfType<DecodedString>().Subject;
+        asciiDesc.Value.Should().Be("Test Profile");
+    }
+
+    [Fact]
+    public void IccFormat_XyzTag_DecodesCorrectly()
+    {
+        var data = IccTestDataGenerator.CreateIccWithTags();
+        var format = new YamlFormatLoader().Load(IccFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var tagTable = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var tags = tagTable.Children[1].Should().BeOfType<DecodedArray>().Subject;
+
+        // tags[1] = XYZ  tag_entry
+        var xyzEntry = tags.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
+        var sig = xyzEntry.Children[0].Should().BeOfType<DecodedString>().Subject;
+        sig.Value.Should().Be("XYZ ");
+
+        // data → switch → xyz_tag_data
+        var xyzData = xyzEntry.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+        var typeSig = xyzData.Children[0].Should().BeOfType<DecodedString>().Subject;
+        typeSig.Value.Should().Be("XYZ ");
+
+        var x = xyzData.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        x.Name.Should().Be("x");
+        x.Value.Should().Be(0x0000F6D6);
+
+        var y = xyzData.Children[3].Should().BeOfType<DecodedInteger>().Subject;
+        y.Name.Should().Be("y");
+        y.Value.Should().Be(0x00010000);
+    }
+
+    [Fact]
     public void IccFormat_TreeOutput_ContainsExpectedElements()
     {
         var data = IccTestDataGenerator.CreateMinimalIcc();

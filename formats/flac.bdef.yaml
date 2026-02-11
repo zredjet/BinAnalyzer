@@ -261,9 +261,22 @@ structs:
       type: uint8
       description: "インデックスポイント数"
     - name: indices
+      type: struct
+      struct: cuesheet_index
+      repeat_count: "{num_indices}"
+
+  cuesheet_index:
+    - name: offset
+      type: uint64
+      description: "トラック先頭からのサンプルオフセット"
+    - name: index_number
+      type: uint8
+      description: "インデックスポイント番号"
+    - name: reserved
       type: bytes
-      size: "{num_indices * 12}"
-      description: "インデックスポイント（各12バイト）"
+      size: "3"
+      padding: true
+      description: "予約領域"
 
   picture_block:
     - name: picture_type

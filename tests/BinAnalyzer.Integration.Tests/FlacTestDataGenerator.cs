@@ -82,4 +82,89 @@ public static class FlacTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// FLACファイル with CUESHEET: magic(4B) + STREAMINFO block(4+34=38B, is_last=0) + CUESHEET block
+    /// CUESHEET: header(4B) + media_catalog(128B) + lead_in(8B) + flags(1B) + reserved(258B) + num_tracks(1B) + 1 track(36B) = 436B body
+    /// track: offset(8) + number(1) + isrc(12) + flags(1) + reserved(13) + num_indices(1) = 36B (but indices follow)
+    /// With 1 index: track(36B) + index(12B) = 48B → total cuesheet body = 128+8+1+258+1+48 = 444B
+    /// Total: 4 + 38 + 4 + 444 = 490B
+    /// </summary>
+    public static byte[] CreateFlacWithCuesheet()
+    {
+        var data = new byte[490];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // magic: "fLaC"
+        data[0] = 0x66; data[1] = 0x4C; data[2] = 0x61; data[3] = 0x43;
+        pos = 4;
+
+        // === STREAMINFO metadata_block (is_last=0) ===
+        data[pos] = 0x00; pos += 1; // header_byte: is_last=0, block_type=0
+        data[pos] = 0x00; pos += 1; // length_b0
+        data[pos] = 0x00; pos += 1; // length_b1
+        data[pos] = 0x22; pos += 1; // length_b2 (34)
+
+        // STREAMINFO: 34 bytes (minimal valid)
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 4096); pos += 2; // min_block_size
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 4096); pos += 2; // max_block_size
+        pos += 3; // min_frame_size (0)
+        pos += 3; // max_frame_size (0)
+        // bitfield: 44100Hz, stereo, 16-bit, 0 samples
+        data[pos] = 0x0A; pos += 1;
+        data[pos] = 0xC4; pos += 1;
+        data[pos] = 0x42; pos += 1;
+        data[pos] = 0xF0; pos += 1;
+        pos += 4; // total_samples low bytes
+        pos += 16; // md5
+
+        // === CUESHEET metadata_block (is_last=1) ===
+        data[pos] = 0x85; pos += 1; // header_byte: is_last=1, block_type=5 (CUESHEET)
+        // length: 444 (24-bit big-endian)
+        data[pos] = 0x00; pos += 1; // length_b0
+        data[pos] = 0x01; pos += 1; // length_b1
+        data[pos] = 0xBC; pos += 1; // length_b2 (0x01BC = 444)
+
+        // CUESHEET body:
+        // media_catalog: 128 bytes (null-padded)
+        data[pos] = (byte)'T'; data[pos + 1] = (byte)'E'; data[pos + 2] = (byte)'S'; data[pos + 3] = (byte)'T';
+        pos += 128;
+
+        // lead_in_samples: 88200 (2 seconds at 44100)
+        BinaryPrimitives.WriteUInt64BigEndian(span[pos..], 88200); pos += 8;
+
+        // cuesheet_flags: 1 byte bitfield, is_cd=1 (bit 7)
+        data[pos] = 0x80; pos += 1;
+
+        // reserved: 258 bytes
+        pos += 258;
+
+        // num_tracks: 1
+        data[pos] = 1; pos += 1;
+
+        // === cuesheet_track ===
+        // track_offset: 0 (8 bytes)
+        BinaryPrimitives.WriteUInt64BigEndian(span[pos..], 0); pos += 8;
+        // track_number: 1
+        data[pos] = 1; pos += 1;
+        // isrc: 12 bytes
+        pos += 12;
+        // track_flags: 1 byte (track_type=0, pre_emphasis=0)
+        data[pos] = 0x00; pos += 1;
+        // track_reserved: 13 bytes
+        pos += 13;
+        // num_indices: 1
+        data[pos] = 1; pos += 1;
+
+        // === cuesheet_index ===
+        // offset: 0 (8 bytes)
+        BinaryPrimitives.WriteUInt64BigEndian(span[pos..], 0); pos += 8;
+        // index_number: 1
+        data[pos] = 1; pos += 1;
+        // reserved: 3 bytes
+        pos += 3;
+
+        return data;
+    }
 }

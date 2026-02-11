@@ -113,6 +113,41 @@ public class WavParsingTests
     }
 
     [Fact]
+    public void WavFormat_ListInfo_DecodesCorrectly()
+    {
+        var wavData = WavTestDataGenerator.CreateWavWithListInfo();
+        var format = new YamlFormatLoader().Load(WavFormatPath);
+        var decoded = new BinaryDecoder().Decode(wavData, format);
+
+        var chunks = decoded.Children[3].Should().BeOfType<DecodedArray>().Subject;
+        chunks.Elements.Should().HaveCount(2); // fmt + LIST
+
+        var listChunk = chunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
+        var chunkId = listChunk.Children[0].Should().BeOfType<DecodedString>().Subject;
+        chunkId.Value.Should().Be("LIST");
+
+        // data → switch → list_chunk → data → info_chunk_data → sub_chunks
+        var listData = listChunk.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var infoData = listData.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var subChunks = infoData.Children[0].Should().BeOfType<DecodedArray>().Subject;
+        subChunks.Elements.Should().HaveCount(2);
+
+        // sub_chunks[0]: INAM
+        var inam = subChunks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var inamId = inam.Children[0].Should().BeOfType<DecodedString>().Subject;
+        inamId.Value.Should().Be("INAM");
+        var inamSize = inam.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        inamSize.Value.Should().Be(5);
+
+        // sub_chunks[1]: ISFT
+        var isft = subChunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
+        var isftId = isft.Children[0].Should().BeOfType<DecodedString>().Subject;
+        isftId.Value.Should().Be("ISFT");
+        var isftSize = isft.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        isftSize.Value.Should().Be(4);
+    }
+
+    [Fact]
     public void WavFormat_TreeOutput_ContainsExpectedElements()
     {
         var wavData = WavTestDataGenerator.CreateMinimalWav();

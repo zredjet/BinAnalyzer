@@ -76,6 +76,40 @@ public class MachoParsingTests
     }
 
     [Fact]
+    public void MachoFormat_BuildVersion_ToolEntryDecodesCorrectly()
+    {
+        var data = MachoTestDataGenerator.CreateMacho64WithBuildVersion();
+        var format = new YamlFormatLoader().Load(MachoFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var loadCommands = body.Children.Last().Should().BeOfType<DecodedArray>().Subject;
+        var lc = loadCommands.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        // cmd=44 (LC_BUILD_VERSION), cmdsize=32, body (switch → build_version_body)
+        var cmd = lc.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        cmd.Value.Should().Be(44);
+        cmd.EnumLabel.Should().Be("LC_BUILD_VERSION");
+
+        var lcBody = lc.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        // build_version_body: platform, minos, sdk, ntools, tools
+        var ntools = lcBody.Children[3].Should().BeOfType<DecodedInteger>().Subject;
+        ntools.Value.Should().Be(1);
+
+        var tools = lcBody.Children[4].Should().BeOfType<DecodedArray>().Subject;
+        tools.Elements.Should().HaveCount(1);
+
+        var toolEntry = tools.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var tool = toolEntry.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        tool.Name.Should().Be("tool");
+        tool.Value.Should().Be(3); // ld
+
+        var version = toolEntry.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        version.Name.Should().Be("version");
+        version.Value.Should().Be(0x003C0600);
+    }
+
+    [Fact]
     public void MachoFormat_TreeOutput_ContainsExpectedElements()
     {
         var data = MachoTestDataGenerator.CreateMinimalMacho64();

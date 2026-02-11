@@ -129,18 +129,27 @@ flags:
 |---|---|---|
 | `ParseFieldType` | `type` 文字列 | `FieldType` enum |
 | `ParseSize` | `size` 文字列 | `(int?, Expression?, bool)` |
-| `ParseRepeatMode` | `repeat`/`repeat_count`/`repeat_until` | `RepeatMode` |
+| `ParseRepeatMode` | `repeat`/`repeat_count`/`repeat_until`/`repeat_while`/`length_prefix_size` | `RepeatMode` |
 | `ParseSwitch` | `switch_on`/`cases`/`default` | `(Expression?, List<SwitchCase>?, string?)` |
 | `ParseChecksum` | `checksum` オブジェクト | `ChecksumSpec?` |
 | `ParseBitfieldEntries` | `fields` リスト | `IReadOnlyList<BitfieldEntry>?` |
 
 フィールドには以下の追加プロパティもマッピングされる:
 
-| プロパティ | 入力 | 説明 |
-|---|---|---|
-| `Condition` | `condition` 文字列（式） | フィールドの条件付きデコード（式がfalseなら読み飛ばす） |
-| `Expected` | `expected` バイト列 | バイト列フィールドの期待値（バリデーション用） |
-| `Description` | `description` 文字列 | フィールドの説明テキスト |
+| プロパティ | 入力キー | IR プロパティ | 説明 |
+|---|---|---|---|
+| 条件 | `if` 文字列（式） | `Condition` | フィールドの条件付きデコード（式がfalseなら読み飛ばす） |
+| 期待値 | `expected` バイト列 | `Expected` | バイト列フィールドの期待値（バリデーション用） |
+| 説明 | `description` 文字列 | `Description` | フィールドの説明テキスト |
+| アライメント | `align` 整数 | `Align` | フィールドデコード後の次フィールド開始位置アライメント |
+| パディング | `padding` bool | `IsPadding` | trueの場合ツリー出力で非表示 |
+| 要素サイズ | `element_size` 文字列 | `ElementSize` / `ElementSizeExpression` | 繰り返し時の各要素バウンダリサイズ |
+| 計算値 | `value` 文字列（式） | `ValueExpression` | virtual型の式 |
+| オフセット | `seek` 文字列（式） | `SeekExpression` | デコード前にジャンプする絶対オフセット |
+| 位置復帰 | `seek_restore` bool | `SeekRestore` | seek後にデコード前の位置に復帰 |
+| エンディアン | `endianness` 文字列 | `Endianness` | フィールドレベルのエンディアン上書き |
+| バリデーション | `validate` 文字列（式） | `ValidationExpression` | デコード後に評価するバリデーション式 |
+| 文字列テーブル | `string_table` 文字列 | `StringTableRef` | 整数値をオフセットとした文字列テーブル参照 |
 
 ##### フィールド型の解決
 
@@ -155,16 +164,26 @@ flags:
 "int16" | "i16"          →  FieldType.Int16
 "int32" | "i32"          →  FieldType.Int32
 "int64" | "i64"          →  FieldType.Int64
+"float32" | "f32"        →  FieldType.Float32
+"float64" | "f64"        →  FieldType.Float64
 "bytes"                  →  FieldType.Bytes
 "ascii"                  →  FieldType.Ascii
 "utf8"                   →  FieldType.Utf8
+"asciiz"                 →  FieldType.AsciiZ
+"utf8z"                  →  FieldType.Utf8Z
 "utf16le" | "utf16-le"   →  FieldType.Utf16Le
 "utf16be" | "utf16-be"   →  FieldType.Utf16Be
 "sjis" | "shift_jis" | "shift-jis"  →  FieldType.ShiftJis
 "latin1" | "iso-8859-1"  →  FieldType.Latin1
+"zlib"                   →  FieldType.Zlib
+"deflate"                →  FieldType.Deflate
+"uleb128" | "leb128u"    →  FieldType.ULeb128
+"sleb128" | "leb128s"    →  FieldType.SLeb128
+"vlq"                    →  FieldType.Vlq
 "struct"                 →  FieldType.Struct
 "switch"                 →  FieldType.Switch
 "bitfield"               →  FieldType.Bitfield
+"virtual"                →  FieldType.Virtual
 ```
 
 ##### サイズの解決
@@ -182,13 +201,15 @@ null         →  (null, null, false)        サイズ指定なし（固定長�
 
 ##### 繰り返しモードの解決
 
-優先順位: `repeat: eof` → `repeat_count` → `repeat_until` → `None`
+優先順位: `repeat: eof` → `repeat: length_prefixed` → `repeat_count` → `repeat_until` → `repeat_while` → `None`
 
 ```
-repeat: eof              →  RepeatMode.UntilEof
-repeat_count: "{count}"  →  RepeatMode.Count(式)
-repeat_until: "{done}"   →  RepeatMode.UntilValue(式)
-（いずれもなし）           →  RepeatMode.None
+repeat: eof                        →  RepeatMode.UntilEof
+repeat: length_prefixed            →  RepeatMode.LengthPrefixed(prefixSize)
+repeat_count: "{count}"            →  RepeatMode.Count(式)
+repeat_until: "{done}"             →  RepeatMode.UntilValue(式)
+repeat_while: "{remaining >= 4}"   →  RepeatMode.While(式)
+（いずれもなし）                     →  RepeatMode.None
 ```
 
 `RepeatMode` は判別共用体（sealed record hierarchy）として実装:
@@ -199,6 +220,8 @@ public abstract record RepeatMode {
     public sealed record Count(Expression CountExpression) : RepeatMode;
     public sealed record UntilEof : RepeatMode;
     public sealed record UntilValue(Expression Condition) : RepeatMode;
+    public sealed record While(Expression Condition) : RepeatMode;
+    public sealed record LengthPrefixed(int PrefixSize) : RepeatMode;
 }
 ```
 
@@ -230,7 +253,7 @@ default: raw_data
 
 `FormatValidator`（`BinAnalyzer.Core.Validation` 名前空間）がIR変換後に静的検証を実行する。CLIでは `--no-validate` オプションでスキップ可能。
 
-**エラー（VAL001〜VAL007）:**
+**エラー（VAL001〜VAL014）:**
 - VAL001: struct型フィールドに `StructRef` がない
 - VAL002: `StructRef` が未定義のstructを参照
 - VAL003: switchのcaseが未定義のstructを参照
@@ -238,8 +261,13 @@ default: raw_data
 - VAL005: switch型フィールドに `switch_on` がない
 - VAL006: switch型フィールドにcasesもdefaultもない
 - VAL007: サイズ指定が必要な型にサイズ指定がない
+- VAL008: フィールドの `align` 値が正の整数ではない
+- VAL009: 構造体の `align` 値が正の整数ではない
+- VAL010: virtual型フィールドに `value` が未指定
+- VAL011: `seek_restore` が `seek` なしで指定されている
+- VAL014: LengthPrefixed の PrefixSize が範囲外（1〜4）
 
-**警告（VAL101〜VAL109）:**
+**警告（VAL101〜VAL112）:**
 - VAL101: `EnumRef` が未定義のenumを参照
 - VAL102: `FlagsRef` が未定義のflagsを参照
 - VAL103: `EnumRef` が整数型以外に使用されている
@@ -249,6 +277,9 @@ default: raw_data
 - VAL107: 未使用のenum定義
 - VAL108: 未使用のflags定義
 - VAL109: ルートから到達不能なstruct定義
+- VAL110: `element_size` が繰り返しフィールド以外に指定されている
+- VAL111: LengthPrefixed が bytes 以外の型に指定されている
+- VAL112: `string_table` 参照が整数型以外のフィールドに指定されている
 
 現時点で実行されない検証（将来拡張候補）:
 - 循環参照の検出
@@ -266,8 +297,14 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
 | `size` | `{length}`, `{length - 4}` | long（整数） |
 | `repeat_count` | `{count}` | long（整数） |
 | `repeat_until` | `{type == 0}` | bool |
+| `repeat_while` | `{remaining >= 4}` | bool |
 | `switch_on` | `{type}` | any（文字列または整数） |
 | switchの`cases`キー | `'IHDR'`, `1` | any（switch_onと同型） |
+| `if`（条件） | `{version >= 2}` | bool |
+| `seek` | `{offset}`, `{e_lfanew + 4}` | long（整数、絶対オフセット） |
+| `value`（virtual） | `{width * height}` | any（計算結果） |
+| `validate` | `{magic == 42}` | bool |
+| `element_size` | `{entry_size}` | long（整数） |
 
 ### 3.2 字句解析（ExpressionTokenizer）
 
@@ -285,6 +322,11 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
 | `Star` | `*` | |
 | `Slash` | `/` | |
 | `Percent` | `%` | |
+| `Ampersand` | `&` | |
+| `Pipe` | `\|` | |
+| `Caret` | `^` | |
+| `LessLess` | `<<` | |
+| `GreaterGreater` | `>>` | |
 | `EqualEqual` | `==` | |
 | `NotEqual` | `!=` | |
 | `LessThan` | `<` | |
@@ -296,6 +338,7 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
 | `Not` | `not`（キーワード） | |
 | `LeftParen` | `(` | |
 | `RightParen` | `)` | |
+| `Comma` | `,` | |
 | `Eof` | 入力終端 | |
 
 #### 字句解析の処理フロー
@@ -308,10 +351,11 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
   シングルクォート → 閉じクォートまで文字列リテラル読み取り
   英字/_       → 識別子読み取り → キーワード判定（and/or/not）
   演算子文字    → 1文字または2文字演算子の判定（先読み1文字）
+  カンマ        → Comma トークン
   その他        → FormatException
 ```
 
-**先読み（Peek）**: `<=`, `>=`, `==`, `!=` の判定に1文字の先読みを使用。入力範囲外の場合は `'\0'` を返す。
+**先読み（Peek）**: `<=`, `>=`, `==`, `!=`, `<<`, `>>` の判定に1文字の先読みを使用。入力範囲外の場合は `'\0'` を返す。`<` は先読みで `=` なら `LessThanOrEqual`、`<` なら `LessLess`（左シフト）、それ以外は `LessThan` と判定する。`>` も同様。
 
 **16進数リテラル**: `0x` 接頭辞を検出した場合、`[0-9a-fA-F]+` を続けて読み取る。
 
@@ -327,12 +371,17 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
 
 ```
 or_expr      ::= and_expr ("or" and_expr)*
-and_expr     ::= compare_expr ("and" compare_expr)*
-compare_expr ::= add_expr (("==" | "!=" | "<" | "<=" | ">" | ">=") add_expr)?
+and_expr     ::= bitor_expr ("and" bitor_expr)*
+bitor_expr   ::= bitxor_expr ("|" bitxor_expr)*
+bitxor_expr  ::= bitand_expr ("^" bitand_expr)*
+bitand_expr  ::= compare_expr ("&" compare_expr)*
+compare_expr ::= shift_expr (("==" | "!=" | "<" | "<=" | ">" | ">=") shift_expr)?
+shift_expr   ::= add_expr (("<<" | ">>") add_expr)*
 add_expr     ::= mul_expr (("+" | "-") mul_expr)*
 mul_expr     ::= unary_expr (("*" | "/" | "%") unary_expr)*
 unary_expr   ::= ("-" | "not") unary_expr | primary
-primary      ::= INTEGER | STRING | IDENTIFIER | "(" or_expr ")"
+primary      ::= INTEGER | STRING | IDENTIFIER | func_call | "(" or_expr ")"
+func_call    ::= IDENTIFIER "(" (or_expr ("," or_expr)*)? ")"
 ```
 
 #### 演算子優先順位表
@@ -341,10 +390,14 @@ primary      ::= INTEGER | STRING | IDENTIFIER | "(" or_expr ")"
 |--------|--------|--------|------------|
 | 1（最低） | `or` | 左 | `ParseOrExpr` |
 | 2 | `and` | 左 | `ParseAndExpr` |
-| 3 | `==` `!=` `<` `<=` `>` `>=` | なし（単一） | `ParseCompareExpr` |
-| 4 | `+` `-` | 左 | `ParseAddExpr` |
-| 5 | `*` `/` `%` | 左 | `ParseMulExpr` |
-| 6（最高） | `-`（単項） `not` | 右 | `ParseUnaryExpr` |
+| 3 | `\|`（ビットOR） | 左 | `ParseBitOrExpr` |
+| 4 | `^`（ビットXOR） | 左 | `ParseBitXorExpr` |
+| 5 | `&`（ビットAND） | 左 | `ParseBitAndExpr` |
+| 6 | `==` `!=` `<` `<=` `>` `>=` | なし（単一） | `ParseCompareExpr` |
+| 7 | `<<` `>>` | 左 | `ParseShiftExpr` |
+| 8 | `+` `-` | 左 | `ParseAddExpr` |
+| 9 | `*` `/` `%` | 左 | `ParseMulExpr` |
+| 10（最高） | `-`（単項） `not` | 右 | `ParseUnaryExpr` |
 
 **比較演算子は非結合**: `a < b < c` は構文エラーにならないが、`(a < b) < c`（bool < int）として評価され、実用上は意味をなさない。チェーン比較は設計上サポートしない。
 
@@ -358,16 +411,20 @@ primary      ::= INTEGER | STRING | IDENTIFIER | "(" or_expr ")"
    └─ Tokenize → [Identifier("length"), Minus, Integer("4"), Eof]
    └─ ParseOrExpr()
       └─ ParseAndExpr()
-         └─ ParseCompareExpr()
-            └─ ParseAddExpr()
-               ├─ ParseMulExpr()
-               │  └─ ParseUnaryExpr()
-               │     └─ ParsePrimary() → FieldReference("length")
-               ├─ Minus を消費
-               └─ ParseMulExpr()
-                  └─ ParseUnaryExpr()
-                     └─ ParsePrimary() → LiteralInt(4)
-               └─ BinaryOp(FieldReference("length"), Subtract, LiteralInt(4))
+         └─ ParseBitOrExpr()
+            └─ ParseBitXorExpr()
+               └─ ParseBitAndExpr()
+                  └─ ParseCompareExpr()
+                     └─ ParseShiftExpr()
+                        └─ ParseAddExpr()
+                           ├─ ParseMulExpr()
+                           │  └─ ParseUnaryExpr()
+                           │     └─ ParsePrimary() → FieldReference("length")
+                           ├─ Minus を消費
+                           └─ ParseMulExpr()
+                              └─ ParseUnaryExpr()
+                                 └─ ParsePrimary() → LiteralInt(4)
+                           └─ BinaryOp(FieldReference("length"), Subtract, LiteralInt(4))
 ```
 
 結果のAST:
@@ -388,12 +445,24 @@ BinaryOp
 
 ```csharp
 ExpressionNode
-├── LiteralInt(long Value)        // 整数リテラル: 42, 0xFF
-├── LiteralString(string Value)   // 文字列リテラル: 'IHDR'
+├── LiteralInt(long Value)            // 整数リテラル: 42, 0xFF
+├── LiteralString(string Value)       // 文字列リテラル: 'IHDR'
 ├── FieldReference(string FieldName)  // フィールド参照: length
 ├── BinaryOp(Left, Operator, Right)   // 二項演算: a + b
-└── UnaryOp(Operator, Operand)        // 単項演算: -x, not y
+├── UnaryOp(Operator, Operand)        // 単項演算: -x, not y
+└── FunctionCall(Name, Arguments)     // 関数呼び出し: until_marker(0xFF, 0xD9)
 ```
+
+`BinaryOperator` enum（17種）:
+
+```csharp
+// 算術: Add, Subtract, Multiply, Divide, Modulo
+// 比較: Equal, NotEqual, LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual
+// 論理: And, Or
+// ビット: BitwiseAnd, BitwiseOr, BitwiseXor, LeftShift, RightShift
+```
+
+`UnaryOperator` enum（2種）: `Negate`（単項マイナス）, `Not`（論理否定）
 
 `Expression` レコードはパース済みAST（`Root`）と元のテキスト（`OriginalText`）を保持する。元テキストはデバッグ・エラーメッセージ用。
 
@@ -411,10 +480,12 @@ ASTをDecodeContextの変数環境上で評価する。Engineプロジェクト�
 | `LiteralString` | `string` |
 | `FieldReference` | デコード時にバインドされた値（`long` または `string`） |
 | 算術演算 | `long` |
+| ビット演算 | `long` |
 | 比較演算 | `bool` |
-| 論理演算 | `bool` |
+| 論理演算（`and`, `or`） | `bool` |
 | 単項否定 | `long` |
 | 単項NOT | `bool` |
+| 関数呼び出し | 関数依存（`until_marker` → `long`） |
 
 #### 型変換ルール
 
@@ -452,7 +523,7 @@ DSL読み込み時に検出されるエラー。`FormatException` または `Inv
 | 未閉の文字列 | ExpressionTokenizer | `Unterminated string literal at position 0` |
 | 予期しないトークン | ExpressionParser | `Unexpected token '+' at position 0` |
 | 閉じ括弧の欠落 | ExpressionParser | `Expected ')' at position 8` |
-| 不明なフィールド型 | YamlToIrMapper | `Unknown field type: float32` |
+| 不明なフィールド型 | YamlToIrMapper | `Unknown field type: bcd` |
 | 不明なエンディアン | YamlToIrMapper | `Unknown endianness: middle` |
 | ルート構造体の不在 | YamlToIrMapper | `Root struct 'main' not found in struct definitions` |
 
@@ -479,13 +550,21 @@ CLIでは `DecodeException` をキャッチし、`FormatMessage()` で構造化�
 
 ## 5. 拡張ポイント
 
-現在の式パーサーは意図的にシンプルに保たれている。将来的な拡張候補:
+### 実装済みの拡張
+
+以下は初期設計後に追加された拡張機能:
+
+| 拡張 | 影響範囲 | 実装REQ |
+|---|---|---|
+| ビット演算（`&`, `\|`, `^`, `<<`, `>>`） | Tokenizer + Parser + Evaluator | REQ-016 |
+| 組み込み関数（`until_marker()`） | Tokenizer（Comma）+ Parser（FunctionCall）+ Evaluator | REQ-091 |
+
+### 将来的な拡張候補
 
 | 拡張 | 影響範囲 | 備考 |
 |---|---|---|
-| ビット演算（`&`, `\|`, `^`, `<<`, `>>`） | Tokenizer + Parser + Evaluator | バイナリ解析で有用 |
 | 三項演算子（`a ? b : c`） | Parser + Evaluator | switchのインライン分岐 |
-| 組み込み関数（`sizeof()`, `offset()`） | 全層 | メタ情報へのアクセス |
+| 追加組み込み関数（`sizeof()`, `offset()`） | Evaluator | メタ情報へのアクセス |
 | ドット記法（`header.length`） | Tokenizer + Parser + Evaluator | ネスト構造体のフィールド参照 |
 | エラーリカバリ | Parser | 複数エラーの一括報告 |
 

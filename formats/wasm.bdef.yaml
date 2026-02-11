@@ -53,6 +53,110 @@ structs:
       type: uleb128
       description: "セクションサイズ（バイト）"
     - name: section_data
-      type: bytes
+      type: switch
       size: "{section_size}"
-      description: "セクションデータ"
+      switch_on: "{section_id}"
+      cases:
+        "0": custom_section_data
+        "1": type_section_data
+        "3": function_section_data
+        "5": memory_section_data
+        "7": export_section_data
+      default: raw_data
+
+  custom_section_data:
+    - name: name_len
+      type: uleb128
+      description: "カスタムセクション名の長さ"
+    - name: name
+      type: utf8
+      size: "{name_len}"
+      description: "カスタムセクション名"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "カスタムセクションデータ"
+
+  type_section_data:
+    - name: count
+      type: uleb128
+      description: "関数型の数"
+    - name: entries
+      type: struct
+      struct: func_type
+      repeat_count: "{count}"
+
+  func_type:
+    - name: form
+      type: uint8
+      validate: "{form == 96}"
+      description: "関数型マーカー（0x60）"
+    - name: param_count
+      type: uleb128
+      description: "パラメータ数"
+    - name: params
+      type: uint8
+      repeat_count: "{param_count}"
+      description: "パラメータ値型"
+    - name: result_count
+      type: uleb128
+      description: "戻り値数"
+    - name: results
+      type: uint8
+      repeat_count: "{result_count}"
+      description: "戻り値型"
+
+  function_section_data:
+    - name: count
+      type: uleb128
+      description: "関数数"
+    - name: type_indices
+      type: uleb128
+      repeat_count: "{count}"
+      description: "型インデックス"
+
+  memory_section_data:
+    - name: count
+      type: uleb128
+      description: "メモリ数"
+    - name: entries
+      type: struct
+      struct: memory_type
+      repeat_count: "{count}"
+
+  memory_type:
+    - name: flags
+      type: uleb128
+      description: "フラグ（0=最小のみ, 1=最小+最大）"
+    - name: initial
+      type: uleb128
+      description: "初期ページ数"
+
+  export_section_data:
+    - name: count
+      type: uleb128
+      description: "エクスポート数"
+    - name: entries
+      type: struct
+      struct: export_entry
+      repeat_count: "{count}"
+
+  export_entry:
+    - name: name_len
+      type: uleb128
+      description: "エクスポート名の長さ"
+    - name: name
+      type: utf8
+      size: "{name_len}"
+      description: "エクスポート名"
+    - name: kind
+      type: uint8
+      description: "エクスポート種別（0=function, 1=table, 2=memory, 3=global）"
+    - name: index
+      type: uleb128
+      description: "エクスポートインデックス"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

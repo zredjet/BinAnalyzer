@@ -54,4 +54,50 @@ public static class MachoTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// Mach-O 64bit with LC_BUILD_VERSION: magic(4B) + header_64_body(28B) + LC_BUILD_VERSION(cmd=44, cmdsize=32) = 64バイト
+    /// ntools=1, tool=3(ld), version=0x003C0600 (60.6.0)
+    /// </summary>
+    public static byte[] CreateMacho64WithBuildVersion()
+    {
+        var data = new byte[64];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // magic: 0xFEEDFACF (64-bit, little-endian)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0xFEEDFACF); pos += 4;
+
+        // === mach_header_64_body ===
+        // cputype: CPU_TYPE_ARM64
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 16777228); pos += 4;
+        // cpusubtype
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        // filetype: MH_EXECUTE = 2
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 2); pos += 4;
+        // ncmds: 1
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4;
+        // sizeofcmds: 32 (BUILD_VERSION command size)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 32); pos += 4;
+        // flags
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0x200084); pos += 4;
+        // reserved
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+
+        // === load_command: LC_BUILD_VERSION (cmd=44, cmdsize=32) ===
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 44); pos += 4;  // cmd
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 32); pos += 4;  // cmdsize
+
+        // build_version_body: platform(4) + minos(4) + sdk(4) + ntools(4) + tool_entry(8) = 24
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4;   // platform: MACOS
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0x000D0000); pos += 4; // minos: 13.0.0
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0x000E0000); pos += 4; // sdk: 14.0.0
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4;   // ntools: 1
+
+        // build_tool_entry: tool=3 (ld), version=0x003C0600
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 3); pos += 4;   // tool: ld
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0x003C0600);    // version
+
+        return data;
+    }
 }

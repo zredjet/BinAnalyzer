@@ -92,9 +92,36 @@ structs:
       size: "4"
       description: "リストタイプ識別子（例: INFO）"
     - name: data
-      type: bytes
+      type: switch
       size: remaining
-      description: "サブチャンク生データ"
+      switch_on: "{list_type}"
+      cases:
+        "'INFO'": info_chunk_data
+      default: raw_data
+
+  info_chunk_data:
+    - name: sub_chunks
+      type: struct
+      struct: info_sub_chunk
+      repeat: eof
+
+  info_sub_chunk:
+    - name: chunk_id
+      type: ascii
+      size: "4"
+      description: "INFO チャンクID（IART, INAM, ICMT, ISFT 等）"
+    - name: chunk_size
+      type: uint32
+    - name: value
+      type: ascii
+      size: "{chunk_size}"
+      description: "チャンク値"
+    - name: padding
+      type: bytes
+      size: "{chunk_size % 2}"
+      if: "{chunk_size % 2 != 0}"
+      padding: true
+      description: "ワード境界アライメント"
 
   raw_data:
     - name: data

@@ -61,4 +61,58 @@ public static class FlvTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// FLV with video tag: signature(3B) + version(1B) + flags(1B) + data_offset(4B) + prev_tag_size_0(4B) + 1 video tag(16B) = 29バイト
+    /// video tag: tag_type=9, data_size=1, data=0x17 (keyframe, AVC/H.264)
+    /// </summary>
+    public static byte[] CreateFlvWithVideoTag()
+    {
+        var data = new byte[29];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // signature: "FLV"
+        data[0] = 0x46; data[1] = 0x4C; data[2] = 0x56;
+        pos = 3;
+
+        // version: 1
+        data[pos] = 0x01; pos += 1;
+
+        // flags: has_video=1 (bit 0)
+        data[pos] = 0x01; pos += 1;
+
+        // data_offset: 9
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 9); pos += 4;
+
+        // prev_tag_size_0: 0
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4;
+
+        // === FLV tag (video, 1 byte data) ===
+        data[pos] = 9; pos += 1; // tag_type: video
+
+        // data_size: 1 (24-bit)
+        data[pos] = 0x00; pos += 1;
+        data[pos] = 0x00; pos += 1;
+        data[pos] = 0x01; pos += 1;
+
+        // timestamp: 0
+        data[pos] = 0x00; pos += 1;
+        data[pos] = 0x00; pos += 1;
+        data[pos] = 0x00; pos += 1;
+        data[pos] = 0x00; pos += 1;
+
+        // stream_id: 0
+        data[pos] = 0x00; pos += 1;
+        data[pos] = 0x00; pos += 1;
+        data[pos] = 0x00; pos += 1;
+
+        // data: 0x17 = keyframe(1) + AVC(7)
+        data[pos] = 0x17; pos += 1;
+
+        // prev_tag_size: 12
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 12);
+
+        return data;
+    }
 }

@@ -135,3 +135,21 @@ structs:
       type: uint16
       repeat_count: "{number_of_cells}"
       description: "ページ内のセルコンテンツへのオフセット配列"
+    - name: cells
+      type: struct
+      struct: table_leaf_cell
+      repeat: eof
+      if: "{page_type == 13}"
+      description: "リーフテーブルセル（ページヘッダ直後に連続する場合のみ）"
+
+  table_leaf_cell:
+    - name: payload_size
+      type: uleb128
+      description: "ペイロードサイズ（バイト）"
+    - name: rowid
+      type: uleb128
+      description: "行ID（INTEGER PRIMARY KEY の値）"
+    - name: payload
+      type: bytes
+      size: "{payload_size}"
+      description: "レコードデータ"

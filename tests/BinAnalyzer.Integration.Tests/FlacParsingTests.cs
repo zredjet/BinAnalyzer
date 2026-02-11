@@ -70,6 +70,46 @@ public class FlacParsingTests
     }
 
     [Fact]
+    public void FlacFormat_CuesheetIndex_DecodesCorrectly()
+    {
+        var data = FlacTestDataGenerator.CreateFlacWithCuesheet();
+        var format = new YamlFormatLoader().Load(FlacFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        // Navigate: metadata_blocks[1].data (switch → cuesheet_block) → tracks[0] → indices
+        var metadataBlocks = (DecodedArray)decoded.Children[1];
+        metadataBlocks.Elements.Should().HaveCount(2);
+
+        var cuesheetBlock = (DecodedStruct)metadataBlocks.Elements[1];
+        // Fields: header_byte, is_last, block_type, length_b0, length_b1, length_b2, length, data
+        var cuesheetData = (DecodedStruct)cuesheetBlock.Children[7]; // data (switch → cuesheet_block)
+
+        // cuesheet_block: media_catalog, lead_in_samples, cuesheet_flags, reserved, num_tracks, tracks
+        var tracks = cuesheetData.Children[5].Should().BeOfType<DecodedArray>().Subject;
+        tracks.Elements.Should().HaveCount(1);
+
+        var track = tracks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        // cuesheet_track: track_offset, track_number, isrc, track_flags, track_reserved, num_indices, indices
+        var numIndices = track.Children[5].Should().BeOfType<DecodedInteger>().Subject;
+        numIndices.Value.Should().Be(1);
+
+        var indices = track.Children[6].Should().BeOfType<DecodedArray>().Subject;
+        indices.Elements.Should().HaveCount(1);
+
+        var index = indices.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var offset = index.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        offset.Name.Should().Be("offset");
+        offset.Value.Should().Be(0);
+
+        var indexNumber = index.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        indexNumber.Name.Should().Be("index_number");
+        indexNumber.Value.Should().Be(1);
+
+        var reserved = index.Children[2].Should().BeOfType<DecodedBytes>().Subject;
+        reserved.Name.Should().Be("reserved");
+    }
+
+    [Fact]
     public void FlacFormat_TreeOutput_ContainsExpectedElements()
     {
         var data = FlacTestDataGenerator.CreateMinimalFlac();

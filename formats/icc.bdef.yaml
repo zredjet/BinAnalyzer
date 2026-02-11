@@ -167,3 +167,62 @@ structs:
     - name: size
       type: uint32
       description: "タグデータサイズ（バイト）"
+    - name: data
+      type: switch
+      size: "{size}"
+      seek: "{offset}"
+      seek_restore: true
+      switch_on: "{signature}"
+      cases:
+        "'desc'": desc_tag_data
+        "'XYZ '": xyz_tag_data
+        "'text'": text_tag_data
+      default: raw_data
+
+  desc_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "タイプシグネチャ（'desc'）"
+    - name: reserved
+      type: uint32
+    - name: ascii_length
+      type: uint32
+    - name: ascii_description
+      type: ascii
+      size: "{ascii_length}"
+    - name: extra_data
+      type: bytes
+      size: remaining
+
+  xyz_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "タイプシグネチャ（'XYZ '）"
+    - name: reserved
+      type: uint32
+    - name: x
+      type: int32
+      description: "X値（s15Fixed16Number）"
+    - name: y
+      type: int32
+      description: "Y値（s15Fixed16Number）"
+    - name: z
+      type: int32
+      description: "Z値（s15Fixed16Number）"
+
+  text_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+    - name: reserved
+      type: uint32
+    - name: text
+      type: ascii
+      size: remaining
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

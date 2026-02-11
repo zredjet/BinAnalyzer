@@ -72,6 +72,35 @@ public class SqliteParsingTests
     }
 
     [Fact]
+    public void SqliteFormat_TableLeafCell_DecodesCorrectly()
+    {
+        var data = SqliteTestDataGenerator.CreateSqliteWithCell();
+        var format = new YamlFormatLoader().Load(SqliteFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var firstPage = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+
+        // cells should be present as the last child (after cell_pointer_array)
+        var cells = firstPage.Children.Last().Should().BeOfType<DecodedArray>().Subject;
+        cells.Name.Should().Be("cells");
+        cells.Elements.Should().HaveCount(1);
+
+        var cell = cells.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        var payloadSize = cell.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        payloadSize.Name.Should().Be("payload_size");
+        payloadSize.Value.Should().Be(2);
+
+        var rowid = cell.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        rowid.Name.Should().Be("rowid");
+        rowid.Value.Should().Be(1);
+
+        var payload = cell.Children[2].Should().BeOfType<DecodedBytes>().Subject;
+        payload.Name.Should().Be("payload");
+        payload.Size.Should().Be(2);
+    }
+
+    [Fact]
     public void SqliteFormat_TreeOutput_ContainsExpectedElements()
     {
         var data = SqliteTestDataGenerator.CreateMinimalSqlite();

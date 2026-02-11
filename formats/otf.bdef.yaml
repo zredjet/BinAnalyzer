@@ -90,10 +90,15 @@ structs:
       type: switch
       size: "{length}"
       seek: "{offset}"
+      seek_restore: true
       switch_on: "{tag}"
       cases:
         "'head'": head_table
         "'name'": name_table
+        "'cmap'": cmap_table
+        "'OS/2'": os2_table
+        "'post'": post_table
+        "'hhea'": hhea_table
       default: raw_data
 
   head_table:
@@ -186,6 +191,167 @@ structs:
     - name: offset
       type: uint16
       description: "文字列ストレージ先頭からのオフセット"
+
+  cmap_table:
+    - name: version
+      type: uint16
+    - name: numTables
+      type: uint16
+      description: "エンコーディングレコード数"
+    - name: encoding_records
+      type: struct
+      struct: cmap_encoding_record
+      repeat_count: "{numTables}"
+
+  cmap_encoding_record:
+    - name: platformID
+      type: uint16
+      description: "プラットフォームID（0=Unicode, 1=Macintosh, 3=Windows）"
+    - name: encodingID
+      type: uint16
+    - name: offset
+      type: uint32
+      description: "cmapテーブル先頭からのサブテーブルオフセット"
+
+  os2_table:
+    - name: version
+      type: uint16
+    - name: xAvgCharWidth
+      type: int16
+    - name: usWeightClass
+      type: uint16
+      description: "フォントウェイト（400=Regular, 700=Bold）"
+    - name: usWidthClass
+      type: uint16
+    - name: fsType
+      type: uint16
+      description: "埋め込み制限フラグ"
+    - name: ySubscriptXSize
+      type: int16
+    - name: ySubscriptYSize
+      type: int16
+    - name: ySubscriptXOffset
+      type: int16
+    - name: ySubscriptYOffset
+      type: int16
+    - name: ySuperscriptXSize
+      type: int16
+    - name: ySuperscriptYSize
+      type: int16
+    - name: ySuperscriptXOffset
+      type: int16
+    - name: ySuperscriptYOffset
+      type: int16
+    - name: yStrikeoutSize
+      type: int16
+    - name: yStrikeoutPosition
+      type: int16
+    - name: sFamilyClass
+      type: int16
+    - name: panose
+      type: bytes
+      size: "10"
+      description: "PANOSEクラス分類"
+    - name: ulUnicodeRange1
+      type: uint32
+    - name: ulUnicodeRange2
+      type: uint32
+    - name: ulUnicodeRange3
+      type: uint32
+    - name: ulUnicodeRange4
+      type: uint32
+    - name: achVendID
+      type: ascii
+      size: "4"
+      description: "ベンダーID"
+    - name: fsSelection
+      type: uint16
+    - name: usFirstCharIndex
+      type: uint16
+    - name: usLastCharIndex
+      type: uint16
+    - name: sTypoAscender
+      type: int16
+    - name: sTypoDescender
+      type: int16
+    - name: sTypoLineGap
+      type: int16
+    - name: usWinAscent
+      type: uint16
+    - name: usWinDescent
+      type: uint16
+    - name: extra_data
+      type: bytes
+      size: remaining
+      description: "バージョン依存の追加フィールド"
+
+  post_table:
+    - name: version
+      type: uint32
+      description: "PostScriptテーブルバージョン（Fixed 16.16）"
+    - name: italicAngle
+      type: int32
+      description: "イタリック角度（Fixed 16.16）"
+    - name: underlinePosition
+      type: int16
+    - name: underlineThickness
+      type: int16
+    - name: isFixedPitch
+      type: uint32
+      description: "等幅フォントの場合は非ゼロ"
+    - name: minMemType42
+      type: uint32
+    - name: maxMemType42
+      type: uint32
+    - name: minMemType1
+      type: uint32
+    - name: maxMemType1
+      type: uint32
+    - name: extra_data
+      type: bytes
+      size: remaining
+      description: "バージョン依存の追加データ"
+
+  hhea_table:
+    - name: majorVersion
+      type: uint16
+    - name: minorVersion
+      type: uint16
+    - name: ascender
+      type: int16
+      description: "アセンダー"
+    - name: descender
+      type: int16
+      description: "ディセンダー"
+    - name: lineGap
+      type: int16
+    - name: advanceWidthMax
+      type: uint16
+    - name: minLeftSideBearing
+      type: int16
+    - name: minRightSideBearing
+      type: int16
+    - name: xMaxExtent
+      type: int16
+    - name: caretSlopeRise
+      type: int16
+    - name: caretSlopeRun
+      type: int16
+    - name: caretOffset
+      type: int16
+    - name: reserved1
+      type: int16
+    - name: reserved2
+      type: int16
+    - name: reserved3
+      type: int16
+    - name: reserved4
+      type: int16
+    - name: metricDataFormat
+      type: int16
+    - name: numberOfHMetrics
+      type: uint16
+      description: "水平メトリクス数"
 
   raw_data:
     - name: data

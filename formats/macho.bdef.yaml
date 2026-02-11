@@ -384,10 +384,18 @@ structs:
     - name: ntools
       type: uint32
       description: "ビルドツール数"
-    - name: tools_data
-      type: bytes
-      size: remaining
-      description: "ビルドツールエントリ"
+    - name: tools
+      type: struct
+      struct: build_tool_entry
+      repeat_count: "{ntools}"
+
+  build_tool_entry:
+    - name: tool
+      type: uint32
+      description: "ビルドツール種別（1=clang, 2=swift, 3=ld, 4=lld）"
+    - name: version
+      type: uint32
+      description: "ツールバージョン（major.minor.patchをエンコード）"
 
   generic_body:
     - name: data

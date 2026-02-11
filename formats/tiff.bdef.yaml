@@ -178,3 +178,17 @@ structs:
     - name: value_offset
       type: uint32
       description: "合計サイズ（type_size × count）が4バイト以下の場合は値そのもの、それ以外は値データへのオフセット"
+    - name: is_inline
+      type: virtual
+      value: "{(field_type == 1 and count <= 4) or (field_type == 3 and count <= 2) or (field_type == 4 and count == 1) or (field_type == 6 and count <= 4) or (field_type == 8 and count <= 2) or (field_type == 9 and count == 1)}"
+      description: "値がインラインかどうか（type_size * count <= 4）"
+    - name: inline_short_value
+      type: virtual
+      value: "{value_offset & 0xFFFF}"
+      if: "{field_type == 3 and count == 1}"
+      description: "SHORT型のインライン値（リトルエンディアン下位16ビット）"
+    - name: inline_long_value
+      type: virtual
+      value: "{value_offset}"
+      if: "{field_type == 4 and count == 1}"
+      description: "LONG型のインライン値"

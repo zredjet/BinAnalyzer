@@ -133,6 +133,7 @@ structs:
         switch_on: "{ether_type}"
         cases:
           "2048": ipv4_packet
+          "34525": ipv6_packet
         default: raw_data
 
   ipv4_packet:
@@ -188,9 +189,111 @@ structs:
         size: "4"
         description: "宛先IPアドレス"
       - name: body
+        type: switch
+        size: remaining
+        switch_on: "{protocol}"
+        cases:
+          "6": tcp_segment
+          "17": udp_datagram
+        default: raw_data
+
+  tcp_segment:
+    endianness: big
+    fields:
+      - name: src_port
+        type: uint16
+      - name: dst_port
+        type: uint16
+      - name: seq_number
+        type: uint32
+      - name: ack_number
+        type: uint32
+      - name: data_offset_flags
+        type: bitfield
+        size: "2"
+        fields:
+          - name: data_offset
+            bits: "15:12"
+            description: "データオフセット（32ビットワード単位）"
+          - name: reserved
+            bits: "11:9"
+          - name: ns
+            bits: "8"
+          - name: cwr
+            bits: "7"
+          - name: ece
+            bits: "6"
+          - name: urg
+            bits: "5"
+          - name: ack
+            bits: "4"
+          - name: psh
+            bits: "3"
+          - name: rst
+            bits: "2"
+          - name: syn
+            bits: "1"
+          - name: fin
+            bits: "0"
+      - name: window_size
+        type: uint16
+      - name: checksum
+        type: uint16
+      - name: urgent_pointer
+        type: uint16
+      - name: payload
         type: bytes
         size: remaining
-        description: "IPペイロード（オプション + データ）"
+
+  udp_datagram:
+    endianness: big
+    fields:
+      - name: src_port
+        type: uint16
+      - name: dst_port
+        type: uint16
+      - name: length
+        type: uint16
+      - name: checksum
+        type: uint16
+      - name: payload
+        type: bytes
+        size: remaining
+
+  ipv6_packet:
+    endianness: big
+    fields:
+      - name: version_tc_flow
+        type: bitfield
+        size: "4"
+        fields:
+          - name: version
+            bits: "31:28"
+          - name: traffic_class
+            bits: "27:20"
+          - name: flow_label
+            bits: "19:0"
+      - name: payload_length
+        type: uint16
+      - name: next_header
+        type: uint8
+        enum: protocol
+      - name: hop_limit
+        type: uint8
+      - name: src_ip
+        type: bytes
+        size: "16"
+      - name: dst_ip
+        type: bytes
+        size: "16"
+      - name: body
+        type: switch
+        size: remaining
+        switch_on: "{next_header}"
+        cases:
+          "6": tcp_segment
+          "17": udp_datagram
+        default: raw_data
 
   raw_data:
     - name: data

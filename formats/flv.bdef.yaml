@@ -78,9 +78,61 @@ structs:
       size: "3"
       description: "ストリームID（常に0）"
     - name: data
-      type: bytes
+      type: switch
       size: "{data_size}"
-      description: "タグデータ"
+      switch_on: "{tag_type}"
+      cases:
+        "8": audio_tag_data
+        "9": video_tag_data
+        "18": script_tag_data
+      default: raw_data
     - name: prev_tag_size
       type: uint32
       description: "前タグの全体サイズ（ヘッダ含む）"
+
+  audio_tag_data:
+    - name: audio_header
+      type: bitfield
+      size: "1"
+      fields:
+        - name: sound_format
+          bits: "7:4"
+          description: "音声フォーマット（0=raw, 1=ADPCM, 2=MP3, 10=AAC, 11=Speex）"
+        - name: sound_rate
+          bits: "3:2"
+          description: "サンプリングレート（0=5.5kHz, 1=11kHz, 2=22kHz, 3=44kHz）"
+        - name: sound_size
+          bits: "1"
+          description: "サンプルサイズ（0=8bit, 1=16bit）"
+        - name: sound_type
+          bits: "0"
+          description: "チャンネル（0=モノラル, 1=ステレオ）"
+    - name: audio_data
+      type: bytes
+      size: remaining
+
+  video_tag_data:
+    - name: video_header
+      type: bitfield
+      size: "1"
+      fields:
+        - name: frame_type
+          bits: "7:4"
+          description: "フレームタイプ（1=キー, 2=インター, 3=使い捨て, 4=生成キー, 5=ビデオ情報）"
+        - name: codec_id
+          bits: "3:0"
+          description: "コーデックID（2=Sorenson H.263, 3=Screen Video, 4=VP6, 7=AVC/H.264）"
+    - name: video_data
+      type: bytes
+      size: remaining
+
+  script_tag_data:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "AMF0エンコードされたスクリプトデータ（onMetaData等）"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining
