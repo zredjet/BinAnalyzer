@@ -77,11 +77,24 @@ public static class YamlToIrMapper
         var result = new Dictionary<string, StructDefinition>();
         foreach (var (name, structModel) in yamlStructs)
         {
+            Expression? endiannessExpr = null;
+            Endianness? endianness = null;
+
+            if (structModel.Endianness is not null && structModel.Endianness.StartsWith('{'))
+            {
+                endiannessExpr = ExpressionParser.Parse(structModel.Endianness);
+            }
+            else
+            {
+                endianness = ParseEndianness(structModel.Endianness);
+            }
+
             result[name] = new StructDefinition
             {
                 Name = name,
                 Fields = structModel.Fields.Select(MapField).ToList(),
-                Endianness = ParseEndianness(structModel.Endianness),
+                Endianness = endianness,
+                EndiannessExpression = endiannessExpr,
                 Align = structModel.Align,
                 IsStringTable = structModel.StringTable ?? false,
             };

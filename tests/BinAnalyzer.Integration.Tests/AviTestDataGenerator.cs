@@ -145,4 +145,160 @@ public static class AviTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// 映像ストリームフォーマット付きAVI:
+    /// RIFF(12) + LIST(hdrl: avih(64) + LIST(strl: strh(64) + strf(48))) = 220バイト
+    /// strf内にBITMAPINFOHEADER（40バイト）
+    /// </summary>
+    public static byte[] CreateAviWithVideoStreamFormat()
+    {
+        var data = new byte[220];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // === Root: RIFF ===
+        Encoding.ASCII.GetBytes("RIFF").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 212); pos += 4; // 220 - 8
+        Encoding.ASCII.GetBytes("AVI ").CopyTo(span[pos..]); pos += 4;
+
+        // === LIST hdrl ===
+        Encoding.ASCII.GetBytes("LIST").CopyTo(span[pos..]); pos += 4;
+        // chunk_size: 4(list_type) + 64(avih) + 8+4+64+48(strl LIST) = 192
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 192); pos += 4;
+        Encoding.ASCII.GetBytes("hdrl").CopyTo(span[pos..]); pos += 4;
+
+        // === avih chunk (8+56=64) ===
+        Encoding.ASCII.GetBytes("avih").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 56); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 33333); pos += 4; // dwMicroSecPerFrame
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;     // dwMaxBytesPerSec
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;     // dwPaddingGranularity
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0x10); pos += 4;  // dwFlags
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 100); pos += 4;   // dwTotalFrames
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;     // dwInitialFrames
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4;     // dwStreams
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;     // dwSuggestedBufferSize
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 320); pos += 4;   // dwWidth
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 240); pos += 4;   // dwHeight
+        pos += 16; // dwReserved
+
+        // === LIST strl ===
+        Encoding.ASCII.GetBytes("LIST").CopyTo(span[pos..]); pos += 4;
+        // chunk_size: 4(list_type) + 64(strh) + 48(strf) = 116
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 116); pos += 4;
+        Encoding.ASCII.GetBytes("strl").CopyTo(span[pos..]); pos += 4;
+
+        // === strh chunk (8+56=64) ===
+        Encoding.ASCII.GetBytes("strh").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 56); pos += 4;
+        Encoding.ASCII.GetBytes("vids").CopyTo(span[pos..]); pos += 4; // fccType
+        Encoding.ASCII.GetBytes("H264").CopyTo(span[pos..]); pos += 4; // fccHandler
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwFlags
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 0); pos += 2;  // wPriority
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 0); pos += 2;  // wLanguage
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwInitialFrames
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4;  // dwScale
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 30); pos += 4; // dwRate
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwStart
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 100); pos += 4; // dwLength
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwSuggestedBufferSize
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwQuality
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwSampleSize
+        pos += 8; // rcFrame
+
+        // === strf chunk (8+40=48) ===
+        Encoding.ASCII.GetBytes("strf").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 40); pos += 4;
+        // BITMAPINFOHEADER (40 bytes)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 40); pos += 4;   // biSize
+        BinaryPrimitives.WriteInt32LittleEndian(span[pos..], 320); pos += 4;   // biWidth
+        BinaryPrimitives.WriteInt32LittleEndian(span[pos..], 240); pos += 4;   // biHeight
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 1); pos += 2;    // biPlanes
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 24); pos += 2;   // biBitCount
+        Encoding.ASCII.GetBytes("H264").CopyTo(span[pos..]); pos += 4;        // biCompression
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 230400); pos += 4; // biSizeImage (320*240*3)
+        BinaryPrimitives.WriteInt32LittleEndian(span[pos..], 0); pos += 4;     // biXPelsPerMeter
+        BinaryPrimitives.WriteInt32LittleEndian(span[pos..], 0); pos += 4;     // biYPelsPerMeter
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;    // biClrUsed
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0);              // biClrImportant
+
+        return data;
+    }
+
+    /// <summary>
+    /// 音声ストリームフォーマット付きAVI:
+    /// RIFF(12) + LIST(hdrl: avih(64) + LIST(strl: strh(64) + strf(24))) = 196バイト
+    /// strf内にWAVEFORMATEX（16バイト）
+    /// </summary>
+    public static byte[] CreateAviWithAudioStreamFormat()
+    {
+        var data = new byte[196];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // === Root: RIFF ===
+        Encoding.ASCII.GetBytes("RIFF").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 188); pos += 4; // 196 - 8
+        Encoding.ASCII.GetBytes("AVI ").CopyTo(span[pos..]); pos += 4;
+
+        // === LIST hdrl ===
+        Encoding.ASCII.GetBytes("LIST").CopyTo(span[pos..]); pos += 4;
+        // chunk_size: 4(list_type) + 64(avih) + 8+4+64+24(strl LIST) = 168
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 168); pos += 4;
+        Encoding.ASCII.GetBytes("hdrl").CopyTo(span[pos..]); pos += 4;
+
+        // === avih chunk (8+56=64) ===
+        Encoding.ASCII.GetBytes("avih").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 56); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 33333); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0x10); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 100); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        pos += 16; // dwReserved
+
+        // === LIST strl ===
+        Encoding.ASCII.GetBytes("LIST").CopyTo(span[pos..]); pos += 4;
+        // chunk_size: 4(list_type) + 64(strh) + 24(strf) = 92
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 92); pos += 4;
+        Encoding.ASCII.GetBytes("strl").CopyTo(span[pos..]); pos += 4;
+
+        // === strh chunk (8+56=64) ===
+        Encoding.ASCII.GetBytes("strh").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 56); pos += 4;
+        Encoding.ASCII.GetBytes("auds").CopyTo(span[pos..]); pos += 4; // fccType
+        // fccHandler: 4 bytes zero (PCM has no handler)
+        pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwFlags
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 0); pos += 2;  // wPriority
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 0); pos += 2;  // wLanguage
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwInitialFrames
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4;  // dwScale
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 44100); pos += 4; // dwRate
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwStart
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 44100); pos += 4; // dwLength
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwSuggestedBufferSize
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;  // dwQuality
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 4); pos += 4;  // dwSampleSize
+        pos += 8; // rcFrame
+
+        // === strf chunk (8+16=24) ===
+        Encoding.ASCII.GetBytes("strf").CopyTo(span[pos..]); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 16); pos += 4;
+        // WAVEFORMATEX (16 bytes)
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 1); pos += 2;     // wFormatTag (PCM)
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 2); pos += 2;     // nChannels
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 44100); pos += 4; // nSamplesPerSec
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 176400); pos += 4; // nAvgBytesPerSec (44100*2*2)
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 4); pos += 2;     // nBlockAlign
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 16);              // wBitsPerSample
+
+        return data;
+    }
 }

@@ -362,8 +362,7 @@
       "properties": {
         "endianness": {
           "type": "string",
-          "enum": ["big", "little", "be", "le"],
-          "description": "この構造体内のフィールドに適用するエンディアン。フォーマットのデフォルトを上書きする。"
+          "description": "この構造体内のフィールドに適用するエンディアン。静的値（big/little/be/le）または動的式（\"{expr}\"）。"
         },
         "align": {
           "type": "integer",

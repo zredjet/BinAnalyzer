@@ -105,6 +105,8 @@ structs:
 - **比較演算**: `==`, `!=`, `<`, `<=`, `>`, `>=`
 - **論理演算**: `and`, `or`, `not`
 - **ビット演算**: `&`（AND）, `|`（OR）, `^`（XOR）, `<<`（左シフト）, `>>`（右シフト）
+- **三項演算子**: `{condition ? true_value : false_value}` — 条件分岐式
+- **配列インデックス**: `{array_field[index]}` — 配列要素へのアクセス
 - **括弧**: `{(a + b) * c}`
 - **関数呼び出し**: `{func_name(arg1, arg2, ...)}` — 組み込み関数の呼び出し
 
@@ -112,7 +114,8 @@ structs:
 
 | 優先度 | 演算子 |
 |--------|--------|
-| 1（最低） | `or` |
+| 0（最低） | `? :`（三項演算子） |
+| 1 | `or` |
 | 2 | `and` |
 | 3 | `\|`（ビットOR） |
 | 4 | `^`（ビットXOR） |
@@ -122,6 +125,8 @@ structs:
 | 8 | `+`, `-` |
 | 9 | `*`, `/`, `%` |
 | 10（最高） | `-`（単項）, `not` |
+
+三項演算子は右結合です。ネストも可能です: `{a ? b : c ? d : e}` は `{a ? b : (c ? d : e)}` と解釈されます。
 
 ### 組み込み関数
 
@@ -143,6 +148,25 @@ structs:
 - マーカーが見つからない場合: 現在のスコープ内の残りバイト数を返す（エラーにしない）
 - マーカー自体はフィールドに含まれない（直前まで）
 - 引数が0個の場合はエラー
+
+#### `parse_int(field_name, base)`
+
+ASCII/UTF-8文字列フィールドの値を指定した基数で整数に変換します。テキストエンコーディングされた数値フィールドの解析に使用します。
+
+```yaml
+# TARファイルサイズ（8進数ASCII文字列）
+- name: file_size_octal
+  type: ascii
+  size: "12"
+- name: file_size
+  type: virtual
+  value: "{parse_int(file_size_octal, 8)}"
+```
+
+- 第1引数: デコード済みの文字列フィールド名
+- 第2引数: 基数（2, 8, 10, 16）
+- ヌル終端文字（`\0`）と末尾の空白は自動的にトリミング
+- 変換に失敗した場合は0を返す（エラーにしない）
 
 ## 列挙型（Enum）
 
@@ -291,6 +315,66 @@ flags:
 - 要素のデコード後、`element_size` の末尾まで未読バイトを自動スキップ
 - 要素のデコードが `element_size` を超えた場合はデコードエラー
 - `repeat`, `repeat_count`, `repeat_until` のいずれとも組み合わせ可能
+
+### 繰り返し内の特殊変数（`_index`）
+
+繰り返しブロック内では `_index` 変数が自動的に設定されます。現在のイテレーションインデックス（0始まり）を保持します。
+
+```yaml
+- name: entries
+  type: struct
+  struct: entry
+  repeat_count: "{count}"
+  seek: "{offsets[_index]}"    # _index番目の要素のオフセットにseek
+  seek_restore: true
+```
+
+### 配列インデックスアクセス
+
+繰り返しフィールドのデコード済み値に `[index]` でアクセスできます。`_index` と組み合わせることで、ポインタテーブルに基づく要素ごとのseekが可能です。
+
+```yaml
+# ポインタテーブルを先に読み取り
+- name: cell_pointers
+  type: uint16
+  repeat_count: "{num_cells}"
+
+# 各ポインタが指す位置のデータを読み取り
+- name: cells
+  type: struct
+  struct: cell_data
+  repeat_count: "{num_cells}"
+  seek: "{cell_pointers[_index]}"
+  seek_restore: true
+```
+
+- インデックスには整数リテラル、フィールド参照、任意の式が使用可能
+- 配列範囲外のインデックスはエラー
+
+### 兄弟スコープ参照
+
+繰り返し（`repeat`/`repeat_count`/`repeat: eof` 等）内で構造体をデコードすると、各要素のスカラーフィールド値（整数、文字列、浮動小数点、virtual、bitfieldサブフィールド）が自動的に親スコープに昇格されます。これにより、前の要素でデコードした値を後続の要素から参照できます。
+
+```yaml
+# AVIの例: strlリスト内のチャンク繰り返し
+- name: sub_chunks
+  type: struct
+  struct: riff_chunk
+  repeat: eof
+  # strh チャンクの fccType ("vids"/"auds") が親スコープに昇格
+  # → 続く strf チャンク内の switch で {fccType} として参照可能
+
+# strf 内の switch
+- name: format_data
+  type: switch
+  switch_on: "{fccType}"       # 兄弟 strh の fccType を参照
+  cases:
+    "'vids'": bitmap_info_header
+    "'auds'": wave_format_ex
+```
+
+- 新しい DSL 構文は不要 — 既存の `{variable_name}` 参照をそのまま利用
+- 同名のフィールドは後続の要素で上書き（通常の変数セマンティクス）
 
 ## Switch（条件分岐構造体）
 
@@ -582,7 +666,7 @@ structs:
 
 構造体レベルまたはフィールドレベルでエンディアンを上書きできます。優先順位: フィールド > 構造体 > トップレベル。
 
-### 構造体レベル
+### 構造体レベル（静的）
 
 ```yaml
 structs:
@@ -596,6 +680,29 @@ structs:
 ```
 
 構造体をオブジェクト形式（`endianness`/`align`/`fields` キー）で定義します。旧形式（フィールドリスト直接）との混在も可能です。
+
+### 構造体レベル（動的）
+
+構造体の `endianness` に式を指定すると、デコード時に動的にエンディアンを決定できます。式は `'little'` または `'big'` を返す必要があります。
+
+```yaml
+structs:
+  tiff:
+    - name: byte_order
+      type: ascii
+      size: "2"
+    - name: body
+      type: struct
+      struct: tiff_body
+
+  tiff_body:
+    endianness: "{byte_order == 'II' ? 'little' : 'big'}"
+    fields:
+      - name: magic
+        type: uint16
+```
+
+三項演算子と組み合わせて、先行フィールドの値に基づくエンディアン切り替えが可能です。動的エンディアンは子構造体にも継承されます。
 
 ### フィールドレベル
 

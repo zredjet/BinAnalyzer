@@ -96,8 +96,24 @@ public static class ExpressionTokenizer
                     tokens.Add(new ExpressionToken(ExpressionTokenType.RightParen, ")", i));
                     i++;
                     break;
+                case '[':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.LeftBracket, "[", i));
+                    i++;
+                    break;
+                case ']':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.RightBracket, "]", i));
+                    i++;
+                    break;
                 case ',':
                     tokens.Add(new ExpressionToken(ExpressionTokenType.Comma, ",", i));
+                    i++;
+                    break;
+                case '?':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.Question, "?", i));
+                    i++;
+                    break;
+                case ':':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.Colon, ":", i));
                     i++;
                     break;
                 case '=' when Peek(input, i + 1) == '=':

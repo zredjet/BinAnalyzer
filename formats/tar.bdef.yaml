@@ -45,12 +45,11 @@ structs:
   tar:
     - name: entries
       type: struct
-      struct: tar_header
+      struct: tar_entry
       repeat: eof
-      element_size: "512"
-      description: "TAR 512バイトブロック（ヘッダとデータブロックを均一に読み込み）"
+      description: "TARエントリ（ヘッダ + データブロック）"
 
-  tar_header:
+  tar_entry:
     - name: name
       type: ascii
       size: "100"
@@ -121,3 +120,16 @@ structs:
       size: "12"
       padding: true
       description: "512バイトブロックへのパディング"
+    - name: file_size_bytes
+      type: virtual
+      value: "{parse_int(size, 8)}"
+      description: "ファイルサイズ（8進ASCII → 整数変換）"
+    - name: data_blocks_size
+      type: virtual
+      value: "{((file_size_bytes + 511) / 512) * 512}"
+      description: "データブロックの合計サイズ（512バイト境界に切り上げ）"
+    - name: data
+      type: bytes
+      size: "{data_blocks_size}"
+      if: "{file_size_bytes > 0}"
+      description: "ファイルデータブロック"

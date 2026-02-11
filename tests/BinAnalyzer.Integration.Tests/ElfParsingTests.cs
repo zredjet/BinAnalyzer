@@ -123,4 +123,92 @@ public class ElfParsingTests
         output.Should().Contain("PT_LOAD");
         output.Should().Contain("program_headers");
     }
+
+    [Fact]
+    public void ElfFormat_BigEndian64_DecodesCorrectly()
+    {
+        var elfData = ElfTestDataGenerator.CreateMinimalElf64BigEndian();
+        var format = new YamlFormatLoader().Load(ElfFormatPath);
+        var decoded = new BinaryDecoder().Decode(elfData, format);
+
+        decoded.Name.Should().Be("ELF");
+
+        var ident = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+        var eiData = ident.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        eiData.Value.Should().Be(2);
+        eiData.EnumLabel.Should().Be("ELFDATA2MSB");
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        var eType = header.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        eType.Value.Should().Be(2);
+        eType.EnumLabel.Should().Be("ET_EXEC");
+
+        var eMachine = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        eMachine.Value.Should().Be(62);
+        eMachine.EnumLabel.Should().Be("EM_X86_64");
+
+        var phdrArray = body.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        phdrArray.Elements.Should().HaveCount(1);
+
+        var phdr = phdrArray.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var pType = phdr.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        pType.Value.Should().Be(1);
+        pType.EnumLabel.Should().Be("PT_LOAD");
+    }
+
+    [Fact]
+    public void ElfFormat_BigEndian32_DecodesCorrectly()
+    {
+        var elfData = ElfTestDataGenerator.CreateMinimalElf32BigEndian();
+        var format = new YamlFormatLoader().Load(ElfFormatPath);
+        var decoded = new BinaryDecoder().Decode(elfData, format);
+
+        decoded.Name.Should().Be("ELF");
+
+        var ident = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+        var eiClass = ident.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        eiClass.Value.Should().Be(1);
+        eiClass.EnumLabel.Should().Be("ELFCLASS32");
+
+        var eiData = ident.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        eiData.Value.Should().Be(2);
+        eiData.EnumLabel.Should().Be("ELFDATA2MSB");
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        var eMachine = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        eMachine.Value.Should().Be(8);
+        eMachine.EnumLabel.Should().Be("EM_MIPS");
+
+        var phdrArray = body.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        phdrArray.Elements.Should().HaveCount(1);
+
+        var phdr = phdrArray.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var pType = phdr.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        pType.Value.Should().Be(1);
+        pType.EnumLabel.Should().Be("PT_LOAD");
+    }
+
+    [Fact]
+    public void ElfFormat_LittleEndian_StillWorksAfterDynamicEndianness()
+    {
+        // Regression test: existing LE data should still decode correctly
+        var elfData = ElfTestDataGenerator.CreateMinimalElf64();
+        var format = new YamlFormatLoader().Load(ElfFormatPath);
+        var decoded = new BinaryDecoder().Decode(elfData, format);
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        var eType = header.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        eType.Value.Should().Be(2);
+        eType.EnumLabel.Should().Be("ET_EXEC");
+
+        var eMachine = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        eMachine.Value.Should().Be(62);
+        eMachine.EnumLabel.Should().Be("EM_X86_64");
+    }
 }

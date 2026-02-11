@@ -197,4 +197,137 @@ public static class PcapTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// IPv4オプション付きPCAP: IHL=6（4バイトオプション）+ TCP data_offset=5
+    /// pcap_header(24B) + packet_header(16B) + ethernet(14B) + IPv4(24B) + TCP(20B) = 98バイト
+    /// </summary>
+    public static byte[] CreatePcapWithIpv4Options()
+    {
+        var data = new byte[98];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // === pcap_header (24 bytes) ===
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0xA1B2C3D4); pos += 4;
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 2); pos += 2;
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 4); pos += 2;
+        BinaryPrimitives.WriteInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 65535); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4; // ETHERNET
+
+        // === pcap_packet header (16 bytes) ===
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1000000); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        // incl_len: 58 (ethernet 14 + IPv4 24 + TCP 20)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 58); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 58); pos += 4;
+
+        // === ethernet_frame (14 bytes) ===
+        data[pos] = 0xFF; data[pos + 1] = 0xFF; data[pos + 2] = 0xFF;
+        data[pos + 3] = 0xFF; data[pos + 4] = 0xFF; data[pos + 5] = 0xFF;
+        pos += 6;
+        data[pos] = 0x00; data[pos + 1] = 0x11; data[pos + 2] = 0x22;
+        data[pos + 3] = 0x33; data[pos + 4] = 0x44; data[pos + 5] = 0x55;
+        pos += 6;
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0x0800); pos += 2;
+
+        // === ipv4_packet (24 bytes, IHL=6) ===
+        data[pos] = 0x46; pos += 1; // version=4, IHL=6
+        data[pos] = 0x00; pos += 1; // tos
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 44); pos += 2; // total_length: 24+20=44
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 1); pos += 2; // identification
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0x4000); pos += 2; // flags_fragment (DF)
+        data[pos] = 64; pos += 1; // ttl
+        data[pos] = 6; pos += 1; // protocol: TCP
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0); pos += 2; // checksum
+        data[pos] = 10; data[pos + 1] = 0; data[pos + 2] = 0; data[pos + 3] = 1; pos += 4; // src_ip
+        data[pos] = 10; data[pos + 1] = 0; data[pos + 2] = 0; data[pos + 3] = 2; pos += 4; // dst_ip
+        // IPv4 options (4 bytes): NOP NOP NOP EOL
+        data[pos] = 0x01; data[pos + 1] = 0x01; data[pos + 2] = 0x01; data[pos + 3] = 0x00;
+        pos += 4;
+
+        // === tcp_segment (20 bytes, data_offset=5) ===
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 80); pos += 2; // src_port
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 8080); pos += 2; // dst_port
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 100); pos += 4; // seq
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // ack
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0x5002); pos += 2; // data_offset=5, SYN
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 65535); pos += 2; // window
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0); pos += 2; // checksum
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0); // urgent_pointer
+
+        return data;
+    }
+
+    /// <summary>
+    /// TCPオプション付きPCAP: IHL=5 + TCP data_offset=8（12バイトオプション）
+    /// pcap_header(24B) + packet_header(16B) + ethernet(14B) + IPv4(20B) + TCP(32B) = 106バイト
+    /// </summary>
+    public static byte[] CreatePcapWithTcpOptions()
+    {
+        var data = new byte[106];
+        var span = data.AsSpan();
+        var pos = 0;
+
+        // === pcap_header (24 bytes) ===
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0xA1B2C3D4); pos += 4;
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 2); pos += 2;
+        BinaryPrimitives.WriteUInt16LittleEndian(span[pos..], 4); pos += 2;
+        BinaryPrimitives.WriteInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 65535); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1); pos += 4; // ETHERNET
+
+        // === pcap_packet header (16 bytes) ===
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 1000000); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0); pos += 4;
+        // incl_len: 66 (ethernet 14 + IPv4 20 + TCP 32)
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 66); pos += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 66); pos += 4;
+
+        // === ethernet_frame (14 bytes) ===
+        data[pos] = 0xFF; data[pos + 1] = 0xFF; data[pos + 2] = 0xFF;
+        data[pos + 3] = 0xFF; data[pos + 4] = 0xFF; data[pos + 5] = 0xFF;
+        pos += 6;
+        data[pos] = 0x00; data[pos + 1] = 0x11; data[pos + 2] = 0x22;
+        data[pos + 3] = 0x33; data[pos + 4] = 0x44; data[pos + 5] = 0x55;
+        pos += 6;
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0x0800); pos += 2;
+
+        // === ipv4_packet (20 bytes, IHL=5) ===
+        data[pos] = 0x45; pos += 1; // version=4, IHL=5
+        data[pos] = 0x00; pos += 1;
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 52); pos += 2; // total_length: 20+32=52
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 1); pos += 2;
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0x4000); pos += 2;
+        data[pos] = 64; pos += 1;
+        data[pos] = 6; pos += 1; // TCP
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0); pos += 2;
+        data[pos] = 10; data[pos + 1] = 0; data[pos + 2] = 0; data[pos + 3] = 1; pos += 4;
+        data[pos] = 10; data[pos + 1] = 0; data[pos + 2] = 0; data[pos + 3] = 2; pos += 4;
+
+        // === tcp_segment (32 bytes, data_offset=8) ===
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 443); pos += 2; // src_port
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 54321); pos += 2; // dst_port
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 200); pos += 4; // seq
+        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0); pos += 4; // ack
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0x8002); pos += 2; // data_offset=8, SYN
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 65535); pos += 2; // window
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0); pos += 2; // checksum
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 0); pos += 2; // urgent_pointer
+        // TCP options (12 bytes): MSS(4) + NOP + NOP + Timestamps(8, but we use 7+NOP)
+        // Kind=2(MSS), Length=4, MSS=1460
+        data[pos] = 0x02; data[pos + 1] = 0x04;
+        BinaryPrimitives.WriteUInt16BigEndian(span[(pos + 2)..], 1460); pos += 4;
+        // NOP NOP
+        data[pos] = 0x01; data[pos + 1] = 0x01; pos += 2;
+        // Kind=8(Timestamps), Length=6 (simplified)
+        data[pos] = 0x08; data[pos + 1] = 0x06;
+        BinaryPrimitives.WriteUInt32BigEndian(span[(pos + 2)..], 12345);
+        pos += 6;
+
+        return data;
+    }
 }

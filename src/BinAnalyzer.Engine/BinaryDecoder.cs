@@ -51,6 +51,23 @@ public sealed class BinaryDecoder : IBinaryDecoder
         if (hasEndiannessOverride)
             context.PushEndiannessScope(structDef.Endianness!.Value);
 
+        // 動的エンディアン式の評価
+        var hasDynamicEndianness = false;
+        if (structDef.EndiannessExpression is not null)
+        {
+            var result = ExpressionEvaluator.EvaluateAsString(
+                structDef.EndiannessExpression, context);
+            var endianness = result.ToLowerInvariant() switch
+            {
+                "little" or "le" => Endianness.Little,
+                "big" or "be" => Endianness.Big,
+                _ => throw new InvalidOperationException(
+                    $"Dynamic endianness expression evaluated to invalid value: '{result}'"),
+            };
+            context.PushEndiannessScope(endianness);
+            hasDynamicEndianness = true;
+        }
+
         var startOffset = context.Position;
         var children = new List<DecodedNode>();
 
@@ -61,6 +78,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 children.Add(node);
         }
 
+        if (hasDynamicEndianness)
+            context.PopScope();
         if (hasEndiannessOverride)
             context.PopScope();
 
@@ -97,8 +116,13 @@ public sealed class BinaryDecoder : IBinaryDecoder
             }
 
             // --- seek処理 ---
+            // 要素ごと seek の判別: seek式が _index や IndexAccess を含む場合
+            bool perElementSeek = field.SeekExpression is not null
+                && field.Repeat is not RepeatMode.None
+                && UsesIterationContext(field.SeekExpression.Root);
+
             int? savedPosition = null;
-            if (field.SeekExpression is not null)
+            if (field.SeekExpression is not null && !perElementSeek)
             {
                 var seekOffset = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekExpression, context);
                 if (field.SeekRestore)
@@ -108,7 +132,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             try
             {
                 if (field.Repeat is not RepeatMode.None)
-                    return DecodeRepeatedField(field, format, context);
+                    return DecodeRepeatedField(field, format, context, perElementSeek);
 
                 var node = DecodeSingleField(field, format, context, siblings);
 
@@ -529,11 +553,12 @@ public sealed class BinaryDecoder : IBinaryDecoder
     private DecodedArray DecodeRepeatedField(
         FieldDefinition field,
         FormatDefinition format,
-        DecodeContext context)
+        DecodeContext context,
+        bool perElementSeek = false)
     {
         var startOffset = context.Position;
         var elements = new List<DecodedNode>();
-        var singleField = WithoutRepeat(field);
+        var singleField = perElementSeek ? WithoutRepeatAndSeek(field) : WithoutRepeat(field);
         var elementSize = ResolveElementSize(field, context);
 
         // 構造体レベルアライメントの取得
@@ -548,10 +573,28 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 var count = ExpressionEvaluator.EvaluateAsLong(countMode.CountExpression, context);
                 for (var i = 0; i < count; i++)
                 {
-                    if (structAlign is { } sa && i > 0)
+                    context.SetVariable("_index", (long)i);
+
+                    int? elementSavedPos = null;
+                    if (perElementSeek && field.SeekExpression is not null)
+                    {
+                        var seekOffset = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekExpression, context);
+                        if (field.SeekRestore)
+                            elementSavedPos = context.SavePosition();
+                        context.Seek(seekOffset);
+                    }
+
+                    if (structAlign is { } sa && i > 0 && !perElementSeek)
                         context.AlignTo(sa);
                     var element = DecodeElementWithScope(singleField, format, context, elementSize);
                     elements.Add(element);
+
+                    // 構造体要素のスカラー変数を親スコープにプロモート（兄弟参照用）
+                    if (element is DecodedStruct)
+                        PromoteDecodedValues(element, context);
+
+                    if (elementSavedPos is { } epos)
+                        context.RestorePosition(epos);
                 }
                 break;
             }
@@ -561,13 +604,32 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 var idx = 0;
                 while (!context.IsEof)
                 {
-                    if (structAlign is { } sa && idx > 0)
+                    context.SetVariable("_index", (long)idx);
+
+                    int? elementSavedPos = null;
+                    if (perElementSeek && field.SeekExpression is not null)
+                    {
+                        var seekOffset = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekExpression, context);
+                        if (field.SeekRestore)
+                            elementSavedPos = context.SavePosition();
+                        context.Seek(seekOffset);
+                    }
+
+                    if (structAlign is { } sa && idx > 0 && !perElementSeek)
                     {
                         context.AlignTo(sa);
                         if (context.IsEof) break;
                     }
                     var element = DecodeElementWithScope(singleField, format, context, elementSize);
                     elements.Add(element);
+
+                    // 構造体要素のスカラー変数を親スコープにプロモート（兄弟参照用）
+                    if (element is DecodedStruct)
+                        PromoteDecodedValues(element, context);
+
+                    if (elementSavedPos is { } epos)
+                        context.RestorePosition(epos);
+
                     idx++;
                 }
                 break;
@@ -578,11 +640,30 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 var idx = 0;
                 while (true)
                 {
-                    if (structAlign is { } sa && idx > 0)
+                    context.SetVariable("_index", (long)idx);
+
+                    int? elementSavedPos = null;
+                    if (perElementSeek && field.SeekExpression is not null)
+                    {
+                        var seekOffset = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekExpression, context);
+                        if (field.SeekRestore)
+                            elementSavedPos = context.SavePosition();
+                        context.Seek(seekOffset);
+                    }
+
+                    if (structAlign is { } sa && idx > 0 && !perElementSeek)
                         context.AlignTo(sa);
                     var (element, conditionMet) = DecodeElementWithScopeAndCondition(
                         singleField, format, context, elementSize, untilMode.Condition);
                     elements.Add(element);
+
+                    // 構造体要素のスカラー変数を親スコープにプロモート（兄弟参照用）
+                    if (element is DecodedStruct)
+                        PromoteDecodedValues(element, context);
+
+                    if (elementSavedPos is { } epos)
+                        context.RestorePosition(epos);
+
                     if (conditionMet)
                         break;
                     if (context.IsEof)
@@ -597,10 +678,29 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 var idx = 0;
                 while (ExpressionEvaluator.EvaluateAsBool(whileMode.Condition, context))
                 {
-                    if (structAlign is { } sa && idx > 0)
+                    context.SetVariable("_index", (long)idx);
+
+                    int? elementSavedPos = null;
+                    if (perElementSeek && field.SeekExpression is not null)
+                    {
+                        var seekOffset = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekExpression, context);
+                        if (field.SeekRestore)
+                            elementSavedPos = context.SavePosition();
+                        context.Seek(seekOffset);
+                    }
+
+                    if (structAlign is { } sa && idx > 0 && !perElementSeek)
                         context.AlignTo(sa);
                     var element = DecodeElementWithScope(singleField, format, context, elementSize);
                     elements.Add(element);
+
+                    // 構造体要素のスカラー変数を親スコープにプロモート（兄弟参照用）
+                    if (element is DecodedStruct)
+                        PromoteDecodedValues(element, context);
+
+                    if (elementSavedPos is { } epos)
+                        context.RestorePosition(epos);
+
                     idx++;
                 }
                 break;
@@ -608,8 +708,11 @@ public sealed class BinaryDecoder : IBinaryDecoder
 
             case RepeatMode.LengthPrefixed lp:
             {
+                var idx = 0;
                 while (!context.IsEof)
                 {
+                    context.SetVariable("_index", (long)idx);
+
                     var prefixValue = ReadLengthPrefix(context, lp.PrefixSize);
                     if (prefixValue == 0)
                         break;
@@ -623,10 +726,28 @@ public sealed class BinaryDecoder : IBinaryDecoder
                         RawBytes = bytes,
                         Description = field.Description,
                     });
+                    idx++;
                 }
                 break;
             }
         }
+
+        // 配列要素値を変数として登録（後続フィールドの式から参照可能にする）
+        var elementValues = new List<object>();
+        foreach (var element in elements)
+        {
+            object? val = element switch
+            {
+                DecodedInteger di => (object)di.Value,
+                DecodedString ds => ds.Value,
+                DecodedFloat df => df.Value,
+                _ => null,
+            };
+            if (val is not null)
+                elementValues.Add(val);
+        }
+        if (elementValues.Count == elements.Count && elements.Count > 0)
+            context.SetVariable(field.Name, elementValues);
 
         return new DecodedArray
         {
@@ -635,6 +756,37 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Size = context.Position - startOffset,
             Elements = elements,
         };
+    }
+
+    private static void PromoteDecodedValues(DecodedNode node, DecodeContext context)
+    {
+        switch (node)
+        {
+            case DecodedInteger di:
+                context.SetVariable(di.Name, di.Value);
+                break;
+            case DecodedString ds:
+                context.SetVariable(ds.Name, ds.Value);
+                break;
+            case DecodedFloat df:
+                context.SetVariable(df.Name, df.Value);
+                break;
+            case DecodedVirtual dv:
+                context.SetVariable(dv.Name, dv.Value);
+                break;
+            case DecodedBitfield bf:
+                context.SetVariable(bf.Name, bf.RawValue);
+                foreach (var field in bf.Fields)
+                    context.SetVariable(field.Name, field.Value);
+                break;
+            case DecodedStruct st:
+                foreach (var child in st.Children)
+                    PromoteDecodedValues(child, context);
+                break;
+            case DecodedArray arr:
+                // スカラー配列は REQ-098 で既に処理済み。struct 配列の内部は走査しない
+                break;
+        }
     }
 
     private DecodedNode DecodeElementWithScope(
@@ -671,6 +823,52 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var met = ExpressionEvaluator.EvaluateAsBool(condition, context);
         context.PopScope();
         return (element, met);
+    }
+
+    private static bool UsesIterationContext(ExpressionNode node) => node switch
+    {
+        ExpressionNode.FieldReference fr => fr.FieldName == "_index",
+        ExpressionNode.IndexAccess => true,
+        ExpressionNode.BinaryOp bo => UsesIterationContext(bo.Left) || UsesIterationContext(bo.Right),
+        ExpressionNode.UnaryOp uo => UsesIterationContext(uo.Operand),
+        ExpressionNode.FunctionCall fc => fc.Arguments.Any(UsesIterationContext),
+        ExpressionNode.Conditional c => UsesIterationContext(c.Condition)
+            || UsesIterationContext(c.TrueExpr) || UsesIterationContext(c.FalseExpr),
+        _ => false,
+    };
+
+    private static FieldDefinition WithoutRepeatAndSeek(FieldDefinition field)
+    {
+        return new FieldDefinition
+        {
+            Name = field.Name,
+            Type = field.Type,
+            Size = field.Size,
+            SizeExpression = field.SizeExpression,
+            SizeRemaining = field.SizeRemaining,
+            EnumRef = field.EnumRef,
+            FlagsRef = field.FlagsRef,
+            StructRef = field.StructRef,
+            Repeat = new RepeatMode.None(),
+            SwitchOn = field.SwitchOn,
+            SwitchCases = field.SwitchCases,
+            SwitchDefault = field.SwitchDefault,
+            BitfieldEntries = field.BitfieldEntries,
+            Checksum = field.Checksum,
+            Expected = field.Expected,
+            Condition = field.Condition,
+            Description = field.Description,
+            Align = field.Align,
+            IsPadding = field.IsPadding,
+            ElementSize = field.ElementSize,
+            ElementSizeExpression = field.ElementSizeExpression,
+            ValueExpression = field.ValueExpression,
+            SeekExpression = null, // per-element seek はループ側で処理
+            SeekRestore = false,
+            Endianness = field.Endianness,
+            ValidationExpression = field.ValidationExpression,
+            StringTableRef = field.StringTableRef,
+        };
     }
 
     private static FieldDefinition WithoutRepeat(FieldDefinition field)

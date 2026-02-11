@@ -90,10 +90,13 @@ public sealed class YamlFormatLoader : IFormatLoader
 ```
 "big" | "be" | null  →  Endianness.Big
 "little" | "le"       →  Endianness.Little
+"{式}"                →  EndiannessExpression に式をパース（静的Endiannessは null）
 その他                 →  InvalidOperationException
 ```
 
 デフォルトはビッグエンディアン。ネットワークバイトオーダーのフォーマット（PNG等）で自然に使える。
+
+動的エンディアン式（`"{byte_order == 'II' ? 'little' : 'big'}"` 等）が指定された場合、`StructDefinition.EndiannessExpression` に式ASTが格納される。デコード時に `BinaryDecoder.DecodeStruct()` で評価され、結果の文字列 `'little'`/`'big'` でエンディアンが決定される。
 
 #### 列挙型マッピング
 
@@ -305,6 +308,7 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
 | `value`（virtual） | `{width * height}` | any（計算結果） |
 | `validate` | `{magic == 42}` | bool |
 | `element_size` | `{entry_size}` | long（整数） |
+| `endianness`（構造体） | `{byte_order == 'II' ? 'little' : 'big'}` | string（`'little'` または `'big'`） |
 
 ### 3.2 字句解析（ExpressionTokenizer）
 
@@ -339,6 +343,10 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
 | `LeftParen` | `(` | |
 | `RightParen` | `)` | |
 | `Comma` | `,` | |
+| `Question` | `?` | |
+| `Colon` | `:` | |
+| `LeftBracket` | `[` | |
+| `RightBracket` | `]` | |
 | `Eof` | 入力終端 | |
 
 #### 字句解析の処理フロー
@@ -352,6 +360,10 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
   英字/_       → 識別子読み取り → キーワード判定（and/or/not）
   演算子文字    → 1文字または2文字演算子の判定（先読み1文字）
   カンマ        → Comma トークン
+  ?            → Question トークン
+  :            → Colon トークン
+  [            → LeftBracket トークン
+  ]            → RightBracket トークン
   その他        → FormatException
 ```
 
@@ -370,6 +382,7 @@ DSL内の `{...}` で囲まれた式を解析するミニ言語処理系。字�
 優先順位の低い規則から順に記述:
 
 ```
+ternary_expr ::= or_expr ("?" or_expr ":" ternary_expr)?
 or_expr      ::= and_expr ("or" and_expr)*
 and_expr     ::= bitor_expr ("and" bitor_expr)*
 bitor_expr   ::= bitxor_expr ("|" bitxor_expr)*
@@ -380,15 +393,18 @@ shift_expr   ::= add_expr (("<<" | ">>") add_expr)*
 add_expr     ::= mul_expr (("+" | "-") mul_expr)*
 mul_expr     ::= unary_expr (("*" | "/" | "%") unary_expr)*
 unary_expr   ::= ("-" | "not") unary_expr | primary
-primary      ::= INTEGER | STRING | IDENTIFIER | func_call | "(" or_expr ")"
-func_call    ::= IDENTIFIER "(" (or_expr ("," or_expr)*)? ")"
+primary      ::= INTEGER | STRING | IDENTIFIER "[" ternary_expr "]" | func_call | "(" ternary_expr ")"
+func_call    ::= IDENTIFIER "(" (ternary_expr ("," ternary_expr)*)? ")"
 ```
+
+`ternary_expr` が文法のルート規則。`? :` は右結合（再帰的に `ternary_expr` を呼ぶ）。
 
 #### 演算子優先順位表
 
 | 優先度 | 演算子 | 結合性 | 対応メソッド |
 |--------|--------|--------|------------|
-| 1（最低） | `or` | 左 | `ParseOrExpr` |
+| 0（最低） | `? :`（三項） | 右 | `ParseTernaryExpr` |
+| 1 | `or` | 左 | `ParseOrExpr` |
 | 2 | `and` | 左 | `ParseAndExpr` |
 | 3 | `\|`（ビットOR） | 左 | `ParseBitOrExpr` |
 | 4 | `^`（ビットXOR） | 左 | `ParseBitXorExpr` |
@@ -409,8 +425,9 @@ func_call    ::= IDENTIFIER "(" (or_expr ("," or_expr)*)? ")"
 1. Parse()
    └─ 波括弧を除去 → "length - 4"
    └─ Tokenize → [Identifier("length"), Minus, Integer("4"), Eof]
-   └─ ParseOrExpr()
-      └─ ParseAndExpr()
+   └─ ParseTernaryExpr()
+      └─ ParseOrExpr()
+         └─ ParseAndExpr()
          └─ ParseBitOrExpr()
             └─ ParseBitXorExpr()
                └─ ParseBitAndExpr()
@@ -450,7 +467,9 @@ ExpressionNode
 ├── FieldReference(string FieldName)  // フィールド参照: length
 ├── BinaryOp(Left, Operator, Right)   // 二項演算: a + b
 ├── UnaryOp(Operator, Operand)        // 単項演算: -x, not y
-└── FunctionCall(Name, Arguments)     // 関数呼び出し: until_marker(0xFF, 0xD9)
+├── FunctionCall(Name, Arguments)     // 関数呼び出し: until_marker(0xFF, 0xD9)
+├── IndexAccess(ArrayName, Index)     // 配列インデックス: offsets[_index]
+└── Conditional(Condition, TrueExpr, FalseExpr)  // 三項演算子: a ? b : c
 ```
 
 `BinaryOperator` enum（17種）:
@@ -485,7 +504,9 @@ ASTをDecodeContextの変数環境上で評価する。Engineプロジェクト�
 | 論理演算（`and`, `or`） | `bool` |
 | 単項否定 | `long` |
 | 単項NOT | `bool` |
-| 関数呼び出し | 関数依存（`until_marker` → `long`） |
+| 関数呼び出し | 関数依存（`until_marker` → `long`、`parse_int` → `long`） |
+| 三項演算子 | `TrueExpr` または `FalseExpr` の評価結果型 |
+| 配列インデックス | 配列要素の型（通常 `long`） |
 
 #### 型変換ルール
 
@@ -508,6 +529,21 @@ ASTをDecodeContextの変数環境上で評価する。Engineプロジェクト�
 GetVariable("length") → スコープ[3]になし → スコープ[2]で13を発見 → 13を返す
 GetVariable("missing") → 全スコープになし → 例外
 ```
+
+#### 特殊変数
+
+| 変数名 | 型 | 設定タイミング | 説明 |
+|--------|-----|-------------|------|
+| `remaining` | long | 常時 | 現在のバウンダリスコープ内の残りバイト数 |
+| `_index` | long | 繰り返し時 | 現在のイテレーションインデックス（0始まり） |
+
+#### 配列変数の解決
+
+`IndexAccess` ノード（`{array[index]}`）の評価時、`DecodeContext` から配列変数を取得し、インデックス式を評価してN番目の要素の値を返す。繰り返しフィールドのデコード結果から整数値リストとして蓄積される。
+
+#### 兄弟スコープへの値昇格（PromoteDecodedValues）
+
+繰り返しブロック内で構造体をデコードした後、`BinaryDecoder.PromoteDecodedValues()` が呼ばれる。デコード済みツリーを再帰的に走査し、スカラー値（整数、文字列、浮動小数点、virtual、bitfieldサブフィールド）を親スコープに `SetVariable()` で登録する。これにより、前の要素のフィールド値が後続の要素の式から参照可能になる。
 
 ---
 
@@ -558,14 +594,20 @@ CLIでは `DecodeException` をキャッチし、`FormatMessage()` で構造化�
 |---|---|---|
 | ビット演算（`&`, `\|`, `^`, `<<`, `>>`） | Tokenizer + Parser + Evaluator | REQ-016 |
 | 組み込み関数（`until_marker()`） | Tokenizer（Comma）+ Parser（FunctionCall）+ Evaluator | REQ-091 |
+| 組み込み関数（`parse_int()`） | Evaluator | REQ-096 |
+| 三項演算子（`a ? b : c`） | Tokenizer（Question, Colon）+ Parser（Conditional）+ Evaluator | REQ-097 |
+| 動的エンディアン式 | Mapper（EndiannessExpression）+ Decoder | REQ-097 |
+| 配列インデックス（`a[i]`） | Tokenizer（LeftBracket, RightBracket）+ Parser（IndexAccess）+ Evaluator | REQ-098 |
+| 繰り返しインデックス変数（`_index`） | Decoder | REQ-098 |
+| 要素ごとseek（繰り返し + seek 連携） | Decoder | REQ-098 |
+| 兄弟スコープ値昇格（PromoteDecodedValues） | Decoder | REQ-099 |
 
 ### 将来的な拡張候補
 
 | 拡張 | 影響範囲 | 備考 |
 |---|---|---|
-| 三項演算子（`a ? b : c`） | Parser + Evaluator | switchのインライン分岐 |
 | 追加組み込み関数（`sizeof()`, `offset()`） | Evaluator | メタ情報へのアクセス |
 | ドット記法（`header.length`） | Tokenizer + Parser + Evaluator | ネスト構造体のフィールド参照 |
 | エラーリカバリ | Parser | 複数エラーの一括報告 |
 
-式パーサーのアーキテクチャ（Tokenizer → Parser → AST → Evaluator）はこれらの拡張に対して開かれている。新しいトークン種別の追加、文法規則の追加、評価ルールの追加がそれぞれ独立して行える。
+式パーサーのアーキテクチャ（Tokenizer → Parser → AST → Evaluator）はこれらの拡張に対して開かれている。REQ-096〜099で三項演算子・配列インデックス・組み込み関数が追加された実績が示す通り、新しいトークン種別の追加、文法規則の追加、評価ルールの追加がそれぞれ独立して行える。

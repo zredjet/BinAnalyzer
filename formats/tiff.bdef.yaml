@@ -1,5 +1,4 @@
 name: TIFF
-endianness: little
 root: tiff
 
 enums:
@@ -129,28 +128,30 @@ enums:
 
 structs:
   tiff:
-    - name: header
-      type: struct
-      struct: tiff_header
-    - name: ifd0
-      type: struct
-      struct: ifd
-      seek: "{ifd_offset}"
-      description: "最初のIFD"
-
-  tiff_header:
     - name: byte_order
       type: ascii
       size: "2"
-      description: "II = リトルエンディアン（Intel）、MM = ビッグエンディアン（Motorola）。どちらも有効なTIFFバイトオーダー"
-      validate: "{byte_order == 'II'}"
-    - name: magic
-      type: uint16
-      description: "TIFFマジックナンバー（42）"
-      validate: "{magic == 42}"
-    - name: ifd_offset
-      type: uint32
-      description: "最初のIFDへのオフセット"
+      description: "バイトオーダーマーク（II=LE, MM=BE）"
+      validate: "{byte_order == 'II' or byte_order == 'MM'}"
+    - name: body
+      type: struct
+      struct: tiff_body
+
+  tiff_body:
+    endianness: "{byte_order == 'II' ? 'little' : 'big'}"
+    fields:
+      - name: magic
+        type: uint16
+        description: "TIFFマジックナンバー（42）"
+        validate: "{magic == 42}"
+      - name: ifd_offset
+        type: uint32
+        description: "最初のIFDへのオフセット"
+      - name: ifd0
+        type: struct
+        struct: ifd
+        seek: "{ifd_offset}"
+        description: "最初のIFD"
 
   ifd:
     - name: entry_count
@@ -192,3 +193,33 @@ structs:
       value: "{value_offset}"
       if: "{field_type == 4 and count == 1}"
       description: "LONG型のインライン値"
+    - name: rational_value
+      type: struct
+      struct: rational_data
+      seek: "{value_offset}"
+      seek_restore: true
+      if: "{field_type == 5 and count == 1}"
+      description: "RATIONAL型の外部値（numerator/denominator）"
+    - name: srational_value
+      type: struct
+      struct: srational_data
+      seek: "{value_offset}"
+      seek_restore: true
+      if: "{field_type == 10 and count == 1}"
+      description: "SRATIONAL型の外部値（signed numerator/denominator）"
+
+  rational_data:
+    - name: numerator
+      type: uint32
+      description: "分子"
+    - name: denominator
+      type: uint32
+      description: "分母"
+
+  srational_data:
+    - name: numerator
+      type: int32
+      description: "分子（符号付き）"
+    - name: denominator
+      type: int32
+      description: "分母（符号付き）"

@@ -92,6 +92,57 @@ public class EndiannessParsingTests
     }
 
     [Fact]
+    public void ParsesDynamicEndianness_Expression()
+    {
+        var yaml = """
+            name: Test
+            root: main
+            structs:
+              main:
+                - name: order
+                  type: ascii
+                  size: "2"
+                - name: body
+                  type: struct
+                  struct: body_struct
+              body_struct:
+                endianness: "{order == 'II' ? 'little' : 'big'}"
+                fields:
+                  - name: value
+                    type: uint16
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        format.Structs["body_struct"].Endianness.Should().BeNull();
+        format.Structs["body_struct"].EndiannessExpression.Should().NotBeNull();
+        format.Structs["body_struct"].EndiannessExpression!.OriginalText
+            .Should().Be("{order == 'II' ? 'little' : 'big'}");
+    }
+
+    [Fact]
+    public void ParsesDynamicEndianness_StaticStillWorks()
+    {
+        var yaml = """
+            name: Test
+            root: main
+            structs:
+              main:
+                endianness: little
+                fields:
+                  - name: value
+                    type: uint16
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        format.Structs["main"].Endianness.Should().Be(Endianness.Little);
+        format.Structs["main"].EndiannessExpression.Should().BeNull();
+    }
+
+    [Fact]
     public void ParsesMixed_OldAndNewFormat()
     {
         var yaml = """

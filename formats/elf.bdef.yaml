@@ -1,5 +1,4 @@
 name: ELF
-endianness: little
 root: elf
 
 enums:
@@ -162,18 +161,20 @@ structs:
 
   # 64ビットELF本体: ヘッダ + プログラムヘッダ + セクションヘッダ
   elf64_body:
-    - name: header
-      type: struct
-      struct: elf64_header
-    - name: program_headers
-      type: struct
-      struct: elf64_phdr
-      repeat_count: "{e_phnum}"
-    - name: section_headers
-      type: struct
-      struct: elf64_shdr
-      seek: "{e_shoff}"
-      repeat_count: "{e_shnum}"
+    endianness: "{ei_data == 1 ? 'little' : 'big'}"
+    fields:
+      - name: header
+        type: struct
+        struct: elf64_header
+      - name: program_headers
+        type: struct
+        struct: elf64_phdr
+        repeat_count: "{e_phnum}"
+      - name: section_headers
+        type: struct
+        struct: elf64_shdr
+        seek: "{e_shoff}"
+        repeat_count: "{e_shnum}"
 
   elf64_header:
     - name: e_type
@@ -251,18 +252,20 @@ structs:
 
   # 32ビットELF本体: ヘッダ + プログラムヘッダ + セクションヘッダ
   elf32_body:
-    - name: header
-      type: struct
-      struct: elf32_header
-    - name: program_headers
-      type: struct
-      struct: elf32_phdr
-      repeat_count: "{e_phnum}"
-    - name: section_headers
-      type: struct
-      struct: elf32_shdr
-      seek: "{e_shoff}"
-      repeat_count: "{e_shnum}"
+    endianness: "{ei_data == 1 ? 'little' : 'big'}"
+    fields:
+      - name: header
+        type: struct
+        struct: elf32_header
+      - name: program_headers
+        type: struct
+        struct: elf32_phdr
+        repeat_count: "{e_phnum}"
+      - name: section_headers
+        type: struct
+        struct: elf32_shdr
+        seek: "{e_shoff}"
+        repeat_count: "{e_shnum}"
 
   elf32_header:
     - name: e_type

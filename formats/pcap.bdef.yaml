@@ -188,6 +188,11 @@ structs:
         type: bytes
         size: "4"
         description: "宛先IPアドレス"
+      - name: options
+        type: bytes
+        size: "{(ihl - 5) * 4}"
+        if: "{ihl > 5}"
+        description: "IPv4オプション（IHL > 5の場合）"
       - name: body
         type: switch
         size: remaining
@@ -241,6 +246,11 @@ structs:
         type: uint16
       - name: urgent_pointer
         type: uint16
+      - name: options
+        type: bytes
+        size: "{(data_offset - 5) * 4}"
+        if: "{data_offset > 5}"
+        description: "TCPオプション（data_offset > 5の場合）"
       - name: payload
         type: bytes
         size: remaining

@@ -31,8 +31,8 @@ public class TiffParsingTests
 
         decoded.Name.Should().Be("TIFF");
         decoded.Children.Should().HaveCount(2);
-        decoded.Children[0].Name.Should().Be("header");
-        decoded.Children[1].Name.Should().Be("ifd0");
+        decoded.Children[0].Name.Should().Be("byte_order");
+        decoded.Children[1].Name.Should().Be("body");
     }
 
     [Fact]
@@ -42,15 +42,15 @@ public class TiffParsingTests
         var format = new YamlFormatLoader().Load(TiffFormatPath);
         var decoded = new BinaryDecoder().Decode(data, format);
 
-        var header = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var byteOrder = header.Children[0].Should().BeOfType<DecodedString>().Subject;
+        var byteOrder = decoded.Children[0].Should().BeOfType<DecodedString>().Subject;
         byteOrder.Value.Should().Be("II");
 
-        var magic = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+
+        var magic = body.Children[0].Should().BeOfType<DecodedInteger>().Subject;
         magic.Value.Should().Be(42);
 
-        var ifdOffset = header.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        var ifdOffset = body.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         ifdOffset.Value.Should().Be(8);
     }
 
@@ -61,7 +61,8 @@ public class TiffParsingTests
         var format = new YamlFormatLoader().Load(TiffFormatPath);
         var decoded = new BinaryDecoder().Decode(data, format);
 
-        var ifd = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var ifd = body.Children[2].Should().BeOfType<DecodedStruct>().Subject;
 
         var entryCount = ifd.Children[0].Should().BeOfType<DecodedInteger>().Subject;
         entryCount.Value.Should().Be(1);
@@ -82,7 +83,8 @@ public class TiffParsingTests
         var format = new YamlFormatLoader().Load(TiffFormatPath);
         var decoded = new BinaryDecoder().Decode(data, format);
 
-        var ifd = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var ifd = body.Children[2].Should().BeOfType<DecodedStruct>().Subject;
         var entries = ifd.Children[1].Should().BeOfType<DecodedArray>().Subject;
         var entry = entries.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
 
@@ -110,8 +112,107 @@ public class TiffParsingTests
         var output = new TreeOutputFormatter().Format(decoded);
 
         output.Should().Contain("TIFF");
-        output.Should().Contain("header");
+        output.Should().Contain("byte_order");
+        output.Should().Contain("body");
         output.Should().Contain("ifd0");
         output.Should().Contain("ImageWidth");
+    }
+
+    [Fact]
+    public void TiffFormat_BigEndian_DecodesCorrectly()
+    {
+        var data = TiffTestDataGenerator.CreateBigEndianTiff();
+        var format = new YamlFormatLoader().Load(TiffFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        decoded.Name.Should().Be("TIFF");
+
+        var byteOrder = decoded.Children[0].Should().BeOfType<DecodedString>().Subject;
+        byteOrder.Value.Should().Be("MM");
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+
+        var magic = body.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        magic.Value.Should().Be(42);
+
+        var ifdOffset = body.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        ifdOffset.Value.Should().Be(8);
+    }
+
+    [Fact]
+    public void TiffFormat_BigEndian_IfdEntry_DecodesCorrectly()
+    {
+        var data = TiffTestDataGenerator.CreateBigEndianTiff();
+        var format = new YamlFormatLoader().Load(TiffFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var ifd = body.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+
+        var entryCount = ifd.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        entryCount.Value.Should().Be(1);
+
+        var entries = ifd.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        entries.Elements.Should().HaveCount(1);
+
+        var entry = entries.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var tag = entry.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        tag.Value.Should().Be(256);
+        tag.EnumLabel.Should().Be("ImageWidth");
+    }
+
+    [Fact]
+    public void TiffFormat_RationalTag_SeeksAndDecodesValue()
+    {
+        var data = TiffTestDataGenerator.CreateTiffWithRationalTag();
+        var format = new YamlFormatLoader().Load(TiffFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var ifd = body.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var entries = ifd.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        var entry = entries.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        // tag=282 (XResolution), field_type=5 (RATIONAL)
+        var tag = entry.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        tag.Value.Should().Be(282);
+        tag.EnumLabel.Should().Be("XResolution");
+
+        var fieldType = entry.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        fieldType.Value.Should().Be(5);
+
+        // rational_value should be present (field_type==5 and count==1)
+        var rational = entry.Children.First(c => c.Name == "rational_value")
+            .Should().BeOfType<DecodedStruct>().Subject;
+
+        var numerator = rational.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        numerator.Name.Should().Be("numerator");
+        numerator.Value.Should().Be(72);
+
+        var denominator = rational.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        denominator.Name.Should().Be("denominator");
+        denominator.Value.Should().Be(1);
+    }
+
+    [Fact]
+    public void TiffFormat_BigEndian_RationalTag_DecodesCorrectly()
+    {
+        var data = TiffTestDataGenerator.CreateBigEndianTiffWithRational();
+        var format = new YamlFormatLoader().Load(TiffFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var ifd = body.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var entries = ifd.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        var entry = entries.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        var rational = entry.Children.First(c => c.Name == "rational_value")
+            .Should().BeOfType<DecodedStruct>().Subject;
+
+        var numerator = rational.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        numerator.Value.Should().Be(72);
+
+        var denominator = rational.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        denominator.Value.Should().Be(1);
     }
 }

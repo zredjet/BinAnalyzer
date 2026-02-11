@@ -43,6 +43,11 @@ public static class ExpressionEvaluator
             ExpressionNode.BinaryOp binOp => EvaluateBinaryOp(binOp, context),
             ExpressionNode.UnaryOp unOp => EvaluateUnaryOp(unOp, context),
             ExpressionNode.FunctionCall func => EvaluateFunction(func, context),
+            ExpressionNode.IndexAccess idx => ResolveIndexAccess(idx.ArrayName, idx.Index, context),
+            ExpressionNode.Conditional cond =>
+                ConvertToBool(EvaluateNode(cond.Condition, context))
+                    ? EvaluateNode(cond.TrueExpr, context)
+                    : EvaluateNode(cond.FalseExpr, context),
             _ => throw new InvalidOperationException($"Unknown expression node type: {node.GetType().Name}"),
         };
     }
@@ -56,6 +61,21 @@ public static class ExpressionEvaluator
         if (value is null)
             throw new InvalidOperationException($"Variable '{fieldName}' not found in current scope");
         return value;
+    }
+
+    private static object ResolveIndexAccess(string arrayName, ExpressionNode indexExpr, DecodeContext context)
+    {
+        var arrayValue = context.GetVariable(arrayName);
+        if (arrayValue is not List<object> list)
+            throw new InvalidOperationException(
+                $"Variable '{arrayName}' is not an array (actual type: {arrayValue?.GetType().Name ?? "null"})");
+
+        var index = (int)ConvertToLong(EvaluateNode(indexExpr, context));
+        if (index < 0 || index >= list.Count)
+            throw new InvalidOperationException(
+                $"Array index {index} is out of range for '{arrayName}' (length: {list.Count})");
+
+        return list[index];
     }
 
     private static object EvaluateBinaryOp(ExpressionNode.BinaryOp binOp, DecodeContext context)
@@ -103,6 +123,7 @@ public static class ExpressionEvaluator
         return func.Name switch
         {
             "until_marker" => EvaluateUntilMarker(func.Arguments, context),
+            "parse_int" => EvaluateParseInt(func.Arguments, context),
             _ => throw new InvalidOperationException($"Unknown function: '{func.Name}'"),
         };
     }
@@ -126,6 +147,35 @@ public static class ExpressionEvaluator
             return (long)context.Remaining;
 
         return (long)(markerPos - context.Position);
+    }
+
+    private static object EvaluateParseInt(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 2)
+            throw new InvalidOperationException(
+                "parse_int requires exactly 2 arguments: parse_int(field, base)");
+
+        var rawValue = EvaluateNode(args[0], context);
+        var stringValue = rawValue?.ToString() ?? "";
+
+        var baseValue = (int)ConvertToLong(EvaluateNode(args[1], context));
+        if (baseValue is not (2 or 8 or 10 or 16))
+            throw new InvalidOperationException(
+                $"parse_int base must be 2, 8, 10, or 16, got: {baseValue}");
+
+        var trimmed = stringValue.TrimEnd('\0', ' ');
+        if (trimmed.Length == 0)
+            return 0L;
+
+        try
+        {
+            return Convert.ToInt64(trimmed, baseValue);
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException)
+        {
+            return 0L;
+        }
     }
 
     private static long ConvertToLong(object value) => value switch

@@ -149,4 +149,81 @@ public class PcapParsingTests
         output.Should().Contain("ETHERNET");
         output.Should().Contain("packets");
     }
+
+    [Fact]
+    public void PcapFormat_Ipv4Options_DecodesCorrectly()
+    {
+        var data = PcapTestDataGenerator.CreatePcapWithIpv4Options();
+        var format = new YamlFormatLoader().Load(PcapFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        // data → ethernet_frame → payload → ipv4_packet
+        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
+        var ipv4 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+
+        // Find options field (should exist because IHL=6 > 5)
+        var options = ipv4.Children.First(c => c.Name == "options")
+            .Should().BeOfType<DecodedBytes>().Subject;
+        options.RawBytes.Length.Should().Be(4); // (6-5)*4 = 4 bytes
+
+        // body → tcp_segment should still decode correctly
+        var body = ipv4.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
+        body.Name.Should().Be("body");
+        var srcPort = body.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        srcPort.Value.Should().Be(80);
+    }
+
+    [Fact]
+    public void PcapFormat_TcpOptions_DecodesCorrectly()
+    {
+        var data = PcapTestDataGenerator.CreatePcapWithTcpOptions();
+        var format = new YamlFormatLoader().Load(PcapFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
+        var ipv4 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+
+        // IPv4 options should NOT be present (IHL=5)
+        ipv4.Children.Should().NotContain(c => c.Name == "options");
+
+        // body → tcp_segment
+        var body = ipv4.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
+        var tcp = body;
+
+        // TCP options should exist (data_offset=8 > 5)
+        var tcpOptions = tcp.Children.First(c => c.Name == "options")
+            .Should().BeOfType<DecodedBytes>().Subject;
+        tcpOptions.RawBytes.Length.Should().Be(12); // (8-5)*4 = 12 bytes
+
+        var srcPort = tcp.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        srcPort.Value.Should().Be(443);
+    }
+
+    [Fact]
+    public void PcapFormat_NoOptions_StillWorks()
+    {
+        // Regression test: IHL=5, data_offset=5 → no options fields
+        var data = PcapTestDataGenerator.CreateMinimalPcap();
+        var format = new YamlFormatLoader().Load(PcapFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
+        var ipv4 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+
+        // No IPv4 options (IHL=5)
+        ipv4.Children.Should().NotContain(c => c.Name == "options");
+
+        // body → tcp_segment → no TCP options (data_offset=5)
+        var body = ipv4.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
+        body.Children.Should().NotContain(c => c.Name == "options");
+    }
 }

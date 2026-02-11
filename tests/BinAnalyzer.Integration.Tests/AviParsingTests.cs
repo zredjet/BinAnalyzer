@@ -118,4 +118,79 @@ public class AviParsingTests
         output.Should().Contain("magic");
         output.Should().Contain("form_type");
     }
+
+    [Fact]
+    public void AviFormat_VideoStreamFormat_DecodesBitmapInfoHeader()
+    {
+        var data = AviTestDataGenerator.CreateAviWithVideoStreamFormat();
+        var format = new YamlFormatLoader().Load(AviFormatPath);
+        var result = new BinaryDecoder().DecodeWithRecovery(data, format, ErrorMode.Continue);
+        var decoded = result.Root;
+
+        var chunks = decoded.Children[3].Should().BeOfType<DecodedArray>().Subject;
+        var hdrlList = chunks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var listData = hdrlList.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var subChunks = listData.Children[1].Should().BeOfType<DecodedArray>().Subject;
+
+        // subChunks[1] = LIST(strl)
+        var strlChunk = subChunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
+        var strlData = strlChunk.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var strlSubChunks = strlData.Children[1].Should().BeOfType<DecodedArray>().Subject;
+
+        // strlSubChunks[1] = strf
+        var strfChunk = strlSubChunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
+        var strfData = strfChunk.Children[2].Should().BeOfType<DecodedStruct>().Subject; // stream_format
+
+        // format_data → bitmap_info_header
+        var formatData = strfData.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+        formatData.Name.Should().Be("format_data");
+
+        var biWidth = formatData.Children.First(c => c.Name == "biWidth")
+            .Should().BeOfType<DecodedInteger>().Subject;
+        biWidth.Value.Should().Be(320);
+
+        var biHeight = formatData.Children.First(c => c.Name == "biHeight")
+            .Should().BeOfType<DecodedInteger>().Subject;
+        biHeight.Value.Should().Be(240);
+
+        var biBitCount = formatData.Children.First(c => c.Name == "biBitCount")
+            .Should().BeOfType<DecodedInteger>().Subject;
+        biBitCount.Value.Should().Be(24);
+    }
+
+    [Fact]
+    public void AviFormat_AudioStreamFormat_DecodesWaveFormatEx()
+    {
+        var data = AviTestDataGenerator.CreateAviWithAudioStreamFormat();
+        var format = new YamlFormatLoader().Load(AviFormatPath);
+        var result = new BinaryDecoder().DecodeWithRecovery(data, format, ErrorMode.Continue);
+        var decoded = result.Root;
+
+        var chunks = decoded.Children[3].Should().BeOfType<DecodedArray>().Subject;
+        var hdrlList = chunks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        var listData = hdrlList.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var subChunks = listData.Children[1].Should().BeOfType<DecodedArray>().Subject;
+
+        var strlChunk = subChunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
+        var strlData = strlChunk.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var strlSubChunks = strlData.Children[1].Should().BeOfType<DecodedArray>().Subject;
+
+        var strfChunk = strlSubChunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
+        var strfData = strfChunk.Children[2].Should().BeOfType<DecodedStruct>().Subject; // stream_format
+
+        var formatData = strfData.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+        formatData.Name.Should().Be("format_data");
+
+        var wFormatTag = formatData.Children.First(c => c.Name == "wFormatTag")
+            .Should().BeOfType<DecodedInteger>().Subject;
+        wFormatTag.Value.Should().Be(1);
+
+        var nChannels = formatData.Children.First(c => c.Name == "nChannels")
+            .Should().BeOfType<DecodedInteger>().Subject;
+        nChannels.Value.Should().Be(2);
+
+        var nSamplesPerSec = formatData.Children.First(c => c.Name == "nSamplesPerSec")
+            .Should().BeOfType<DecodedInteger>().Subject;
+        nSamplesPerSec.Value.Should().Be(44100);
+    }
 }

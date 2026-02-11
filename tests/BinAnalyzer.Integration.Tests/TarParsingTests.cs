@@ -85,4 +85,30 @@ public class TarParsingTests
         output.Should().Contain("regular_file");
         output.Should().Contain("uname");
     }
+
+    [Fact]
+    public void TarFormat_VirtualFields_ComputeCorrectly()
+    {
+        var data = TarTestDataGenerator.CreateMinimalTar();
+        var format = new YamlFormatLoader().Load(TarFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var entries = decoded.Children[0].Should().BeOfType<DecodedArray>().Subject;
+        entries.Elements.Should().HaveCount(1);
+
+        var entry = entries.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+
+        // file_size_bytes = parse_int("00000000000\0", 8) = 0
+        var fileSizeBytes = entry.Children.First(c => c.Name == "file_size_bytes")
+            .Should().BeOfType<DecodedVirtual>().Subject;
+        fileSizeBytes.Value.Should().Be(0L);
+
+        // data_blocks_size = ((0 + 511) / 512) * 512 = 0
+        var dataBlocksSize = entry.Children.First(c => c.Name == "data_blocks_size")
+            .Should().BeOfType<DecodedVirtual>().Subject;
+        dataBlocksSize.Value.Should().Be(0L);
+
+        // data field should be skipped (condition: file_size_bytes > 0 is false)
+        entry.Children.Should().NotContain(c => c.Name == "data");
+    }
 }

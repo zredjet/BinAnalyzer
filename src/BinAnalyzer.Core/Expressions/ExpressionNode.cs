@@ -10,6 +10,9 @@ public abstract record ExpressionNode
     public sealed record BinaryOp(ExpressionNode Left, BinaryOperator Operator, ExpressionNode Right) : ExpressionNode;
     public sealed record UnaryOp(UnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;
     public sealed record FunctionCall(string Name, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
+    public sealed record IndexAccess(string ArrayName, ExpressionNode Index) : ExpressionNode;
+    public sealed record Conditional(
+        ExpressionNode Condition, ExpressionNode TrueExpr, ExpressionNode FalseExpr) : ExpressionNode;
 }
 
 public enum BinaryOperator

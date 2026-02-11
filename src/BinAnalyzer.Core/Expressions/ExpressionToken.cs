@@ -27,6 +27,10 @@ public enum ExpressionTokenType
     LeftParen,
     RightParen,
     Comma,
+    Question,
+    Colon,
+    LeftBracket,
+    RightBracket,
     Eof,
 }
 

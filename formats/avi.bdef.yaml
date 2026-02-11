@@ -132,10 +132,80 @@ structs:
       description: "表示矩形（left, top, right, bottom 各 int16）"
 
   stream_format:
-    - name: data
+    - name: format_data
+      type: switch
+      size: remaining
+      switch_on: "{fccType}"
+      cases:
+        "'vids'": bitmap_info_header
+        "'auds'": wave_format_ex
+      default: raw_data
+
+  bitmap_info_header:
+    - name: biSize
+      type: uint32
+      description: "構造体サイズ（バイト）"
+    - name: biWidth
+      type: int32
+      description: "画像幅（ピクセル）"
+    - name: biHeight
+      type: int32
+      description: "画像高さ（正=ボトムアップ、負=トップダウン）"
+    - name: biPlanes
+      type: uint16
+      description: "プレーン数（常に1）"
+    - name: biBitCount
+      type: uint16
+      description: "1ピクセルあたりのビット数"
+    - name: biCompression
+      type: ascii
+      size: "4"
+      description: "圧縮方式（FourCC）"
+    - name: biSizeImage
+      type: uint32
+      description: "画像データサイズ（バイト）"
+    - name: biXPelsPerMeter
+      type: int32
+      description: "水平解像度（ピクセル/メートル）"
+    - name: biYPelsPerMeter
+      type: int32
+      description: "垂直解像度（ピクセル/メートル）"
+    - name: biClrUsed
+      type: uint32
+      description: "使用色数"
+    - name: biClrImportant
+      type: uint32
+      description: "重要色数"
+    - name: extra
       type: bytes
       size: remaining
-      description: "ストリームフォーマットデータ"
+      if: "{remaining > 0}"
+      description: "追加ヘッダデータ"
+
+  wave_format_ex:
+    - name: wFormatTag
+      type: uint16
+      description: "オーディオフォーマットタグ（1=PCM）"
+    - name: nChannels
+      type: uint16
+      description: "チャンネル数"
+    - name: nSamplesPerSec
+      type: uint32
+      description: "サンプリングレート（Hz）"
+    - name: nAvgBytesPerSec
+      type: uint32
+      description: "平均バイトレート"
+    - name: nBlockAlign
+      type: uint16
+      description: "ブロックアライメント（バイト）"
+    - name: wBitsPerSample
+      type: uint16
+      description: "1サンプルあたりのビット数"
+    - name: extra
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "拡張データ（cbSize + フォーマット固有データ）"
 
   avi_old_index:
     - name: entries

@@ -5,6 +5,7 @@ namespace BinAnalyzer.Core.Expressions;
 /// "{...}" DSL文字列から式をパースする。
 ///
 /// 文法（優先順位: 低→高）:
+///   ternary_expr → or_expr ("?" or_expr ":" ternary_expr)?
 ///   or_expr      → and_expr ("or" and_expr)*
 ///   and_expr     → bitor_expr ("and" bitor_expr)*
 ///   bitor_expr   → bitxor_expr ("|" bitxor_expr)*
@@ -15,7 +16,7 @@ namespace BinAnalyzer.Core.Expressions;
 ///   add_expr     → mul_expr (("+" | "-") mul_expr)*
 ///   mul_expr     → unary_expr (("*" | "/" | "%") unary_expr)*
 ///   unary_expr   → ("-" | "not") unary_expr | primary
-///   primary      → INTEGER | STRING | IDENTIFIER | IDENTIFIER "(" arg_list? ")" | "(" or_expr ")"
+///   primary      → INTEGER | STRING | IDENTIFIER | IDENTIFIER "(" arg_list? ")" | IDENTIFIER "[" ternary_expr "]" | "(" or_expr ")"
 ///   arg_list     → or_expr ("," or_expr)*
 /// </summary>
 public sealed class ExpressionParser
@@ -38,7 +39,7 @@ public sealed class ExpressionParser
 
         var tokens = ExpressionTokenizer.Tokenize(stripped);
         var parser = new ExpressionParser(tokens);
-        var node = parser.ParseOrExpr();
+        var node = parser.ParseTernaryExpr();
 
         if (parser.Current.Type != ExpressionTokenType.Eof)
             throw new FormatException($"Unexpected token '{parser.Current.Value}' at position {parser.Current.Position}");
@@ -61,6 +62,20 @@ public sealed class ExpressionParser
             return false;
         _pos++;
         return true;
+    }
+
+    private ExpressionNode ParseTernaryExpr()
+    {
+        var condition = ParseOrExpr();
+        if (Current.Type != ExpressionTokenType.Question)
+            return condition;
+
+        Advance(); // consume '?'
+        var trueExpr = ParseOrExpr();
+        if (!Match(ExpressionTokenType.Colon))
+            throw new FormatException($"Expected ':' in ternary expression at position {Current.Position}");
+        var falseExpr = ParseTernaryExpr(); // right-associative
+        return new ExpressionNode.Conditional(condition, trueExpr, falseExpr);
     }
 
     private ExpressionNode ParseOrExpr()
@@ -240,13 +255,21 @@ public sealed class ExpressionParser
                     var args = new List<ExpressionNode>();
                     if (Current.Type != ExpressionTokenType.RightParen)
                     {
-                        args.Add(ParseOrExpr());
+                        args.Add(ParseTernaryExpr());
                         while (Match(ExpressionTokenType.Comma))
-                            args.Add(ParseOrExpr());
+                            args.Add(ParseTernaryExpr());
                     }
                     if (!Match(ExpressionTokenType.RightParen))
                         throw new FormatException($"Expected ')' at position {Current.Position}");
                     return new ExpressionNode.FunctionCall(token.Value, args);
+                }
+                if (Current.Type == ExpressionTokenType.LeftBracket)
+                {
+                    Advance(); // consume '['
+                    var indexExpr = ParseTernaryExpr();
+                    if (!Match(ExpressionTokenType.RightBracket))
+                        throw new FormatException($"Expected ']' at position {Current.Position}");
+                    return new ExpressionNode.IndexAccess(token.Value, indexExpr);
                 }
                 return new ExpressionNode.FieldReference(token.Value);
             }
@@ -254,7 +277,7 @@ public sealed class ExpressionParser
             case ExpressionTokenType.LeftParen:
             {
                 Advance();
-                var expr = ParseOrExpr();
+                var expr = ParseTernaryExpr();
                 if (!Match(ExpressionTokenType.RightParen))
                     throw new FormatException($"Expected ')' at position {Current.Position}");
                 return expr;

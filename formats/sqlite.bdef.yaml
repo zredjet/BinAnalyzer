@@ -138,9 +138,11 @@ structs:
     - name: cells
       type: struct
       struct: table_leaf_cell
-      repeat: eof
+      repeat_count: "{number_of_cells}"
+      seek: "{cell_pointer_array[_index]}"
+      seek_restore: true
       if: "{page_type == 13}"
-      description: "リーフテーブルセル（ページヘッダ直後に連続する場合のみ）"
+      description: "リーフテーブルセル（cell_pointer_arrayが指すオフセットに配置）"
 
   table_leaf_cell:
     - name: payload_size
