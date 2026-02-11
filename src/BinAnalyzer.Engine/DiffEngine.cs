@@ -46,6 +46,12 @@ public static class DiffEngine
             case DecodedCompressed lc when right is DecodedCompressed rc:
                 CompareCompressed(lc, rc, path, entries);
                 break;
+            case DecodedFlags lfl when right is DecodedFlags rfl:
+                CompareFlags(lfl, rfl, path, entries);
+                break;
+            case DecodedVirtual lv when right is DecodedVirtual rv:
+                CompareVirtual(lv, rv, path, entries);
+                break;
         }
     }
 
@@ -152,6 +158,24 @@ public static class DiffEngine
         }
     }
 
+    private static void CompareFlags(DecodedFlags left, DecodedFlags right, string path, List<DiffEntry> entries)
+    {
+        if (left.RawValue != right.RawValue)
+        {
+            entries.Add(new DiffEntry(DiffKind.Changed, path, $"0x{left.RawValue:X}", $"0x{right.RawValue:X}"));
+        }
+    }
+
+    private static void CompareVirtual(DecodedVirtual left, DecodedVirtual right, string path, List<DiffEntry> entries)
+    {
+        var leftStr = left.Value?.ToString() ?? "";
+        var rightStr = right.Value?.ToString() ?? "";
+        if (leftStr != rightStr)
+        {
+            entries.Add(new DiffEntry(DiffKind.Changed, path, leftStr, rightStr));
+        }
+    }
+
     private static void CompareCompressed(DecodedCompressed left, DecodedCompressed right, string path, List<DiffEntry> entries)
     {
         if (left.Algorithm != right.Algorithm)
@@ -209,6 +233,8 @@ public static class DiffEngine
             DecodedBytes b => FormatBytesValue(b.RawBytes),
             DecodedFloat f => f.Value.ToString("G"),
             DecodedBitfield bf => $"0x{bf.RawValue:X}",
+            DecodedFlags fl => $"0x{fl.RawValue:X}",
+            DecodedVirtual v => v.Value?.ToString() ?? "",
             DecodedStruct st => $"({st.StructType})",
             DecodedArray a => $"[{a.Elements.Count} items]",
             DecodedCompressed c => $"[{c.Algorithm}: {c.CompressedSize}→{c.DecompressedSize} bytes]",
@@ -229,6 +255,8 @@ public static class DiffEngine
             DecodedCompressed c => $"compressed({c.Algorithm})",
             DecodedStruct s => $"struct({s.StructType})",
             DecodedArray => "array",
+            DecodedFlags => "flags",
+            DecodedVirtual => "virtual",
             DecodedError => "error",
             _ => node.GetType().Name,
         };

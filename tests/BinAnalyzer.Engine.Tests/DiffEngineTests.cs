@@ -193,6 +193,54 @@ public class DiffEngineTests
         result.Entries[0].FieldPath.Should().Be("sig");
     }
 
+    [Fact]
+    public void FlagsValueChanged_ReportsChanged()
+    {
+        var left = CreateStruct("root", [
+            new DecodedFlags
+            {
+                Name = "flags", Offset = 0, Size = 1, RawValue = 0x01,
+                FlagStates = [new FlagState("bit0", true, 0, null)],
+            },
+        ]);
+        var right = CreateStruct("root", [
+            new DecodedFlags
+            {
+                Name = "flags", Offset = 0, Size = 1, RawValue = 0x03,
+                FlagStates = [new FlagState("bit0", true, 0, null), new FlagState("bit1", true, 1, null)],
+            },
+        ]);
+
+        var result = DiffEngine.Compare(left, right);
+
+        result.HasDifferences.Should().BeTrue();
+        result.Entries.Should().HaveCount(1);
+        result.Entries[0].Kind.Should().Be(DiffKind.Changed);
+        result.Entries[0].FieldPath.Should().Be("flags");
+        result.Entries[0].OldValue.Should().Contain("0x1");
+        result.Entries[0].NewValue.Should().Contain("0x3");
+    }
+
+    [Fact]
+    public void VirtualValueChanged_ReportsChanged()
+    {
+        var left = CreateStruct("root", [
+            new DecodedVirtual { Name = "total", Offset = 0, Size = 0, Value = "100" },
+        ]);
+        var right = CreateStruct("root", [
+            new DecodedVirtual { Name = "total", Offset = 0, Size = 0, Value = "200" },
+        ]);
+
+        var result = DiffEngine.Compare(left, right);
+
+        result.HasDifferences.Should().BeTrue();
+        result.Entries.Should().HaveCount(1);
+        result.Entries[0].Kind.Should().Be(DiffKind.Changed);
+        result.Entries[0].FieldPath.Should().Be("total");
+        result.Entries[0].OldValue.Should().Be("100");
+        result.Entries[0].NewValue.Should().Be("200");
+    }
+
     private static DecodedStruct CreateStruct(string name, List<DecodedNode> children)
     {
         return new DecodedStruct

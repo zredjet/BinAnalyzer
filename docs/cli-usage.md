@@ -172,7 +172,7 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 2つのバイナリファイルを同じフォーマット定義で解析し、構造的な差分を表示します。
 
 ```
-binanalyzer diff <file1> <file2> -f <format> [--color <mode>]
+binanalyzer diff <file1> <file2> -f <format> [--output <format>] [--color <mode>]
 ```
 
 ### 引数
@@ -187,7 +187,15 @@ binanalyzer diff <file1> <file2> -f <format> [--color <mode>]
 | オプション | 説明 | デフォルト |
 |------------|------|-----------|
 | `-f, --format <file>` | フォーマット定義ファイル（`.bdef.yaml`）**必須** | — |
+| `--output <format>` | 出力形式（`flat`, `tree`） | `flat` |
 | `--color <mode>` | カラー出力（`auto`, `always`, `never`） | `auto` |
+
+### 出力形式
+
+| 形式 | 説明 |
+|------|------|
+| `flat` | 差分フィールドのパスと値の一覧をフラットに表示（デフォルト） |
+| `tree` | デコード済みツリー構造で差分を表示。同一ノードは `(同一)` と表示し、変更箇所をハイライト |
 
 ### 終了コード
 
@@ -199,7 +207,11 @@ binanalyzer diff <file1> <file2> -f <format> [--color <mode>]
 ### 使用例
 
 ```bash
+# フラット形式（デフォルト）
 dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml
+
+# ツリー形式
+dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml --output tree
 ```
 
 ## カラー出力
@@ -252,8 +264,11 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 # カラー出力を強制
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always
 
-# 2つのファイルの差分比較
+# 2つのファイルの差分比較（フラット形式）
 dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml
+
+# 2つのファイルの差分比較（ツリー形式）
+dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --output tree
 
 # バリデーションをスキップして解析
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --no-validate

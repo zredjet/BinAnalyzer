@@ -209,12 +209,19 @@ var diffColorOption = new Option<string>("--color")
     DefaultValueFactory = _ => "auto",
 };
 
+var diffOutputOption = new Option<string>("--output")
+{
+    Description = "出力形式 (flat, tree)",
+    DefaultValueFactory = _ => "flat",
+};
+
 var diffCommand = new Command("diff", "2つのバイナリファイルの構造的差分を表示")
 {
     file1Arg,
     file2Arg,
     diffFormatOption,
     diffColorOption,
+    diffOutputOption,
 };
 
 diffCommand.SetAction((parseResult) =>
@@ -248,7 +255,6 @@ diffCommand.SetAction((parseResult) =>
         var decoded1 = decoder.Decode(File.ReadAllBytes(f1.FullName), format);
         var decoded2 = decoder.Decode(File.ReadAllBytes(f2.FullName), format);
 
-        var diffResult = DiffEngine.Compare(decoded1, decoded2);
         var diffColorSetting = parseResult.GetValue(diffColorOption)!;
         var diffColorMode = diffColorSetting switch
         {
@@ -256,9 +262,21 @@ diffCommand.SetAction((parseResult) =>
             "never" => ColorMode.Never,
             _ => ColorMode.Auto,
         };
-        var formatter = new DiffOutputFormatter(diffColorMode);
-        Console.Write(formatter.Format(diffResult));
-        return diffResult.HasDifferences ? 1 : 0;
+
+        var outputFormat = parseResult.GetValue(diffOutputOption)!;
+        if (outputFormat == "tree")
+        {
+            var treeFormatter = new DiffTreeOutputFormatter(diffColorMode);
+            Console.Write(treeFormatter.Format(decoded1, decoded2));
+            return treeFormatter.HasDifferences ? 1 : 0;
+        }
+        else
+        {
+            var diffResult = DiffEngine.Compare(decoded1, decoded2);
+            var formatter = new DiffOutputFormatter(diffColorMode);
+            Console.Write(formatter.Format(diffResult));
+            return diffResult.HasDifferences ? 1 : 0;
+        }
     }
     catch (DecodeException dex)
     {

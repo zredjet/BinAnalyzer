@@ -1,3 +1,4 @@
+using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Diff;
 using BinAnalyzer.Output;
 using FluentAssertions;
@@ -88,5 +89,167 @@ public class DiffOutputTests
         var output = formatter.Format(result);
 
         output.Should().Contain("差分: 3 件");
+    }
+
+    // --- DiffTreeOutputFormatter tests ---
+
+    [Fact]
+    public void TreeFormat_NoDifferences_ShowsAllIdentical()
+    {
+        var left = MakeStruct("root", [
+            MakeInteger("width", 100),
+            MakeInteger("height", 200),
+        ]);
+        var right = MakeStruct("root", [
+            MakeInteger("width", 100),
+            MakeInteger("height", 200),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("width");
+        output.Should().Contain("(同一)");
+        output.Should().Contain("height");
+        formatter.HasDifferences.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TreeFormat_ChangedValue_ShowsArrow()
+    {
+        var left = MakeStruct("root", [
+            MakeInteger("width", 100),
+        ]);
+        var right = MakeStruct("root", [
+            MakeInteger("width", 200),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("width");
+        output.Should().Contain("100");
+        output.Should().Contain("→");
+        output.Should().Contain("200");
+        formatter.HasDifferences.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TreeFormat_AddedField_ShowsPlus()
+    {
+        var left = MakeStruct("root", [
+            MakeInteger("width", 100),
+        ]);
+        var right = MakeStruct("root", [
+            MakeInteger("width", 100),
+            MakeInteger("height", 200),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("+ height: 200");
+        formatter.HasDifferences.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TreeFormat_RemovedField_ShowsMinus()
+    {
+        var left = MakeStruct("root", [
+            MakeInteger("width", 100),
+            MakeInteger("height", 200),
+        ]);
+        var right = MakeStruct("root", [
+            MakeInteger("width", 100),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("- height: 200");
+        formatter.HasDifferences.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TreeFormat_NestedStruct_IndentsCorrectly()
+    {
+        var left = MakeStruct("root", [
+            MakeStruct("header", [
+                MakeInteger("width", 100),
+                MakeInteger("height", 200),
+            ]),
+        ]);
+        var right = MakeStruct("root", [
+            MakeStruct("header", [
+                MakeInteger("width", 200),
+                MakeInteger("height", 200),
+            ]),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("header");
+        // width is changed, should be indented under header
+        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var headerLine = lines.First(l => l.Contains("header"));
+        var widthLine = lines.First(l => l.Contains("width"));
+        // width should have more leading spaces than header
+        var headerIndent = headerLine.Length - headerLine.TrimStart().Length;
+        var widthIndent = widthLine.Length - widthLine.TrimStart().Length;
+        widthIndent.Should().BeGreaterThan(headerIndent);
+    }
+
+    [Fact]
+    public void TreeFormat_ArrayDiff_ShowsElementChanges()
+    {
+        var left = MakeStruct("root", [
+            MakeArray("items", [
+                MakeInteger("item", 10),
+                MakeInteger("item", 20),
+                MakeInteger("item", 30),
+            ]),
+        ]);
+        var right = MakeStruct("root", [
+            MakeArray("items", [
+                MakeInteger("item", 10),
+                MakeInteger("item", 99),
+            ]),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        // [0] should be identical
+        output.Should().Contain("[0]");
+        // [1] should show change 20 → 99
+        output.Should().Contain("20");
+        output.Should().Contain("99");
+        output.Should().Contain("→");
+        // [2] should be removed
+        output.Should().Contain("- [2]");
+        formatter.HasDifferences.Should().BeTrue();
+    }
+
+    private static DecodedStruct MakeStruct(string name, List<DecodedNode> children)
+    {
+        return new DecodedStruct
+        {
+            Name = name,
+            StructType = name,
+            Offset = 0,
+            Size = 0,
+            Children = children,
+        };
+    }
+
+    private static DecodedInteger MakeInteger(string name, long value)
+    {
+        return new DecodedInteger { Name = name, Offset = 0, Size = 4, Value = value };
+    }
+
+    private static DecodedArray MakeArray(string name, List<DecodedNode> elements)
+    {
+        return new DecodedArray { Name = name, Offset = 0, Size = 0, Elements = elements };
     }
 }
