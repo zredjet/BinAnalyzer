@@ -248,8 +248,159 @@ public class DiffOutputTests
         return new DecodedInteger { Name = name, Offset = 0, Size = 4, Value = value };
     }
 
-    private static DecodedArray MakeArray(string name, List<DecodedNode> elements)
+    private static DecodedArray MakeArray(string name, List<DecodedNode> elements, string? diffKey = null, IReadOnlyList<string>? diffKeys = null)
     {
-        return new DecodedArray { Name = name, Offset = 0, Size = 0, Elements = elements };
+        var resolvedKeys = diffKeys ?? (diffKey is not null ? [diffKey] : null);
+        return new DecodedArray { Name = name, Offset = 0, Size = 0, Elements = elements, DiffKey = resolvedKeys };
+    }
+
+    // --- Keyed array tree format tests ---
+
+    [Fact]
+    public void TreeFormat_KeyedArray_IdenticalElements_ShowsIdentical()
+    {
+        var left = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("id", 1), MakeInteger("val", 10)]),
+            ], diffKey: "id"),
+        ]);
+        var right = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("id", 1), MakeInteger("val", 10)]),
+            ], diffKey: "id"),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("items");
+        output.Should().Contain("(同一)");
+        formatter.HasDifferences.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TreeFormat_KeyedArray_ChangedElement_ShowsKeyAndArrow()
+    {
+        var left = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("id", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("id", 2), MakeInteger("val", 20)]),
+            ], diffKey: "id"),
+        ]);
+        var right = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("id", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("id", 2), MakeInteger("val", 99)]),
+            ], diffKey: "id"),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("[id=1]");
+        output.Should().Contain("[id=2]");
+        output.Should().Contain("20");
+        output.Should().Contain("→");
+        output.Should().Contain("99");
+        formatter.HasDifferences.Should().BeTrue();
+    }
+
+    // --- Composite key tree format tests ---
+
+    [Fact]
+    public void TreeFormat_CompositeKey_ChangedElement_ShowsCompositeKeyLabel()
+    {
+        var left = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 2), MakeInteger("val", 20)]),
+            ], diffKeys: ["group", "item"]),
+        ]);
+        var right = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 2), MakeInteger("val", 99)]),
+            ], diffKeys: ["group", "item"]),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("[group=1,item=1]");
+        output.Should().Contain("[group=1,item=2]");
+        output.Should().Contain("20");
+        output.Should().Contain("→");
+        output.Should().Contain("99");
+        formatter.HasDifferences.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TreeFormat_CompositeKey_AddedAndRemoved_ShowsPlusMinus()
+    {
+        var left = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("group", 2), MakeInteger("item", 1), MakeInteger("val", 20)]),
+            ], diffKeys: ["group", "item"]),
+        ]);
+        var right = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("group", 2), MakeInteger("item", 2), MakeInteger("val", 30)]),
+            ], diffKeys: ["group", "item"]),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("- [group=2,item=1]");
+        output.Should().Contain("+ [group=2,item=2]");
+        formatter.HasDifferences.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TreeFormat_CompositeKey_IdenticalElements_ShowsIdentical()
+    {
+        var left = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 1), MakeInteger("val", 10)]),
+            ], diffKeys: ["group", "item"]),
+        ]);
+        var right = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("group", 1), MakeInteger("item", 1), MakeInteger("val", 10)]),
+            ], diffKeys: ["group", "item"]),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("items");
+        output.Should().Contain("(同一)");
+        formatter.HasDifferences.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TreeFormat_KeyedArray_AddedAndRemoved_ShowsPlusMinus()
+    {
+        var left = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("id", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("id", 2), MakeInteger("val", 20)]),
+            ], diffKey: "id"),
+        ]);
+        var right = MakeStruct("root", [
+            MakeArray("items", [
+                MakeStruct("entry", [MakeInteger("id", 1), MakeInteger("val", 10)]),
+                MakeStruct("entry", [MakeInteger("id", 3), MakeInteger("val", 30)]),
+            ], diffKey: "id"),
+        ]);
+
+        var formatter = new DiffTreeOutputFormatter();
+        var output = formatter.Format(left, right);
+
+        output.Should().Contain("- [id=2]");
+        output.Should().Contain("+ [id=3]");
+        formatter.HasDifferences.Should().BeTrue();
     }
 }

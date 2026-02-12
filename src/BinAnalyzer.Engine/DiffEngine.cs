@@ -135,6 +135,12 @@ public static class DiffEngine
 
     private static void CompareArray(DecodedArray left, DecodedArray right, string path, List<DiffEntry> entries)
     {
+        if (left.DiffKey is { Count: > 0 } diffKeys && CanUseKeyedComparison(left, right, diffKeys))
+        {
+            CompareArrayByKey(left, right, path, diffKeys, entries);
+            return;
+        }
+
         var minCount = Math.Min(left.Elements.Count, right.Elements.Count);
 
         for (var i = 0; i < minCount; i++)
@@ -156,6 +162,117 @@ public static class DiffEngine
             var elementPath = $"{path}[{i}]";
             entries.Add(new DiffEntry(DiffKind.Added, elementPath, null, FormatLeafValue(right.Elements[i])));
         }
+    }
+
+    private static bool CanUseKeyedComparison(DecodedArray left, DecodedArray right, IReadOnlyList<string> keyFields)
+    {
+        // All elements must be structs containing all key fields with extractable values
+        foreach (var elem in left.Elements)
+        {
+            if (ExtractCompositeKey(elem, keyFields) is null)
+                return false;
+        }
+        foreach (var elem in right.Elements)
+        {
+            if (ExtractCompositeKey(elem, keyFields) is null)
+                return false;
+        }
+        return true;
+    }
+
+    private static void CompareArrayByKey(DecodedArray left, DecodedArray right, string path, IReadOnlyList<string> keyFields, List<DiffEntry> entries)
+    {
+        var leftByKey = BuildKeyMap(left.Elements, keyFields);
+        var rightByKey = BuildKeyMap(right.Elements, keyFields);
+
+        // Walk left elements in order: matched → recurse, unmatched → removed
+        foreach (var elem in left.Elements)
+        {
+            var compositeKey = ExtractCompositeKey(elem, keyFields)!;
+            var elementPath = BuildKeyedPath(path, keyFields, elem);
+
+            if (rightByKey.TryGetValue(compositeKey, out var rightElem))
+            {
+                CompareNodes(elem, rightElem, elementPath, entries);
+            }
+            else
+            {
+                entries.Add(new DiffEntry(DiffKind.Removed, elementPath, FormatLeafValue(elem), null));
+            }
+        }
+
+        // Elements only in right → added (in right's order)
+        foreach (var elem in right.Elements)
+        {
+            var compositeKey = ExtractCompositeKey(elem, keyFields)!;
+            if (!leftByKey.ContainsKey(compositeKey))
+            {
+                var elementPath = BuildKeyedPath(path, keyFields, elem);
+                entries.Add(new DiffEntry(DiffKind.Added, elementPath, null, FormatLeafValue(elem)));
+            }
+        }
+    }
+
+    private static Dictionary<string, DecodedNode> BuildKeyMap(IReadOnlyList<DecodedNode> elements, IReadOnlyList<string> keyFields)
+    {
+        var map = new Dictionary<string, DecodedNode>();
+        foreach (var elem in elements)
+        {
+            var compositeKey = ExtractCompositeKey(elem, keyFields);
+            if (compositeKey is not null)
+                map.TryAdd(compositeKey, elem);
+        }
+        return map;
+    }
+
+    internal static string? ExtractCompositeKey(DecodedNode element, IReadOnlyList<string> keyFields)
+    {
+        if (element is not DecodedStruct st)
+            return null;
+
+        if (keyFields.Count == 1)
+            return ExtractSingleFieldValue(st, keyFields[0]);
+
+        var parts = new string[keyFields.Count];
+        for (var i = 0; i < keyFields.Count; i++)
+        {
+            var val = ExtractSingleFieldValue(st, keyFields[i]);
+            if (val is null) return null;
+            parts[i] = val;
+        }
+        return string.Join("\0", parts);
+    }
+
+    internal static string? ExtractSingleFieldValue(DecodedStruct st, string fieldName)
+    {
+        foreach (var child in st.Children)
+        {
+            if (child.Name == fieldName)
+            {
+                return child switch
+                {
+                    DecodedInteger i => i.EnumLabel ?? i.Value.ToString(),
+                    DecodedString s => s.Value,
+                    _ => null,
+                };
+            }
+        }
+        return null;
+    }
+
+    private static string BuildKeyedPath(string basePath, IReadOnlyList<string> keyFields, DecodedNode element)
+    {
+        if (element is not DecodedStruct st)
+            return basePath;
+
+        if (keyFields.Count == 1)
+        {
+            var val = ExtractSingleFieldValue(st, keyFields[0]);
+            return $"{basePath}[{keyFields[0]}={val}]";
+        }
+
+        var pairs = keyFields.Select(f => $"{f}={ExtractSingleFieldValue(st, f)}");
+        return $"{basePath}[{string.Join(",", pairs)}]";
     }
 
     private static void CompareFlags(DecodedFlags left, DecodedFlags right, string path, List<DiffEntry> entries)

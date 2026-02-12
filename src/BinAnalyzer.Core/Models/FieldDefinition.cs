@@ -70,4 +70,7 @@ public sealed class FieldDefinition
 
     /// <summary>参照する文字列テーブル名。整数値をオフセットとして文字列を解決する。</summary>
     public string? StringTableRef { get; init; }
+
+    /// <summary>diff時に配列要素をキーベースで比較する場合の、要素内キーフィールド名リスト。単一キーは要素1のリスト。</summary>
+    public IReadOnlyList<string>? DiffKey { get; init; }
 }

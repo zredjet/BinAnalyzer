@@ -156,6 +156,9 @@ public sealed class YamlFieldModel
 
     [YamlMember(Alias = "string_table")]
     public string? StringTable { get; set; }
+
+    [YamlMember(Alias = "diff_key")]
+    public object? DiffKey { get; set; }
 }
 
 public sealed class YamlChecksumModel

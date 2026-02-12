@@ -132,6 +132,12 @@ public sealed class DiffTreeOutputFormatter
 
     private void FormatArray(StringBuilder sb, DecodedArray left, DecodedArray right, string indent)
     {
+        if (left.DiffKey is { Count: > 0 } diffKeys && CanUseKeyedFormat(left, right, diffKeys))
+        {
+            FormatArrayByKey(sb, left, right, diffKeys, indent);
+            return;
+        }
+
         var minCount = Math.Min(left.Elements.Count, right.Elements.Count);
 
         for (var i = 0; i < minCount; i++)
@@ -170,6 +176,137 @@ public sealed class DiffTreeOutputFormatter
             _hasDifferences = true;
             sb.AppendLine(C($"{indent}+ [{i}]: {FormatLeafDisplay(right.Elements[i])}", AnsiColors.Green));
         }
+    }
+
+    private void FormatArrayByKey(StringBuilder sb, DecodedArray left, DecodedArray right, IReadOnlyList<string> keyFields, string indent)
+    {
+        var rightByKey = new Dictionary<string, DecodedNode>();
+        foreach (var elem in right.Elements)
+        {
+            var key = ExtractCompositeKey(elem, keyFields);
+            if (key is not null)
+                rightByKey.TryAdd(key, elem);
+        }
+
+        var leftKeys = new HashSet<string>();
+        foreach (var elem in left.Elements)
+        {
+            var key = ExtractCompositeKey(elem, keyFields)!;
+            leftKeys.Add(key);
+            var label = BuildKeyedLabel(keyFields, elem);
+
+            if (rightByKey.TryGetValue(key, out var rElem))
+            {
+                if (elem is DecodedStruct ls && rElem is DecodedStruct rs)
+                {
+                    if (AllChildrenIdentical(ls, rs))
+                    {
+                        sb.AppendLine(C($"{indent}{label}  (同一)", AnsiColors.Dim));
+                    }
+                    else
+                    {
+                        sb.AppendLine($"{indent}{label}");
+                        FormatStruct(sb, ls, rs, indent + "  ");
+                    }
+                }
+                else
+                {
+                    var leftVal = FormatLeafDisplay(elem);
+                    var rightVal = FormatLeafDisplay(rElem);
+                    if (leftVal == rightVal)
+                    {
+                        sb.AppendLine(C($"{indent}{label}  (同一)", AnsiColors.Dim));
+                    }
+                    else
+                    {
+                        _hasDifferences = true;
+                        sb.AppendLine(C($"{indent}{label}  {leftVal} → {rightVal}", AnsiColors.Yellow));
+                    }
+                }
+            }
+            else
+            {
+                _hasDifferences = true;
+                sb.AppendLine(C($"{indent}- {label}: {FormatLeafDisplay(elem)}", AnsiColors.Red));
+            }
+        }
+
+        // Elements only in right (added, in right's order)
+        foreach (var elem in right.Elements)
+        {
+            var key = ExtractCompositeKey(elem, keyFields)!;
+            if (!leftKeys.Contains(key))
+            {
+                _hasDifferences = true;
+                var label = BuildKeyedLabel(keyFields, elem);
+                sb.AppendLine(C($"{indent}+ {label}: {FormatLeafDisplay(elem)}", AnsiColors.Green));
+            }
+        }
+    }
+
+    private static bool CanUseKeyedFormat(DecodedArray left, DecodedArray right, IReadOnlyList<string> keyFields)
+    {
+        foreach (var elem in left.Elements)
+        {
+            if (ExtractCompositeKey(elem, keyFields) is null)
+                return false;
+        }
+        foreach (var elem in right.Elements)
+        {
+            if (ExtractCompositeKey(elem, keyFields) is null)
+                return false;
+        }
+        return true;
+    }
+
+    private static string? ExtractCompositeKey(DecodedNode element, IReadOnlyList<string> keyFields)
+    {
+        if (element is not DecodedStruct st)
+            return null;
+
+        if (keyFields.Count == 1)
+            return ExtractSingleFieldValue(st, keyFields[0]);
+
+        var parts = new string[keyFields.Count];
+        for (var i = 0; i < keyFields.Count; i++)
+        {
+            var val = ExtractSingleFieldValue(st, keyFields[i]);
+            if (val is null) return null;
+            parts[i] = val;
+        }
+        return string.Join("\0", parts);
+    }
+
+    private static string? ExtractSingleFieldValue(DecodedStruct st, string fieldName)
+    {
+        foreach (var child in st.Children)
+        {
+            if (child.Name == fieldName)
+            {
+                return child switch
+                {
+                    DecodedInteger i => i.EnumLabel ?? i.Value.ToString(),
+                    DecodedString s => s.Value,
+                    _ => null,
+                };
+            }
+        }
+        return null;
+    }
+
+    private static string BuildKeyedLabel(IReadOnlyList<string> keyFields, DecodedNode element)
+    {
+        if (element is not DecodedStruct st)
+            return "[]";
+
+        if (keyFields.Count == 1)
+        {
+            var val = ExtractSingleFieldValue(st, keyFields[0]);
+            return $"[{keyFields[0]}={val}]";
+        }
+
+        var pairs = keyFields.Select(f => $"{f}={ExtractSingleFieldValue(st, f)}");
+        return $"[{string.Join(",", pairs)}]";
     }
 
     private void FormatArrayElementPair(StringBuilder sb, DecodedNode left, DecodedNode right, int index, string indent)
@@ -268,6 +405,27 @@ public sealed class DiffTreeOutputFormatter
     {
         if (left.Elements.Count != right.Elements.Count)
             return false;
+
+        if (left.DiffKey is { Count: > 0 } diffKeys && CanUseKeyedFormat(left, right, diffKeys))
+        {
+            var rightByKey = new Dictionary<string, DecodedNode>();
+            foreach (var elem in right.Elements)
+            {
+                var key = ExtractCompositeKey(elem, diffKeys);
+                if (key is not null)
+                    rightByKey.TryAdd(key, elem);
+            }
+
+            foreach (var elem in left.Elements)
+            {
+                var key = ExtractCompositeKey(elem, diffKeys);
+                if (key is null || !rightByKey.TryGetValue(key, out var rElem))
+                    return false;
+                if (!NodesIdentical(elem, rElem))
+                    return false;
+            }
+            return true;
+        }
 
         for (var i = 0; i < left.Elements.Count; i++)
         {

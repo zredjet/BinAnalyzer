@@ -822,3 +822,85 @@ structs:
   size: "3"
   padding: true   # ツリー出力で非表示
 ```
+
+## Diff キー（diff_key）
+
+配列（repeat 系属性を持つフィールド）に `diff_key` を指定すると、`binanalyzer diff` コマンドでの比較時に、インデックスではなく指定フィールドの値をキーとして要素をマッチングします。単一フィールドキーと複合キー（複数フィールド）の両方に対応しています。
+
+### 単一キー
+
+```yaml
+- name: sections
+  type: struct
+  struct: section_header
+  repeat_count: "{num_sections}"
+  diff_key: name              # 各要素の name フィールドをキーとして比較
+```
+
+### 複合キー
+
+複数フィールドの組み合わせでユニークになる場合、リスト形式で複合キーを指定できます:
+
+```yaml
+# インライン形式
+- name: entries
+  type: struct
+  struct: entry
+  repeat_count: "{count}"
+  diff_key: [group_id, item_id]
+
+# ブロック形式
+- name: entries
+  type: struct
+  struct: entry
+  repeat_count: "{count}"
+  diff_key:
+    - group_id
+    - item_id
+```
+
+単一キーは内部的に要素 1 のリストとして統一処理されます。
+
+### 動作
+
+- **diff_key 未指定**: 従来のインデックスベース比較（`[0]` vs `[0]`, `[1]` vs `[1]`, ...）
+- **単一キー指定**: キーベース比較（`[name=.text]` vs `[name=.text]`, ...）
+- **複合キー指定**: 複合キーベース比較（`[group_id=1,item_id=3]` vs `[group_id=1,item_id=3]`, ...）
+
+キーベース比較では、要素の挿入・削除・並び替えがあっても、同じキー値を持つ要素同士が正しくマッチングされます。
+
+### 使用例
+
+#### 単一キー
+
+```
+$ binanalyzer diff old.elf new.elf -f formats/elf.bdef.yaml
+
+sections
+  [name=.text]  (同一)
+  [name=.data]
+    size  1024 → 2048
+  + [name=.rodata]
+  - [name=.debug_info]
+```
+
+#### 複合キー
+
+```
+$ binanalyzer diff old.bin new.bin -f formats/record.bdef.yaml
+
+entries
+  [group_id=1,item_id=1]  (同一)
+  [group_id=1,item_id=2]
+    val  20 → 99
+  [group_id=2,item_id=1]  (同一)
+  + [group_id=2,item_id=2]
+```
+
+### 制約
+
+- `diff_key` に指定するフィールドの型は整数（`DecodedInteger`）または文字列（`DecodedString`）のみ対応
+- 配列要素が構造体（`DecodedStruct`）でない場合は使用不可（インデックスベースにフォールバック）
+- 指定フィールドが要素内に存在しない場合もインデックスベースにフォールバック
+- 空リスト `diff_key: []` の場合、インデックスベースにフォールバック
+- diff 以外の処理（デコード、ツリー表示、hexdump 等）には影響しない

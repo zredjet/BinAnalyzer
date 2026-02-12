@@ -64,7 +64,7 @@ IRはバイナリフォーマットの正規表現。YAML構文から独立し�
 
 - **FormatDefinition** — 最上位: 名前、エンディアン、列挙型、フラグ、構造体、ルート構造体
 - **StructDefinition** — 名前付きフィールドの集合（エンディアン上書き、アライメント、文字列テーブルフラグ）
-- **FieldDefinition** — 型、サイズ、enum/flags参照、繰り返しモード、switch、期待値、条件式、アライメント、パディング、値式（virtual用）、seekオフセット式、seek復帰フラグ、エンディアン上書き、バリデーション式、文字列テーブル参照
+- **FieldDefinition** — 型、サイズ、enum/flags参照、繰り返しモード、switch、期待値、条件式、アライメント、パディング、値式（virtual用）、seekオフセット式、seek復帰フラグ、エンディアン上書き、バリデーション式、文字列テーブル参照、diffキー（単一キーまたは複合キーリスト）
 - **EnumDefinition / FlagsDefinition** — 値のマッピング
 - **ChecksumSpec** — チェックサム検証仕様（アルゴリズム名とフィールド名リスト）
 - **SwitchCase / BitfieldEntry / RepeatMode** — switch分岐、ビットフィールド、繰り返しモードの定義

@@ -306,6 +306,21 @@
         "string_table": {
           "type": "string",
           "description": "参照する文字列テーブル名。整数値をオフセットとして文字列を解決する。"
+        },
+        "diff_key": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "単一キーフィールド名"
+            },
+            {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "description": "複合キーフィールド名リスト"
+            }
+          ],
+          "description": "diff時に配列要素をキーベースで比較する場合の、要素内キーフィールド名。単一文字列または文字列リスト。repeat系属性を持つフィールドでのみ有効。"
         }
       }
     },

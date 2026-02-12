@@ -153,6 +153,7 @@ flags:
 | エンディアン | `endianness` 文字列 | `Endianness` | フィールドレベルのエンディアン上書き |
 | バリデーション | `validate` 文字列（式） | `ValidationExpression` | デコード後に評価するバリデーション式 |
 | 文字列テーブル | `string_table` 文字列 | `StringTableRef` | 整数値をオフセットとした文字列テーブル参照 |
+| Diffキー | `diff_key` 文字列またはリスト | `DiffKey` | diff時に配列要素をキーベースで比較するためのキーフィールド名（単一キーまたは複合キーリスト） |
 
 ##### フィールド型の解決
 

@@ -755,6 +755,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Offset = startOffset,
             Size = context.Position - startOffset,
             Elements = elements,
+            DiffKey = field.DiffKey,
         };
     }
 

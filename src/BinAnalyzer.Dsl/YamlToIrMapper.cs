@@ -1,3 +1,4 @@
+using System.Collections;
 using BinAnalyzer.Core.Expressions;
 using BinAnalyzer.Core.Models;
 using BinAnalyzer.Dsl.YamlModels;
@@ -150,6 +151,7 @@ public static class YamlToIrMapper
             Endianness = ParseEndianness(yaml.Endianness),
             ValidationExpression = yaml.Validate is not null ? ExpressionParser.Parse(yaml.Validate) : null,
             StringTableRef = yaml.StringTable,
+            DiffKey = MapDiffKey(yaml.DiffKey),
         };
     }
 
@@ -308,6 +310,16 @@ public static class YamlToIrMapper
                 Description = e.Description,
             };
         }).ToList();
+    }
+
+    private static IReadOnlyList<string>? MapDiffKey(object? value)
+    {
+        return value switch
+        {
+            string s => [s],
+            IList list => list.Cast<object>().Select(x => x.ToString()!).ToArray(),
+            _ => null,
+        };
     }
 
     /// <summary>
