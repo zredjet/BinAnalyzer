@@ -38,3 +38,4 @@ coverage/
 report.html
 BenchmarkDotNet.Artifacts/
 testdata/real/
+THIRD-PARTY-LICENSES.txt

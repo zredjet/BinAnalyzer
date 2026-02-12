@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'バージョン番号 (例: 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Restore
+        run: dotnet restore BinAnalyzer.slnx
+
+      - name: Build
+        run: dotnet build BinAnalyzer.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test BinAnalyzer.slnx --no-build --configuration Release --verbosity normal
+
+  build-and-release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Generate third-party licenses
+        run: bash scripts/generate-third-party-licenses.sh
+
+      - name: Publish win-x64
+        run: |
+          dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:Version=${{ inputs.version }} \
+            --output ./publish/win-x64
+
+      # --- Mac / Linux ビルド（将来有効化） ---
+      # - name: Publish osx-x64
+      #   run: |
+      #     dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
+      #       --configuration Release \
+      #       --runtime osx-x64 \
+      #       --self-contained true \
+      #       -p:PublishSingleFile=true \
+      #       -p:IncludeNativeLibrariesForSelfExtract=true \
+      #       -p:Version=${{ inputs.version }} \
+      #       --output ./publish/osx-x64
+
+      # - name: Publish osx-arm64
+      #   run: |
+      #     dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
+      #       --configuration Release \
+      #       --runtime osx-arm64 \
+      #       --self-contained true \
+      #       -p:PublishSingleFile=true \
+      #       -p:IncludeNativeLibrariesForSelfExtract=true \
+      #       -p:Version=${{ inputs.version }} \
+      #       --output ./publish/osx-arm64
+
+      # - name: Publish linux-x64
+      #   run: |
+      #     dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
+      #       --configuration Release \
+      #       --runtime linux-x64 \
+      #       --self-contained true \
+      #       -p:PublishSingleFile=true \
+      #       -p:IncludeNativeLibrariesForSelfExtract=true \
+      #       -p:Version=${{ inputs.version }} \
+      #       --output ./publish/linux-x64
+
+      - name: Package win-x64
+        run: |
+          STAGING_DIR="BinAnalyzer-${{ inputs.version }}-win-x64"
+          mkdir -p "$STAGING_DIR"
+          cp ./publish/win-x64/BinAnalyzer.Cli.exe "$STAGING_DIR/binanalyzer.exe"
+          cp -r formats/ "$STAGING_DIR/formats/"
+          cp -r schemas/ "$STAGING_DIR/schemas/"
+          cp README.md "$STAGING_DIR/"
+          cp LICENSE "$STAGING_DIR/"
+          cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
+          zip -r "BinAnalyzer-${{ inputs.version }}-win-x64.zip" "$STAGING_DIR"
+
+      # --- Mac / Linux パッケージング（将来有効化） ---
+      # - name: Package osx-x64
+      #   run: |
+      #     STAGING_DIR="BinAnalyzer-${{ inputs.version }}-osx-x64"
+      #     mkdir -p "$STAGING_DIR"
+      #     cp ./publish/osx-x64/BinAnalyzer.Cli "$STAGING_DIR/binanalyzer"
+      #     cp -r formats/ "$STAGING_DIR/formats/"
+      #     cp -r schemas/ "$STAGING_DIR/schemas/"
+      #     cp README.md "$STAGING_DIR/"
+      #     cp LICENSE "$STAGING_DIR/"
+      #     cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
+      #     zip -r "BinAnalyzer-${{ inputs.version }}-osx-x64.zip" "$STAGING_DIR"
+
+      # - name: Package osx-arm64
+      #   run: |
+      #     STAGING_DIR="BinAnalyzer-${{ inputs.version }}-osx-arm64"
+      #     mkdir -p "$STAGING_DIR"
+      #     cp ./publish/osx-arm64/BinAnalyzer.Cli "$STAGING_DIR/binanalyzer"
+      #     cp -r formats/ "$STAGING_DIR/formats/"
+      #     cp -r schemas/ "$STAGING_DIR/schemas/"
+      #     cp README.md "$STAGING_DIR/"
+      #     cp LICENSE "$STAGING_DIR/"
+      #     cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
+      #     zip -r "BinAnalyzer-${{ inputs.version }}-osx-arm64.zip" "$STAGING_DIR"
+
+      # - name: Package linux-x64
+      #   run: |
+      #     STAGING_DIR="BinAnalyzer-${{ inputs.version }}-linux-x64"
+      #     mkdir -p "$STAGING_DIR"
+      #     cp ./publish/linux-x64/BinAnalyzer.Cli "$STAGING_DIR/binanalyzer"
+      #     cp -r formats/ "$STAGING_DIR/formats/"
+      #     cp -r schemas/ "$STAGING_DIR/schemas/"
+      #     cp README.md "$STAGING_DIR/"
+      #     cp LICENSE "$STAGING_DIR/"
+      #     cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
+      #     zip -r "BinAnalyzer-${{ inputs.version }}-linux-x64.zip" "$STAGING_DIR"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          # Mac / Linux 有効化時は以下を追加:
+          #   BinAnalyzer-${{ inputs.version }}-osx-x64.zip
+          #   BinAnalyzer-${{ inputs.version }}-osx-arm64.zip
+          #   BinAnalyzer-${{ inputs.version }}-linux-x64.zip
+          files: |
+            BinAnalyzer-${{ inputs.version }}-win-x64.zip
+          generate_release_notes: true
