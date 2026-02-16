@@ -90,14 +90,35 @@ public static class YamlToIrMapper
                 endianness = ParseEndianness(structModel.Endianness);
             }
 
+            // mode バリデーション
+            if (structModel.Mode is not null and not "bitstream")
+                throw new InvalidOperationException(
+                    $"Unknown struct mode '{structModel.Mode}' in struct '{name}'. Supported modes: bitstream");
+
+            var isBitstream = structModel.Mode == "bitstream";
+            var fields = structModel.Fields.Select(MapField).ToList();
+
+            // bitstream フィールド型バリデーション
+            if (isBitstream)
+            {
+                foreach (var field in fields)
+                {
+                    if (!IsIntegerFieldType(field.Type))
+                        throw new InvalidOperationException(
+                            $"Bitstream struct '{name}' contains non-integer field '{field.Name}' of type '{field.Type}'. " +
+                            $"Only integer types (uint8/16/32/64, int8/16/32/64) are allowed in bitstream structs.");
+                }
+            }
+
             result[name] = new StructDefinition
             {
                 Name = name,
-                Fields = structModel.Fields.Select(MapField).ToList(),
+                Fields = fields,
                 Endianness = endianness,
                 EndiannessExpression = endiannessExpr,
                 Align = structModel.Align,
                 IsStringTable = structModel.StringTable ?? false,
+                IsBitstream = isBitstream,
             };
         }
         return result;
@@ -183,6 +204,11 @@ public static class YamlToIrMapper
             "bitfield" => FieldType.Bitfield,
             "zlib" => FieldType.Zlib,
             "deflate" => FieldType.Deflate,
+            "gzip" => FieldType.Gzip,
+            "bzip2" => FieldType.Bzip2,
+            "lzma" => FieldType.Lzma,
+            "zstd" or "zstandard" => FieldType.Zstd,
+            "lz4" => FieldType.Lz4,
             "virtual" => FieldType.Virtual,
             "uleb128" or "leb128u" => FieldType.ULeb128,
             "sleb128" or "leb128s" => FieldType.SLeb128,
@@ -321,6 +347,10 @@ public static class YamlToIrMapper
             _ => null,
         };
     }
+
+    private static bool IsIntegerFieldType(FieldType type) =>
+        type is FieldType.UInt8 or FieldType.UInt16 or FieldType.UInt32 or FieldType.UInt64
+            or FieldType.Int8 or FieldType.Int16 or FieldType.Int32 or FieldType.Int64;
 
     /// <summary>
     /// ビット範囲指定をパースする。

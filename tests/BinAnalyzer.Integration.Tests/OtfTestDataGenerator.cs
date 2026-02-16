@@ -100,6 +100,18 @@ public static class OtfTestDataGenerator
     }
 
     /// <summary>
+    /// 最小TTFファイル: CreateMinimalOtf() と同一構造、sfVersion のみ TrueType (0x00010000) に変更
+    /// </summary>
+    public static byte[] CreateMinimalTtf()
+    {
+        var data = CreateMinimalOtf();
+        var span = data.AsSpan();
+        // sfVersion: 0x00010000 (TrueType) — 先頭4バイトを上書き
+        BinaryPrimitives.WriteUInt32BigEndian(span, 0x00010000);
+        return data;
+    }
+
+    /// <summary>
     /// head + cmap + hhea テーブル付きOTF:
     /// offset_table(12B) + 3 table_records(48B) + head(54B) + cmap(12B) + hhea(36B) = 162バイト
     /// </summary>

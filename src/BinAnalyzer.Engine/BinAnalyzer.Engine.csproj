@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Compression\BinAnalyzer.Compression.csproj" />
   </ItemGroup>
 
 </Project>

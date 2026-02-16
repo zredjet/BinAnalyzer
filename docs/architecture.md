@@ -4,6 +4,7 @@
 
 ```
 DSL(.bdef.yaml) → [DSLパーサー] → IR(中間表現) → [バイナリデコーダー] + バイナリデータ → デコード済みツリー → [出力フォーマッター] → ツリー表示
+                                        └→ [スキーマフォーマッター] → Mermaid / DOT スキーマ図
 ```
 
 ## プロジェクト構成
@@ -63,7 +64,7 @@ Core → （なし）
 IRはバイナリフォーマットの正規表現。YAML構文から独立しています。
 
 - **FormatDefinition** — 最上位: 名前、エンディアン、列挙型、フラグ、構造体、ルート構造体
-- **StructDefinition** — 名前付きフィールドの集合（エンディアン上書き、アライメント、文字列テーブルフラグ）
+- **StructDefinition** — 名前付きフィールドの集合（エンディアン上書き、アライメント、文字列テーブルフラグ、ビットストリームモードフラグ）
 - **FieldDefinition** — 型、サイズ、enum/flags参照、繰り返しモード、switch、期待値、条件式、アライメント、パディング、値式（virtual用）、seekオフセット式、seek復帰フラグ、エンディアン上書き、バリデーション式、文字列テーブル参照、diffキー（単一キーまたは複合キーリスト）
 - **EnumDefinition / FlagsDefinition** — 値のマッピング
 - **ChecksumSpec** — チェックサム検証仕様（アルゴリズム名とフィールド名リスト）
@@ -124,7 +125,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### バイナリデコーダー — Engine/
 
-- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照
+- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り
 - **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価
 - **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決のオーケストレーター
 - **Crc32Calculator** — ISO 3309準拠のCRC-32計算器（PNG/ZIP互換）
@@ -139,7 +140,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### 出力フォーマッター — Output/
 
-デコード済みツリーを各種形式に変換:
+デコード済みツリーを各種形式に変換（IOutputFormatter）:
 
 - **TreeOutputFormatter** — インデント付きツリー表示（デフォルト）
 - **JsonOutputFormatter** — JSON形式
@@ -150,6 +151,11 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **DiffOutputFormatter** — 2つのバイナリの構造的差分表示
 
 各フォーマッターはANSIカラー出力に対応（ColorMode: Auto / Always / Never）。
+
+フォーマット定義（IR）からスキーマ図を生成（ISchemaFormatter）:
+
+- **MermaidSchemaFormatter** — Mermaid classDiagram 形式（struct 間参照関係グラフ）
+- **DotSchemaFormatter** — Graphviz DOT digraph 形式（struct 間参照関係グラフ）
 
 ## 設計上の重要ポイント
 
@@ -166,3 +172,4 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 11. **カスタムバリデーション式** — フィールドに `validate` 式を指定し、デコード後に評価。結果はDecodedNodeのValidationInfoに格納され、出力フォーマッターが ✓/✗ で表示
 12. **エラー回復モード** — `--on-error continue` でデコードエラー後も解析を継続。エラー箇所はDecodedErrorノードとして結果ツリーに含まれる。DecodeResultでエラーリストも返却
 13. **文字列テーブル参照** — IsStringTable構造体のバイト列をDecodeContextに登録し、整数フィールドのStringTableRefでNUL終端文字列をルックアップ。ELFの.strtab等で使用
+14. **ビットストリームモード** — `mode: bitstream` 構造体内ではフィールドのsizeがビット単位で解釈される。DecodeContext.BitReaderがMSB-firstのビット単位読み取りを提供し、構造体終了時に自動バイトアライン。既存bitfield型とは独立して共存

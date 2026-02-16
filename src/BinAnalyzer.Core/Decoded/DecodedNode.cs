@@ -13,4 +13,7 @@ public abstract class DecodedNode
 
     /// <summary>カスタムバリデーション式の結果。</summary>
     public ValidationInfo? Validation { get; init; }
+
+    /// <summary>ビットストリームフィールドのバイト内ビットオフセット（0–7）。nullはバイト単位フィールド。</summary>
+    public int? BitOffset { get; init; }
 }

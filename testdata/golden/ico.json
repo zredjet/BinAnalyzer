@@ -1,0 +1,143 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 22,
+  "name": "ICO",
+  "struct_type": "ico",
+  "children": {
+    "reserved": {
+      "_type": "integer",
+      "offset": 0,
+      "size": 2,
+      "name": "reserved",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "type": {
+      "_type": "integer",
+      "offset": 2,
+      "size": 2,
+      "description": "1 = ICO\uFF08\u30A2\u30A4\u30B3\u30F3\uFF09\u30012 = CUR\uFF08\u30AB\u30FC\u30BD\u30EB\uFF09",
+      "name": "type",
+      "value": 1,
+      "hex": "0x1",
+      "enum_label": "ICO",
+      "enum_description": "\u30A2\u30A4\u30B3\u30F3\u753B\u50CF\u5F62\u5F0F\uFF08.ico\uFF09"
+    },
+    "count": {
+      "_type": "integer",
+      "offset": 4,
+      "size": 2,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u5185\u306E\u753B\u50CF\u6570",
+      "name": "count",
+      "value": 1,
+      "hex": "0x1"
+    },
+    "entries": {
+      "_type": "array",
+      "offset": 6,
+      "size": 16,
+      "name": "entries",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 6,
+          "size": 16,
+          "name": "entries",
+          "struct_type": "ico_entry",
+          "children": {
+            "width": {
+              "_type": "integer",
+              "offset": 6,
+              "size": 1,
+              "description": "\u5E45\uFF08\u30D4\u30AF\u30BB\u30EB\u30010\u306F256\u3092\u610F\u5473\u3059\u308B\uFF09",
+              "name": "width",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "height": {
+              "_type": "integer",
+              "offset": 7,
+              "size": 1,
+              "description": "\u9AD8\u3055\uFF08\u30D4\u30AF\u30BB\u30EB\u30010\u306F256\u3092\u610F\u5473\u3059\u308B\uFF09",
+              "name": "height",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "color_count": {
+              "_type": "integer",
+              "offset": 8,
+              "size": 1,
+              "description": "\u30D1\u30EC\u30C3\u30C8\u306E\u8272\u6570\uFF08256\u8272\u4EE5\u4E0A\u306E\u5834\u5408\u306F0\uFF09",
+              "name": "color_count",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "reserved": {
+              "_type": "integer",
+              "offset": 9,
+              "size": 1,
+              "name": "reserved",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "planes": {
+              "_type": "integer",
+              "offset": 10,
+              "size": 2,
+              "description": "\u30AB\u30E9\u30FC\u30D7\u30EC\u30FC\u30F3\u6570\uFF08ICO\uFF09\u307E\u305F\u306F\u30DB\u30C3\u30C8\u30B9\u30DD\u30C3\u30C8X\u5EA7\u6A19\uFF08CUR\uFF09",
+              "name": "planes",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "bpp": {
+              "_type": "integer",
+              "offset": 12,
+              "size": 2,
+              "description": "\u30D3\u30C3\u30C8/\u30D4\u30AF\u30BB\u30EB\uFF08ICO\uFF09\u307E\u305F\u306F\u30DB\u30C3\u30C8\u30B9\u30DD\u30C3\u30C8Y\u5EA7\u6A19\uFF08CUR\uFF09",
+              "name": "bpp",
+              "value": 32,
+              "hex": "0x20"
+            },
+            "bytes_in_res": {
+              "_type": "integer",
+              "offset": 14,
+              "size": 4,
+              "description": "\u753B\u50CF\u30C7\u30FC\u30BF\u306E\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
+              "name": "bytes_in_res",
+              "value": 40,
+              "hex": "0x28"
+            },
+            "image_offset": {
+              "_type": "integer",
+              "offset": 18,
+              "size": 4,
+              "description": "\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u753B\u50CF\u30C7\u30FC\u30BF\u307E\u3067\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
+              "name": "image_offset",
+              "value": 22,
+              "hex": "0x16"
+            },
+            "image_magic": {
+              "_type": "integer",
+              "offset": 22,
+              "size": 4,
+              "description": "\u753B\u50CF\u5F62\u5F0F\u30B7\u30B0\u30CD\u30C1\u30E3\uFF080x89504E47 = PNG\u3001\u305D\u308C\u4EE5\u5916\u306FBMP DIB\u30D8\u30C3\u30C0\uFF09",
+              "name": "image_magic",
+              "value": 671088640,
+              "hex": "0x28000000"
+            },
+            "image_data": {
+              "_type": "error",
+              "offset": 22,
+              "size": 0,
+              "name": "image_data",
+              "error_message": "Variable \u0027image_magic\u0027 not found in current scope",
+              "field_type": "Switch"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

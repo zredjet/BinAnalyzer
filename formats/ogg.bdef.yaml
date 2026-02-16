@@ -1,0 +1,103 @@
+name: OGG
+endianness: little
+root: ogg_file
+
+enums:
+  vorbis_packet_type:
+    - value: 1
+      label: identification
+    - value: 3
+      label: comment
+    - value: 5
+      label: setup
+
+structs:
+  ogg_file:
+    - name: pages
+      type: struct
+      struct: ogg_page
+      repeat: eof
+
+  ogg_page:
+    - name: capture_pattern
+      type: bytes
+      size: "4"
+      expected: [0x4F, 0x67, 0x67, 0x53]
+    - name: version
+      type: uint8
+      validate: "{version == 0}"
+    - name: header_type
+      type: uint8
+    - name: is_continuation
+      type: virtual
+      value: "{header_type & 1}"
+    - name: is_bos
+      type: virtual
+      value: "{(header_type >> 1) & 1}"
+    - name: is_eos
+      type: virtual
+      value: "{(header_type >> 2) & 1}"
+    - name: granule_position
+      type: uint64
+    - name: serial_number
+      type: uint32
+    - name: page_sequence_number
+      type: uint32
+    - name: crc32
+      type: uint32
+    - name: num_segments
+      type: uint8
+    - name: segment_table
+      type: uint8
+      repeat_count: "{num_segments}"
+    - name: page_data
+      type: switch
+      size: "{until_marker(0x4F, 0x67, 0x67, 0x53)}"
+      switch_on: "{is_bos}"
+      cases:
+        "1": vorbis_bos_data
+      default: raw_data
+
+  vorbis_bos_data:
+    - name: packet_type
+      type: uint8
+      enum: vorbis_packet_type
+    - name: codec_id
+      type: ascii
+      size: "6"
+    - name: vorbis_id_header
+      type: struct
+      struct: vorbis_identification
+      if: "{packet_type == 1}"
+    - name: remaining_data
+      type: bytes
+      size: remaining
+
+  vorbis_identification:
+    - name: vorbis_version
+      type: uint32
+    - name: channels
+      type: uint8
+    - name: sample_rate
+      type: uint32
+    - name: bitrate_maximum
+      type: uint32
+    - name: bitrate_nominal
+      type: uint32
+    - name: bitrate_minimum
+      type: uint32
+    - name: blocksize_info
+      type: uint8
+    - name: blocksize_0
+      type: virtual
+      value: "{blocksize_info & 0x0F}"
+    - name: blocksize_1
+      type: virtual
+      value: "{blocksize_info >> 4}"
+    - name: framing_flag
+      type: uint8
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

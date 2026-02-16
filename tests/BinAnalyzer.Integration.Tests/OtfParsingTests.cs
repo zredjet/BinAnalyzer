@@ -131,6 +131,19 @@ public class OtfParsingTests
     }
 
     [Fact]
+    public void MinimalTtf_SfVersion_IsTrueType()
+    {
+        var data = OtfTestDataGenerator.CreateMinimalTtf();
+        var format = new YamlFormatLoader().Load(OtfFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var offsetTable = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+        var sfVersion = offsetTable.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        sfVersion.Name.Should().Be("sfVersion");
+        sfVersion.EnumLabel.Should().Be("TrueType");
+    }
+
+    [Fact]
     public void OtfFormat_TreeOutput_ContainsExpectedElements()
     {
         var data = OtfTestDataGenerator.CreateMinimalOtf();

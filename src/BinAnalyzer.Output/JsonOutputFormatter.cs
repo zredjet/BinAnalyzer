@@ -130,6 +130,8 @@ public sealed class JsonOutputFormatter : IOutputFormatter
             writer.WriteBoolean("checksum_valid", node.ChecksumValid.Value);
             if (node.ChecksumExpected.HasValue)
                 writer.WriteString("checksum_expected", $"0x{node.ChecksumExpected:X}");
+            if (node.ChecksumAlgorithm is not null)
+                writer.WriteString("checksum_algorithm", node.ChecksumAlgorithm);
         }
 
         if (node.StringTableValue is not null)
@@ -155,6 +157,15 @@ public sealed class JsonOutputFormatter : IOutputFormatter
 
         if (node.ValidationPassed.HasValue)
             writer.WriteBoolean("valid", node.ValidationPassed.Value);
+
+        if (node.ChecksumValid.HasValue)
+        {
+            writer.WriteBoolean("checksum_valid", node.ChecksumValid.Value);
+            if (node.ChecksumExpectedHex is not null)
+                writer.WriteString("checksum_expected", node.ChecksumExpectedHex);
+            if (node.ChecksumAlgorithm is not null)
+                writer.WriteString("checksum_algorithm", node.ChecksumAlgorithm);
+        }
 
         writer.WriteEndObject();
     }

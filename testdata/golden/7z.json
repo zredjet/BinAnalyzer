@@ -1,0 +1,98 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 34,
+  "name": "7z",
+  "struct_type": "sevenz",
+  "children": {
+    "signature_header": {
+      "_type": "struct",
+      "offset": 0,
+      "size": 32,
+      "name": "signature_header",
+      "struct_type": "signature_header",
+      "children": {
+        "signature": {
+          "_type": "bytes",
+          "offset": 0,
+          "size": 6,
+          "description": "7z\u30B7\u30B0\u30CD\u30C1\u30E3",
+          "name": "signature",
+          "hex": "37 7A BC AF 27 1C",
+          "valid": true
+        },
+        "major_version": {
+          "_type": "integer",
+          "offset": 6,
+          "size": 1,
+          "description": "\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u901A\u5E380\uFF09",
+          "name": "major_version",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "minor_version": {
+          "_type": "integer",
+          "offset": 7,
+          "size": 1,
+          "description": "\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u901A\u5E384\uFF09",
+          "name": "minor_version",
+          "value": 4,
+          "hex": "0x4"
+        },
+        "start_header_crc": {
+          "_type": "integer",
+          "offset": 8,
+          "size": 4,
+          "description": "StartHeader\u306ECRC32",
+          "name": "start_header_crc",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "next_header_offset": {
+          "_type": "integer",
+          "offset": 12,
+          "size": 8,
+          "description": "NextHeader\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF08SignatureHeader\u672B\u5C3E\u304B\u3089\u306E\u76F8\u5BFE\u4F4D\u7F6E\u3001\u30D0\u30A4\u30C832\u57FA\u6E96\uFF09",
+          "name": "next_header_offset",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "next_header_size": {
+          "_type": "integer",
+          "offset": 20,
+          "size": 8,
+          "description": "NextHeader\u306E\u30B5\u30A4\u30BA",
+          "name": "next_header_size",
+          "value": 2,
+          "hex": "0x2"
+        },
+        "next_header_crc": {
+          "_type": "integer",
+          "offset": 28,
+          "size": 4,
+          "description": "NextHeader\u306ECRC32",
+          "name": "next_header_crc",
+          "value": 0,
+          "hex": "0x0"
+        }
+      }
+    },
+    "next_header": {
+      "_type": "struct",
+      "offset": 32,
+      "size": 2,
+      "name": "next_header",
+      "struct_type": "next_header",
+      "children": {
+        "header_data": {
+          "_type": "bytes",
+          "offset": 32,
+          "size": 2,
+          "description": "7z\u30A8\u30F3\u30B3\u30FC\u30C9\u6E08\u307F\u30D8\u30C3\u30C0\u3002\u5185\u90E8\u69CB\u9020\u306F\u53EF\u5909\u9577\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\u3092\u4F7F\u7528\u3057\u3066\u304A\u308A\u3001DSL\u306E\u8868\u73FE\u529B\u3092\u8D85\u3048\u308B\u305F\u3081\u69CB\u9020\u5316\u4E0D\u53EF",
+          "name": "header_data",
+          "hex": "01 00"
+        }
+      }
+    }
+  }
+}

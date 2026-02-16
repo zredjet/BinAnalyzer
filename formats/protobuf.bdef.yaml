@@ -1,0 +1,48 @@
+name: Protobuf
+endianness: little
+root: protobuf_message
+
+enums:
+  wire_type:
+    - value: 0
+      label: varint
+    - value: 1
+      label: fixed64
+    - value: 2
+      label: length_delimited
+    - value: 5
+      label: fixed32
+
+structs:
+  protobuf_message:
+    - name: fields
+      type: struct
+      struct: protobuf_field
+      repeat: eof
+
+  protobuf_field:
+    - name: tag
+      type: uleb128
+    - name: field_number
+      type: virtual
+      value: "{tag >> 3}"
+    - name: wire_type
+      type: virtual
+      value: "{tag & 7}"
+      enum: wire_type
+    - name: varint_value
+      type: uleb128
+      if: "{wire_type == 0}"
+    - name: fixed64_value
+      type: uint64
+      if: "{wire_type == 1}"
+    - name: length
+      type: uleb128
+      if: "{wire_type == 2}"
+    - name: delimited_data
+      type: bytes
+      size: "{length}"
+      if: "{wire_type == 2}"
+    - name: fixed32_value
+      type: uint32
+      if: "{wire_type == 5}"

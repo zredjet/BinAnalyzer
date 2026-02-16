@@ -57,6 +57,12 @@ public class NewTypeParsingTests
     [Theory]
     [InlineData("zlib", FieldType.Zlib)]
     [InlineData("deflate", FieldType.Deflate)]
+    [InlineData("gzip", FieldType.Gzip)]
+    [InlineData("bzip2", FieldType.Bzip2)]
+    [InlineData("lzma", FieldType.Lzma)]
+    [InlineData("zstd", FieldType.Zstd)]
+    [InlineData("zstandard", FieldType.Zstd)]
+    [InlineData("lz4", FieldType.Lz4)]
     public void Load_CompressedType_ParsesCorrectly(string typeName, FieldType expected)
     {
         var yaml = $"""

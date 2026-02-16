@@ -28,6 +28,7 @@ public static class FormatValidator
                 ValidateSeek(field, structName, diagnostics);
                 ValidateStringTable(field, structName, diagnostics);
                 ValidateLengthPrefixed(field, structName, diagnostics);
+                ValidateChecksum(field, structName, diagnostics);
             }
 
             ValidateStructAlign(structDef, diagnostics);
@@ -142,7 +143,8 @@ public static class FormatValidator
 
         if (field.Type is FieldType.Bytes or FieldType.Ascii or FieldType.Utf8
                 or FieldType.Utf16Le or FieldType.Utf16Be or FieldType.ShiftJis or FieldType.Latin1
-                or FieldType.Bitfield or FieldType.Zlib or FieldType.Deflate)
+                or FieldType.Bitfield or FieldType.Zlib or FieldType.Deflate
+                or FieldType.Gzip or FieldType.Bzip2 or FieldType.Lzma or FieldType.Zstd or FieldType.Lz4)
         {
             if (!field.Size.HasValue && field.SizeExpression is null && !field.SizeRemaining)
             {
@@ -224,7 +226,11 @@ public static class FormatValidator
         FieldDefinition field, string structName,
         List<ValidationDiagnostic> diagnostics)
     {
-        if (field.StructRef is not null && field.Type is not FieldType.Struct and not FieldType.Switch)
+        if (field.StructRef is not null
+            && field.Type is not FieldType.Struct and not FieldType.Switch
+            and not FieldType.Zlib and not FieldType.Deflate
+            and not FieldType.Gzip and not FieldType.Bzip2 and not FieldType.Lzma
+            and not FieldType.Zstd and not FieldType.Lz4)
         {
             diagnostics.Add(Warning("VAL106",
                 $"フィールド '{field.Name}' ({field.Type}) にstruct参照が指定されていますが、struct/switch型以外では無視されます",
@@ -436,6 +442,40 @@ public static class FormatValidator
         {
             diagnostics.Add(Warning("VAL111",
                 $"フィールド '{field.Name}' ({field.Type}) に repeat: length_prefixed が指定されていますが、bytes型でのみ有効です",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL113: 未知のチェックサムアルゴリズム</summary>
+    /// <summary>VAL114: 整数系アルゴリズムが非整数フィールドに指定</summary>
+    /// <summary>VAL115: ハッシュ系アルゴリズムが非bytesフィールドに指定</summary>
+    private static void ValidateChecksum(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.Checksum is null)
+            return;
+
+        var algorithm = field.Checksum.Algorithm;
+
+        if (!ChecksumAlgorithms.IsKnown(algorithm))
+        {
+            diagnostics.Add(Warning("VAL113",
+                $"フィールド '{field.Name}' のチェックサムアルゴリズム '{algorithm}' は未知です",
+                structName, field.Name));
+        }
+
+        if (ChecksumAlgorithms.IsIntegerAlgorithm(algorithm) && field.Type == FieldType.Bytes)
+        {
+            diagnostics.Add(Error("VAL114",
+                $"フィールド '{field.Name}' に整数系チェックサムアルゴリズム '{algorithm}' が指定されていますが、bytes型フィールドには使用できません。整数型フィールドを使用してください",
+                structName, field.Name));
+        }
+
+        if (ChecksumAlgorithms.IsHashAlgorithm(algorithm) && field.Type != FieldType.Bytes)
+        {
+            diagnostics.Add(Error("VAL115",
+                $"フィールド '{field.Name}' にハッシュ系チェックサムアルゴリズム '{algorithm}' が指定されていますが、bytes型以外のフィールドには使用できません",
                 structName, field.Name));
         }
     }

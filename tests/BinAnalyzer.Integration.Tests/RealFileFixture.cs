@@ -20,6 +20,7 @@ public sealed class RealFileFixture : IDisposable
         EnsureFile("test.mp3", Mp3TestDataGenerator.CreateMinimalMp3);
         EnsureFile("test.flac", FlacTestDataGenerator.CreateMinimalFlac);
         EnsureFile("test.avi", AviTestDataGenerator.CreateMinimalAvi);
+        EnsureFile("test.mp4", Mp4TestDataGenerator.CreateMinimalMp4);
         EnsureFile("test.flv", FlvTestDataGenerator.CreateMinimalFlv);
         EnsureFile("test.midi", MidiTestDataGenerator.CreateMinimalMidi);
         EnsureFile("test.webp", WebpTestDataGenerator.CreateMinimalWebp);
@@ -30,6 +31,8 @@ public sealed class RealFileFixture : IDisposable
         EnsureFile("test.dns", DnsTestDataGenerator.CreateMinimalDns);
         EnsureFile("test.7z", SevenZipTestDataGenerator.CreateMinimal7z);
         EnsureFile("test.parquet", ParquetTestDataGenerator.CreateMinimalParquet);
+        EnsureFile("test.protobuf", ProtobufTestDataGenerator.CreateMinimalProtobuf);
+        EnsureFile("test.ogg", OggTestDataGenerator.CreateMinimalOgg);
 
         // シェルスクリプトが未実行の場合のフォールバック
         EnsureFile("test.png", PngTestDataGenerator.CreateMinimalPng);

@@ -37,6 +37,41 @@ public class ChecksumParsingTests
         crcField.Checksum.FieldNames.Should().BeEquivalentTo(["type", "data"]);
     }
 
+    [Theory]
+    [InlineData("crc16-ccitt")]
+    [InlineData("crc16-ibm")]
+    [InlineData("adler32")]
+    [InlineData("md5")]
+    [InlineData("sha1")]
+    [InlineData("sha256")]
+    public void Load_NewAlgorithmNames_ParsesCorrectly(string algorithm)
+    {
+        var yaml = $"""
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                - name: data
+                  type: bytes
+                  size: "8"
+                - name: checksum
+                  type: bytes
+                  size: "16"
+                  checksum:
+                    algorithm: {algorithm}
+                    fields: [data]
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var checksumField = format.Structs["root"].Fields[1];
+        checksumField.Checksum.Should().NotBeNull();
+        checksumField.Checksum!.Algorithm.Should().Be(algorithm);
+        checksumField.Checksum.FieldNames.Should().BeEquivalentTo(["data"]);
+    }
+
     [Fact]
     public void Load_FieldWithoutChecksum_HasNullChecksum()
     {

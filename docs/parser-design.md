@@ -56,6 +56,7 @@ YAML構文の変更がエンジンに影響しないよう、デシリアライ�
 
 ```
 YamlFormatModel     →  FormatDefinition
+YamlStructModel     →  StructDefinition
 YamlFieldModel      →  FieldDefinition
 YamlEnumEntry       →  EnumEntry / EnumDefinition
 YamlFlagsModel      →  FlagsDefinition
@@ -97,6 +98,16 @@ public sealed class YamlFormatLoader : IFormatLoader
 デフォルトはビッグエンディアン。ネットワークバイトオーダーのフォーマット（PNG等）で自然に使える。
 
 動的エンディアン式（`"{byte_order == 'II' ? 'little' : 'big'}"` 等）が指定された場合、`StructDefinition.EndiannessExpression` に式ASTが格納される。デコード時に `BinaryDecoder.DecodeStruct()` で評価され、結果の文字列 `'little'`/`'big'` でエンディアンが決定される。
+
+#### 構造体モード解決
+
+```
+null          →  IsBitstream = false（通常モード）
+"bitstream"   →  IsBitstream = true（ビットストリームモード）
+その他         →  InvalidOperationException
+```
+
+`mode: bitstream` の場合、構造体のフィールド型バリデーションも実行される。整数型（`uint8`〜`uint64`、`int8`〜`int64`）以外のフィールドが含まれていると `InvalidOperationException` をスローする。
 
 #### 列挙型マッピング
 
@@ -181,6 +192,11 @@ flags:
 "latin1" | "iso-8859-1"  →  FieldType.Latin1
 "zlib"                   →  FieldType.Zlib
 "deflate"                →  FieldType.Deflate
+"gzip"                   →  FieldType.Gzip
+"bzip2"                  →  FieldType.Bzip2
+"lzma"                   →  FieldType.Lzma
+"zstd" | "zstandard"     →  FieldType.Zstd
+"lz4"                    →  FieldType.Lz4
 "uleb128" | "leb128u"    →  FieldType.ULeb128
 "sleb128" | "leb128s"    →  FieldType.SLeb128
 "vlq"                    →  FieldType.Vlq
@@ -252,12 +268,14 @@ default: raw_data
 - **ルート構造体の存在確認** — `root` で指定された構造体名がstructs内に存在するか
 - **エンディアン値の検証** — 不明な値に対して例外をスロー
 - **フィールド型の検証** — 不明な型名に対して例外をスロー
+- **構造体モードの検証** — `mode` が `null` でも `"bitstream"` でもない場合に例外をスロー
+- **ビットストリーム構造体のフィールド型検証** — `mode: bitstream` 構造体内に整数型以外のフィールドがある場合に例外をスロー
 
 #### FormatValidator の検証（マッピング後）
 
 `FormatValidator`（`BinAnalyzer.Core.Validation` 名前空間）がIR変換後に静的検証を実行する。CLIでは `--no-validate` オプションでスキップ可能。
 
-**エラー（VAL001〜VAL014）:**
+**エラー（VAL001〜VAL014, VAL114〜VAL115）:**
 - VAL001: struct型フィールドに `StructRef` がない
 - VAL002: `StructRef` が未定義のstructを参照
 - VAL003: switchのcaseが未定義のstructを参照
@@ -270,8 +288,10 @@ default: raw_data
 - VAL010: virtual型フィールドに `value` が未指定
 - VAL011: `seek_restore` が `seek` なしで指定されている
 - VAL014: LengthPrefixed の PrefixSize が範囲外（1〜4）
+- VAL114: 整数系チェックサムアルゴリズムが非整数フィールド（bytes）に指定されている
+- VAL115: ハッシュ系チェックサムアルゴリズムが非bytesフィールドに指定されている
 
-**警告（VAL101〜VAL112）:**
+**警告（VAL101〜VAL113）:**
 - VAL101: `EnumRef` が未定義のenumを参照
 - VAL102: `FlagsRef` が未定義のflagsを参照
 - VAL103: `EnumRef` が整数型以外に使用されている
@@ -284,6 +304,7 @@ default: raw_data
 - VAL110: `element_size` が繰り返しフィールド以外に指定されている
 - VAL111: LengthPrefixed が bytes 以外の型に指定されている
 - VAL112: `string_table` 参照が整数型以外のフィールドに指定されている
+- VAL113: 未知のチェックサムアルゴリズムが指定されている
 
 現時点で実行されない検証（将来拡張候補）:
 - 循環参照の検出
@@ -602,6 +623,7 @@ CLIでは `DecodeException` をキャッチし、`FormatMessage()` で構造化�
 | 繰り返しインデックス変数（`_index`） | Decoder | REQ-098 |
 | 要素ごとseek（繰り返し + seek 連携） | Decoder | REQ-098 |
 | 兄弟スコープ値昇格（PromoteDecodedValues） | Decoder | REQ-099 |
+| ビットストリームモード（`mode: bitstream`） | Mapper（IsBitstream検証）+ Decoder（BitReader）+ Output（ビットオフセット表示） | REQ-122 |
 
 ### 将来的な拡張候補
 

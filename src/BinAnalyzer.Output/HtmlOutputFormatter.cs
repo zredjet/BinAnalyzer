@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Interfaces;
+using BinAnalyzer.Core.Models;
 
 namespace BinAnalyzer.Output;
 
@@ -176,10 +177,11 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
         }
         if (node.ChecksumValid.HasValue)
         {
+            var algName = ChecksumAlgorithms.DisplayName(node.ChecksumAlgorithm ?? "crc32");
             if (node.ChecksumValid.Value)
-                sb.Append(" <span class=\"valid\">✓</span>");
+                sb.Append(" <span class=\"valid\">✓ (").Append(E(algName)).Append(")</span>");
             else
-                sb.Append(" <span class=\"invalid\">✗ (expected: 0x").Append(node.ChecksumExpected?.ToString("X") ?? "?").Append(")</span>");
+                sb.Append(" <span class=\"invalid\">✗ (").Append(E(algName)).Append(", expected: 0x").Append(node.ChecksumExpected?.ToString("X") ?? "?").Append(")</span>");
         }
         AppendValidationHtml(sb, node);
         sb.AppendLine();
@@ -223,6 +225,14 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
             sb.Append(node.ValidationPassed.Value
                 ? " <span class=\"valid\">✓</span>"
                 : " <span class=\"invalid\">✗</span>");
+        }
+        if (node.ChecksumValid.HasValue)
+        {
+            var algName = ChecksumAlgorithms.DisplayName(node.ChecksumAlgorithm ?? "");
+            if (node.ChecksumValid.Value)
+                sb.Append(" <span class=\"valid\">✓ (").Append(E(algName)).Append(")</span>");
+            else
+                sb.Append(" <span class=\"invalid\">✗ (").Append(E(algName)).Append(", expected: ").Append(E(node.ChecksumExpectedHex ?? "?")).Append(")</span>");
         }
         sb.AppendLine();
         sb.AppendLine("</div>");

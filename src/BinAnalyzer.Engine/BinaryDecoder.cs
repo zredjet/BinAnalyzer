@@ -6,6 +6,9 @@ using BinAnalyzer.Core.Expressions;
 using BinAnalyzer.Core.Interfaces;
 using BinAnalyzer.Core.Models;
 
+#pragma warning disable CA5350 // SHA-1 is used for checksum verification, not security
+#pragma warning disable CA5351 // MD5 is used for checksum verification, not security
+
 namespace BinAnalyzer.Engine;
 
 public sealed class BinaryDecoder : IBinaryDecoder
@@ -71,12 +74,19 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var startOffset = context.Position;
         var children = new List<DecodedNode>();
 
+        var isBitstream = structDef.IsBitstream;
+        if (isBitstream)
+            context.EnterBitstreamMode();
+
         foreach (var field in structDef.Fields)
         {
             var node = DecodeField(field, format, context, children);
             if (node is not null)
                 children.Add(node);
         }
+
+        if (isBitstream)
+            context.ExitBitstreamMode();
 
         if (hasDynamicEndianness)
             context.PopScope();
@@ -217,7 +227,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.UInt8 or FieldType.UInt16 or FieldType.UInt32 or FieldType.UInt64
                 or FieldType.Int8 or FieldType.Int16 or FieldType.Int32 or FieldType.Int64
                 => DecodeIntegerField(field, format, context, siblings),
-            FieldType.Bytes => DecodeBytesField(field, context),
+            FieldType.Bytes => DecodeBytesField(field, context, siblings),
             FieldType.Ascii => DecodeAsciiField(field, format, context),
             FieldType.Utf8 => DecodeStringField(field, context, Encoding.UTF8, "utf8"),
             FieldType.Utf16Le => DecodeStringField(field, context, Encoding.Unicode, "utf16le"),
@@ -227,7 +237,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.AsciiZ => DecodeNullTerminatedStringField(field, context, Encoding.ASCII, "asciiz"),
             FieldType.Utf8Z => DecodeNullTerminatedStringField(field, context, Encoding.UTF8, "utf8z"),
             FieldType.Float32 or FieldType.Float64 => DecodeFloatField(field, context),
-            FieldType.Zlib or FieldType.Deflate => DecodeCompressedField(field, format, context),
+            FieldType.Zlib or FieldType.Deflate or FieldType.Gzip
+                or FieldType.Bzip2 or FieldType.Lzma or FieldType.Zstd or FieldType.Lz4
+                => DecodeCompressedField(field, format, context),
             FieldType.Struct => DecodeStructField(field, format, context),
             FieldType.Switch => DecodeSwitchField(field, format, context),
             FieldType.Bitfield => DecodeBitfieldField(field, format, context),
@@ -249,6 +261,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
         DecodeContext context,
         IReadOnlyList<DecodedNode>? siblings = null)
     {
+        if (context.IsBitstreamMode)
+            return DecodeBitstreamIntegerField(field, format, context, siblings);
+
         var offset = context.Position;
         long value = field.Type switch
         {
@@ -281,11 +296,13 @@ public sealed class BinaryDecoder : IBinaryDecoder
         // チェックサム検証
         bool? checksumValid = null;
         long? checksumExpected = null;
+        string? checksumAlgorithm = null;
         if (field.Checksum is not null && siblings is not null)
         {
             var (valid, expected) = VerifyChecksum(field.Checksum, value, siblings, context);
             checksumValid = valid;
             checksumExpected = expected;
+            checksumAlgorithm = field.Checksum.Algorithm;
         }
 
         // 文字列テーブル参照
@@ -305,14 +322,91 @@ public sealed class BinaryDecoder : IBinaryDecoder
             EnumDescription = enumDesc,
             ChecksumValid = checksumValid,
             ChecksumExpected = checksumExpected,
+            ChecksumAlgorithm = checksumAlgorithm,
             StringTableValue = stringTableValue,
             Description = field.Description,
         };
     }
 
+    private DecodedInteger DecodeBitstreamIntegerField(
+        FieldDefinition field,
+        FormatDefinition format,
+        DecodeContext context,
+        IReadOnlyList<DecodedNode>? siblings = null)
+    {
+        var byteOffset = context.Position;
+        var bitOffset = context.CurrentBitOffset ?? 0;
+        var bitSize = ResolveSize(field, context);
+
+        if (bitSize <= 0 || bitSize > 64)
+            throw new InvalidOperationException(
+                $"Bitstream field '{field.Name}' has invalid bit size {bitSize}. Must be 1–64.");
+
+        var rawValue = context.ReadBitsAsLong(bitSize);
+
+        // 符号拡張（signed 型の場合）
+        if (IsSignedType(field.Type) && bitSize < 64)
+        {
+            var signBit = 1L << (bitSize - 1);
+            if ((rawValue & signBit) != 0)
+                rawValue |= ~((1L << bitSize) - 1);
+        }
+
+        context.SetVariable(field.Name, rawValue);
+
+        string? enumLabel = null;
+        string? enumDesc = null;
+        if (field.EnumRef is not null && format.Enums.TryGetValue(field.EnumRef, out var enumDef))
+        {
+            var entry = enumDef.FindByValue(rawValue);
+            if (entry is not null)
+            {
+                enumLabel = entry.Label;
+                enumDesc = entry.Description;
+            }
+        }
+
+        bool? checksumValid = null;
+        long? checksumExpected = null;
+        string? checksumAlgorithm = null;
+        if (field.Checksum is not null && siblings is not null)
+        {
+            var (valid, expected) = VerifyChecksum(field.Checksum, rawValue, siblings, context);
+            checksumValid = valid;
+            checksumExpected = expected;
+            checksumAlgorithm = field.Checksum.Algorithm;
+        }
+
+        string? stringTableValue = null;
+        if (field.StringTableRef is not null)
+        {
+            stringTableValue = context.LookupString(field.StringTableRef, (int)rawValue);
+        }
+
+        return new DecodedInteger
+        {
+            Name = field.Name,
+            Offset = byteOffset,
+            BitOffset = bitOffset,
+            Size = bitSize,
+            Value = rawValue,
+            EnumLabel = enumLabel,
+            EnumDescription = enumDesc,
+            ChecksumValid = checksumValid,
+            ChecksumExpected = checksumExpected,
+            ChecksumAlgorithm = checksumAlgorithm,
+            StringTableValue = stringTableValue,
+            Description = field.Description,
+        };
+    }
+
+    private static bool IsSignedType(FieldType type) =>
+        type is FieldType.Int8 or FieldType.Int16 or FieldType.Int32 or FieldType.Int64;
+
     private DecodedBytes DecodeBytesField(
         FieldDefinition field,
-        DecodeContext context)
+        DecodeContext context,
+        IReadOnlyList<DecodedNode>? siblings = null)
     {
         var offset = context.Position;
         var size = ResolveSize(field, context);
@@ -324,6 +418,18 @@ public sealed class BinaryDecoder : IBinaryDecoder
             valid = bytes.Span.SequenceEqual(field.Expected);
         }
 
+        bool? checksumValid = null;
+        string? checksumExpectedHex = null;
+        string? checksumAlgorithm = null;
+        if (field.Checksum is not null && siblings is not null
+            && ChecksumAlgorithms.IsHashAlgorithm(field.Checksum.Algorithm))
+        {
+            var (v, hex) = VerifyHashChecksum(field.Checksum, bytes, siblings, context);
+            checksumValid = v;
+            checksumExpectedHex = hex;
+            checksumAlgorithm = field.Checksum.Algorithm;
+        }
+
         return new DecodedBytes
         {
             Name = field.Name,
@@ -332,6 +438,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
             RawBytes = bytes,
             ValidationPassed = valid,
             Description = field.Description,
+            ChecksumValid = checksumValid,
+            ChecksumExpectedHex = checksumExpectedHex,
+            ChecksumAlgorithm = checksumAlgorithm,
         };
     }
 
@@ -442,20 +551,31 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var offset = context.Position;
         var compressedSize = ResolveSize(field, context);
         var compressedBytes = context.ReadBytes(compressedSize);
-        var algorithm = field.Type == FieldType.Zlib ? "zlib" : "deflate";
+        var algorithm = field.Type switch
+        {
+            FieldType.Zlib => "zlib",
+            FieldType.Deflate => "deflate",
+            FieldType.Gzip => "gzip",
+            FieldType.Bzip2 => "bzip2",
+            FieldType.Lzma => "lzma",
+            FieldType.Zstd => "zstd",
+            FieldType.Lz4 => "lz4",
+            _ => throw new InvalidOperationException($"Not a compression type: {field.Type}"),
+        };
 
         byte[] decompressed;
         try
         {
-            using var input = new MemoryStream(compressedBytes.ToArray());
-            using var decompressor = field.Type == FieldType.Zlib
-                ? (Stream)new ZLibStream(input, CompressionMode.Decompress)
-                : new DeflateStream(input, CompressionMode.Decompress);
-            using var output = new MemoryStream();
-            decompressor.CopyTo(output);
-            decompressed = output.ToArray();
+            if (field.Type is FieldType.Zlib or FieldType.Deflate or FieldType.Gzip)
+            {
+                decompressed = DecompressBclStream(compressedBytes, field.Type);
+            }
+            else
+            {
+                decompressed = Compression.Decompressor.Decompress(compressedBytes, algorithm);
+            }
         }
-        catch (InvalidDataException ex)
+        catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or ArgumentException or IOException)
         {
             throw new DecodeException(
                 $"Failed to decompress {algorithm} data: {ex.Message}",
@@ -483,6 +603,21 @@ public sealed class BinaryDecoder : IBinaryDecoder
             RawDecompressed = rawDecompressed,
             Description = field.Description,
         };
+    }
+
+    private static byte[] DecompressBclStream(ReadOnlyMemory<byte> compressedBytes, FieldType type)
+    {
+        using var input = new MemoryStream(compressedBytes.ToArray());
+        using Stream decompressor = type switch
+        {
+            FieldType.Zlib => new ZLibStream(input, CompressionMode.Decompress),
+            FieldType.Deflate => new DeflateStream(input, CompressionMode.Decompress),
+            FieldType.Gzip => new GZipStream(input, CompressionMode.Decompress),
+            _ => throw new InvalidOperationException($"Not a BCL compression type: {type}"),
+        };
+        using var output = new MemoryStream();
+        decompressor.CopyTo(output);
+        return output.ToArray();
     }
 
     private DecodedStruct DecodeStructField(
@@ -908,16 +1043,16 @@ public sealed class BinaryDecoder : IBinaryDecoder
 
     private static DecodedNode SetPaddingFlag(DecodedNode node) => node switch
     {
-        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true, Validation = b.Validation },
-        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = true, Validation = i.Validation },
+        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true, Validation = b.Validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm },
+        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = true, Validation = i.Validation },
         DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = true, Validation = s.Validation },
         _ => node, // struct/array等はパディングとしてマークしない
     };
 
     private static DecodedNode SetValidation(DecodedNode node, Core.Decoded.ValidationInfo validation) => node switch
     {
-        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = b.IsPadding, Validation = validation },
-        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = i.IsPadding, Validation = validation },
+        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = b.IsPadding, Validation = validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm },
+        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = i.IsPadding, Validation = validation },
         DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = s.IsPadding, Validation = validation },
         DecodedFloat f => new DecodedFloat { Name = f.Name, Offset = f.Offset, Size = f.Size, Value = f.Value, IsSinglePrecision = f.IsSinglePrecision, Description = f.Description, IsPadding = f.IsPadding, Validation = validation },
         _ => node, // struct/array/bitfield等はバリデーションをサポートしない
@@ -1140,11 +1275,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
         };
     }
 
-    private static (bool valid, long? expected) VerifyChecksum(
-        ChecksumSpec spec, long actualValue,
-        IReadOnlyList<DecodedNode> siblings, DecodeContext context)
+    private static byte[] CollectChecksumData(
+        ChecksumSpec spec, IReadOnlyList<DecodedNode> siblings, DecodeContext context)
     {
-        // 対象フィールドのバイト範囲を収集
         using var ms = new MemoryStream();
         foreach (var fieldName in spec.FieldNames)
         {
@@ -1155,19 +1288,44 @@ public sealed class BinaryDecoder : IBinaryDecoder
             var slice = context.SliceOriginal((int)sibling.Offset, (int)sibling.Size);
             ms.Write(slice.Span);
         }
+        return ms.ToArray();
+    }
 
-        var data = ms.ToArray();
+    private static (bool valid, long? expected) VerifyChecksum(
+        ChecksumSpec spec, long actualValue,
+        IReadOnlyList<DecodedNode> siblings, DecodeContext context)
+    {
+        var data = CollectChecksumData(spec, siblings, context);
 
-        if (spec.Algorithm.Equals("crc32", StringComparison.OrdinalIgnoreCase))
+        long computed = spec.Algorithm.ToLowerInvariant() switch
         {
-            var computed = Crc32Calculator.Compute(data);
-            var expected = (long)computed;
-            var valid = actualValue == expected;
-            return (valid, valid ? null : expected);
-        }
+            "crc32" => Crc32Calculator.Compute(data),
+            "crc16-ccitt" => Crc16Calculator.ComputeCcitt(data),
+            "crc16-ibm" => Crc16Calculator.ComputeIbm(data),
+            "adler32" => Adler32Calculator.Compute(data),
+            _ => actualValue, // 未知: 常にvalid
+        };
 
-        // 未知のアルゴリズム: 検証スキップ
-        return (true, null);
+        var valid = actualValue == computed;
+        return (valid, valid ? null : computed);
+    }
+
+    private static (bool valid, string? expectedHex) VerifyHashChecksum(
+        ChecksumSpec spec, ReadOnlyMemory<byte> actualBytes,
+        IReadOnlyList<DecodedNode> siblings, DecodeContext context)
+    {
+        var data = CollectChecksumData(spec, siblings, context);
+
+        byte[] computed = spec.Algorithm.ToLowerInvariant() switch
+        {
+            "md5" => HashCalculator.ComputeMd5(data),
+            "sha1" => HashCalculator.ComputeSha1(data),
+            "sha256" => HashCalculator.ComputeSha256(data),
+            _ => actualBytes.ToArray(), // 未知: 常にvalid
+        };
+
+        var valid = actualBytes.Span.SequenceEqual(computed);
+        return (valid, valid ? null : Convert.ToHexString(computed).ToLowerInvariant());
     }
 
     private static bool ValuesEqual(object left, object right)

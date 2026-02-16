@@ -18,4 +18,7 @@ public sealed class StructDefinition
 
     /// <summary>trueの場合、この構造体のデコード結果のバイト列を文字列テーブルとして登録する。</summary>
     public bool IsStringTable { get; init; }
+
+    /// <summary>trueの場合、この構造体はビットストリームモードで、フィールドのsizeはビット単位。</summary>
+    public bool IsBitstream { get; init; }
 }

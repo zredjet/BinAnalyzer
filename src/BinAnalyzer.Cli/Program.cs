@@ -292,4 +292,69 @@ diffCommand.SetAction((parseResult) =>
 
 rootCommand.Subcommands.Add(diffCommand);
 
+// schema サブコマンド
+var schemaFormatFileArg = new Argument<FileInfo>("format-file")
+{
+    Description = "フォーマット定義ファイル (.bdef.yaml)",
+};
+
+var schemaOutputOption = new Option<string>("-o", "--output")
+{
+    Description = "出力形式 (mermaid, dot, graphviz)",
+    DefaultValueFactory = _ => "mermaid",
+};
+
+var schemaCommand = new Command("schema", "フォーマット定義のIR構造図を出力")
+{
+    schemaFormatFileArg,
+    schemaOutputOption,
+};
+
+schemaCommand.SetAction((parseResult) =>
+{
+    var fmtFile = parseResult.GetValue(schemaFormatFileArg)!;
+    var outputFormat = parseResult.GetValue(schemaOutputOption)!;
+
+    if (!fmtFile.Exists)
+    {
+        Console.Error.WriteLine($"エラー: フォーマットファイルが見つかりません: {fmtFile.FullName}");
+        return 1;
+    }
+
+    try
+    {
+        var loader = new YamlFormatLoader();
+        var format = loader.Load(fmtFile.FullName);
+
+        // バリデーション
+        var validationResult = FormatValidator.Validate(format);
+
+        foreach (var warning in validationResult.Warnings)
+            Console.Error.WriteLine($"警告 [{warning.Code}]: {warning.Message}");
+
+        if (!validationResult.IsValid)
+        {
+            foreach (var error in validationResult.Errors)
+                Console.Error.WriteLine($"エラー [{error.Code}]: {error.Message}");
+            return 1;
+        }
+
+        ISchemaFormatter formatter = outputFormat switch
+        {
+            "dot" or "graphviz" => new DotSchemaFormatter(),
+            _ => new MermaidSchemaFormatter(),
+        };
+
+        Console.Write(formatter.Format(format));
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"エラー: {ex.Message}");
+        return 1;
+    }
+});
+
+rootCommand.Subcommands.Add(schemaCommand);
+
 return rootCommand.Parse(args).Invoke();

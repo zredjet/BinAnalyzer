@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.38.*" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.*" />
+    <PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.3.*" />
+  </ItemGroup>
+
+</Project>

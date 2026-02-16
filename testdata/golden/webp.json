@@ -1,0 +1,139 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 30,
+  "name": "WebP",
+  "struct_type": "webp",
+  "children": {
+    "riff_magic": {
+      "_type": "bytes",
+      "offset": 0,
+      "size": 4,
+      "description": "RIFF\u30B3\u30F3\u30C6\u30CA\u30DE\u30B8\u30C3\u30AF",
+      "name": "riff_magic",
+      "hex": "52 49 46 46",
+      "valid": true
+    },
+    "file_size": {
+      "_type": "integer",
+      "offset": 4,
+      "size": 4,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA - 8\u30D0\u30A4\u30C8\uFF08RIFF\u30D8\u30C3\u30C0\u5206\uFF09",
+      "name": "file_size",
+      "value": 22,
+      "hex": "0x16"
+    },
+    "webp_magic": {
+      "_type": "bytes",
+      "offset": 8,
+      "size": 4,
+      "description": "WEBP\u30D5\u30A9\u30FC\u30E0\u30BF\u30A4\u30D7",
+      "name": "webp_magic",
+      "hex": "57 45 42 50",
+      "valid": true
+    },
+    "chunks": {
+      "_type": "array",
+      "offset": 12,
+      "size": 18,
+      "name": "chunks",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 12,
+          "size": 18,
+          "name": "chunks",
+          "struct_type": "webp_chunk",
+          "children": {
+            "chunk_id": {
+              "_type": "string",
+              "offset": 12,
+              "size": 4,
+              "name": "chunk_id",
+              "value": "VP8 ",
+              "encoding": "ascii"
+            },
+            "chunk_size": {
+              "_type": "integer",
+              "offset": 16,
+              "size": 4,
+              "name": "chunk_size",
+              "value": 10,
+              "hex": "0xA"
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 20,
+              "size": 10,
+              "name": "data",
+              "struct_type": "vp8_data",
+              "children": {
+                "frame_tag": {
+                  "_type": "bitfield",
+                  "offset": 20,
+                  "size": 3,
+                  "name": "frame_tag",
+                  "raw_value": "0x10",
+                  "fields": [
+                    {
+                      "name": "frame_type",
+                      "value": 0,
+                      "bit_high": 0,
+                      "bit_low": 0
+                    },
+                    {
+                      "name": "version",
+                      "value": 0,
+                      "bit_high": 3,
+                      "bit_low": 1
+                    },
+                    {
+                      "name": "show_frame",
+                      "value": 1,
+                      "bit_high": 4,
+                      "bit_low": 4
+                    },
+                    {
+                      "name": "partition_size",
+                      "value": 0,
+                      "bit_high": 23,
+                      "bit_low": 5
+                    }
+                  ]
+                },
+                "start_code": {
+                  "_type": "bytes",
+                  "offset": 23,
+                  "size": 3,
+                  "description": "VP8\u30B9\u30BF\u30FC\u30C8\u30B3\u30FC\u30C9",
+                  "name": "start_code",
+                  "hex": "9D 01 2A",
+                  "valid": true
+                },
+                "width_and_scale": {
+                  "_type": "integer",
+                  "offset": 26,
+                  "size": 2,
+                  "description": "\u5E45\u3068\u6C34\u5E73\u30B9\u30B1\u30FC\u30EB\uFF08\u4E0B\u4F4D14\u30D3\u30C3\u30C8 = \u5E45\u3001\u4E0A\u4F4D2\u30D3\u30C3\u30C8 = \u30B9\u30B1\u30FC\u30EB\uFF09",
+                  "name": "width_and_scale",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "height_and_scale": {
+                  "_type": "integer",
+                  "offset": 28,
+                  "size": 2,
+                  "description": "\u9AD8\u3055\u3068\u5782\u76F4\u30B9\u30B1\u30FC\u30EB\uFF08\u4E0B\u4F4D14\u30D3\u30C3\u30C8 = \u9AD8\u3055\u3001\u4E0A\u4F4D2\u30D3\u30C3\u30C8 = \u30B9\u30B1\u30FC\u30EB\uFF09",
+                  "name": "height_and_scale",
+                  "value": 1,
+                  "hex": "0x1"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

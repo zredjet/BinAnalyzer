@@ -346,6 +346,28 @@ public sealed class DecodeContext
         return result;
     }
 
+    // --- Bitstream mode ---
+    private BitReader? _bitReader;
+
+    public bool IsBitstreamMode => _bitReader is not null;
+    public int? CurrentBitOffset => _bitReader?.BitPosition;
+
+    public void EnterBitstreamMode()
+    {
+        _bitReader = new BitReader(this);
+    }
+
+    public void ExitBitstreamMode()
+    {
+        _bitReader!.AlignToByte();
+        _bitReader = null;
+    }
+
+    public long ReadBitsAsLong(int bitCount)
+    {
+        return _bitReader!.ReadBits(bitCount);
+    }
+
     private void EnsureAvailable(int count)
     {
         if (_position + count > CurrentScope.End)
@@ -360,5 +382,75 @@ public sealed class DecodeContext
         public Endianness? ScopeEndianness { get; } = endianness;
         public bool IsOverlay { get; } = isOverlay;
         public Dictionary<string, object> Variables { get; } = new();
+    }
+
+    private sealed class BitReader
+    {
+        private readonly DecodeContext _context;
+        private int _bitPosition;   // 0–7: 現在バイト内の次に読み取るビット位置（MSB=0）
+        private byte _currentByte;
+        private bool _hasByte;
+
+        public BitReader(DecodeContext context)
+        {
+            _context = context;
+        }
+
+        public int BitPosition => _bitPosition;
+
+        public long ReadBits(int count)
+        {
+            if (count <= 0 || count > 64)
+                throw new InvalidOperationException(
+                    $"Bit read count must be 1–64, got {count}");
+
+            long result = 0;
+            var remaining = count;
+
+            while (remaining > 0)
+            {
+                if (!_hasByte)
+                {
+                    _currentByte = _context.ReadUInt8();
+                    // ReadUInt8 advances _position, but we're consuming bits from this byte.
+                    // We need to "un-advance" since we manage position via bits.
+                    // Actually, ReadUInt8 already advanced _position. We keep that byte cached
+                    // and only read next byte when all 8 bits are consumed.
+                    _bitPosition = 0;
+                    _hasByte = true;
+                }
+
+                var availableInByte = 8 - _bitPosition;
+                var bitsToRead = Math.Min(remaining, availableInByte);
+
+                // Extract bitsToRead bits from _currentByte starting at _bitPosition (MSB-first)
+                // Shift the current byte left to align the target bits to MSB, then shift right
+                var shift = availableInByte - bitsToRead;
+                var mask = (1 << bitsToRead) - 1;
+                var bits = (_currentByte >> shift) & mask;
+
+                result = (result << bitsToRead) | (uint)bits;
+                _bitPosition += bitsToRead;
+                remaining -= bitsToRead;
+
+                if (_bitPosition >= 8)
+                {
+                    _hasByte = false;
+                    _bitPosition = 0;
+                }
+            }
+
+            return result;
+        }
+
+        public void AlignToByte()
+        {
+            if (_hasByte && _bitPosition > 0)
+            {
+                // Discard remaining bits in current byte
+                _hasByte = false;
+                _bitPosition = 0;
+            }
+        }
     }
 }

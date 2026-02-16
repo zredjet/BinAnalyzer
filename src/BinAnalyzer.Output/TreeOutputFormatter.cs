@@ -1,6 +1,7 @@
 using System.Text;
 using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Interfaces;
+using BinAnalyzer.Core.Models;
 
 namespace BinAnalyzer.Output;
 
@@ -146,6 +147,8 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         sb.Append(C(node.Value.ToString(), AnsiColors.Cyan));
         if (node.Value is >= 16 or <= -16)
             sb.Append(C($" (0x{node.Value:X})", AnsiColors.Dim));
+        if (node.BitOffset.HasValue)
+            sb.Append(C($" [0x{node.Offset:X8}:{node.BitOffset}] ({node.Size} bits)", AnsiColors.Dim));
         if (node.EnumLabel is not null)
         {
             sb.Append(' ');
@@ -155,15 +158,16 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         }
         if (node.ChecksumValid.HasValue)
         {
+            var algName = ChecksumAlgorithms.DisplayName(node.ChecksumAlgorithm ?? "crc32");
             if (node.ChecksumValid.Value)
             {
                 sb.Append("  ");
-                sb.Append(C("✓ (CRC-32)", AnsiColors.Green));
+                sb.Append(C($"✓ ({algName})", AnsiColors.Green));
             }
             else
             {
                 sb.Append("  ");
-                sb.Append(C($"✗ (CRC-32, 期待値: 0x{node.ChecksumExpected:X})", AnsiColors.Red));
+                sb.Append(C($"✗ ({algName}, 期待値: 0x{node.ChecksumExpected:X})", AnsiColors.Red));
             }
         }
         if (node.StringTableValue is not null)
@@ -197,6 +201,20 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         {
             sb.Append("  ");
             sb.Append(node.ValidationPassed.Value ? C("✓", AnsiColors.Green) : C("✗", AnsiColors.Red));
+        }
+        if (node.ChecksumValid.HasValue)
+        {
+            var algName = ChecksumAlgorithms.DisplayName(node.ChecksumAlgorithm ?? "");
+            if (node.ChecksumValid.Value)
+            {
+                sb.Append("  ");
+                sb.Append(C($"✓ ({algName})", AnsiColors.Green));
+            }
+            else
+            {
+                sb.Append("  ");
+                sb.Append(C($"✗ ({algName}, 期待値: {node.ChecksumExpectedHex})", AnsiColors.Red));
+            }
         }
         AppendValidation(sb, node);
 

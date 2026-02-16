@@ -1,0 +1,492 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 180,
+  "name": "ZIP",
+  "struct_type": "zip",
+  "children": {
+    "records": {
+      "_type": "array",
+      "offset": 0,
+      "size": 180,
+      "name": "records",
+      "count": 3,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 0,
+          "size": 79,
+          "name": "records",
+          "struct_type": "pk_record",
+          "children": {
+            "signature": {
+              "_type": "integer",
+              "offset": 0,
+              "size": 4,
+              "name": "signature",
+              "value": 67324752,
+              "hex": "0x4034B50"
+            },
+            "body": {
+              "_type": "struct",
+              "offset": 4,
+              "size": 75,
+              "name": "body",
+              "struct_type": "local_file_header",
+              "children": {
+                "version_needed": {
+                  "_type": "integer",
+                  "offset": 4,
+                  "size": 2,
+                  "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u4E0B\u4F4D\u30D0\u30A4\u30C8=\u30D0\u30FC\u30B8\u30E7\u30F3\u3001\u4E0A\u4F4D\u30D0\u30A4\u30C8=OS\uFF09",
+                  "name": "version_needed",
+                  "value": 10,
+                  "hex": "0xA"
+                },
+                "version_needed_os": {
+                  "_type": "virtual",
+                  "offset": 6,
+                  "size": 0,
+                  "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\u306EOS\u60C5\u5831\uFF08\u4E0A\u4F4D\u30D0\u30A4\u30C8\uFF09",
+                  "name": "version_needed_os",
+                  "value": 0
+                },
+                "flags": {
+                  "_type": "integer",
+                  "offset": 6,
+                  "size": 2,
+                  "description": "\u6C4E\u7528\u30D3\u30C3\u30C8\u30D5\u30E9\u30B0",
+                  "name": "flags",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "encrypted": {
+                  "_type": "virtual",
+                  "offset": 8,
+                  "size": 0,
+                  "description": "\u6697\u53F7\u5316\u30D5\u30E9\u30B0\uFF08bit 0: 1=\u6697\u53F7\u5316\u3055\u308C\u3066\u3044\u308B\uFF09",
+                  "name": "encrypted",
+                  "value": 0
+                },
+                "has_data_descriptor": {
+                  "_type": "virtual",
+                  "offset": 8,
+                  "size": 0,
+                  "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30B9\u30AF\u30EA\u30D7\u30BF\u30D5\u30E9\u30B0\uFF08bit 3: 1=compressed_data\u306E\u5F8C\u306Bcrc32(4bytes)/compressed_size(4bytes)/uncompressed_size(4bytes)\u306EData Descriptor\u304C\u914D\u7F6E\u3055\u308C\u308B\u3002\u3053\u306E\u5834\u5408\u30D8\u30C3\u30C0\u5185\u306Ecrc32/compressed_size/uncompressed_size\u306F0\u3068\u306A\u308B\uFF09",
+                  "name": "has_data_descriptor",
+                  "value": 0
+                },
+                "utf8_encoding": {
+                  "_type": "virtual",
+                  "offset": 8,
+                  "size": 0,
+                  "description": "UTF-8\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\u30D5\u30E9\u30B0\uFF08bit 11: 1=\u30D5\u30A1\u30A4\u30EB\u540D\u3068\u30B3\u30E1\u30F3\u30C8\u304CUTF-8\u3067\u30A8\u30F3\u30B3\u30FC\u30C9\u3055\u308C\u3066\u3044\u308B\uFF09",
+                  "name": "utf8_encoding",
+                  "value": 0
+                },
+                "compression": {
+                  "_type": "integer",
+                  "offset": 8,
+                  "size": 2,
+                  "name": "compression",
+                  "value": 0,
+                  "hex": "0x0",
+                  "enum_label": "stored"
+                },
+                "mod_time": {
+                  "_type": "integer",
+                  "offset": 10,
+                  "size": 2,
+                  "name": "mod_time",
+                  "value": 34256,
+                  "hex": "0x85D0"
+                },
+                "mod_date": {
+                  "_type": "integer",
+                  "offset": 12,
+                  "size": 2,
+                  "name": "mod_date",
+                  "value": 23627,
+                  "hex": "0x5C4B"
+                },
+                "crc32": {
+                  "_type": "integer",
+                  "offset": 14,
+                  "size": 4,
+                  "name": "crc32",
+                  "value": 2407947532,
+                  "hex": "0x8F865D0C"
+                },
+                "compressed_size": {
+                  "_type": "integer",
+                  "offset": 18,
+                  "size": 4,
+                  "name": "compressed_size",
+                  "value": 12,
+                  "hex": "0xC"
+                },
+                "uncompressed_size": {
+                  "_type": "integer",
+                  "offset": 22,
+                  "size": 4,
+                  "name": "uncompressed_size",
+                  "value": 12,
+                  "hex": "0xC"
+                },
+                "filename_length": {
+                  "_type": "integer",
+                  "offset": 26,
+                  "size": 2,
+                  "name": "filename_length",
+                  "value": 9,
+                  "hex": "0x9"
+                },
+                "extra_length": {
+                  "_type": "integer",
+                  "offset": 28,
+                  "size": 2,
+                  "name": "extra_length",
+                  "value": 28,
+                  "hex": "0x1C"
+                },
+                "filename": {
+                  "_type": "string",
+                  "offset": 30,
+                  "size": 9,
+                  "name": "filename",
+                  "value": "hello.txt",
+                  "encoding": "ascii"
+                },
+                "extra": {
+                  "_type": "bytes",
+                  "offset": 39,
+                  "size": 28,
+                  "name": "extra",
+                  "hex": "55 54 09 00 03 D8 33 8C 69 D8 33 8C 69 75 78 0B 00 01 04 F5 01 00 00 04 00 00 00 00"
+                },
+                "data": {
+                  "_type": "bytes",
+                  "offset": 67,
+                  "size": 12,
+                  "name": "data",
+                  "hex": "48 65 6C 6C 6F 2C 20 5A 49 50 21 0A"
+                }
+              }
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 79,
+          "size": 79,
+          "name": "records",
+          "struct_type": "pk_record",
+          "children": {
+            "signature": {
+              "_type": "integer",
+              "offset": 79,
+              "size": 4,
+              "name": "signature",
+              "value": 33639248,
+              "hex": "0x2014B50"
+            },
+            "body": {
+              "_type": "struct",
+              "offset": 83,
+              "size": 75,
+              "name": "body",
+              "struct_type": "central_directory_entry",
+              "children": {
+                "version_made_by": {
+                  "_type": "integer",
+                  "offset": 83,
+                  "size": 2,
+                  "description": "\u30A2\u30FC\u30AB\u30A4\u30D6\u4F5C\u6210\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u4E0B\u4F4D\u30D0\u30A4\u30C8=\u30D0\u30FC\u30B8\u30E7\u30F3\u3001\u4E0A\u4F4D\u30D0\u30A4\u30C8=OS\uFF09",
+                  "name": "version_made_by",
+                  "value": 798,
+                  "hex": "0x31E"
+                },
+                "version_made_by_os": {
+                  "_type": "virtual",
+                  "offset": 85,
+                  "size": 0,
+                  "description": "\u30A2\u30FC\u30AB\u30A4\u30D6\u4F5C\u6210OS\u60C5\u5831\uFF08\u4E0A\u4F4D\u30D0\u30A4\u30C8\uFF09",
+                  "name": "version_made_by_os",
+                  "value": 3
+                },
+                "version_needed": {
+                  "_type": "integer",
+                  "offset": 85,
+                  "size": 2,
+                  "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u4E0B\u4F4D\u30D0\u30A4\u30C8=\u30D0\u30FC\u30B8\u30E7\u30F3\u3001\u4E0A\u4F4D\u30D0\u30A4\u30C8=OS\uFF09",
+                  "name": "version_needed",
+                  "value": 10,
+                  "hex": "0xA"
+                },
+                "version_needed_os": {
+                  "_type": "virtual",
+                  "offset": 87,
+                  "size": 0,
+                  "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\u306EOS\u60C5\u5831\uFF08\u4E0A\u4F4D\u30D0\u30A4\u30C8\uFF09",
+                  "name": "version_needed_os",
+                  "value": 0
+                },
+                "flags": {
+                  "_type": "integer",
+                  "offset": 87,
+                  "size": 2,
+                  "description": "\u6C4E\u7528\u30D3\u30C3\u30C8\u30D5\u30E9\u30B0",
+                  "name": "flags",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "encrypted": {
+                  "_type": "virtual",
+                  "offset": 89,
+                  "size": 0,
+                  "description": "\u6697\u53F7\u5316\u30D5\u30E9\u30B0\uFF08bit 0: 1=\u6697\u53F7\u5316\u3055\u308C\u3066\u3044\u308B\uFF09",
+                  "name": "encrypted",
+                  "value": 0
+                },
+                "has_data_descriptor": {
+                  "_type": "virtual",
+                  "offset": 89,
+                  "size": 0,
+                  "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30B9\u30AF\u30EA\u30D7\u30BF\u30D5\u30E9\u30B0\uFF08bit 3: 1=compressed_data\u306E\u5F8C\u306Bcrc32(4bytes)/compressed_size(4bytes)/uncompressed_size(4bytes)\u306EData Descriptor\u304C\u914D\u7F6E\u3055\u308C\u308B\u3002\u3053\u306E\u5834\u5408\u30D8\u30C3\u30C0\u5185\u306Ecrc32/compressed_size/uncompressed_size\u306F0\u3068\u306A\u308B\uFF09",
+                  "name": "has_data_descriptor",
+                  "value": 0
+                },
+                "utf8_encoding": {
+                  "_type": "virtual",
+                  "offset": 89,
+                  "size": 0,
+                  "description": "UTF-8\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\u30D5\u30E9\u30B0\uFF08bit 11: 1=\u30D5\u30A1\u30A4\u30EB\u540D\u3068\u30B3\u30E1\u30F3\u30C8\u304CUTF-8\u3067\u30A8\u30F3\u30B3\u30FC\u30C9\u3055\u308C\u3066\u3044\u308B\uFF09",
+                  "name": "utf8_encoding",
+                  "value": 0
+                },
+                "compression": {
+                  "_type": "integer",
+                  "offset": 89,
+                  "size": 2,
+                  "name": "compression",
+                  "value": 0,
+                  "hex": "0x0",
+                  "enum_label": "stored"
+                },
+                "mod_time": {
+                  "_type": "integer",
+                  "offset": 91,
+                  "size": 2,
+                  "name": "mod_time",
+                  "value": 34256,
+                  "hex": "0x85D0"
+                },
+                "mod_date": {
+                  "_type": "integer",
+                  "offset": 93,
+                  "size": 2,
+                  "name": "mod_date",
+                  "value": 23627,
+                  "hex": "0x5C4B"
+                },
+                "crc32": {
+                  "_type": "integer",
+                  "offset": 95,
+                  "size": 4,
+                  "name": "crc32",
+                  "value": 2407947532,
+                  "hex": "0x8F865D0C"
+                },
+                "compressed_size": {
+                  "_type": "integer",
+                  "offset": 99,
+                  "size": 4,
+                  "name": "compressed_size",
+                  "value": 12,
+                  "hex": "0xC"
+                },
+                "uncompressed_size": {
+                  "_type": "integer",
+                  "offset": 103,
+                  "size": 4,
+                  "name": "uncompressed_size",
+                  "value": 12,
+                  "hex": "0xC"
+                },
+                "filename_length": {
+                  "_type": "integer",
+                  "offset": 107,
+                  "size": 2,
+                  "name": "filename_length",
+                  "value": 9,
+                  "hex": "0x9"
+                },
+                "extra_length": {
+                  "_type": "integer",
+                  "offset": 109,
+                  "size": 2,
+                  "name": "extra_length",
+                  "value": 24,
+                  "hex": "0x18"
+                },
+                "comment_length": {
+                  "_type": "integer",
+                  "offset": 111,
+                  "size": 2,
+                  "name": "comment_length",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "disk_number_start": {
+                  "_type": "integer",
+                  "offset": 113,
+                  "size": 2,
+                  "name": "disk_number_start",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "internal_attributes": {
+                  "_type": "integer",
+                  "offset": 115,
+                  "size": 2,
+                  "name": "internal_attributes",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "external_attributes": {
+                  "_type": "integer",
+                  "offset": 117,
+                  "size": 4,
+                  "name": "external_attributes",
+                  "value": 2175008768,
+                  "hex": "0x81A40000"
+                },
+                "local_header_offset": {
+                  "_type": "integer",
+                  "offset": 121,
+                  "size": 4,
+                  "name": "local_header_offset",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "filename": {
+                  "_type": "string",
+                  "offset": 125,
+                  "size": 9,
+                  "name": "filename",
+                  "value": "hello.txt",
+                  "encoding": "ascii"
+                },
+                "extra": {
+                  "_type": "bytes",
+                  "offset": 134,
+                  "size": 24,
+                  "name": "extra",
+                  "hex": "55 54 05 00 03 D8 33 8C 69 75 78 0B 00 01 04 F5 01 00 00 04 00 00 00 00"
+                },
+                "comment": {
+                  "_type": "string",
+                  "offset": 158,
+                  "size": 0,
+                  "name": "comment",
+                  "value": "",
+                  "encoding": "ascii"
+                }
+              }
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 158,
+          "size": 22,
+          "name": "records",
+          "struct_type": "pk_record",
+          "children": {
+            "signature": {
+              "_type": "integer",
+              "offset": 158,
+              "size": 4,
+              "name": "signature",
+              "value": 101010256,
+              "hex": "0x6054B50"
+            },
+            "body": {
+              "_type": "struct",
+              "offset": 162,
+              "size": 18,
+              "name": "body",
+              "struct_type": "end_of_central_dir",
+              "children": {
+                "disk_number": {
+                  "_type": "integer",
+                  "offset": 162,
+                  "size": 2,
+                  "name": "disk_number",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "start_disk": {
+                  "_type": "integer",
+                  "offset": 164,
+                  "size": 2,
+                  "name": "start_disk",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "entries_on_disk": {
+                  "_type": "integer",
+                  "offset": 166,
+                  "size": 2,
+                  "name": "entries_on_disk",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "total_entries": {
+                  "_type": "integer",
+                  "offset": 168,
+                  "size": 2,
+                  "name": "total_entries",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "directory_size": {
+                  "_type": "integer",
+                  "offset": 170,
+                  "size": 4,
+                  "name": "directory_size",
+                  "value": 79,
+                  "hex": "0x4F"
+                },
+                "directory_offset": {
+                  "_type": "integer",
+                  "offset": 174,
+                  "size": 4,
+                  "name": "directory_offset",
+                  "value": 79,
+                  "hex": "0x4F"
+                },
+                "comment_length": {
+                  "_type": "integer",
+                  "offset": 178,
+                  "size": 2,
+                  "name": "comment_length",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "comment": {
+                  "_type": "string",
+                  "offset": 180,
+                  "size": 0,
+                  "name": "comment",
+                  "value": "",
+                  "encoding": "ascii"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,513 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 244,
+  "name": "PNG",
+  "struct_type": "png",
+  "children": {
+    "signature": {
+      "_type": "bytes",
+      "offset": 0,
+      "size": 8,
+      "name": "signature",
+      "hex": "89 50 4E 47 0D 0A 1A 0A",
+      "valid": true
+    },
+    "chunks": {
+      "_type": "array",
+      "offset": 8,
+      "size": 236,
+      "name": "chunks",
+      "count": 6,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 8,
+          "size": 25,
+          "name": "chunks",
+          "struct_type": "chunk",
+          "children": {
+            "length": {
+              "_type": "integer",
+              "offset": 8,
+              "size": 4,
+              "name": "length",
+              "value": 13,
+              "hex": "0xD"
+            },
+            "type": {
+              "_type": "string",
+              "offset": 12,
+              "size": 4,
+              "name": "type",
+              "value": "IHDR",
+              "encoding": "ascii",
+              "flags": {
+                "ancillary": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "private": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "reserved": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "safe_to_copy": {
+                  "set": false,
+                  "meaning": "no"
+                }
+              }
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 16,
+              "size": 13,
+              "name": "data",
+              "struct_type": "ihdr",
+              "children": {
+                "width": {
+                  "_type": "integer",
+                  "offset": 16,
+                  "size": 4,
+                  "name": "width",
+                  "value": 4,
+                  "hex": "0x4"
+                },
+                "height": {
+                  "_type": "integer",
+                  "offset": 20,
+                  "size": 4,
+                  "name": "height",
+                  "value": 4,
+                  "hex": "0x4"
+                },
+                "bit_depth": {
+                  "_type": "integer",
+                  "offset": 24,
+                  "size": 1,
+                  "name": "bit_depth",
+                  "value": 8,
+                  "hex": "0x8"
+                },
+                "color_type": {
+                  "_type": "integer",
+                  "offset": 25,
+                  "size": 1,
+                  "name": "color_type",
+                  "value": 2,
+                  "hex": "0x2",
+                  "enum_label": "truecolor"
+                },
+                "compression": {
+                  "_type": "integer",
+                  "offset": 26,
+                  "size": 1,
+                  "name": "compression",
+                  "value": 0,
+                  "hex": "0x0",
+                  "enum_label": "deflate"
+                },
+                "filter": {
+                  "_type": "integer",
+                  "offset": 27,
+                  "size": 1,
+                  "name": "filter",
+                  "value": 0,
+                  "hex": "0x0",
+                  "enum_label": "adaptive"
+                },
+                "interlace": {
+                  "_type": "integer",
+                  "offset": 28,
+                  "size": 1,
+                  "name": "interlace",
+                  "value": 0,
+                  "hex": "0x0",
+                  "enum_label": "none"
+                }
+              }
+            },
+            "crc": {
+              "_type": "integer",
+              "offset": 29,
+              "size": 4,
+              "name": "crc",
+              "value": 647170345,
+              "hex": "0x26930929",
+              "checksum_valid": true,
+              "checksum_algorithm": "crc32"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 33,
+          "size": 13,
+          "name": "chunks",
+          "struct_type": "chunk",
+          "children": {
+            "length": {
+              "_type": "integer",
+              "offset": 33,
+              "size": 4,
+              "name": "length",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "type": {
+              "_type": "string",
+              "offset": 37,
+              "size": 4,
+              "name": "type",
+              "value": "sRGB",
+              "encoding": "ascii",
+              "flags": {
+                "ancillary": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "private": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "reserved": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "safe_to_copy": {
+                  "set": true,
+                  "meaning": "yes"
+                }
+              }
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 41,
+              "size": 1,
+              "name": "data",
+              "struct_type": "srgb_chunk",
+              "children": {
+                "rendering_intent": {
+                  "_type": "integer",
+                  "offset": 41,
+                  "size": 1,
+                  "name": "rendering_intent",
+                  "value": 0,
+                  "hex": "0x0",
+                  "enum_label": "perceptual"
+                }
+              }
+            },
+            "crc": {
+              "_type": "integer",
+              "offset": 42,
+              "size": 4,
+              "name": "crc",
+              "value": 2932743401,
+              "hex": "0xAECE1CE9",
+              "checksum_valid": true,
+              "checksum_algorithm": "crc32"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 46,
+          "size": 132,
+          "name": "chunks",
+          "struct_type": "chunk",
+          "children": {
+            "length": {
+              "_type": "integer",
+              "offset": 46,
+              "size": 4,
+              "name": "length",
+              "value": 120,
+              "hex": "0x78"
+            },
+            "type": {
+              "_type": "string",
+              "offset": 50,
+              "size": 4,
+              "name": "type",
+              "value": "eXIf",
+              "encoding": "ascii",
+              "flags": {
+                "ancillary": {
+                  "set": true,
+                  "meaning": "yes"
+                },
+                "private": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "reserved": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "safe_to_copy": {
+                  "set": true,
+                  "meaning": "yes"
+                }
+              }
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 54,
+              "size": 120,
+              "name": "data",
+              "struct_type": "raw_data",
+              "children": {
+                "data": {
+                  "_type": "bytes",
+                  "offset": 54,
+                  "size": 120,
+                  "name": "data",
+                  "hex": "4D 4D 00 2A 00 00 00 08 00 04 01 1A 00 05 00 00 00 01 00 00 00 3E 01 1B 00 05 00 00 00 01 00 00 00 46 01 28 00 03 00 00 00 01 00 02 00 00 87 69 00 04 00 00 00 01 00 00 00 4E 00 00 00 00 00 00 00 48 00 00 00 01 00 00 00 48 00 00 00 01 00 03 A0 01 00 03 00 00 00 01 00 01 00 00 A0 02 00 04 00 00 00 01 00 00 00 04 A0 03 00 04 00 00 00 01 00 00 00 04 00 00 00 00"
+                }
+              }
+            },
+            "crc": {
+              "_type": "integer",
+              "offset": 174,
+              "size": 4,
+              "name": "crc",
+              "value": 4142123573,
+              "hex": "0xF6E3CA35",
+              "checksum_valid": true,
+              "checksum_algorithm": "crc32"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 178,
+          "size": 21,
+          "name": "chunks",
+          "struct_type": "chunk",
+          "children": {
+            "length": {
+              "_type": "integer",
+              "offset": 178,
+              "size": 4,
+              "name": "length",
+              "value": 9,
+              "hex": "0x9"
+            },
+            "type": {
+              "_type": "string",
+              "offset": 182,
+              "size": 4,
+              "name": "type",
+              "value": "pHYs",
+              "encoding": "ascii",
+              "flags": {
+                "ancillary": {
+                  "set": true,
+                  "meaning": "yes"
+                },
+                "private": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "reserved": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "safe_to_copy": {
+                  "set": true,
+                  "meaning": "yes"
+                }
+              }
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 186,
+              "size": 9,
+              "name": "data",
+              "struct_type": "phys_chunk",
+              "children": {
+                "pixels_per_unit_x": {
+                  "_type": "integer",
+                  "offset": 186,
+                  "size": 4,
+                  "name": "pixels_per_unit_x",
+                  "value": 2835,
+                  "hex": "0xB13"
+                },
+                "pixels_per_unit_y": {
+                  "_type": "integer",
+                  "offset": 190,
+                  "size": 4,
+                  "name": "pixels_per_unit_y",
+                  "value": 2835,
+                  "hex": "0xB13"
+                },
+                "unit": {
+                  "_type": "integer",
+                  "offset": 194,
+                  "size": 1,
+                  "name": "unit",
+                  "value": 1,
+                  "hex": "0x1",
+                  "enum_label": "meter"
+                }
+              }
+            },
+            "crc": {
+              "_type": "integer",
+              "offset": 195,
+              "size": 4,
+              "name": "crc",
+              "value": 10132504,
+              "hex": "0x9A9C18",
+              "checksum_valid": true,
+              "checksum_algorithm": "crc32"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 199,
+          "size": 33,
+          "name": "chunks",
+          "struct_type": "chunk",
+          "children": {
+            "length": {
+              "_type": "integer",
+              "offset": 199,
+              "size": 4,
+              "name": "length",
+              "value": 21,
+              "hex": "0x15"
+            },
+            "type": {
+              "_type": "string",
+              "offset": 203,
+              "size": 4,
+              "name": "type",
+              "value": "IDAT",
+              "encoding": "ascii",
+              "flags": {
+                "ancillary": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "private": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "reserved": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "safe_to_copy": {
+                  "set": false,
+                  "meaning": "no"
+                }
+              }
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 207,
+              "size": 21,
+              "name": "data",
+              "struct_type": "raw_data",
+              "children": {
+                "data": {
+                  "_type": "bytes",
+                  "offset": 207,
+                  "size": 21,
+                  "name": "data",
+                  "hex": "08 1D 63 64 60 F8 CF 00 03 4C 30 06 88 C6 CD 01 00 31 D3 01 07"
+                }
+              }
+            },
+            "crc": {
+              "_type": "integer",
+              "offset": 228,
+              "size": 4,
+              "name": "crc",
+              "value": 3682491951,
+              "hex": "0xDB7E5E2F",
+              "checksum_valid": true,
+              "checksum_algorithm": "crc32"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 232,
+          "size": 12,
+          "name": "chunks",
+          "struct_type": "chunk",
+          "children": {
+            "length": {
+              "_type": "integer",
+              "offset": 232,
+              "size": 4,
+              "name": "length",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "type": {
+              "_type": "string",
+              "offset": 236,
+              "size": 4,
+              "name": "type",
+              "value": "IEND",
+              "encoding": "ascii",
+              "flags": {
+                "ancillary": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "private": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "reserved": {
+                  "set": false,
+                  "meaning": "no"
+                },
+                "safe_to_copy": {
+                  "set": false,
+                  "meaning": "no"
+                }
+              }
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 240,
+              "size": 0,
+              "name": "data",
+              "struct_type": "raw_data",
+              "children": {
+                "data": {
+                  "_type": "bytes",
+                  "offset": 240,
+                  "size": 0,
+                  "name": "data",
+                  "hex": ""
+                }
+              }
+            },
+            "crc": {
+              "_type": "integer",
+              "offset": 240,
+              "size": 4,
+              "name": "crc",
+              "value": 2923585666,
+              "hex": "0xAE426082",
+              "checksum_valid": true,
+              "checksum_algorithm": "crc32"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

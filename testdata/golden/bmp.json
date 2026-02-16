@@ -1,0 +1,165 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 102,
+  "name": "BMP",
+  "struct_type": "bmp",
+  "children": {
+    "file_header": {
+      "_type": "struct",
+      "offset": 0,
+      "size": 14,
+      "name": "file_header",
+      "struct_type": "bmp_file_header",
+      "children": {
+        "signature": {
+          "_type": "bytes",
+          "offset": 0,
+          "size": 2,
+          "name": "signature",
+          "hex": "42 4D",
+          "valid": true
+        },
+        "file_size": {
+          "_type": "integer",
+          "offset": 2,
+          "size": 4,
+          "name": "file_size",
+          "value": 102,
+          "hex": "0x66"
+        },
+        "reserved1": {
+          "_type": "integer",
+          "offset": 6,
+          "size": 2,
+          "name": "reserved1",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "reserved2": {
+          "_type": "integer",
+          "offset": 8,
+          "size": 2,
+          "name": "reserved2",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "pixel_offset": {
+          "_type": "integer",
+          "offset": 10,
+          "size": 4,
+          "name": "pixel_offset",
+          "value": 54,
+          "hex": "0x36"
+        }
+      }
+    },
+    "header_size": {
+      "_type": "integer",
+      "offset": 14,
+      "size": 4,
+      "description": "DIB\u30D8\u30C3\u30C0\u30B5\u30A4\u30BA (40=V1, 108=V4, 124=V5)",
+      "name": "header_size",
+      "value": 40,
+      "hex": "0x28"
+    },
+    "dib_header": {
+      "_type": "struct",
+      "offset": 18,
+      "size": 36,
+      "name": "dib_header",
+      "struct_type": "bitmapinfoheader",
+      "children": {
+        "width": {
+          "_type": "integer",
+          "offset": 18,
+          "size": 4,
+          "name": "width",
+          "value": 4,
+          "hex": "0x4"
+        },
+        "height": {
+          "_type": "integer",
+          "offset": 22,
+          "size": 4,
+          "name": "height",
+          "value": -4,
+          "hex": "0xFFFFFFFFFFFFFFFC"
+        },
+        "planes": {
+          "_type": "integer",
+          "offset": 26,
+          "size": 2,
+          "name": "planes",
+          "value": 1,
+          "hex": "0x1"
+        },
+        "bits_per_pixel": {
+          "_type": "integer",
+          "offset": 28,
+          "size": 2,
+          "name": "bits_per_pixel",
+          "value": 24,
+          "hex": "0x18"
+        },
+        "compression": {
+          "_type": "integer",
+          "offset": 30,
+          "size": 4,
+          "name": "compression",
+          "value": 0,
+          "hex": "0x0",
+          "enum_label": "BI_RGB",
+          "enum_description": "\u7121\u5727\u7E2E"
+        },
+        "image_size": {
+          "_type": "integer",
+          "offset": 34,
+          "size": 4,
+          "name": "image_size",
+          "value": 48,
+          "hex": "0x30"
+        },
+        "x_pixels_per_meter": {
+          "_type": "integer",
+          "offset": 38,
+          "size": 4,
+          "name": "x_pixels_per_meter",
+          "value": 2835,
+          "hex": "0xB13"
+        },
+        "y_pixels_per_meter": {
+          "_type": "integer",
+          "offset": 42,
+          "size": 4,
+          "name": "y_pixels_per_meter",
+          "value": 2835,
+          "hex": "0xB13"
+        },
+        "colors_used": {
+          "_type": "integer",
+          "offset": 46,
+          "size": 4,
+          "name": "colors_used",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "colors_important": {
+          "_type": "integer",
+          "offset": 50,
+          "size": 4,
+          "name": "colors_important",
+          "value": 0,
+          "hex": "0x0"
+        }
+      }
+    },
+    "pixel_data": {
+      "_type": "bytes",
+      "offset": 54,
+      "size": 48,
+      "name": "pixel_data",
+      "hex": "FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00"
+    }
+  }
+}

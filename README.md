@@ -11,6 +11,7 @@
 - **7種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv
 - **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）
 - **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示（フラット形式 / ツリー形式）
+- **スキーマ図出力** — `schema` サブコマンドでフォーマット定義の struct 間参照関係を Mermaid / Graphviz DOT 形式で出力
 - **カラー出力** — 端末でのANSIカラー表示（auto / always / never）
 - **式・演算子** — 算術・比較・論理演算に加え、ビット演算（`&`, `|`, `^`, `<<`, `>>`）をサポート
 - **enum / flags / bitfield** — 値のラベルマッピング、ビットフラグ解析
@@ -86,6 +87,12 @@ dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bd
 
 # 2つのファイルの差分比較（ツリー形式）
 dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --output tree
+
+# フォーマット定義のスキーマ図をMermaid形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml
+
+# スキーマ図をGraphviz DOT形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
 
 # カラー出力を強制
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always

@@ -1,0 +1,137 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 14,
+  "name": "GIF",
+  "struct_type": "gif",
+  "children": {
+    "signature": {
+      "_type": "string",
+      "offset": 0,
+      "size": 3,
+      "description": "GIF\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027GIF\u0027\uFF09",
+      "name": "signature",
+      "value": "GIF",
+      "encoding": "ascii"
+    },
+    "version": {
+      "_type": "string",
+      "offset": 3,
+      "size": 3,
+      "description": "\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002787a\u0027\u307E\u305F\u306F\u002789a\u0027\uFF09",
+      "name": "version",
+      "value": "89a",
+      "encoding": "ascii"
+    },
+    "logical_screen_desc": {
+      "_type": "struct",
+      "offset": 6,
+      "size": 7,
+      "name": "logical_screen_desc",
+      "struct_type": "logical_screen_desc",
+      "children": {
+        "width": {
+          "_type": "integer",
+          "offset": 6,
+          "size": 2,
+          "name": "width",
+          "value": 1,
+          "hex": "0x1"
+        },
+        "height": {
+          "_type": "integer",
+          "offset": 8,
+          "size": 2,
+          "name": "height",
+          "value": 1,
+          "hex": "0x1"
+        },
+        "packed": {
+          "_type": "bitfield",
+          "offset": 10,
+          "size": 1,
+          "name": "packed",
+          "raw_value": "0x0",
+          "fields": [
+            {
+              "name": "global_color_table_flag",
+              "value": 0,
+              "bit_high": 7,
+              "bit_low": 7
+            },
+            {
+              "name": "color_resolution",
+              "value": 0,
+              "bit_high": 6,
+              "bit_low": 4
+            },
+            {
+              "name": "sort_flag",
+              "value": 0,
+              "bit_high": 3,
+              "bit_low": 3
+            },
+            {
+              "name": "size_of_global_color_table",
+              "value": 0,
+              "bit_high": 2,
+              "bit_low": 0
+            }
+          ]
+        },
+        "bg_color_index": {
+          "_type": "integer",
+          "offset": 11,
+          "size": 1,
+          "description": "\u80CC\u666F\u8272\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+          "name": "bg_color_index",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "pixel_aspect_ratio": {
+          "_type": "integer",
+          "offset": 12,
+          "size": 1,
+          "name": "pixel_aspect_ratio",
+          "value": 0,
+          "hex": "0x0"
+        }
+      }
+    },
+    "blocks": {
+      "_type": "array",
+      "offset": 13,
+      "size": 1,
+      "name": "blocks",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 13,
+          "size": 1,
+          "name": "blocks",
+          "struct_type": "gif_block",
+          "children": {
+            "introducer": {
+              "_type": "integer",
+              "offset": 13,
+              "size": 1,
+              "name": "introducer",
+              "value": 59,
+              "hex": "0x3B",
+              "enum_label": "Trailer"
+            },
+            "body": {
+              "_type": "struct",
+              "offset": 14,
+              "size": 0,
+              "name": "body",
+              "struct_type": "trailer",
+              "children": {}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

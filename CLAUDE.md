@@ -20,7 +20,8 @@ DSL(.bdef.yaml) → [DSLパーサー] → IR(中間表現) → [バイナリデ�
 
 - **BinAnalyzer.Core** — ドメインモデル(IR)、式、デコード結果、インタフェース。外部依存ゼロ。
 - **BinAnalyzer.Dsl** — YAML → IR変換。YamlDotNetに依存。
-- **BinAnalyzer.Engine** — バイナリデコーダーエンジン。BCLのみ。
+- **BinAnalyzer.Compression** — 外部NuGet依存の圧縮展開処理（bzip2/lzma/zstd/lz4）。SharpCompress, ZstdSharp.Port, K4os.Compression.LZ4に依存。
+- **BinAnalyzer.Engine** — バイナリデコーダーエンジン。BCL + Compressionに依存。
 - **BinAnalyzer.Output** — 出力フォーマッター(ツリー等)。BCLのみ。
 - **BinAnalyzer.Cli** — CLIエントリポイント。
 

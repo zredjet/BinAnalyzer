@@ -13,6 +13,9 @@ public sealed class YamlStructModel
     [YamlMember(Alias = "string_table")]
     public bool? StringTable { get; set; }
 
+    [YamlMember(Alias = "mode")]
+    public string? Mode { get; set; }
+
     [YamlMember(Alias = "fields")]
     public List<YamlFieldModel> Fields { get; set; } = new();
 }

@@ -1,0 +1,337 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 26,
+  "name": "MP3",
+  "struct_type": "mp3",
+  "children": {
+    "id3v2_header": {
+      "_type": "struct",
+      "offset": 0,
+      "size": 10,
+      "name": "id3v2_header",
+      "struct_type": "id3v2_header",
+      "children": {
+        "magic": {
+          "_type": "string",
+          "offset": 0,
+          "size": 3,
+          "description": "ID3",
+          "name": "magic",
+          "value": "ID3",
+          "encoding": "ascii"
+        },
+        "version": {
+          "_type": "integer",
+          "offset": 3,
+          "size": 1,
+          "description": "ID3v2\u30D0\u30FC\u30B8\u30E7\u30F3\uFF083=v2.3, 4=v2.4\uFF09",
+          "name": "version",
+          "value": 3,
+          "hex": "0x3"
+        },
+        "revision": {
+          "_type": "integer",
+          "offset": 4,
+          "size": 1,
+          "name": "revision",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "flags": {
+          "_type": "bitfield",
+          "offset": 5,
+          "size": 1,
+          "name": "flags",
+          "raw_value": "0x0",
+          "fields": [
+            {
+              "name": "unsynchronisation",
+              "value": 0,
+              "bit_high": 7,
+              "bit_low": 7
+            },
+            {
+              "name": "extended_header",
+              "value": 0,
+              "bit_high": 6,
+              "bit_low": 6
+            },
+            {
+              "name": "experimental",
+              "value": 0,
+              "bit_high": 5,
+              "bit_low": 5
+            },
+            {
+              "name": "footer",
+              "value": 0,
+              "bit_high": 4,
+              "bit_low": 4
+            }
+          ]
+        },
+        "size_b0": {
+          "_type": "integer",
+          "offset": 6,
+          "size": 1,
+          "name": "size_b0",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "size_b1": {
+          "_type": "integer",
+          "offset": 7,
+          "size": 1,
+          "name": "size_b1",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "size_b2": {
+          "_type": "integer",
+          "offset": 8,
+          "size": 1,
+          "name": "size_b2",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "size_b3": {
+          "_type": "integer",
+          "offset": 9,
+          "size": 1,
+          "name": "size_b3",
+          "value": 12,
+          "hex": "0xC"
+        },
+        "tag_size": {
+          "_type": "virtual",
+          "offset": 10,
+          "size": 0,
+          "description": "\u30B7\u30F3\u30AF\u30BB\u30FC\u30D5\u6574\u6570\u304B\u3089\u7B97\u51FA\u3057\u305F\u30BF\u30B0\u30B5\u30A4\u30BA",
+          "name": "tag_size",
+          "value": 12
+        }
+      }
+    },
+    "id3v2_body": {
+      "_type": "struct",
+      "offset": 10,
+      "size": 12,
+      "name": "id3v2_body",
+      "struct_type": "id3v2_frames",
+      "children": {
+        "frames": {
+          "_type": "array",
+          "offset": 10,
+          "size": 12,
+          "name": "frames",
+          "count": 1,
+          "elements": [
+            {
+              "_type": "struct",
+              "offset": 10,
+              "size": 12,
+              "name": "frames",
+              "struct_type": "id3v2_frame",
+              "children": {
+                "frame_id": {
+                  "_type": "string",
+                  "offset": 10,
+                  "size": 4,
+                  "description": "\u30D5\u30EC\u30FC\u30E0\u8B58\u5225\u5B50\uFF08TIT2, TPE1, TALB\u7B49\uFF09",
+                  "name": "frame_id",
+                  "value": "TIT2",
+                  "encoding": "ascii"
+                },
+                "frame_size": {
+                  "_type": "integer",
+                  "offset": 14,
+                  "size": 4,
+                  "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA",
+                  "name": "frame_size",
+                  "value": 2,
+                  "hex": "0x2"
+                },
+                "frame_flags": {
+                  "_type": "integer",
+                  "offset": 18,
+                  "size": 2,
+                  "description": "\u30D5\u30EC\u30FC\u30E0\u30D5\u30E9\u30B0",
+                  "name": "frame_flags",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "frame_data": {
+                  "_type": "bytes",
+                  "offset": 20,
+                  "size": 2,
+                  "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u672C\u4F53",
+                  "name": "frame_data",
+                  "hex": "03 41"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "mpeg_frame_header": {
+      "_type": "struct",
+      "offset": 22,
+      "size": 2,
+      "name": "mpeg_frame_header",
+      "struct_type": "mpeg_frame_header",
+      "children": {
+        "raw": {
+          "_type": "integer",
+          "offset": 22,
+          "size": 2,
+          "description": "MPEG\u30D5\u30EC\u30FC\u30E0\u30D8\u30C3\u30C0\u524D\u534A2\u30D0\u30A4\u30C8",
+          "name": "raw",
+          "value": 65531,
+          "hex": "0xFFFB"
+        },
+        "sync": {
+          "_type": "virtual",
+          "offset": 24,
+          "size": 0,
+          "description": "\u540C\u671F\u30EF\u30FC\u30C9\uFF080x7FF\uFF09",
+          "name": "sync",
+          "value": 2047
+        },
+        "mpeg_version": {
+          "_type": "virtual",
+          "offset": 24,
+          "size": 0,
+          "description": "MPEG\u30D0\u30FC\u30B8\u30E7\u30F3\uFF080=MPEG2.5, 2=MPEG2, 3=MPEG1\uFF09",
+          "name": "mpeg_version",
+          "value": 3
+        },
+        "layer": {
+          "_type": "virtual",
+          "offset": 24,
+          "size": 0,
+          "description": "\u30EC\u30A4\u30E4\u30FC\uFF081=Layer III, 2=Layer II, 3=Layer I\uFF09",
+          "name": "layer",
+          "value": 1
+        },
+        "protection": {
+          "_type": "virtual",
+          "offset": 24,
+          "size": 0,
+          "description": "CRC\u4FDD\u8B77\uFF080=\u3042\u308A, 1=\u306A\u3057\uFF09",
+          "name": "protection",
+          "value": 1
+        }
+      }
+    },
+    "audio_properties": {
+      "_type": "struct",
+      "offset": 24,
+      "size": 1,
+      "name": "audio_properties",
+      "struct_type": "audio_properties",
+      "children": {
+        "raw": {
+          "_type": "integer",
+          "offset": 24,
+          "size": 1,
+          "description": "\u30AA\u30FC\u30C7\u30A3\u30AA\u30D7\u30ED\u30D1\u30C6\u30A3\u30D0\u30A4\u30C8",
+          "name": "raw",
+          "value": 144,
+          "hex": "0x90"
+        },
+        "bitrate_index": {
+          "_type": "virtual",
+          "offset": 25,
+          "size": 0,
+          "description": "\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+          "name": "bitrate_index",
+          "value": 9
+        },
+        "sample_rate_index": {
+          "_type": "virtual",
+          "offset": 25,
+          "size": 0,
+          "description": "\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+          "name": "sample_rate_index",
+          "value": 0
+        },
+        "padding": {
+          "_type": "virtual",
+          "offset": 25,
+          "size": 0,
+          "description": "\u30D1\u30C7\u30A3\u30F3\u30B0\u30D3\u30C3\u30C8",
+          "name": "padding",
+          "value": 0
+        },
+        "private": {
+          "_type": "virtual",
+          "offset": 25,
+          "size": 0,
+          "description": "\u30D7\u30E9\u30A4\u30D9\u30FC\u30C8\u30D3\u30C3\u30C8",
+          "name": "private",
+          "value": 0
+        }
+      }
+    },
+    "channel_mode_and_extension": {
+      "_type": "struct",
+      "offset": 25,
+      "size": 1,
+      "name": "channel_mode_and_extension",
+      "struct_type": "channel_mode_and_extension",
+      "children": {
+        "raw": {
+          "_type": "integer",
+          "offset": 25,
+          "size": 1,
+          "description": "\u30C1\u30E3\u30F3\u30CD\u30EB\u30E2\u30FC\u30C9\u30FB\u62E1\u5F35\u30D0\u30A4\u30C8",
+          "name": "raw",
+          "value": 4,
+          "hex": "0x4"
+        },
+        "channel_mode": {
+          "_type": "virtual",
+          "offset": 26,
+          "size": 0,
+          "description": "\u30C1\u30E3\u30F3\u30CD\u30EB\u30E2\u30FC\u30C9\uFF080=\u30B9\u30C6\u30EC\u30AA, 1=\u30B8\u30E7\u30A4\u30F3\u30C8\u30B9\u30C6\u30EC\u30AA, 2=\u30C7\u30E5\u30A2\u30EB\u30C1\u30E3\u30F3\u30CD\u30EB, 3=\u30E2\u30CE\u30E9\u30EB\uFF09",
+          "name": "channel_mode",
+          "value": 0
+        },
+        "mode_extension": {
+          "_type": "virtual",
+          "offset": 26,
+          "size": 0,
+          "description": "\u30E2\u30FC\u30C9\u62E1\u5F35\uFF08\u30B8\u30E7\u30A4\u30F3\u30C8\u30B9\u30C6\u30EC\u30AA\u6642\u306E\u307F\u6709\u52B9\uFF09",
+          "name": "mode_extension",
+          "value": 0
+        },
+        "copyright": {
+          "_type": "virtual",
+          "offset": 26,
+          "size": 0,
+          "description": "\u30B3\u30D4\u30FC\u30E9\u30A4\u30C8\u30D5\u30E9\u30B0",
+          "name": "copyright",
+          "value": 0
+        },
+        "original": {
+          "_type": "virtual",
+          "offset": 26,
+          "size": 0,
+          "description": "\u30AA\u30EA\u30B8\u30CA\u30EB\u30D5\u30E9\u30B0",
+          "name": "original",
+          "value": 1
+        },
+        "emphasis": {
+          "_type": "virtual",
+          "offset": 26,
+          "size": 0,
+          "description": "\u30A8\u30F3\u30D5\u30A1\u30B7\u30B9\uFF080=\u306A\u3057, 1=50/15ms, 2=reserved, 3=CCITT J.17\uFF09",
+          "name": "emphasis",
+          "value": 0
+        }
+      }
+    }
+  }
+}

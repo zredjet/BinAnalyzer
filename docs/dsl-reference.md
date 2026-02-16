@@ -56,6 +56,11 @@ structs:
 | `utf8z` | 可変 | ヌル終端UTF-8文字列（サイズ指定不要） |
 | `zlib` | 可変 | zlib圧縮データ（展開して解析） |
 | `deflate` | 可変 | deflate圧縮データ（展開して解析） |
+| `gzip` | 可変 | gzip圧縮データ（展開して解析） |
+| `bzip2` | 可変 | bzip2圧縮データ（展開して解析） |
+| `lzma` | 可変 | LZMA圧縮データ（展開して解析、raw LZMA形式） |
+| `zstd` / `zstandard` | 可変 | Zstandard圧縮データ（展開して解析） |
+| `lz4` | 可変 | LZ4圧縮データ（展開して解析、LZ4 Frame Format） |
 | `utf16le` / `utf16-le` | 可変 | UTF-16LE文字列（サイズ指定必須） |
 | `utf16be` / `utf16-be` | 可変 | UTF-16BE文字列（サイズ指定必須） |
 | `sjis` / `shift_jis` / `shift-jis` | 可変 | Shift_JIS文字列（サイズ指定必須） |
@@ -70,7 +75,7 @@ structs:
 
 ## サイズ指定
 
-可変サイズのフィールド（`bytes`, `ascii`, `utf8`, `utf16le`, `utf16be`, `sjis`, `latin1`, `bitfield`, `zlib`, `deflate`）にはサイズ指定が必要です:
+可変サイズのフィールド（`bytes`, `ascii`, `utf8`, `utf16le`, `utf16be`, `sjis`, `latin1`, `bitfield`, `zlib`, `deflate`, `gzip`, `bzip2`, `lzma`, `zstd`, `lz4`）にはサイズ指定が必要です:
 
 ```yaml
 # 固定サイズ
@@ -427,7 +432,23 @@ flags:
 
 ## チェックサム
 
-整数フィールドに `checksum` を指定すると、指定フィールドのバイト列からチェックサムを計算し、フィールド値と照合します。
+フィールドに `checksum` を指定すると、指定フィールドのバイト列からチェックサムを計算し、フィールド値と照合します。
+
+### 対応アルゴリズム
+
+| アルゴリズム | カテゴリ | 出力サイズ | 対応フィールド型 |
+|---|---|---|---|
+| `crc32` | 整数系 | 4 bytes (32-bit) | uint32 等の整数型 |
+| `crc16-ccitt` | 整数系 | 2 bytes (16-bit) | uint16 等の整数型 |
+| `crc16-ibm` | 整数系 | 2 bytes (16-bit) | uint16 等の整数型 |
+| `adler32` | 整数系 | 4 bytes (32-bit) | uint32 等の整数型 |
+| `md5` | ハッシュ系 | 16 bytes | bytes |
+| `sha1` | ハッシュ系 | 20 bytes | bytes |
+| `sha256` | ハッシュ系 | 32 bytes | bytes |
+
+整数系アルゴリズムは整数型フィールドに、ハッシュ系アルゴリズムは bytes 型フィールドに指定します。
+
+### 整数系（CRC-32 / CRC-16 / Adler-32）
 
 ```yaml
 - name: type
@@ -439,11 +460,35 @@ flags:
 - name: crc
   type: uint32
   checksum:
-    algorithm: crc32        # 現在はCRC-32のみ対応
+    algorithm: crc32
     fields: [type, data]    # チェックサム計算対象のフィールド名リスト
+
+- name: header_crc
+  type: uint16
+  checksum:
+    algorithm: crc16-ccitt
+    fields: [magic, version, flags]
 ```
 
-出力にはチェックマーク（✓）またはバツ印（✗）と期待値が表示されます。
+### ハッシュ系（MD5 / SHA-1 / SHA-256）
+
+```yaml
+- name: content_hash
+  type: bytes
+  size: "16"
+  checksum:
+    algorithm: md5
+    fields: [content]
+
+- name: digest
+  type: bytes
+  size: "32"
+  checksum:
+    algorithm: sha256
+    fields: [header, payload]
+```
+
+出力にはチェックマーク（✓）またはバツ印（✗）とアルゴリズム名が表示されます。
 
 ## 可変長整数（LEB128 / VLQ）
 
@@ -494,6 +539,112 @@ flags:
 
 ビット範囲は `"高:低"` 形式で、単一ビットの場合はビット番号のみ指定します。
 
+## ビットストリーム（mode: bitstream）
+
+`mode: bitstream` を構造体に指定すると、その構造体内のフィールドの `size` はビット単位として解釈されます。バイト境界をまたぐ任意ビット幅のフィールドを連続して読み取ることができます。
+
+```yaml
+structs:
+  streaminfo_bits:
+    mode: bitstream
+    fields:
+      - name: sample_rate
+        type: uint32
+        size: "20"          # 20ビット
+      - name: channels
+        type: uint8
+        size: "3"           # 3ビット
+      - name: bps
+        type: uint8
+        size: "5"           # 5ビット
+      - name: total_samples
+        type: uint64
+        size: "36"          # 36ビット
+```
+
+### 制約
+
+- **対応するフィールド型**: 整数型のみ（`uint8`/`uint16`/`uint32`/`uint64`/`int8`/`int16`/`int32`/`int64`）。`bytes`、`ascii`、`struct`、`switch` 等は使用不可
+- **`size` の範囲**: 1〜64 ビット
+- **ビットオーダー**: MSB-first（ビッグエンディアン・ビットオーダー）固定
+- **`type` の役割**: 結果の解釈（符号あり/なし）を決定する。実際の読み取りビット幅は `size` で指定
+
+### 自動バイトアライン
+
+bitstream 構造体の終了時、読み取り位置は自動的に次のバイト境界にアラインされます。合計ビット数がバイト境界に一致しない場合、余りビットは読み飛ばされます。
+
+### 符号拡張
+
+`type` が符号付き整数型（`int8`/`int16`/`int32`/`int64`）の場合、読み取ったビット列のMSBを見て符号拡張が行われます。例えば、5ビットの `11111` は `int8` として `-1` に解釈されます。
+
+### 式参照
+
+bitstream 構造体内でもフィールド参照（`{field_name}`）は通常通り使用できます。先行フィールドの値に基づいて後続フィールドのビット幅を動的に決定することも可能です。
+
+```yaml
+- name: width
+  type: uint8
+  size: "4"
+- name: value
+  type: uint32
+  size: "{width}"    # width の値をビット幅として使用
+```
+
+### 出力表示
+
+bitstream フィールドのオフセットは `[0x0000000A:3]` 形式（バイトオフセット:ビットオフセット）で表示され、サイズは `(20 bits)` のようにビット単位で表示されます。
+
+### bitfield 型との違い
+
+| 観点 | `bitfield` 型（既存） | `mode: bitstream`（新規） |
+|---|---|---|
+| 単位 | バイトコンテナからビット範囲を抽出 | ビットストリームとしてNビット連続読み取り |
+| 指定方法 | フィールドの `type: bitfield` + `fields` でビット位置を範囲指定 | 構造体の `mode: bitstream` + 各フィールドの `size` がビット幅 |
+| バイト境界 | コンテナはバイト単位で読み取り。境界をまたがない | フィールドがバイト境界を自由にまたぐ |
+| 典型的ユースケース | フラグレジスタ、ヘッダの固定幅ビットフィールド | FLAC STREAMINFO、H.264 SPS 等のビットストリーム |
+
+### 使用例: FLAC STREAMINFO
+
+```yaml
+structs:
+  streaminfo:
+    - name: info
+      type: struct
+      struct: streaminfo_bits
+    - name: md5
+      type: bytes
+      size: "16"
+
+  streaminfo_bits:
+    mode: bitstream
+    fields:
+      - name: min_block_size
+        type: uint16
+        size: "16"
+      - name: max_block_size
+        type: uint16
+        size: "16"
+      - name: min_frame_size
+        type: uint32
+        size: "24"
+      - name: max_frame_size
+        type: uint32
+        size: "24"
+      - name: sample_rate
+        type: uint32
+        size: "20"
+      - name: channels
+        type: uint8
+        size: "3"
+      - name: bits_per_sample
+        type: uint8
+        size: "5"
+      - name: total_samples
+        type: uint64
+        size: "36"
+      # 合計: 16+16+24+24+20+3+5+36 = 144ビット = 18バイト
+```
+
 ## バリデーション
 
 バイトフィールドに期待値を指定できます:
@@ -532,7 +683,7 @@ flags:
 
 ## 圧縮データ
 
-`zlib` と `deflate` は圧縮データを展開します。`struct` を指定すると、展開後のデータを構造体としてネスト解析できます。
+圧縮型（`zlib`, `deflate`, `gzip`, `bzip2`, `lzma`, `zstd`, `lz4`）は圧縮データを展開します。`struct` を指定すると、展開後のデータを構造体としてネスト解析できます。
 
 ```yaml
 - name: compressed_data
@@ -543,9 +694,33 @@ flags:
 - name: raw_compressed
   type: deflate
   size: remaining           # structを省略すると生バイト列として出力
+
+- name: gzip_payload
+  type: gzip
+  size: "{gz_size}"
+  struct: inner_data
+
+- name: bz2_section
+  type: bzip2
+  size: "{bz2_size}"
+
+- name: lzma_data
+  type: lzma
+  size: "{lzma_size}"
+
+- name: zstd_block
+  type: zstd                # "zstandard" もエイリアスとして使用可能
+  size: "{block_size}"
+  struct: block_content
+
+- name: lz4_frame
+  type: lz4
+  size: remaining
 ```
 
 `struct` を省略した場合、展開後の生バイト列が出力されます。
+
+`gzip` は BCL の `GZipStream` を使用します。`bzip2`, `lzma`, `zstd`, `lz4` は外部ライブラリ（BinAnalyzer.Compression）を使用します。`lzma` は raw LZMA 形式（5バイトプロパティ + 8バイトサイズ + 圧縮データ）、`lz4` は LZ4 Frame Format を対象とします。
 
 ## インポート
 
@@ -679,7 +854,7 @@ structs:
         type: uint16
 ```
 
-構造体をオブジェクト形式（`endianness`/`align`/`fields` キー）で定義します。旧形式（フィールドリスト直接）との混在も可能です。
+構造体をオブジェクト形式（`endianness`/`align`/`string_table`/`mode`/`fields` キー）で定義します。旧形式（フィールドリスト直接）との混在も可能です。
 
 ### 構造体レベル（動的）
 

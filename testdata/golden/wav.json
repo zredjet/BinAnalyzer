@@ -1,0 +1,167 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 48,
+  "name": "WAV",
+  "struct_type": "wav",
+  "children": {
+    "riff_id": {
+      "_type": "string",
+      "offset": 0,
+      "size": 4,
+      "name": "riff_id",
+      "value": "RIFF",
+      "encoding": "ascii"
+    },
+    "file_size": {
+      "_type": "integer",
+      "offset": 4,
+      "size": 4,
+      "name": "file_size",
+      "value": 40,
+      "hex": "0x28"
+    },
+    "wave_id": {
+      "_type": "string",
+      "offset": 8,
+      "size": 4,
+      "name": "wave_id",
+      "value": "WAVE",
+      "encoding": "ascii"
+    },
+    "chunks": {
+      "_type": "array",
+      "offset": 12,
+      "size": 36,
+      "name": "chunks",
+      "count": 2,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 12,
+          "size": 24,
+          "name": "chunks",
+          "struct_type": "riff_chunk",
+          "children": {
+            "chunk_id": {
+              "_type": "string",
+              "offset": 12,
+              "size": 4,
+              "name": "chunk_id",
+              "value": "fmt ",
+              "encoding": "ascii"
+            },
+            "chunk_size": {
+              "_type": "integer",
+              "offset": 16,
+              "size": 4,
+              "name": "chunk_size",
+              "value": 16,
+              "hex": "0x10"
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 20,
+              "size": 16,
+              "name": "data",
+              "struct_type": "fmt_chunk",
+              "children": {
+                "audio_format": {
+                  "_type": "integer",
+                  "offset": 20,
+                  "size": 2,
+                  "name": "audio_format",
+                  "value": 1,
+                  "hex": "0x1",
+                  "enum_label": "PCM"
+                },
+                "num_channels": {
+                  "_type": "integer",
+                  "offset": 22,
+                  "size": 2,
+                  "name": "num_channels",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "sample_rate": {
+                  "_type": "integer",
+                  "offset": 24,
+                  "size": 4,
+                  "name": "sample_rate",
+                  "value": 8000,
+                  "hex": "0x1F40"
+                },
+                "byte_rate": {
+                  "_type": "integer",
+                  "offset": 28,
+                  "size": 4,
+                  "name": "byte_rate",
+                  "value": 8000,
+                  "hex": "0x1F40"
+                },
+                "block_align": {
+                  "_type": "integer",
+                  "offset": 32,
+                  "size": 2,
+                  "name": "block_align",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "bits_per_sample": {
+                  "_type": "integer",
+                  "offset": 34,
+                  "size": 2,
+                  "name": "bits_per_sample",
+                  "value": 8,
+                  "hex": "0x8"
+                }
+              }
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 36,
+          "size": 12,
+          "name": "chunks",
+          "struct_type": "riff_chunk",
+          "children": {
+            "chunk_id": {
+              "_type": "string",
+              "offset": 36,
+              "size": 4,
+              "name": "chunk_id",
+              "value": "data",
+              "encoding": "ascii"
+            },
+            "chunk_size": {
+              "_type": "integer",
+              "offset": 40,
+              "size": 4,
+              "name": "chunk_size",
+              "value": 4,
+              "hex": "0x4"
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 44,
+              "size": 4,
+              "name": "data",
+              "struct_type": "data_chunk",
+              "children": {
+                "data": {
+                  "_type": "bytes",
+                  "offset": 44,
+                  "size": 4,
+                  "description": "\u30AA\u30FC\u30C7\u30A3\u30AA\u30B5\u30F3\u30D7\u30EB\u30C7\u30FC\u30BF",
+                  "name": "data",
+                  "hex": "80 80 80 80"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

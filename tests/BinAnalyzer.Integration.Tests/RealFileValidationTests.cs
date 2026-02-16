@@ -58,11 +58,14 @@ public class RealFileValidationTests : IClassFixture<RealFileFixture>
     [InlineData("otf.bdef.yaml", "test.otf", "OTF", 2)]
     [InlineData("icc.bdef.yaml", "test.icc", "ICC", 2)]
     [InlineData("avi.bdef.yaml", "test.avi", "AVI", 2)]
+    [InlineData("mp4.bdef.yaml", "test.mp4", "MP4", 1)]
     [InlineData("flv.bdef.yaml", "test.flv", "FLV", 2)]
     [InlineData("7z.bdef.yaml", "test.7z", "7z", 2)]
     [InlineData("wasm.bdef.yaml", "test.wasm", "WASM", 2)]
     [InlineData("dns.bdef.yaml", "test.dns", "DNS", 2)]
     [InlineData("parquet.bdef.yaml", "test.parquet", "Parquet", 2)]
+    [InlineData("protobuf.bdef.yaml", "test.protobuf", "Protobuf", 1)]
+    [InlineData("ogg.bdef.yaml", "test.ogg", "OGG", 1)]
     public void RealFile_DecodesSuccessfully(
         string formatFile, string fileName, string expectedName, int minChildren)
     {
@@ -70,8 +73,7 @@ public class RealFileValidationTests : IClassFixture<RealFileFixture>
         var filePath = Path.Combine(_fixture.TestDataDir, fileName);
         if (!File.Exists(filePath))
         {
-            _output.WriteLine($"SKIPPED: Test file not found: {fileName}");
-            return;
+            Assert.Fail($"Test file not found: {fileName} — RealFileFixture should have generated it");
         }
 
         var data = File.ReadAllBytes(filePath);

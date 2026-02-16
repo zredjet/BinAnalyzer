@@ -1,0 +1,150 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 14,
+  "name": "WASM",
+  "struct_type": "wasm",
+  "children": {
+    "magic": {
+      "_type": "bytes",
+      "offset": 0,
+      "size": 4,
+      "description": "WASM\u30DE\u30B8\u30C3\u30AF\uFF08\u0027\\0asm\u0027\uFF09",
+      "name": "magic",
+      "hex": "00 61 73 6D",
+      "valid": true
+    },
+    "version": {
+      "_type": "integer",
+      "offset": 4,
+      "size": 4,
+      "description": "WASM\u30D0\u30A4\u30CA\u30EA\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30FC\u30B8\u30E7\u30F3",
+      "_validation": {
+        "passed": true,
+        "expression": "{version == 1}"
+      },
+      "name": "version",
+      "value": 1,
+      "hex": "0x1"
+    },
+    "sections": {
+      "_type": "array",
+      "offset": 8,
+      "size": 6,
+      "name": "sections",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 8,
+          "size": 6,
+          "name": "sections",
+          "struct_type": "section",
+          "children": {
+            "section_id": {
+              "_type": "integer",
+              "offset": 8,
+              "size": 1,
+              "name": "section_id",
+              "value": 1,
+              "hex": "0x1",
+              "enum_label": "type"
+            },
+            "section_size": {
+              "_type": "integer",
+              "offset": 9,
+              "size": 1,
+              "description": "\u30BB\u30AF\u30B7\u30E7\u30F3\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
+              "name": "section_size",
+              "value": 4,
+              "hex": "0x4"
+            },
+            "section_data": {
+              "_type": "struct",
+              "offset": 10,
+              "size": 4,
+              "name": "section_data",
+              "struct_type": "type_section_data",
+              "children": {
+                "count": {
+                  "_type": "integer",
+                  "offset": 10,
+                  "size": 1,
+                  "description": "\u95A2\u6570\u578B\u306E\u6570",
+                  "name": "count",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "entries": {
+                  "_type": "array",
+                  "offset": 11,
+                  "size": 3,
+                  "name": "entries",
+                  "count": 1,
+                  "elements": [
+                    {
+                      "_type": "struct",
+                      "offset": 11,
+                      "size": 3,
+                      "name": "entries",
+                      "struct_type": "func_type",
+                      "children": {
+                        "form": {
+                          "_type": "integer",
+                          "offset": 11,
+                          "size": 1,
+                          "description": "\u95A2\u6570\u578B\u30DE\u30FC\u30AB\u30FC\uFF080x60\uFF09",
+                          "_validation": {
+                            "passed": true,
+                            "expression": "{form == 96}"
+                          },
+                          "name": "form",
+                          "value": 96,
+                          "hex": "0x60"
+                        },
+                        "param_count": {
+                          "_type": "integer",
+                          "offset": 12,
+                          "size": 1,
+                          "description": "\u30D1\u30E9\u30E1\u30FC\u30BF\u6570",
+                          "name": "param_count",
+                          "value": 0,
+                          "hex": "0x0"
+                        },
+                        "params": {
+                          "_type": "array",
+                          "offset": 13,
+                          "size": 0,
+                          "name": "params",
+                          "count": 0,
+                          "elements": []
+                        },
+                        "result_count": {
+                          "_type": "integer",
+                          "offset": 13,
+                          "size": 1,
+                          "description": "\u623B\u308A\u5024\u6570",
+                          "name": "result_count",
+                          "value": 0,
+                          "hex": "0x0"
+                        },
+                        "results": {
+                          "_type": "array",
+                          "offset": 14,
+                          "size": 0,
+                          "name": "results",
+                          "count": 0,
+                          "elements": []
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,351 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 110,
+  "name": "SQLite",
+  "struct_type": "sqlite",
+  "children": {
+    "header": {
+      "_type": "struct",
+      "offset": 0,
+      "size": 100,
+      "name": "header",
+      "struct_type": "database_header",
+      "children": {
+        "magic": {
+          "_type": "string",
+          "offset": 0,
+          "size": 16,
+          "description": "\u30D8\u30C3\u30C0\u6587\u5B57\u5217: \u0027SQLite format 3\\000\u0027",
+          "name": "magic",
+          "value": "SQLite format 3\u0000",
+          "encoding": "ascii"
+        },
+        "page_size": {
+          "_type": "integer",
+          "offset": 16,
+          "size": 2,
+          "description": "\u30DA\u30FC\u30B8\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09\u30021\u306E\u5834\u5408\u306F65536\u3092\u610F\u5473\u3059\u308B\u3002512\u304B\u308965536\u306E\u9593\u306E2\u306E\u7D2F\u4E57\u3067\u3042\u308B\u3053\u3068",
+          "name": "page_size",
+          "value": 4096,
+          "hex": "0x1000"
+        },
+        "write_version": {
+          "_type": "integer",
+          "offset": 18,
+          "size": 1,
+          "description": "\u30D5\u30A1\u30A4\u30EB\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u66F8\u304D\u8FBC\u307F\u30D0\u30FC\u30B8\u30E7\u30F3\uFF081=\u30EC\u30AC\u30B7\u30FC\u30012=WAL\uFF09",
+          "name": "write_version",
+          "value": 1,
+          "hex": "0x1",
+          "enum_label": "legacy",
+          "enum_description": "\u30EC\u30AC\u30B7\u30FC\u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB"
+        },
+        "read_version": {
+          "_type": "integer",
+          "offset": 19,
+          "size": 1,
+          "description": "\u30D5\u30A1\u30A4\u30EB\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u8AAD\u307F\u53D6\u308A\u30D0\u30FC\u30B8\u30E7\u30F3\uFF081=\u30EC\u30AC\u30B7\u30FC\u30012=WAL\uFF09",
+          "name": "read_version",
+          "value": 1,
+          "hex": "0x1",
+          "enum_label": "legacy",
+          "enum_description": "\u30EC\u30AC\u30B7\u30FC\u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB"
+        },
+        "reserved_space": {
+          "_type": "integer",
+          "offset": 20,
+          "size": 1,
+          "description": "\u5404\u30DA\u30FC\u30B8\u672B\u5C3E\u306E\u672A\u4F7F\u7528\u30D0\u30A4\u30C8\u6570",
+          "name": "reserved_space",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "max_embedded_payload_fraction": {
+          "_type": "integer",
+          "offset": 21,
+          "size": 1,
+          "description": "Must be 64",
+          "_validation": {
+            "passed": true,
+            "expression": "{max_embedded_payload_fraction == 64}"
+          },
+          "name": "max_embedded_payload_fraction",
+          "value": 64,
+          "hex": "0x40"
+        },
+        "min_embedded_payload_fraction": {
+          "_type": "integer",
+          "offset": 22,
+          "size": 1,
+          "description": "Must be 32",
+          "_validation": {
+            "passed": true,
+            "expression": "{min_embedded_payload_fraction == 32}"
+          },
+          "name": "min_embedded_payload_fraction",
+          "value": 32,
+          "hex": "0x20"
+        },
+        "leaf_payload_fraction": {
+          "_type": "integer",
+          "offset": 23,
+          "size": 1,
+          "description": "Must be 32",
+          "_validation": {
+            "passed": true,
+            "expression": "{leaf_payload_fraction == 32}"
+          },
+          "name": "leaf_payload_fraction",
+          "value": 32,
+          "hex": "0x20"
+        },
+        "file_change_counter": {
+          "_type": "integer",
+          "offset": 24,
+          "size": 4,
+          "description": "\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3\u30B3\u30DF\u30C3\u30C8\u3054\u3068\u306B\u30A4\u30F3\u30AF\u30EA\u30E1\u30F3\u30C8\u3002\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u5909\u66F4\u306E\u691C\u51FA\u306B\u4F7F\u7528",
+          "name": "file_change_counter",
+          "value": 2,
+          "hex": "0x2"
+        },
+        "database_size_pages": {
+          "_type": "integer",
+          "offset": 28,
+          "size": 4,
+          "description": "\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u30B5\u30A4\u30BA\uFF08\u30DA\u30FC\u30B8\u6570\uFF09",
+          "name": "database_size_pages",
+          "value": 2,
+          "hex": "0x2"
+        },
+        "first_freelist_trunk_page": {
+          "_type": "integer",
+          "offset": 32,
+          "size": 4,
+          "name": "first_freelist_trunk_page",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "total_freelist_pages": {
+          "_type": "integer",
+          "offset": 36,
+          "size": 4,
+          "name": "total_freelist_pages",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "schema_cookie": {
+          "_type": "integer",
+          "offset": 40,
+          "size": 4,
+          "name": "schema_cookie",
+          "value": 1,
+          "hex": "0x1"
+        },
+        "schema_format_number": {
+          "_type": "integer",
+          "offset": 44,
+          "size": 4,
+          "description": "1, 2, 3, or 4",
+          "_validation": {
+            "passed": true,
+            "expression": "{schema_format_number \u003E= 1 and schema_format_number \u003C= 4}"
+          },
+          "name": "schema_format_number",
+          "value": 4,
+          "hex": "0x4"
+        },
+        "default_page_cache_size": {
+          "_type": "integer",
+          "offset": 48,
+          "size": 4,
+          "name": "default_page_cache_size",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "largest_root_btree_page": {
+          "_type": "integer",
+          "offset": 52,
+          "size": 4,
+          "description": "\u6700\u5927\u30EB\u30FC\u30C8B-Tree\u30DA\u30FC\u30B8\u756A\u53F7\uFF08\u81EA\u52D5\u30D0\u30AD\u30E5\u30FC\u30E0/\u5897\u5206\u30D0\u30AD\u30E5\u30FC\u30E0\u30E2\u30FC\u30C9\uFF09",
+          "name": "largest_root_btree_page",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "text_encoding": {
+          "_type": "integer",
+          "offset": 56,
+          "size": 4,
+          "name": "text_encoding",
+          "value": 1,
+          "hex": "0x1",
+          "enum_label": "UTF-8"
+        },
+        "user_version": {
+          "_type": "integer",
+          "offset": 60,
+          "size": 4,
+          "name": "user_version",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "incremental_vacuum_mode": {
+          "_type": "integer",
+          "offset": 64,
+          "size": 4,
+          "description": "\u5897\u5206\u30D0\u30AD\u30E5\u30FC\u30E0\u30E2\u30FC\u30C9\u306E\u5834\u5408\u306F\u975E\u30BC\u30ED",
+          "name": "incremental_vacuum_mode",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "application_id": {
+          "_type": "integer",
+          "offset": 68,
+          "size": 4,
+          "name": "application_id",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "reserved_for_expansion": {
+          "_type": "bytes",
+          "offset": 72,
+          "size": 20,
+          "description": "\u62E1\u5F35\u7528\u4E88\u7D04\u9818\u57DF\uFF08\u30BC\u30ED\u3067\u3042\u308B\u3053\u3068\uFF09",
+          "name": "reserved_for_expansion",
+          "hex": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+        },
+        "version_valid_for": {
+          "_type": "integer",
+          "offset": 92,
+          "size": 4,
+          "name": "version_valid_for",
+          "value": 2,
+          "hex": "0x2"
+        },
+        "sqlite_version_number": {
+          "_type": "integer",
+          "offset": 96,
+          "size": 4,
+          "description": "e.g. 3039004 for 3.39.4",
+          "name": "sqlite_version_number",
+          "value": 3051001,
+          "hex": "0x2E8DF9"
+        }
+      }
+    },
+    "first_page": {
+      "_type": "struct",
+      "offset": 100,
+      "size": 10,
+      "name": "first_page",
+      "struct_type": "btree_page_header",
+      "children": {
+        "page_type": {
+          "_type": "integer",
+          "offset": 100,
+          "size": 1,
+          "name": "page_type",
+          "value": 13,
+          "hex": "0xD",
+          "enum_label": "TABLE_LEAF",
+          "enum_description": "\u30EA\u30FC\u30D5\u30C6\u30FC\u30D6\u30EBB-Tree\u30DA\u30FC\u30B8"
+        },
+        "first_freeblock": {
+          "_type": "integer",
+          "offset": 101,
+          "size": 2,
+          "name": "first_freeblock",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "number_of_cells": {
+          "_type": "integer",
+          "offset": 103,
+          "size": 2,
+          "name": "number_of_cells",
+          "value": 1,
+          "hex": "0x1"
+        },
+        "cell_content_offset": {
+          "_type": "integer",
+          "offset": 105,
+          "size": 2,
+          "description": "\u30BB\u30EB\u30B3\u30F3\u30C6\u30F3\u30C4\u9818\u57DF\u306E\u5148\u982D\u30D0\u30A4\u30C8\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF080\u306F65536\u3092\u610F\u5473\u3059\u308B\uFF09",
+          "name": "cell_content_offset",
+          "value": 4022,
+          "hex": "0xFB6"
+        },
+        "fragmented_free_bytes": {
+          "_type": "integer",
+          "offset": 107,
+          "size": 1,
+          "name": "fragmented_free_bytes",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "cell_pointer_array": {
+          "_type": "array",
+          "offset": 108,
+          "size": 2,
+          "name": "cell_pointer_array",
+          "count": 1,
+          "elements": [
+            {
+              "_type": "integer",
+              "offset": 108,
+              "size": 2,
+              "description": "\u30DA\u30FC\u30B8\u5185\u306E\u30BB\u30EB\u30B3\u30F3\u30C6\u30F3\u30C4\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\u914D\u5217",
+              "name": "cell_pointer_array",
+              "value": 4022,
+              "hex": "0xFB6"
+            }
+          ]
+        },
+        "cells": {
+          "_type": "array",
+          "offset": 110,
+          "size": 0,
+          "name": "cells",
+          "count": 1,
+          "elements": [
+            {
+              "_type": "struct",
+              "offset": 4022,
+              "size": 74,
+              "name": "cells",
+              "struct_type": "table_leaf_cell",
+              "children": {
+                "payload_size": {
+                  "_type": "integer",
+                  "offset": 4022,
+                  "size": 1,
+                  "description": "\u30DA\u30A4\u30ED\u30FC\u30C9\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
+                  "name": "payload_size",
+                  "value": 72,
+                  "hex": "0x48"
+                },
+                "rowid": {
+                  "_type": "integer",
+                  "offset": 4023,
+                  "size": 1,
+                  "description": "\u884CID\uFF08INTEGER PRIMARY KEY \u306E\u5024\uFF09",
+                  "name": "rowid",
+                  "value": 1,
+                  "hex": "0x1"
+                },
+                "payload": {
+                  "_type": "bytes",
+                  "offset": 4024,
+                  "size": 72,
+                  "description": "\u30EC\u30B3\u30FC\u30C9\u30C7\u30FC\u30BF",
+                  "name": "payload",
+                  "hex": "06 17 15 15 01 75 74 61 62 6C 65 74 65 73 74 74 65 73 74 02 43 52 45 41 54 45 20 54 41 42 4C 45 20 74 65 73 74 28 69 64 20 49 4E 54 45 47 45 52 20 50 52 49 4D 41 52 59 20 4B 45 59 2C 20 6E 61 6D 65 20 54 45 58 54 29"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

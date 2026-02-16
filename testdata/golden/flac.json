@@ -1,0 +1,224 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 42,
+  "name": "FLAC",
+  "struct_type": "flac",
+  "children": {
+    "magic": {
+      "_type": "bytes",
+      "offset": 0,
+      "size": 4,
+      "description": "fLaC\u30DE\u30B8\u30C3\u30AF",
+      "name": "magic",
+      "hex": "66 4C 61 43",
+      "valid": true
+    },
+    "metadata_blocks": {
+      "_type": "array",
+      "offset": 4,
+      "size": 38,
+      "name": "metadata_blocks",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 4,
+          "size": 38,
+          "name": "metadata_blocks",
+          "struct_type": "metadata_block",
+          "children": {
+            "header_byte": {
+              "_type": "integer",
+              "offset": 4,
+              "size": 1,
+              "name": "header_byte",
+              "value": 128,
+              "hex": "0x80"
+            },
+            "is_last": {
+              "_type": "virtual",
+              "offset": 5,
+              "size": 0,
+              "description": "\u6700\u7D42\u30D6\u30ED\u30C3\u30AF\u30D5\u30E9\u30B0\uFF081=\u6700\u7D42\uFF09",
+              "name": "is_last",
+              "value": 1
+            },
+            "block_type": {
+              "_type": "virtual",
+              "offset": 5,
+              "size": 0,
+              "description": "\u30D6\u30ED\u30C3\u30AF\u30BF\u30A4\u30D7\uFF080=STREAMINFO, 1=PADDING, 2=APPLICATION, 3=SEEKTABLE, 4=VORBIS_COMMENT, 5=CUESHEET, 6=PICTURE\uFF09",
+              "name": "block_type",
+              "value": 0
+            },
+            "length_b0": {
+              "_type": "integer",
+              "offset": 5,
+              "size": 1,
+              "name": "length_b0",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "length_b1": {
+              "_type": "integer",
+              "offset": 6,
+              "size": 1,
+              "name": "length_b1",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "length_b2": {
+              "_type": "integer",
+              "offset": 7,
+              "size": 1,
+              "name": "length_b2",
+              "value": 34,
+              "hex": "0x22"
+            },
+            "length": {
+              "_type": "virtual",
+              "offset": 8,
+              "size": 0,
+              "description": "\u30D6\u30ED\u30C3\u30AF\u30C7\u30FC\u30BF\u9577\uFF0824\u30D3\u30C3\u30C8\uFF09",
+              "name": "length",
+              "value": 34
+            },
+            "data": {
+              "_type": "struct",
+              "offset": 8,
+              "size": 34,
+              "name": "data",
+              "struct_type": "streaminfo",
+              "children": {
+                "min_block_size": {
+                  "_type": "integer",
+                  "offset": 8,
+                  "size": 2,
+                  "description": "\u6700\u5C0F\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u30B5\u30F3\u30D7\u30EB\u6570\uFF09",
+                  "name": "min_block_size",
+                  "value": 4096,
+                  "hex": "0x1000"
+                },
+                "max_block_size": {
+                  "_type": "integer",
+                  "offset": 10,
+                  "size": 2,
+                  "description": "\u6700\u5927\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u30B5\u30F3\u30D7\u30EB\u6570\uFF09",
+                  "name": "max_block_size",
+                  "value": 4096,
+                  "hex": "0x1000"
+                },
+                "min_frame_size_b0": {
+                  "_type": "integer",
+                  "offset": 12,
+                  "size": 1,
+                  "name": "min_frame_size_b0",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "min_frame_size_b1": {
+                  "_type": "integer",
+                  "offset": 13,
+                  "size": 1,
+                  "name": "min_frame_size_b1",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "min_frame_size_b2": {
+                  "_type": "integer",
+                  "offset": 14,
+                  "size": 1,
+                  "name": "min_frame_size_b2",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "min_frame_size": {
+                  "_type": "virtual",
+                  "offset": 15,
+                  "size": 0,
+                  "description": "\u6700\u5C0F\u30D5\u30EC\u30FC\u30E0\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30010=\u4E0D\u660E\uFF09",
+                  "name": "min_frame_size",
+                  "value": 0
+                },
+                "max_frame_size_b0": {
+                  "_type": "integer",
+                  "offset": 15,
+                  "size": 1,
+                  "name": "max_frame_size_b0",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "max_frame_size_b1": {
+                  "_type": "integer",
+                  "offset": 16,
+                  "size": 1,
+                  "name": "max_frame_size_b1",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "max_frame_size_b2": {
+                  "_type": "integer",
+                  "offset": 17,
+                  "size": 1,
+                  "name": "max_frame_size_b2",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "max_frame_size": {
+                  "_type": "virtual",
+                  "offset": 18,
+                  "size": 0,
+                  "description": "\u6700\u5927\u30D5\u30EC\u30FC\u30E0\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30010=\u4E0D\u660E\uFF09",
+                  "name": "max_frame_size",
+                  "value": 0
+                },
+                "sample_rate_channels_bps_samples": {
+                  "_type": "bitfield",
+                  "offset": 18,
+                  "size": 8,
+                  "name": "sample_rate_channels_bps_samples",
+                  "raw_value": "0xAC442F000000000",
+                  "fields": [
+                    {
+                      "name": "sample_rate",
+                      "value": 44100,
+                      "bit_high": 63,
+                      "bit_low": 44
+                    },
+                    {
+                      "name": "channels",
+                      "value": 1,
+                      "bit_high": 43,
+                      "bit_low": 41
+                    },
+                    {
+                      "name": "bps",
+                      "value": 15,
+                      "bit_high": 40,
+                      "bit_low": 36
+                    },
+                    {
+                      "name": "total_samples",
+                      "value": 0,
+                      "bit_high": 35,
+                      "bit_low": 0
+                    }
+                  ]
+                },
+                "md5": {
+                  "_type": "bytes",
+                  "offset": 26,
+                  "size": 16,
+                  "description": "\u975E\u5727\u7E2E\u30AA\u30FC\u30C7\u30A3\u30AA\u30C7\u30FC\u30BF\u306EMD5\u30B7\u30B0\u30CD\u30C1\u30E3",
+                  "name": "md5",
+                  "hex": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

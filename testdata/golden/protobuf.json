@@ -1,0 +1,142 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 15,
+  "name": "Protobuf",
+  "struct_type": "protobuf_message",
+  "children": {
+    "fields": {
+      "_type": "array",
+      "offset": 0,
+      "size": 15,
+      "name": "fields",
+      "count": 3,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 0,
+          "size": 3,
+          "name": "fields",
+          "struct_type": "protobuf_field",
+          "children": {
+            "tag": {
+              "_type": "integer",
+              "offset": 0,
+              "size": 1,
+              "name": "tag",
+              "value": 8,
+              "hex": "0x8"
+            },
+            "field_number": {
+              "_type": "virtual",
+              "offset": 1,
+              "size": 0,
+              "name": "field_number",
+              "value": 1
+            },
+            "wire_type": {
+              "_type": "virtual",
+              "offset": 1,
+              "size": 0,
+              "name": "wire_type",
+              "value": 0
+            },
+            "varint_value": {
+              "_type": "integer",
+              "offset": 1,
+              "size": 2,
+              "name": "varint_value",
+              "value": 150,
+              "hex": "0x96"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 3,
+          "size": 7,
+          "name": "fields",
+          "struct_type": "protobuf_field",
+          "children": {
+            "tag": {
+              "_type": "integer",
+              "offset": 3,
+              "size": 1,
+              "name": "tag",
+              "value": 18,
+              "hex": "0x12"
+            },
+            "field_number": {
+              "_type": "virtual",
+              "offset": 4,
+              "size": 0,
+              "name": "field_number",
+              "value": 2
+            },
+            "wire_type": {
+              "_type": "virtual",
+              "offset": 4,
+              "size": 0,
+              "name": "wire_type",
+              "value": 2
+            },
+            "length": {
+              "_type": "integer",
+              "offset": 4,
+              "size": 1,
+              "name": "length",
+              "value": 5,
+              "hex": "0x5"
+            },
+            "delimited_data": {
+              "_type": "bytes",
+              "offset": 5,
+              "size": 5,
+              "name": "delimited_data",
+              "hex": "48 65 6C 6C 6F"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 10,
+          "size": 5,
+          "name": "fields",
+          "struct_type": "protobuf_field",
+          "children": {
+            "tag": {
+              "_type": "integer",
+              "offset": 10,
+              "size": 1,
+              "name": "tag",
+              "value": 29,
+              "hex": "0x1D"
+            },
+            "field_number": {
+              "_type": "virtual",
+              "offset": 11,
+              "size": 0,
+              "name": "field_number",
+              "value": 3
+            },
+            "wire_type": {
+              "_type": "virtual",
+              "offset": 11,
+              "size": 0,
+              "name": "wire_type",
+              "value": 5
+            },
+            "fixed32_value": {
+              "_type": "integer",
+              "offset": 11,
+              "size": 4,
+              "name": "fixed32_value",
+              "value": 42,
+              "hex": "0x2A"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

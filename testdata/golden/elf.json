@@ -1,0 +1,293 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 0,
+  "name": "ELF",
+  "struct_type": "elf",
+  "children": {
+    "e_ident": {
+      "_type": "struct",
+      "offset": 0,
+      "size": 16,
+      "name": "e_ident",
+      "struct_type": "elf_ident",
+      "children": {
+        "magic": {
+          "_type": "bytes",
+          "offset": 0,
+          "size": 4,
+          "name": "magic",
+          "hex": "7F 45 4C 46",
+          "valid": true
+        },
+        "ei_class": {
+          "_type": "integer",
+          "offset": 4,
+          "size": 1,
+          "name": "ei_class",
+          "value": 2,
+          "hex": "0x2",
+          "enum_label": "ELFCLASS64"
+        },
+        "ei_data": {
+          "_type": "integer",
+          "offset": 5,
+          "size": 1,
+          "name": "ei_data",
+          "value": 1,
+          "hex": "0x1",
+          "enum_label": "ELFDATA2LSB",
+          "enum_description": "\u30EA\u30C8\u30EB\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3"
+        },
+        "ei_version": {
+          "_type": "integer",
+          "offset": 6,
+          "size": 1,
+          "name": "ei_version",
+          "value": 1,
+          "hex": "0x1"
+        },
+        "ei_osabi": {
+          "_type": "integer",
+          "offset": 7,
+          "size": 1,
+          "name": "ei_osabi",
+          "value": 0,
+          "hex": "0x0",
+          "enum_label": "ELFOSABI_NONE",
+          "enum_description": "System V"
+        },
+        "ei_abiversion": {
+          "_type": "integer",
+          "offset": 8,
+          "size": 1,
+          "name": "ei_abiversion",
+          "value": 0,
+          "hex": "0x0"
+        },
+        "ei_pad": {
+          "_type": "bytes",
+          "offset": 9,
+          "size": 7,
+          "name": "ei_pad",
+          "hex": "00 00 00 00 00 00 00"
+        }
+      }
+    },
+    "body": {
+      "_type": "struct",
+      "offset": 16,
+      "size": -16,
+      "name": "body",
+      "struct_type": "elf64_body",
+      "children": {
+        "header": {
+          "_type": "struct",
+          "offset": 16,
+          "size": 48,
+          "name": "header",
+          "struct_type": "elf64_header",
+          "children": {
+            "e_type": {
+              "_type": "integer",
+              "offset": 16,
+              "size": 2,
+              "name": "e_type",
+              "value": 2,
+              "hex": "0x2",
+              "enum_label": "ET_EXEC"
+            },
+            "e_machine": {
+              "_type": "integer",
+              "offset": 18,
+              "size": 2,
+              "name": "e_machine",
+              "value": 62,
+              "hex": "0x3E",
+              "enum_label": "EM_X86_64"
+            },
+            "e_version": {
+              "_type": "integer",
+              "offset": 20,
+              "size": 4,
+              "name": "e_version",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "e_entry": {
+              "_type": "integer",
+              "offset": 24,
+              "size": 8,
+              "name": "e_entry",
+              "value": 4194304,
+              "hex": "0x400000"
+            },
+            "e_phoff": {
+              "_type": "integer",
+              "offset": 32,
+              "size": 8,
+              "name": "e_phoff",
+              "value": 64,
+              "hex": "0x40"
+            },
+            "e_shoff": {
+              "_type": "integer",
+              "offset": 40,
+              "size": 8,
+              "name": "e_shoff",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "e_flags": {
+              "_type": "integer",
+              "offset": 48,
+              "size": 4,
+              "name": "e_flags",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "e_ehsize": {
+              "_type": "integer",
+              "offset": 52,
+              "size": 2,
+              "name": "e_ehsize",
+              "value": 64,
+              "hex": "0x40"
+            },
+            "e_phentsize": {
+              "_type": "integer",
+              "offset": 54,
+              "size": 2,
+              "name": "e_phentsize",
+              "value": 56,
+              "hex": "0x38"
+            },
+            "e_phnum": {
+              "_type": "integer",
+              "offset": 56,
+              "size": 2,
+              "name": "e_phnum",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "e_shentsize": {
+              "_type": "integer",
+              "offset": 58,
+              "size": 2,
+              "name": "e_shentsize",
+              "value": 64,
+              "hex": "0x40"
+            },
+            "e_shnum": {
+              "_type": "integer",
+              "offset": 60,
+              "size": 2,
+              "name": "e_shnum",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "e_shstrndx": {
+              "_type": "integer",
+              "offset": 62,
+              "size": 2,
+              "name": "e_shstrndx",
+              "value": 0,
+              "hex": "0x0"
+            }
+          }
+        },
+        "program_headers": {
+          "_type": "array",
+          "offset": 64,
+          "size": 56,
+          "name": "program_headers",
+          "count": 1,
+          "elements": [
+            {
+              "_type": "struct",
+              "offset": 64,
+              "size": 56,
+              "name": "program_headers",
+              "struct_type": "elf64_phdr",
+              "children": {
+                "p_type": {
+                  "_type": "integer",
+                  "offset": 64,
+                  "size": 4,
+                  "name": "p_type",
+                  "value": 1,
+                  "hex": "0x1",
+                  "enum_label": "PT_LOAD"
+                },
+                "p_flags": {
+                  "_type": "integer",
+                  "offset": 68,
+                  "size": 4,
+                  "name": "p_flags",
+                  "value": 5,
+                  "hex": "0x5"
+                },
+                "p_offset": {
+                  "_type": "integer",
+                  "offset": 72,
+                  "size": 8,
+                  "name": "p_offset",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "p_vaddr": {
+                  "_type": "integer",
+                  "offset": 80,
+                  "size": 8,
+                  "name": "p_vaddr",
+                  "value": 4194304,
+                  "hex": "0x400000"
+                },
+                "p_paddr": {
+                  "_type": "integer",
+                  "offset": 88,
+                  "size": 8,
+                  "name": "p_paddr",
+                  "value": 4194304,
+                  "hex": "0x400000"
+                },
+                "p_filesz": {
+                  "_type": "integer",
+                  "offset": 96,
+                  "size": 8,
+                  "name": "p_filesz",
+                  "value": 120,
+                  "hex": "0x78"
+                },
+                "p_memsz": {
+                  "_type": "integer",
+                  "offset": 104,
+                  "size": 8,
+                  "name": "p_memsz",
+                  "value": 120,
+                  "hex": "0x78"
+                },
+                "p_align": {
+                  "_type": "integer",
+                  "offset": 112,
+                  "size": 8,
+                  "name": "p_align",
+                  "value": 2097152,
+                  "hex": "0x200000"
+                }
+              }
+            }
+          ]
+        },
+        "section_headers": {
+          "_type": "array",
+          "offset": 0,
+          "size": 0,
+          "name": "section_headers",
+          "count": 0,
+          "elements": []
+        }
+      }
+    }
+  }
+}

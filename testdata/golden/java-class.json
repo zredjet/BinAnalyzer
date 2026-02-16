@@ -1,0 +1,221 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 34,
+  "name": "JavaClass",
+  "struct_type": "java_class",
+  "children": {
+    "magic": {
+      "_type": "bytes",
+      "offset": 0,
+      "size": 4,
+      "description": "Java\u30AF\u30E9\u30B9\u30D5\u30A1\u30A4\u30EB\u30DE\u30B8\u30C3\u30AF\uFF080xCAFEBABE\uFF09",
+      "name": "magic",
+      "hex": "CA FE BA BE",
+      "valid": true
+    },
+    "minor_version": {
+      "_type": "integer",
+      "offset": 4,
+      "size": 2,
+      "name": "minor_version",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "major_version": {
+      "_type": "integer",
+      "offset": 6,
+      "size": 2,
+      "name": "major_version",
+      "value": 61,
+      "hex": "0x3D",
+      "enum_label": "Java_17"
+    },
+    "constant_pool_count": {
+      "_type": "integer",
+      "offset": 8,
+      "size": 2,
+      "name": "constant_pool_count",
+      "value": 3,
+      "hex": "0x3"
+    },
+    "constant_pool": {
+      "_type": "array",
+      "offset": 10,
+      "size": 10,
+      "name": "constant_pool",
+      "count": 2,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 10,
+          "size": 3,
+          "name": "constant_pool",
+          "struct_type": "cp_entry",
+          "children": {
+            "tag": {
+              "_type": "integer",
+              "offset": 10,
+              "size": 1,
+              "name": "tag",
+              "value": 7,
+              "hex": "0x7",
+              "enum_label": "Class"
+            },
+            "info": {
+              "_type": "struct",
+              "offset": 11,
+              "size": 2,
+              "name": "info",
+              "struct_type": "cp_class",
+              "children": {
+                "name_index": {
+                  "_type": "integer",
+                  "offset": 11,
+                  "size": 2,
+                  "description": "\u30AF\u30E9\u30B9\u540D\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08CONSTANT_Utf8\uFF09",
+                  "name": "name_index",
+                  "value": 2,
+                  "hex": "0x2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 13,
+          "size": 7,
+          "name": "constant_pool",
+          "struct_type": "cp_entry",
+          "children": {
+            "tag": {
+              "_type": "integer",
+              "offset": 13,
+              "size": 1,
+              "name": "tag",
+              "value": 1,
+              "hex": "0x1",
+              "enum_label": "Utf8"
+            },
+            "info": {
+              "_type": "struct",
+              "offset": 14,
+              "size": 6,
+              "name": "info",
+              "struct_type": "cp_utf8",
+              "children": {
+                "length": {
+                  "_type": "integer",
+                  "offset": 14,
+                  "size": 2,
+                  "name": "length",
+                  "value": 4,
+                  "hex": "0x4"
+                },
+                "value": {
+                  "_type": "bytes",
+                  "offset": 16,
+                  "size": 4,
+                  "description": "UTF-8\u30A8\u30F3\u30B3\u30FC\u30C9\u6587\u5B57\u5217\u30D0\u30A4\u30C8\u5217",
+                  "name": "value",
+                  "hex": "54 65 73 74"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "access_flags": {
+      "_type": "integer",
+      "offset": 20,
+      "size": 2,
+      "name": "access_flags",
+      "value": 33,
+      "hex": "0x21"
+    },
+    "this_class": {
+      "_type": "integer",
+      "offset": 22,
+      "size": 2,
+      "description": "\u3053\u306E\u30AF\u30E9\u30B9\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+      "name": "this_class",
+      "value": 1,
+      "hex": "0x1"
+    },
+    "super_class": {
+      "_type": "integer",
+      "offset": 24,
+      "size": 2,
+      "description": "\u30B9\u30FC\u30D1\u30FC\u30AF\u30E9\u30B9\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+      "name": "super_class",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "interfaces_count": {
+      "_type": "integer",
+      "offset": 26,
+      "size": 2,
+      "name": "interfaces_count",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "interfaces": {
+      "_type": "array",
+      "offset": 28,
+      "size": 0,
+      "name": "interfaces",
+      "count": 0,
+      "elements": []
+    },
+    "fields_count": {
+      "_type": "integer",
+      "offset": 28,
+      "size": 2,
+      "name": "fields_count",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "fields": {
+      "_type": "array",
+      "offset": 30,
+      "size": 0,
+      "name": "fields",
+      "count": 0,
+      "elements": []
+    },
+    "methods_count": {
+      "_type": "integer",
+      "offset": 30,
+      "size": 2,
+      "name": "methods_count",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "methods": {
+      "_type": "array",
+      "offset": 32,
+      "size": 0,
+      "name": "methods",
+      "count": 0,
+      "elements": []
+    },
+    "attributes_count": {
+      "_type": "integer",
+      "offset": 32,
+      "size": 2,
+      "name": "attributes_count",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "attributes": {
+      "_type": "array",
+      "offset": 34,
+      "size": 0,
+      "name": "attributes",
+      "count": 0,
+      "elements": []
+    }
+  }
+}

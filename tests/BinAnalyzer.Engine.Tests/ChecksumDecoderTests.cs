@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Security.Cryptography;
 using System.Text;
 using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Models;
@@ -171,6 +172,236 @@ public class ChecksumDecoderTests
     }
 
     [Fact]
+    public void Decode_Crc32_ChecksumAlgorithmPropertySet()
+    {
+        var typeBytes = Encoding.ASCII.GetBytes("TEST");
+        var expectedCrc = Crc32Calculator.Compute(typeBytes);
+        var crcBytes = new byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, expectedCrc);
+
+        var data = new byte[typeBytes.Length + crcBytes.Length];
+        typeBytes.CopyTo(data, 0);
+        crcBytes.CopyTo(data, typeBytes.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "type", Type = FieldType.Ascii, Size = 4 },
+            new FieldDefinition
+            {
+                Name = "crc",
+                Type = FieldType.UInt32,
+                Checksum = new ChecksumSpec { Algorithm = "crc32", FieldNames = ["type"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var crcNode = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        crcNode.ChecksumValid.Should().BeTrue();
+        crcNode.ChecksumAlgorithm.Should().Be("crc32");
+    }
+
+    [Fact]
+    public void Decode_Crc16Ccitt_ValidChecksum()
+    {
+        var payload = Encoding.ASCII.GetBytes("TEST");
+        var expectedCrc = Crc16Calculator.ComputeCcitt(payload);
+        var crcBytes = new byte[2];
+        BinaryPrimitives.WriteUInt16BigEndian(crcBytes, expectedCrc);
+
+        var data = new byte[payload.Length + crcBytes.Length];
+        payload.CopyTo(data, 0);
+        crcBytes.CopyTo(data, payload.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "data", Type = FieldType.Ascii, Size = 4 },
+            new FieldDefinition
+            {
+                Name = "crc",
+                Type = FieldType.UInt16,
+                Checksum = new ChecksumSpec { Algorithm = "crc16-ccitt", FieldNames = ["data"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var crcNode = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        crcNode.ChecksumValid.Should().BeTrue();
+        crcNode.ChecksumAlgorithm.Should().Be("crc16-ccitt");
+    }
+
+    [Fact]
+    public void Decode_Crc16Ibm_ValidChecksum()
+    {
+        var payload = Encoding.ASCII.GetBytes("TEST");
+        var expectedCrc = Crc16Calculator.ComputeIbm(payload);
+        var crcBytes = new byte[2];
+        BinaryPrimitives.WriteUInt16BigEndian(crcBytes, expectedCrc);
+
+        var data = new byte[payload.Length + crcBytes.Length];
+        payload.CopyTo(data, 0);
+        crcBytes.CopyTo(data, payload.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "data", Type = FieldType.Ascii, Size = 4 },
+            new FieldDefinition
+            {
+                Name = "crc",
+                Type = FieldType.UInt16,
+                Checksum = new ChecksumSpec { Algorithm = "crc16-ibm", FieldNames = ["data"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var crcNode = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        crcNode.ChecksumValid.Should().BeTrue();
+        crcNode.ChecksumAlgorithm.Should().Be("crc16-ibm");
+    }
+
+    [Fact]
+    public void Decode_Adler32_ValidChecksum()
+    {
+        var payload = Encoding.ASCII.GetBytes("TEST");
+        var expectedAdler = Adler32Calculator.Compute(payload);
+        var adlerBytes = new byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(adlerBytes, expectedAdler);
+
+        var data = new byte[payload.Length + adlerBytes.Length];
+        payload.CopyTo(data, 0);
+        adlerBytes.CopyTo(data, payload.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "data", Type = FieldType.Ascii, Size = 4 },
+            new FieldDefinition
+            {
+                Name = "checksum",
+                Type = FieldType.UInt32,
+                Checksum = new ChecksumSpec { Algorithm = "adler32", FieldNames = ["data"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var checksumNode = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        checksumNode.ChecksumValid.Should().BeTrue();
+        checksumNode.ChecksumAlgorithm.Should().Be("adler32");
+    }
+
+    [Fact]
+    public void Decode_Md5_ValidChecksum()
+    {
+        var payload = Encoding.ASCII.GetBytes("TESTDATA");
+        var hash = MD5.HashData(payload);
+
+        var data = new byte[payload.Length + hash.Length];
+        payload.CopyTo(data, 0);
+        hash.CopyTo(data, payload.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "data", Type = FieldType.Ascii, Size = 8 },
+            new FieldDefinition
+            {
+                Name = "hash",
+                Type = FieldType.Bytes,
+                Size = 16,
+                Checksum = new ChecksumSpec { Algorithm = "md5", FieldNames = ["data"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var hashNode = result.Children[1].Should().BeOfType<DecodedBytes>().Subject;
+        hashNode.ChecksumValid.Should().BeTrue();
+        hashNode.ChecksumExpectedHex.Should().BeNull();
+        hashNode.ChecksumAlgorithm.Should().Be("md5");
+    }
+
+    [Fact]
+    public void Decode_Sha1_ValidChecksum()
+    {
+        var payload = Encoding.ASCII.GetBytes("TESTDATA");
+        var hash = SHA1.HashData(payload);
+
+        var data = new byte[payload.Length + hash.Length];
+        payload.CopyTo(data, 0);
+        hash.CopyTo(data, payload.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "data", Type = FieldType.Ascii, Size = 8 },
+            new FieldDefinition
+            {
+                Name = "hash",
+                Type = FieldType.Bytes,
+                Size = 20,
+                Checksum = new ChecksumSpec { Algorithm = "sha1", FieldNames = ["data"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var hashNode = result.Children[1].Should().BeOfType<DecodedBytes>().Subject;
+        hashNode.ChecksumValid.Should().BeTrue();
+        hashNode.ChecksumAlgorithm.Should().Be("sha1");
+    }
+
+    [Fact]
+    public void Decode_Sha256_ValidChecksum()
+    {
+        var payload = Encoding.ASCII.GetBytes("TESTDATA");
+        var hash = SHA256.HashData(payload);
+
+        var data = new byte[payload.Length + hash.Length];
+        payload.CopyTo(data, 0);
+        hash.CopyTo(data, payload.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "data", Type = FieldType.Ascii, Size = 8 },
+            new FieldDefinition
+            {
+                Name = "hash",
+                Type = FieldType.Bytes,
+                Size = 32,
+                Checksum = new ChecksumSpec { Algorithm = "sha256", FieldNames = ["data"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var hashNode = result.Children[1].Should().BeOfType<DecodedBytes>().Subject;
+        hashNode.ChecksumValid.Should().BeTrue();
+        hashNode.ChecksumAlgorithm.Should().Be("sha256");
+    }
+
+    [Fact]
+    public void Decode_Sha256_InvalidChecksum_ReturnsExpectedHex()
+    {
+        var payload = Encoding.ASCII.GetBytes("TESTDATA");
+        var wrongHash = new byte[32]; // all zeros
+
+        var data = new byte[payload.Length + wrongHash.Length];
+        payload.CopyTo(data, 0);
+        wrongHash.CopyTo(data, payload.Length);
+
+        var format = MakeFormat(
+            new FieldDefinition { Name = "data", Type = FieldType.Ascii, Size = 8 },
+            new FieldDefinition
+            {
+                Name = "hash",
+                Type = FieldType.Bytes,
+                Size = 32,
+                Checksum = new ChecksumSpec { Algorithm = "sha256", FieldNames = ["data"] },
+            });
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(data, format);
+
+        var hashNode = result.Children[1].Should().BeOfType<DecodedBytes>().Subject;
+        hashNode.ChecksumValid.Should().BeFalse();
+        hashNode.ChecksumExpectedHex.Should().NotBeNullOrEmpty();
+        hashNode.ChecksumAlgorithm.Should().Be("sha256");
+    }
+
+    [Fact]
     public void Decode_FieldWithoutChecksum_HasNullProperties()
     {
         var format = new FormatDefinition
@@ -200,4 +431,21 @@ public class ChecksumDecoderTests
         intNode.ChecksumValid.Should().BeNull();
         intNode.ChecksumExpected.Should().BeNull();
     }
+
+    private static FormatDefinition MakeFormat(params FieldDefinition[] fields) => new()
+    {
+        Name = "test",
+        Endianness = Endianness.Big,
+        Enums = new Dictionary<string, EnumDefinition>(),
+        Flags = new Dictionary<string, FlagsDefinition>(),
+        Structs = new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                Fields = fields.ToList(),
+            },
+        },
+        RootStruct = "root",
+    };
 }

@@ -1,0 +1,398 @@
+name: MP4
+endianness: big
+root: mp4_file
+
+structs:
+  mp4_file:
+    - name: boxes
+      type: struct
+      struct: iso_box
+      repeat: eof
+
+  iso_box:
+    - name: box_size
+      type: uint32
+    - name: box_type
+      type: ascii
+      size: "4"
+    - name: extended_size
+      type: uint64
+      if: "{box_size == 1}"
+    - name: box_data
+      type: switch
+      size: "{box_size == 0 ? remaining : (box_size == 1 ? extended_size - 16 : box_size - 8)}"
+      switch_on: "{box_type}"
+      cases:
+        "'ftyp'": ftyp_box
+        "'moov'": container_box
+        "'trak'": container_box
+        "'mdia'": container_box
+        "'minf'": container_box
+        "'stbl'": container_box
+        "'dinf'": container_box
+        "'edts'": container_box
+        "'udta'": container_box
+        "'mvhd'": mvhd_box
+        "'tkhd'": tkhd_box
+        "'mdhd'": mdhd_box
+        "'hdlr'": hdlr_box
+        "'smhd'": smhd_box
+        "'vmhd'": vmhd_box
+        "'dref'": dref_box
+        "'stsd'": stsd_box
+        "'stts'": stts_box
+        "'stsc'": stsc_box
+        "'stsz'": stsz_box
+        "'stco'": stco_box
+        "'elst'": elst_box
+        "'mdat'": raw_data
+        "'free'": raw_data
+        "'skip'": raw_data
+      default: raw_data
+
+  container_box:
+    - name: children
+      type: struct
+      struct: iso_box
+      repeat: eof
+
+  ftyp_box:
+    - name: major_brand
+      type: ascii
+      size: "4"
+      description: "メジャーブランド（例: isom, mp42, M4A ）"
+    - name: minor_version
+      type: uint32
+      description: "マイナーバージョン"
+    - name: compatible_brands
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "互換ブランドリスト（各4バイトのASCII）"
+
+  mvhd_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: creation_time
+      type: uint32
+      if: "{version == 0}"
+    - name: creation_time_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: modification_time
+      type: uint32
+      if: "{version == 0}"
+    - name: modification_time_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: timescale
+      type: uint32
+    - name: duration
+      type: uint32
+      if: "{version == 0}"
+    - name: duration_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: rate
+      type: uint32
+      description: "再生速度（固定小数点 16.16、通常 0x00010000 = 1.0）"
+    - name: volume
+      type: uint16
+      description: "音量（固定小数点 8.8、通常 0x0100 = 1.0）"
+    - name: reserved
+      type: bytes
+      size: "10"
+    - name: matrix
+      type: bytes
+      size: "36"
+      description: "変換マトリクス（3x3 固定小数点）"
+    - name: pre_defined
+      type: bytes
+      size: "24"
+    - name: next_track_id
+      type: uint32
+
+  tkhd_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: creation_time
+      type: uint32
+      if: "{version == 0}"
+    - name: creation_time_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: modification_time
+      type: uint32
+      if: "{version == 0}"
+    - name: modification_time_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: track_id
+      type: uint32
+    - name: reserved1
+      type: bytes
+      size: "4"
+    - name: duration
+      type: uint32
+      if: "{version == 0}"
+    - name: duration_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: reserved2
+      type: bytes
+      size: "8"
+    - name: layer
+      type: uint16
+    - name: alternate_group
+      type: uint16
+    - name: volume
+      type: uint16
+      description: "音量（固定小数点 8.8）"
+    - name: reserved3
+      type: bytes
+      size: "2"
+    - name: matrix
+      type: bytes
+      size: "36"
+      description: "変換マトリクス（3x3 固定小数点）"
+    - name: width
+      type: uint32
+      description: "幅（固定小数点 16.16）"
+    - name: height
+      type: uint32
+      description: "高さ（固定小数点 16.16）"
+
+  mdhd_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: creation_time
+      type: uint32
+      if: "{version == 0}"
+    - name: creation_time_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: modification_time
+      type: uint32
+      if: "{version == 0}"
+    - name: modification_time_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: timescale
+      type: uint32
+    - name: duration
+      type: uint32
+      if: "{version == 0}"
+    - name: duration_v1
+      type: uint64
+      if: "{version == 1}"
+    - name: language
+      type: uint16
+      description: "言語コード（ISO-639-2/T パック形式）"
+    - name: pre_defined
+      type: uint16
+
+  hdlr_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: pre_defined
+      type: uint32
+    - name: handler_type
+      type: ascii
+      size: "4"
+      description: "ハンドラタイプ（'vide'=映像, 'soun'=音声）"
+    - name: reserved
+      type: bytes
+      size: "12"
+    - name: name
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "ハンドラ名（UTF-8 文字列）"
+
+  smhd_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: balance
+      type: uint16
+      description: "バランス（固定小数点 8.8）"
+    - name: reserved
+      type: uint16
+
+  vmhd_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: graphicsmode
+      type: uint16
+      description: "グラフィックスモード"
+    - name: opcolor
+      type: bytes
+      size: "6"
+      description: "オペレーションカラー（R, G, B 各 uint16）"
+
+  dref_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: entry_count
+      type: uint32
+    - name: entries
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "データ参照エントリ"
+
+  stsd_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: entry_count
+      type: uint32
+    - name: entries
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "サンプル記述エントリ"
+
+  stts_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: entry_count
+      type: uint32
+    - name: entries
+      type: struct
+      struct: stts_entry
+      repeat_count: "{entry_count}"
+
+  stts_entry:
+    - name: sample_count
+      type: uint32
+    - name: sample_delta
+      type: uint32
+
+  stsc_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: entry_count
+      type: uint32
+    - name: entries
+      type: struct
+      struct: stsc_entry
+      repeat_count: "{entry_count}"
+
+  stsc_entry:
+    - name: first_chunk
+      type: uint32
+    - name: samples_per_chunk
+      type: uint32
+    - name: sample_description_index
+      type: uint32
+
+  stsz_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: sample_size
+      type: uint32
+      description: "共通サンプルサイズ（0の場合は個別サイズ）"
+    - name: sample_count
+      type: uint32
+    - name: entry_sizes
+      type: struct
+      struct: stsz_entry
+      repeat_count: "{sample_count}"
+      if: "{sample_size == 0}"
+
+  stsz_entry:
+    - name: entry_size
+      type: uint32
+
+  stco_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: entry_count
+      type: uint32
+    - name: entries
+      type: struct
+      struct: stco_entry
+      repeat_count: "{entry_count}"
+
+  stco_entry:
+    - name: chunk_offset
+      type: uint32
+
+  elst_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: entry_count
+      type: uint32
+    - name: entries
+      type: struct
+      struct: elst_entry_v0
+      repeat_count: "{entry_count}"
+      if: "{version == 0}"
+    - name: entries_v1
+      type: struct
+      struct: elst_entry_v1
+      repeat_count: "{entry_count}"
+      if: "{version == 1}"
+
+  elst_entry_v0:
+    - name: segment_duration
+      type: uint32
+    - name: media_time
+      type: int32
+    - name: media_rate_integer
+      type: uint16
+    - name: media_rate_fraction
+      type: uint16
+
+  elst_entry_v1:
+    - name: segment_duration
+      type: uint64
+    - name: media_time
+      type: int64
+    - name: media_rate_integer
+      type: uint16
+    - name: media_rate_fraction
+      type: uint16
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

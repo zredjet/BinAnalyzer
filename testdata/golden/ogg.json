@@ -1,0 +1,384 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 87,
+  "name": "OGG",
+  "struct_type": "ogg_file",
+  "children": {
+    "pages": {
+      "_type": "array",
+      "offset": 0,
+      "size": 87,
+      "name": "pages",
+      "count": 2,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 0,
+          "size": 58,
+          "name": "pages",
+          "struct_type": "ogg_page",
+          "children": {
+            "capture_pattern": {
+              "_type": "bytes",
+              "offset": 0,
+              "size": 4,
+              "name": "capture_pattern",
+              "hex": "4F 67 67 53",
+              "valid": true
+            },
+            "version": {
+              "_type": "integer",
+              "offset": 4,
+              "size": 1,
+              "_validation": {
+                "passed": true,
+                "expression": "{version == 0}"
+              },
+              "name": "version",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "header_type": {
+              "_type": "integer",
+              "offset": 5,
+              "size": 1,
+              "name": "header_type",
+              "value": 2,
+              "hex": "0x2"
+            },
+            "is_continuation": {
+              "_type": "virtual",
+              "offset": 6,
+              "size": 0,
+              "name": "is_continuation",
+              "value": 0
+            },
+            "is_bos": {
+              "_type": "virtual",
+              "offset": 6,
+              "size": 0,
+              "name": "is_bos",
+              "value": 1
+            },
+            "is_eos": {
+              "_type": "virtual",
+              "offset": 6,
+              "size": 0,
+              "name": "is_eos",
+              "value": 0
+            },
+            "granule_position": {
+              "_type": "integer",
+              "offset": 6,
+              "size": 8,
+              "name": "granule_position",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "serial_number": {
+              "_type": "integer",
+              "offset": 14,
+              "size": 4,
+              "name": "serial_number",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "page_sequence_number": {
+              "_type": "integer",
+              "offset": 18,
+              "size": 4,
+              "name": "page_sequence_number",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "crc32": {
+              "_type": "integer",
+              "offset": 22,
+              "size": 4,
+              "name": "crc32",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "num_segments": {
+              "_type": "integer",
+              "offset": 26,
+              "size": 1,
+              "name": "num_segments",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "segment_table": {
+              "_type": "array",
+              "offset": 27,
+              "size": 1,
+              "name": "segment_table",
+              "count": 1,
+              "elements": [
+                {
+                  "_type": "integer",
+                  "offset": 27,
+                  "size": 1,
+                  "name": "segment_table",
+                  "value": 30,
+                  "hex": "0x1E"
+                }
+              ]
+            },
+            "page_data": {
+              "_type": "struct",
+              "offset": 28,
+              "size": 30,
+              "name": "page_data",
+              "struct_type": "vorbis_bos_data",
+              "children": {
+                "packet_type": {
+                  "_type": "integer",
+                  "offset": 28,
+                  "size": 1,
+                  "name": "packet_type",
+                  "value": 1,
+                  "hex": "0x1",
+                  "enum_label": "identification"
+                },
+                "codec_id": {
+                  "_type": "string",
+                  "offset": 29,
+                  "size": 6,
+                  "name": "codec_id",
+                  "value": "vorbis",
+                  "encoding": "ascii"
+                },
+                "vorbis_id_header": {
+                  "_type": "struct",
+                  "offset": 35,
+                  "size": 23,
+                  "name": "vorbis_id_header",
+                  "struct_type": "vorbis_identification",
+                  "children": {
+                    "vorbis_version": {
+                      "_type": "integer",
+                      "offset": 35,
+                      "size": 4,
+                      "name": "vorbis_version",
+                      "value": 0,
+                      "hex": "0x0"
+                    },
+                    "channels": {
+                      "_type": "integer",
+                      "offset": 39,
+                      "size": 1,
+                      "name": "channels",
+                      "value": 1,
+                      "hex": "0x1"
+                    },
+                    "sample_rate": {
+                      "_type": "integer",
+                      "offset": 40,
+                      "size": 4,
+                      "name": "sample_rate",
+                      "value": 44100,
+                      "hex": "0xAC44"
+                    },
+                    "bitrate_maximum": {
+                      "_type": "integer",
+                      "offset": 44,
+                      "size": 4,
+                      "name": "bitrate_maximum",
+                      "value": 0,
+                      "hex": "0x0"
+                    },
+                    "bitrate_nominal": {
+                      "_type": "integer",
+                      "offset": 48,
+                      "size": 4,
+                      "name": "bitrate_nominal",
+                      "value": 128000,
+                      "hex": "0x1F400"
+                    },
+                    "bitrate_minimum": {
+                      "_type": "integer",
+                      "offset": 52,
+                      "size": 4,
+                      "name": "bitrate_minimum",
+                      "value": 0,
+                      "hex": "0x0"
+                    },
+                    "blocksize_info": {
+                      "_type": "integer",
+                      "offset": 56,
+                      "size": 1,
+                      "name": "blocksize_info",
+                      "value": 184,
+                      "hex": "0xB8"
+                    },
+                    "blocksize_0": {
+                      "_type": "virtual",
+                      "offset": 57,
+                      "size": 0,
+                      "name": "blocksize_0",
+                      "value": 8
+                    },
+                    "blocksize_1": {
+                      "_type": "virtual",
+                      "offset": 57,
+                      "size": 0,
+                      "name": "blocksize_1",
+                      "value": 11
+                    },
+                    "framing_flag": {
+                      "_type": "integer",
+                      "offset": 57,
+                      "size": 1,
+                      "name": "framing_flag",
+                      "value": 1,
+                      "hex": "0x1"
+                    }
+                  }
+                },
+                "remaining_data": {
+                  "_type": "bytes",
+                  "offset": 58,
+                  "size": 0,
+                  "name": "remaining_data",
+                  "hex": ""
+                }
+              }
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 58,
+          "size": 29,
+          "name": "pages",
+          "struct_type": "ogg_page",
+          "children": {
+            "capture_pattern": {
+              "_type": "bytes",
+              "offset": 58,
+              "size": 4,
+              "name": "capture_pattern",
+              "hex": "4F 67 67 53",
+              "valid": true
+            },
+            "version": {
+              "_type": "integer",
+              "offset": 62,
+              "size": 1,
+              "_validation": {
+                "passed": true,
+                "expression": "{version == 0}"
+              },
+              "name": "version",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "header_type": {
+              "_type": "integer",
+              "offset": 63,
+              "size": 1,
+              "name": "header_type",
+              "value": 4,
+              "hex": "0x4"
+            },
+            "is_continuation": {
+              "_type": "virtual",
+              "offset": 64,
+              "size": 0,
+              "name": "is_continuation",
+              "value": 0
+            },
+            "is_bos": {
+              "_type": "virtual",
+              "offset": 64,
+              "size": 0,
+              "name": "is_bos",
+              "value": 0
+            },
+            "is_eos": {
+              "_type": "virtual",
+              "offset": 64,
+              "size": 0,
+              "name": "is_eos",
+              "value": 1
+            },
+            "granule_position": {
+              "_type": "integer",
+              "offset": 64,
+              "size": 8,
+              "name": "granule_position",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "serial_number": {
+              "_type": "integer",
+              "offset": 72,
+              "size": 4,
+              "name": "serial_number",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "page_sequence_number": {
+              "_type": "integer",
+              "offset": 76,
+              "size": 4,
+              "name": "page_sequence_number",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "crc32": {
+              "_type": "integer",
+              "offset": 80,
+              "size": 4,
+              "name": "crc32",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "num_segments": {
+              "_type": "integer",
+              "offset": 84,
+              "size": 1,
+              "name": "num_segments",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "segment_table": {
+              "_type": "array",
+              "offset": 85,
+              "size": 1,
+              "name": "segment_table",
+              "count": 1,
+              "elements": [
+                {
+                  "_type": "integer",
+                  "offset": 85,
+                  "size": 1,
+                  "name": "segment_table",
+                  "value": 1,
+                  "hex": "0x1"
+                }
+              ]
+            },
+            "page_data": {
+              "_type": "struct",
+              "offset": 86,
+              "size": 1,
+              "name": "page_data",
+              "struct_type": "raw_data",
+              "children": {
+                "data": {
+                  "_type": "bytes",
+                  "offset": 86,
+                  "size": 1,
+                  "name": "data",
+                  "hex": "00"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

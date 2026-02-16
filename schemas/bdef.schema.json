@@ -161,7 +161,7 @@
         },
         "type": {
           "type": "string",
-          "description": "フィールドの型。整数型（uint8, u8 等）、文字列型（ascii, utf8 等）、複合型（struct, switch, bitfield）、圧縮型（zlib, deflate）。",
+          "description": "フィールドの型。整数型（uint8, u8 等）、文字列型（ascii, utf8 等）、複合型（struct, switch, bitfield）、圧縮型（zlib, deflate, gzip, bzip2, lzma, zstd, lz4）。",
           "enum": [
             "uint8", "u8",
             "uint16", "u16",
@@ -182,6 +182,7 @@
             "asciiz", "utf8z",
             "struct", "switch", "bitfield",
             "zlib", "deflate",
+            "gzip", "bzip2", "lzma", "zstd", "zstandard", "lz4",
             "virtual"
           ]
         },
@@ -357,8 +358,8 @@
       "properties": {
         "algorithm": {
           "type": "string",
-          "enum": ["crc32"],
-          "description": "チェックサムアルゴリズム。現在は crc32 のみ対応。"
+          "enum": ["crc32", "crc16-ccitt", "crc16-ibm", "adler32", "md5", "sha1", "sha256"],
+          "description": "チェックサムアルゴリズム。整数系: crc32, crc16-ccitt, crc16-ibm, adler32。ハッシュ系: md5, sha1, sha256。"
         },
         "fields": {
           "type": "array",
@@ -387,6 +388,11 @@
         "string_table": {
           "type": "boolean",
           "description": "trueの場合、この構造体のバイト列を文字列テーブルとして登録する。"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["bitstream"],
+          "description": "構造体のモード。\"bitstream\" を指定すると、フィールドの size がビット単位として解釈される。整数型フィールドのみ使用可能。"
         },
         "fields": {
           "type": "array",

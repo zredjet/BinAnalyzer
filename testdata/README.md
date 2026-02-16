@@ -1,6 +1,6 @@
 # testdata
 
-実ファイル検証（REQ-095）用のテストファイル格納ディレクトリ。
+実ファイル検証（REQ-095）・ゴールデンファイルリグレッション（REQ-107/110）用のテストデータ格納ディレクトリ。
 
 ## ディレクトリ構成
 
@@ -8,7 +8,11 @@
 testdata/
 ├── README.md                  # 本ファイル
 ├── generate-real-files.sh     # macOS ツールで実ファイル生成
-└── real/                      # 生成された実ファイル
+├── golden/                    # ゴールデンファイル（JSON、git コミット済み）
+│   ├── png.json
+│   ├── bmp.json
+│   └── ... (全30フォーマット)
+└── real/                      # 生成された実ファイル（.gitignore 対象含む）
     ├── test.png               # sips
     ├── test.jpg               # sips
     ├── test.bmp               # sips
@@ -62,6 +66,42 @@ dotnet test --filter "Category=RealFile" -v detailed
 - シェルスクリプト生成ファイル: git にコミット
 - TestDataGenerator 生成ファイル: `.gitignore` で除外（テスト時に自動生成）
 - 本物の実ファイルが入手でき次第、差し替え可能
+
+## CI テスト実行フロー（REQ-110）
+
+CI（GitHub Actions）では、テストが3ステップに分離して実行される:
+
+1. **Unit & Integration Tests** — `Category` Trait なしの一般テスト
+2. **Golden File Regression Tests** — `[Trait("Category", "Golden")]` テスト（30フォーマット）
+3. **Real File Validation Tests** — `[Trait("Category", "RealFile")]` テスト（30フォーマット）
+
+テストバイナリは `RealFileFixture` + `TestDataGenerator` により CI 環境で実行時に自動生成される。ファイルが不在の場合はテストが即失敗する（サイレントスキップしない）。
+
+## ゴールデンファイル更新手順
+
+デコード出力に影響するコード変更を行った場合:
+
+```bash
+# 1. ゴールデンファイルを再生成
+UPDATE_GOLDEN=1 dotnet test --filter "Category=Golden"
+
+# 2. 差分を確認
+git diff testdata/golden/
+
+# 3. 意図した変更であれば、コード変更とゴールデンファイル更新を同じ PR でコミット
+git add testdata/golden/
+git commit  # コード変更と一緒に
+```
+
+### ローカルのテストファイル再生成
+
+`testdata/real/` のファイルが古い場合や破損した場合:
+
+```bash
+# TestDataGenerator 生成ファイルを削除して再生成
+rm testdata/real/test.gif testdata/real/test.wav  # etc.
+dotnet test --filter "Category=RealFile"           # RealFileFixture が再生成
+```
 
 ## 依存ツール
 

@@ -24,5 +24,20 @@ jobs:
       - name: Build
         run: dotnet build BinAnalyzer.slnx --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test BinAnalyzer.slnx --no-build --configuration Release --verbosity normal
+      - name: Unit & Integration Tests
+        run: >
+          dotnet test BinAnalyzer.slnx
+          --no-build --configuration Release --verbosity normal
+          --filter "Category!=Golden&Category!=RealFile"
+
+      - name: Golden File Regression Tests
+        run: >
+          dotnet test BinAnalyzer.slnx
+          --no-build --configuration Release --verbosity normal
+          --filter "Category=Golden"
+
+      - name: Real File Validation Tests
+        run: >
+          dotnet test BinAnalyzer.slnx
+          --no-build --configuration Release --verbosity normal
+          --filter "Category=RealFile"

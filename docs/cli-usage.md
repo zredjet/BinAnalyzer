@@ -237,6 +237,53 @@ tree出力でのカラー割り当て:
 | 赤 | バリデーション失敗（✗） |
 | 暗色 | オフセット、サイズ、ツリー罫線 |
 
+## schema サブコマンド
+
+フォーマット定義（IR）から struct 間の参照関係を Mermaid または Graphviz DOT 形式で出力します。バイナリファイルは不要です。
+
+```
+binanalyzer schema <format-file> [-o <output>]
+```
+
+### 引数
+
+| 引数 | 説明 |
+|------|------|
+| `format-file` | フォーマット定義ファイル（`.bdef.yaml`） |
+
+### オプション
+
+| オプション | 説明 | デフォルト |
+|------------|------|-----------|
+| `-o, --output <format>` | 出力形式（`mermaid`, `dot`, `graphviz`） | `mermaid` |
+
+### 出力形式
+
+| 形式 | 説明 |
+|------|------|
+| `mermaid` | Mermaid classDiagram 形式（デフォルト）。GitHub Markdown に直接埋め込み可能 |
+| `dot` / `graphviz` | Graphviz DOT digraph 形式。`dot` コマンドで SVG/PNG に変換可能 |
+
+### 出力内容
+
+- 各 struct が Mermaid ではクラス、DOT ではレコードノードとして表示
+- ルート struct はステレオタイプ（`<<root>>`）または太枠で強調
+- struct フィールド参照、switch 分岐、圧縮フィールドがエッジとして表示
+- 繰り返しフィールドは `*` 多重度付き
+
+### 使用例
+
+```bash
+# Mermaid形式でスキーマ図を出力（デフォルト）
+dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml
+
+# Graphviz DOT形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
+
+# DOT出力をSVGに変換（Graphvizが必要）
+dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml -o dot | dot -Tsvg -o schema.svg
+```
+
 ## 使用例
 
 ```bash
@@ -281,4 +328,10 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 # フィルタとCSVを組み合わせてデータ抽出
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o csv --filter "**.width" --filter "**.height"
+
+# フォーマット定義のスキーマ図をMermaid形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml
+
+# スキーマ図をGraphviz DOT形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
 ```
