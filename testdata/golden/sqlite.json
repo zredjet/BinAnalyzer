@@ -1,7 +1,7 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 110,
+  "size": 108,
   "name": "SQLite",
   "struct_type": "sqlite",
   "children": {
@@ -106,8 +106,8 @@
           "size": 4,
           "description": "\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3\u30B3\u30DF\u30C3\u30C8\u3054\u3068\u306B\u30A4\u30F3\u30AF\u30EA\u30E1\u30F3\u30C8\u3002\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u5909\u66F4\u306E\u691C\u51FA\u306B\u4F7F\u7528",
           "name": "file_change_counter",
-          "value": 2,
-          "hex": "0x2"
+          "value": 1,
+          "hex": "0x1"
         },
         "database_size_pages": {
           "_type": "integer",
@@ -115,8 +115,8 @@
           "size": 4,
           "description": "\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u30B5\u30A4\u30BA\uFF08\u30DA\u30FC\u30B8\u6570\uFF09",
           "name": "database_size_pages",
-          "value": 2,
-          "hex": "0x2"
+          "value": 1,
+          "hex": "0x1"
         },
         "first_freelist_trunk_page": {
           "_type": "integer",
@@ -139,8 +139,8 @@
           "offset": 40,
           "size": 4,
           "name": "schema_cookie",
-          "value": 1,
-          "hex": "0x1"
+          "value": 0,
+          "hex": "0x0"
         },
         "schema_format_number": {
           "_type": "integer",
@@ -219,8 +219,8 @@
           "offset": 92,
           "size": 4,
           "name": "version_valid_for",
-          "value": 2,
-          "hex": "0x2"
+          "value": 1,
+          "hex": "0x1"
         },
         "sqlite_version_number": {
           "_type": "integer",
@@ -228,15 +228,15 @@
           "size": 4,
           "description": "e.g. 3039004 for 3.39.4",
           "name": "sqlite_version_number",
-          "value": 3051001,
-          "hex": "0x2E8DF9"
+          "value": 3039004,
+          "hex": "0x2E5F1C"
         }
       }
     },
     "first_page": {
       "_type": "struct",
       "offset": 100,
-      "size": 10,
+      "size": 8,
       "name": "first_page",
       "struct_type": "btree_page_header",
       "children": {
@@ -263,8 +263,8 @@
           "offset": 103,
           "size": 2,
           "name": "number_of_cells",
-          "value": 1,
-          "hex": "0x1"
+          "value": 0,
+          "hex": "0x0"
         },
         "cell_content_offset": {
           "_type": "integer",
@@ -272,8 +272,8 @@
           "size": 2,
           "description": "\u30BB\u30EB\u30B3\u30F3\u30C6\u30F3\u30C4\u9818\u57DF\u306E\u5148\u982D\u30D0\u30A4\u30C8\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF080\u306F65536\u3092\u610F\u5473\u3059\u308B\uFF09",
           "name": "cell_content_offset",
-          "value": 4022,
-          "hex": "0xFB6"
+          "value": 0,
+          "hex": "0x0"
         },
         "fragmented_free_bytes": {
           "_type": "integer",
@@ -286,64 +286,18 @@
         "cell_pointer_array": {
           "_type": "array",
           "offset": 108,
-          "size": 2,
+          "size": 0,
           "name": "cell_pointer_array",
-          "count": 1,
-          "elements": [
-            {
-              "_type": "integer",
-              "offset": 108,
-              "size": 2,
-              "description": "\u30DA\u30FC\u30B8\u5185\u306E\u30BB\u30EB\u30B3\u30F3\u30C6\u30F3\u30C4\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\u914D\u5217",
-              "name": "cell_pointer_array",
-              "value": 4022,
-              "hex": "0xFB6"
-            }
-          ]
+          "count": 0,
+          "elements": []
         },
         "cells": {
           "_type": "array",
-          "offset": 110,
+          "offset": 108,
           "size": 0,
           "name": "cells",
-          "count": 1,
-          "elements": [
-            {
-              "_type": "struct",
-              "offset": 4022,
-              "size": 74,
-              "name": "cells",
-              "struct_type": "table_leaf_cell",
-              "children": {
-                "payload_size": {
-                  "_type": "integer",
-                  "offset": 4022,
-                  "size": 1,
-                  "description": "\u30DA\u30A4\u30ED\u30FC\u30C9\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
-                  "name": "payload_size",
-                  "value": 72,
-                  "hex": "0x48"
-                },
-                "rowid": {
-                  "_type": "integer",
-                  "offset": 4023,
-                  "size": 1,
-                  "description": "\u884CID\uFF08INTEGER PRIMARY KEY \u306E\u5024\uFF09",
-                  "name": "rowid",
-                  "value": 1,
-                  "hex": "0x1"
-                },
-                "payload": {
-                  "_type": "bytes",
-                  "offset": 4024,
-                  "size": 72,
-                  "description": "\u30EC\u30B3\u30FC\u30C9\u30C7\u30FC\u30BF",
-                  "name": "payload",
-                  "hex": "06 17 15 15 01 75 74 61 62 6C 65 74 65 73 74 74 65 73 74 02 43 52 45 41 54 45 20 54 41 42 4C 45 20 74 65 73 74 28 69 64 20 49 4E 54 45 47 45 52 20 50 52 49 4D 41 52 59 20 4B 45 59 2C 20 6E 61 6D 65 20 54 45 58 54 29"
-                }
-              }
-            }
-          ]
+          "count": 0,
+          "elements": []
         }
       }
     }

@@ -1,21 +1,21 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 4096,
+  "size": 512,
   "name": "TAR",
   "struct_type": "tar",
   "children": {
     "entries": {
       "_type": "array",
       "offset": 0,
-      "size": 4096,
+      "size": 512,
       "name": "entries",
-      "count": 5,
+      "count": 1,
       "elements": [
         {
           "_type": "struct",
           "offset": 0,
-          "size": 1024,
+          "size": 512,
           "name": "entries",
           "struct_type": "tar_entry",
           "children": {
@@ -25,7 +25,7 @@
               "size": 100,
               "description": "\u30D5\u30A1\u30A4\u30EB\u540D",
               "name": "name",
-              "value": "._hello.txt\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+              "value": "hello.txt\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
               "encoding": "ascii"
             },
             "mode": {
@@ -34,7 +34,7 @@
               "size": 8,
               "description": "\u30D5\u30A1\u30A4\u30EB\u30E2\u30FC\u30C9\uFF088\u9032ASCII\uFF09",
               "name": "mode",
-              "value": "000644 \u0000",
+              "value": "0000644\u0000",
               "encoding": "ascii"
             },
             "uid": {
@@ -43,7 +43,7 @@
               "size": 8,
               "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6ID\uFF088\u9032ASCII\uFF09",
               "name": "uid",
-              "value": "000765 \u0000",
+              "value": "0001000\u0000",
               "encoding": "ascii"
             },
             "gid": {
@@ -52,7 +52,7 @@
               "size": 8,
               "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7ID\uFF088\u9032ASCII\uFF09",
               "name": "gid",
-              "value": "000000 \u0000",
+              "value": "0001000\u0000",
               "encoding": "ascii"
             },
             "size": {
@@ -61,7 +61,7 @@
               "size": 12,
               "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30018\u9032ASCII\uFF09",
               "name": "size",
-              "value": "00000000243 ",
+              "value": "00000000000\u0000",
               "encoding": "ascii"
             },
             "mtime": {
@@ -70,7 +70,7 @@
               "size": 12,
               "description": "\u66F4\u65B0\u65E5\u6642\uFF088\u9032ASCII\u3001Unix\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
               "name": "mtime",
-              "value": "15143031730 ",
+              "value": "14246320600\u0000",
               "encoding": "ascii"
             },
             "checksum": {
@@ -79,7 +79,7 @@
               "size": 8,
               "description": "\u30D8\u30C3\u30C0\u5168\u30D0\u30A4\u30C8\u306E\u5408\u8A08\u5024\uFF08\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u30D5\u30A3\u30FC\u30EB\u30C9\u306F\u30B9\u30DA\u30FC\u30B9\u3068\u3057\u3066\u8A08\u7B97\uFF09",
               "name": "checksum",
-              "value": "013546\u0000 ",
+              "value": "011611\u0000 ",
               "encoding": "ascii"
             },
             "typeflag": {
@@ -130,7 +130,7 @@
               "size": 32,
               "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6\u540D",
               "name": "uname",
-              "value": "redjet\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+              "value": "user\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
               "encoding": "ascii"
             },
             "gname": {
@@ -139,7 +139,7 @@
               "size": 32,
               "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7\u540D",
               "name": "gname",
-              "value": "wheel\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+              "value": "group\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
               "encoding": "ascii"
             },
             "devmajor": {
@@ -148,7 +148,7 @@
               "size": 8,
               "description": "\u30C7\u30D0\u30A4\u30B9\u30E1\u30B8\u30E3\u30FC\u756A\u53F7",
               "name": "devmajor",
-              "value": "000000 \u0000",
+              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
               "encoding": "ascii"
             },
             "devminor": {
@@ -157,7 +157,7 @@
               "size": 8,
               "description": "\u30C7\u30D0\u30A4\u30B9\u30DE\u30A4\u30CA\u30FC\u756A\u53F7",
               "name": "devminor",
-              "value": "000000 \u0000",
+              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
               "encoding": "ascii"
             },
             "prefix": {
@@ -183,767 +183,11 @@
               "size": 0,
               "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF088\u9032ASCII \u2192 \u6574\u6570\u5909\u63DB\uFF09",
               "name": "file_size_bytes",
-              "value": 163
+              "value": 0
             },
             "data_blocks_size": {
               "_type": "virtual",
               "offset": 512,
-              "size": 0,
-              "description": "\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF\u306E\u5408\u8A08\u30B5\u30A4\u30BA\uFF08512\u30D0\u30A4\u30C8\u5883\u754C\u306B\u5207\u308A\u4E0A\u3052\uFF09",
-              "name": "data_blocks_size",
-              "value": 512
-            },
-            "data": {
-              "_type": "bytes",
-              "offset": 512,
-              "size": 512,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF",
-              "name": "data",
-              "hex": "00 05 16 07 00 02 00 00 4D 61 63 20 4F 53 20 58 20 20 20 20 20 20 20 20 00 02 00 00 00 09 00 00 00 32 00 00 00 71 00 00 00 02 00 00 00 A3 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 41 54 54 52 00 00 00 00 00 00 00 A3 00 00 00 98 00 00 00 0B 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 98 00 00 00 0B 00 00 15 63 6F 6D 2E 61 70 70 6C 65 2E 70 72 6F 76 65 6E 61 6E 63 65 00 01 02 00 48 6A 1D 5C 50 99 EC 26 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 1024,
-          "size": 1024,
-          "name": "entries",
-          "struct_type": "tar_entry",
-          "children": {
-            "name": {
-              "_type": "string",
-              "offset": 1024,
-              "size": 100,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "name",
-              "value": "PaxHeader/hello.txt\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "mode": {
-              "_type": "string",
-              "offset": 1124,
-              "size": 8,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30E2\u30FC\u30C9\uFF088\u9032ASCII\uFF09",
-              "name": "mode",
-              "value": "000644 \u0000",
-              "encoding": "ascii"
-            },
-            "uid": {
-              "_type": "string",
-              "offset": 1132,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6ID\uFF088\u9032ASCII\uFF09",
-              "name": "uid",
-              "value": "000765 \u0000",
-              "encoding": "ascii"
-            },
-            "gid": {
-              "_type": "string",
-              "offset": 1140,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7ID\uFF088\u9032ASCII\uFF09",
-              "name": "gid",
-              "value": "000000 \u0000",
-              "encoding": "ascii"
-            },
-            "size": {
-              "_type": "string",
-              "offset": 1148,
-              "size": 12,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30018\u9032ASCII\uFF09",
-              "name": "size",
-              "value": "00000000210 ",
-              "encoding": "ascii"
-            },
-            "mtime": {
-              "_type": "string",
-              "offset": 1160,
-              "size": 12,
-              "description": "\u66F4\u65B0\u65E5\u6642\uFF088\u9032ASCII\u3001Unix\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
-              "name": "mtime",
-              "value": "15143031730 ",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "string",
-              "offset": 1172,
-              "size": 8,
-              "description": "\u30D8\u30C3\u30C0\u5168\u30D0\u30A4\u30C8\u306E\u5408\u8A08\u5024\uFF08\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u30D5\u30A3\u30FC\u30EB\u30C9\u306F\u30B9\u30DA\u30FC\u30B9\u3068\u3057\u3066\u8A08\u7B97\uFF09",
-              "name": "checksum",
-              "value": "015274\u0000 ",
-              "encoding": "ascii"
-            },
-            "typeflag": {
-              "_type": "integer",
-              "offset": 1180,
-              "size": 1,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30BF\u30A4\u30D7\u30D5\u30E9\u30B0",
-              "name": "typeflag",
-              "value": 120,
-              "hex": "0x78",
-              "enum_label": "pax_extended",
-              "enum_description": "\u0027x\u0027 - PAX\u62E1\u5F35\u30D8\u30C3\u30C0\uFF08\u6B21\u306E\u30A8\u30F3\u30C8\u30EA\u306B\u9069\u7528\uFF09"
-            },
-            "linkname": {
-              "_type": "string",
-              "offset": 1181,
-              "size": 100,
-              "description": "\u30EA\u30F3\u30AF\u5148\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "linkname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "magic": {
-              "_type": "string",
-              "offset": 1281,
-              "size": 6,
-              "description": "UStar\u30DE\u30B8\u30C3\u30AF\uFF08\u0027ustar\u0027 \u002B null\uFF09",
-              "_validation": {
-                "passed": false,
-                "expression": "{magic == \u0027ustar\u0027}"
-              },
-              "name": "magic",
-              "value": "ustar\u0000",
-              "encoding": "ascii"
-            },
-            "version": {
-              "_type": "string",
-              "offset": 1287,
-              "size": 2,
-              "description": "UStar\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002700\u0027\uFF09",
-              "name": "version",
-              "value": "00",
-              "encoding": "ascii"
-            },
-            "uname": {
-              "_type": "string",
-              "offset": 1289,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6\u540D",
-              "name": "uname",
-              "value": "redjet\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "gname": {
-              "_type": "string",
-              "offset": 1321,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7\u540D",
-              "name": "gname",
-              "value": "wheel\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "devmajor": {
-              "_type": "string",
-              "offset": 1353,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30E1\u30B8\u30E3\u30FC\u756A\u53F7",
-              "name": "devmajor",
-              "value": "000000 \u0000",
-              "encoding": "ascii"
-            },
-            "devminor": {
-              "_type": "string",
-              "offset": 1361,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30DE\u30A4\u30CA\u30FC\u756A\u53F7",
-              "name": "devminor",
-              "value": "000000 \u0000",
-              "encoding": "ascii"
-            },
-            "prefix": {
-              "_type": "string",
-              "offset": 1369,
-              "size": 155,
-              "description": "\u9577\u3044\u30D5\u30A1\u30A4\u30EB\u540D\u7528\u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9",
-              "name": "prefix",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "header_padding": {
-              "_type": "bytes",
-              "offset": 1524,
-              "size": 12,
-              "description": "512\u30D0\u30A4\u30C8\u30D6\u30ED\u30C3\u30AF\u3078\u306E\u30D1\u30C7\u30A3\u30F3\u30B0",
-              "name": "header_padding",
-              "hex": "00 00 00 00 00 00 00 00 00 00 00 00"
-            },
-            "file_size_bytes": {
-              "_type": "virtual",
-              "offset": 1536,
-              "size": 0,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF088\u9032ASCII \u2192 \u6574\u6570\u5909\u63DB\uFF09",
-              "name": "file_size_bytes",
-              "value": 136
-            },
-            "data_blocks_size": {
-              "_type": "virtual",
-              "offset": 1536,
-              "size": 0,
-              "description": "\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF\u306E\u5408\u8A08\u30B5\u30A4\u30BA\uFF08512\u30D0\u30A4\u30C8\u5883\u754C\u306B\u5207\u308A\u4E0A\u3052\uFF09",
-              "name": "data_blocks_size",
-              "value": 512
-            },
-            "data": {
-              "_type": "bytes",
-              "offset": 1536,
-              "size": 512,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF",
-              "name": "data",
-              "hex": "33 30 20 6D 74 69 6D 65 3D 31 37 37 30 37 39 35 39 39 32 2E 32 30 31 38 37 33 36 38 38 0A 35 37 20 4C 49 42 41 52 43 48 49 56 45 2E 78 61 74 74 72 2E 63 6F 6D 2E 61 70 70 6C 65 2E 70 72 6F 76 65 6E 61 6E 63 65 3D 41 51 49 41 53 47 6F 64 58 46 43 5A 37 43 59 0A 34 39 20 53 43 48 49 4C 59 2E 78 61 74 74 72 2E 63 6F 6D 2E 61 70 70 6C 65 2E 70 72 6F 76 65 6E 61 6E 63 65 3D 01 02 00 48 6A 1D 5C 50 99 EC 26 0A 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 2048,
-          "size": 1024,
-          "name": "entries",
-          "struct_type": "tar_entry",
-          "children": {
-            "name": {
-              "_type": "string",
-              "offset": 2048,
-              "size": 100,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "name",
-              "value": "hello.txt\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "mode": {
-              "_type": "string",
-              "offset": 2148,
-              "size": 8,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30E2\u30FC\u30C9\uFF088\u9032ASCII\uFF09",
-              "name": "mode",
-              "value": "000644 \u0000",
-              "encoding": "ascii"
-            },
-            "uid": {
-              "_type": "string",
-              "offset": 2156,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6ID\uFF088\u9032ASCII\uFF09",
-              "name": "uid",
-              "value": "000765 \u0000",
-              "encoding": "ascii"
-            },
-            "gid": {
-              "_type": "string",
-              "offset": 2164,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7ID\uFF088\u9032ASCII\uFF09",
-              "name": "gid",
-              "value": "000000 \u0000",
-              "encoding": "ascii"
-            },
-            "size": {
-              "_type": "string",
-              "offset": 2172,
-              "size": 12,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30018\u9032ASCII\uFF09",
-              "name": "size",
-              "value": "00000000014 ",
-              "encoding": "ascii"
-            },
-            "mtime": {
-              "_type": "string",
-              "offset": 2184,
-              "size": 12,
-              "description": "\u66F4\u65B0\u65E5\u6642\uFF088\u9032ASCII\u3001Unix\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
-              "name": "mtime",
-              "value": "15143031730 ",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "string",
-              "offset": 2196,
-              "size": 8,
-              "description": "\u30D8\u30C3\u30C0\u5168\u30D0\u30A4\u30C8\u306E\u5408\u8A08\u5024\uFF08\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u30D5\u30A3\u30FC\u30EB\u30C9\u306F\u30B9\u30DA\u30FC\u30B9\u3068\u3057\u3066\u8A08\u7B97\uFF09",
-              "name": "checksum",
-              "value": "013325\u0000 ",
-              "encoding": "ascii"
-            },
-            "typeflag": {
-              "_type": "integer",
-              "offset": 2204,
-              "size": 1,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30BF\u30A4\u30D7\u30D5\u30E9\u30B0",
-              "name": "typeflag",
-              "value": 48,
-              "hex": "0x30",
-              "enum_label": "regular_file",
-              "enum_description": "\u00270\u0027 - \u901A\u5E38\u30D5\u30A1\u30A4\u30EB"
-            },
-            "linkname": {
-              "_type": "string",
-              "offset": 2205,
-              "size": 100,
-              "description": "\u30EA\u30F3\u30AF\u5148\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "linkname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "magic": {
-              "_type": "string",
-              "offset": 2305,
-              "size": 6,
-              "description": "UStar\u30DE\u30B8\u30C3\u30AF\uFF08\u0027ustar\u0027 \u002B null\uFF09",
-              "_validation": {
-                "passed": false,
-                "expression": "{magic == \u0027ustar\u0027}"
-              },
-              "name": "magic",
-              "value": "ustar\u0000",
-              "encoding": "ascii"
-            },
-            "version": {
-              "_type": "string",
-              "offset": 2311,
-              "size": 2,
-              "description": "UStar\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002700\u0027\uFF09",
-              "name": "version",
-              "value": "00",
-              "encoding": "ascii"
-            },
-            "uname": {
-              "_type": "string",
-              "offset": 2313,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6\u540D",
-              "name": "uname",
-              "value": "redjet\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "gname": {
-              "_type": "string",
-              "offset": 2345,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7\u540D",
-              "name": "gname",
-              "value": "wheel\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "devmajor": {
-              "_type": "string",
-              "offset": 2377,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30E1\u30B8\u30E3\u30FC\u756A\u53F7",
-              "name": "devmajor",
-              "value": "000000 \u0000",
-              "encoding": "ascii"
-            },
-            "devminor": {
-              "_type": "string",
-              "offset": 2385,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30DE\u30A4\u30CA\u30FC\u756A\u53F7",
-              "name": "devminor",
-              "value": "000000 \u0000",
-              "encoding": "ascii"
-            },
-            "prefix": {
-              "_type": "string",
-              "offset": 2393,
-              "size": 155,
-              "description": "\u9577\u3044\u30D5\u30A1\u30A4\u30EB\u540D\u7528\u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9",
-              "name": "prefix",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "header_padding": {
-              "_type": "bytes",
-              "offset": 2548,
-              "size": 12,
-              "description": "512\u30D0\u30A4\u30C8\u30D6\u30ED\u30C3\u30AF\u3078\u306E\u30D1\u30C7\u30A3\u30F3\u30B0",
-              "name": "header_padding",
-              "hex": "00 00 00 00 00 00 00 00 00 00 00 00"
-            },
-            "file_size_bytes": {
-              "_type": "virtual",
-              "offset": 2560,
-              "size": 0,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF088\u9032ASCII \u2192 \u6574\u6570\u5909\u63DB\uFF09",
-              "name": "file_size_bytes",
-              "value": 12
-            },
-            "data_blocks_size": {
-              "_type": "virtual",
-              "offset": 2560,
-              "size": 0,
-              "description": "\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF\u306E\u5408\u8A08\u30B5\u30A4\u30BA\uFF08512\u30D0\u30A4\u30C8\u5883\u754C\u306B\u5207\u308A\u4E0A\u3052\uFF09",
-              "name": "data_blocks_size",
-              "value": 512
-            },
-            "data": {
-              "_type": "bytes",
-              "offset": 2560,
-              "size": 512,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF",
-              "name": "data",
-              "hex": "48 65 6C 6C 6F 2C 20 54 41 52 21 0A 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 3072,
-          "size": 512,
-          "name": "entries",
-          "struct_type": "tar_entry",
-          "children": {
-            "name": {
-              "_type": "string",
-              "offset": 3072,
-              "size": 100,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "name",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "mode": {
-              "_type": "string",
-              "offset": 3172,
-              "size": 8,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30E2\u30FC\u30C9\uFF088\u9032ASCII\uFF09",
-              "name": "mode",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "uid": {
-              "_type": "string",
-              "offset": 3180,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6ID\uFF088\u9032ASCII\uFF09",
-              "name": "uid",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "gid": {
-              "_type": "string",
-              "offset": 3188,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7ID\uFF088\u9032ASCII\uFF09",
-              "name": "gid",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "size": {
-              "_type": "string",
-              "offset": 3196,
-              "size": 12,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30018\u9032ASCII\uFF09",
-              "name": "size",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "mtime": {
-              "_type": "string",
-              "offset": 3208,
-              "size": 12,
-              "description": "\u66F4\u65B0\u65E5\u6642\uFF088\u9032ASCII\u3001Unix\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
-              "name": "mtime",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "string",
-              "offset": 3220,
-              "size": 8,
-              "description": "\u30D8\u30C3\u30C0\u5168\u30D0\u30A4\u30C8\u306E\u5408\u8A08\u5024\uFF08\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u30D5\u30A3\u30FC\u30EB\u30C9\u306F\u30B9\u30DA\u30FC\u30B9\u3068\u3057\u3066\u8A08\u7B97\uFF09",
-              "name": "checksum",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "typeflag": {
-              "_type": "integer",
-              "offset": 3228,
-              "size": 1,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30BF\u30A4\u30D7\u30D5\u30E9\u30B0",
-              "name": "typeflag",
-              "value": 0,
-              "hex": "0x0",
-              "enum_label": "regular_file_legacy",
-              "enum_description": "\u30EC\u30AC\u30B7\u30FC\u901A\u5E38\u30D5\u30A1\u30A4\u30EB\uFF08NULL\u30D0\u30A4\u30C8\uFF09"
-            },
-            "linkname": {
-              "_type": "string",
-              "offset": 3229,
-              "size": 100,
-              "description": "\u30EA\u30F3\u30AF\u5148\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "linkname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "magic": {
-              "_type": "string",
-              "offset": 3329,
-              "size": 6,
-              "description": "UStar\u30DE\u30B8\u30C3\u30AF\uFF08\u0027ustar\u0027 \u002B null\uFF09",
-              "_validation": {
-                "passed": false,
-                "expression": "{magic == \u0027ustar\u0027}"
-              },
-              "name": "magic",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "version": {
-              "_type": "string",
-              "offset": 3335,
-              "size": 2,
-              "description": "UStar\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002700\u0027\uFF09",
-              "name": "version",
-              "value": "\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "uname": {
-              "_type": "string",
-              "offset": 3337,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6\u540D",
-              "name": "uname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "gname": {
-              "_type": "string",
-              "offset": 3369,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7\u540D",
-              "name": "gname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "devmajor": {
-              "_type": "string",
-              "offset": 3401,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30E1\u30B8\u30E3\u30FC\u756A\u53F7",
-              "name": "devmajor",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "devminor": {
-              "_type": "string",
-              "offset": 3409,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30DE\u30A4\u30CA\u30FC\u756A\u53F7",
-              "name": "devminor",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "prefix": {
-              "_type": "string",
-              "offset": 3417,
-              "size": 155,
-              "description": "\u9577\u3044\u30D5\u30A1\u30A4\u30EB\u540D\u7528\u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9",
-              "name": "prefix",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "header_padding": {
-              "_type": "bytes",
-              "offset": 3572,
-              "size": 12,
-              "description": "512\u30D0\u30A4\u30C8\u30D6\u30ED\u30C3\u30AF\u3078\u306E\u30D1\u30C7\u30A3\u30F3\u30B0",
-              "name": "header_padding",
-              "hex": "00 00 00 00 00 00 00 00 00 00 00 00"
-            },
-            "file_size_bytes": {
-              "_type": "virtual",
-              "offset": 3584,
-              "size": 0,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF088\u9032ASCII \u2192 \u6574\u6570\u5909\u63DB\uFF09",
-              "name": "file_size_bytes",
-              "value": 0
-            },
-            "data_blocks_size": {
-              "_type": "virtual",
-              "offset": 3584,
-              "size": 0,
-              "description": "\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF\u306E\u5408\u8A08\u30B5\u30A4\u30BA\uFF08512\u30D0\u30A4\u30C8\u5883\u754C\u306B\u5207\u308A\u4E0A\u3052\uFF09",
-              "name": "data_blocks_size",
-              "value": 0
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 3584,
-          "size": 512,
-          "name": "entries",
-          "struct_type": "tar_entry",
-          "children": {
-            "name": {
-              "_type": "string",
-              "offset": 3584,
-              "size": 100,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "name",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "mode": {
-              "_type": "string",
-              "offset": 3684,
-              "size": 8,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30E2\u30FC\u30C9\uFF088\u9032ASCII\uFF09",
-              "name": "mode",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "uid": {
-              "_type": "string",
-              "offset": 3692,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6ID\uFF088\u9032ASCII\uFF09",
-              "name": "uid",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "gid": {
-              "_type": "string",
-              "offset": 3700,
-              "size": 8,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7ID\uFF088\u9032ASCII\uFF09",
-              "name": "gid",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "size": {
-              "_type": "string",
-              "offset": 3708,
-              "size": 12,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30018\u9032ASCII\uFF09",
-              "name": "size",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "mtime": {
-              "_type": "string",
-              "offset": 3720,
-              "size": 12,
-              "description": "\u66F4\u65B0\u65E5\u6642\uFF088\u9032ASCII\u3001Unix\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
-              "name": "mtime",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "string",
-              "offset": 3732,
-              "size": 8,
-              "description": "\u30D8\u30C3\u30C0\u5168\u30D0\u30A4\u30C8\u306E\u5408\u8A08\u5024\uFF08\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u30D5\u30A3\u30FC\u30EB\u30C9\u306F\u30B9\u30DA\u30FC\u30B9\u3068\u3057\u3066\u8A08\u7B97\uFF09",
-              "name": "checksum",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "typeflag": {
-              "_type": "integer",
-              "offset": 3740,
-              "size": 1,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30BF\u30A4\u30D7\u30D5\u30E9\u30B0",
-              "name": "typeflag",
-              "value": 0,
-              "hex": "0x0",
-              "enum_label": "regular_file_legacy",
-              "enum_description": "\u30EC\u30AC\u30B7\u30FC\u901A\u5E38\u30D5\u30A1\u30A4\u30EB\uFF08NULL\u30D0\u30A4\u30C8\uFF09"
-            },
-            "linkname": {
-              "_type": "string",
-              "offset": 3741,
-              "size": 100,
-              "description": "\u30EA\u30F3\u30AF\u5148\u30D5\u30A1\u30A4\u30EB\u540D",
-              "name": "linkname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "magic": {
-              "_type": "string",
-              "offset": 3841,
-              "size": 6,
-              "description": "UStar\u30DE\u30B8\u30C3\u30AF\uFF08\u0027ustar\u0027 \u002B null\uFF09",
-              "_validation": {
-                "passed": false,
-                "expression": "{magic == \u0027ustar\u0027}"
-              },
-              "name": "magic",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "version": {
-              "_type": "string",
-              "offset": 3847,
-              "size": 2,
-              "description": "UStar\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002700\u0027\uFF09",
-              "name": "version",
-              "value": "\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "uname": {
-              "_type": "string",
-              "offset": 3849,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6\u540D",
-              "name": "uname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "gname": {
-              "_type": "string",
-              "offset": 3881,
-              "size": 32,
-              "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7\u540D",
-              "name": "gname",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "devmajor": {
-              "_type": "string",
-              "offset": 3913,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30E1\u30B8\u30E3\u30FC\u756A\u53F7",
-              "name": "devmajor",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "devminor": {
-              "_type": "string",
-              "offset": 3921,
-              "size": 8,
-              "description": "\u30C7\u30D0\u30A4\u30B9\u30DE\u30A4\u30CA\u30FC\u756A\u53F7",
-              "name": "devminor",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "prefix": {
-              "_type": "string",
-              "offset": 3929,
-              "size": 155,
-              "description": "\u9577\u3044\u30D5\u30A1\u30A4\u30EB\u540D\u7528\u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9",
-              "name": "prefix",
-              "value": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-              "encoding": "ascii"
-            },
-            "header_padding": {
-              "_type": "bytes",
-              "offset": 4084,
-              "size": 12,
-              "description": "512\u30D0\u30A4\u30C8\u30D6\u30ED\u30C3\u30AF\u3078\u306E\u30D1\u30C7\u30A3\u30F3\u30B0",
-              "name": "header_padding",
-              "hex": "00 00 00 00 00 00 00 00 00 00 00 00"
-            },
-            "file_size_bytes": {
-              "_type": "virtual",
-              "offset": 4096,
-              "size": 0,
-              "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF088\u9032ASCII \u2192 \u6574\u6570\u5909\u63DB\uFF09",
-              "name": "file_size_bytes",
-              "value": 0
-            },
-            "data_blocks_size": {
-              "_type": "virtual",
-              "offset": 4096,
               "size": 0,
               "description": "\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF\u306E\u5408\u8A08\u30B5\u30A4\u30BA\uFF08512\u30D0\u30A4\u30C8\u5883\u754C\u306B\u5207\u308A\u4E0A\u3052\uFF09",
               "name": "data_blocks_size",

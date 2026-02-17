@@ -55,8 +55,13 @@ public sealed class RealFileFixture : IDisposable
     private void EnsureFile(string name, Func<byte[]> generator)
     {
         var path = Path.Combine(TestDataDir, name);
-        if (!File.Exists(path))
-            File.WriteAllBytes(path, generator());
+        var data = generator();
+        
+        // Always write if file doesn't exist, or if size differs (ensures consistency across environments)
+        if (!File.Exists(path) || new FileInfo(path).Length != data.Length)
+        {
+            File.WriteAllBytes(path, data);
+        }
     }
 
     public void Dispose()

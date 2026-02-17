@@ -1,7 +1,7 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 33,
+  "size": 20,
   "name": "GZIP",
   "struct_type": "gzip",
   "children": {
@@ -67,8 +67,8 @@
       "size": 4,
       "description": "\u66F4\u65B0\u65E5\u6642\uFF08UNIX\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
       "name": "mtime",
-      "value": 1770795992,
-      "hex": "0x698C33D8"
+      "value": 0,
+      "hex": "0x0"
     },
     "xfl": {
       "_type": "integer",
@@ -76,8 +76,8 @@
       "size": 1,
       "description": "\u8FFD\u52A0\u30D5\u30E9\u30B0\uFF082=\u6700\u9AD8\u5727\u7E2E\u30014=\u6700\u901F\u5727\u7E2E\uFF09",
       "name": "xfl",
-      "value": 0,
-      "hex": "0x0"
+      "value": 2,
+      "hex": "0x2"
     },
     "os": {
       "_type": "integer",
@@ -91,31 +91,31 @@
     "compressed_data": {
       "_type": "compressed",
       "offset": 10,
-      "size": 15,
+      "size": 2,
       "description": "\u5727\u7E2E\u30C7\u30FC\u30BF\uFF08deflate\uFF09",
       "name": "compressed_data",
       "algorithm": "deflate",
-      "compressed_size": 15,
-      "decompressed_size": 13,
-      "decompressed_hex": "48 65 6C 6C 6F 2C 20 47 5A 49 50 21 0A"
+      "compressed_size": 2,
+      "decompressed_size": 0,
+      "decompressed_hex": ""
     },
     "crc32": {
       "_type": "integer",
-      "offset": 25,
+      "offset": 12,
       "size": 4,
       "description": "CRC-32\uFF08\u5143\u30C7\u30FC\u30BF\u306ECRC\uFF09",
       "name": "crc32",
-      "value": 2914310121,
-      "hex": "0xADB4D7E9"
+      "value": 0,
+      "hex": "0x0"
     },
     "isize": {
       "_type": "integer",
-      "offset": 29,
+      "offset": 16,
       "size": 4,
       "description": "ISIZE\uFF08\u5143\u30C7\u30FC\u30BF\u306E\u30B5\u30A4\u30BA mod 2^32\uFF09",
       "name": "isize",
-      "value": 13,
-      "hex": "0xD"
+      "value": 0,
+      "hex": "0x0"
     }
   }
 }

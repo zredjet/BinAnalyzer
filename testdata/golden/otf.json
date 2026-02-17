@@ -1,7 +1,7 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 156,
+  "size": 28,
   "name": "OTF",
   "struct_type": "otf",
   "children": {
@@ -29,41 +29,41 @@
           "size": 2,
           "description": "\u30C6\u30FC\u30D6\u30EB\u6570",
           "name": "numTables",
-          "value": 9,
-          "hex": "0x9"
+          "value": 1,
+          "hex": "0x1"
         },
         "searchRange": {
           "_type": "integer",
           "offset": 6,
           "size": 2,
           "name": "searchRange",
-          "value": 128,
-          "hex": "0x80"
+          "value": 16,
+          "hex": "0x10"
         },
         "entrySelector": {
           "_type": "integer",
           "offset": 8,
           "size": 2,
           "name": "entrySelector",
-          "value": 3,
-          "hex": "0x3"
+          "value": 0,
+          "hex": "0x0"
         },
         "rangeShift": {
           "_type": "integer",
           "offset": 10,
           "size": 2,
           "name": "rangeShift",
-          "value": 136,
-          "hex": "0x88"
+          "value": 0,
+          "hex": "0x0"
         }
       }
     },
     "table_records": {
       "_type": "array",
       "offset": 12,
-      "size": 144,
+      "size": 16,
       "name": "table_records",
-      "count": 9,
+      "count": 1,
       "elements": [
         {
           "_type": "struct",
@@ -78,7 +78,7 @@
               "size": 4,
               "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
               "name": "tag",
-              "value": "CFF ",
+              "value": "head",
               "encoding": "ascii"
             },
             "checksum": {
@@ -86,8 +86,8 @@
               "offset": 16,
               "size": 4,
               "name": "checksum",
-              "value": 3926460504,
-              "hex": "0xEA090858"
+              "value": 0,
+              "hex": "0x0"
             },
             "offset": {
               "_type": "integer",
@@ -95,186 +95,12 @@
               "size": 4,
               "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
               "name": "offset",
-              "value": 1784,
-              "hex": "0x6F8"
+              "value": 28,
+              "hex": "0x1C"
             },
             "length": {
               "_type": "integer",
               "offset": 24,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 746,
-              "hex": "0x2EA"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 1784,
-              "size": 746,
-              "name": "table_data",
-              "struct_type": "raw_data",
-              "children": {
-                "data": {
-                  "_type": "bytes",
-                  "offset": 1784,
-                  "size": 746,
-                  "name": "data",
-                  "hex": "01 00 04 02 00 01 01 01 17 4C 61 73 74 52 65 73 6F 72 74 53 61 6E 73 2D 52 65 67 75 6C 61 72 00 01 01 01 3B 1E A0 00 48 82 8F 8B 8B 1E A0 00 48 82 8F 8B 8B 0C 07 F8 10 00 F8 20 01 F8 21 02 F8 18 04 FB 37 0C 03 9F 0C 04 F7 62 FB 5C 1C 08 30 1C 06 6A 05 F7 83 0F F7 8D 11 9F F9 12 12 00 07 01 01 05 0C 1E 35 4B 6F 85 4E 55 4C 4C 75 6E 69 30 30 30 44 6C 61 73 74 72 65 73 6F 72 74 74 65 6D 70 6C 61 74 65 6C 61 73 74 72 65 73 6F 72 74 68 69 67 68 73 75 72 72 6F 67 61 74 65 6C 61 73 74 72 65 73 6F 72 74 6C 6F 77 73 75 72 72 6F 67 61 74 65 43 6F 70 79 72 69 67 68 74 20 31 39 39 38 2D 32 30 30 38 2C 20 32 30 31 37 20 41 70 70 6C 65 20 49 6E 63 2E 4C 61 73 74 52 65 73 6F 72 74 53 61 6E 73 20 52 65 67 75 6C 61 72 00 00 01 01 87 01 00 01 00 01 89 02 00 07 02 00 01 00 27 00 29 00 2C 00 2F 00 BF 01 05 01 73 1C 08 C3 F8 CD FB 5C 24 0A F3 F7 62 20 0A 1C 04 BB F7 35 15 1C FB 47 21 0A 1C 04 B9 06 EE C3 22 0A 53 56 28 1E 0E 20 0E F8 D4 0E FA 29 0E F8 9C FB 5C 24 0A F3 F7 62 20 0A 1C 04 BB F7 35 15 1C FB 47 21 0A 1C 04 B9 06 EE C3 22 0A 53 56 28 1E FD 04 F8 BE 15 BE A9 AB B2 1F 97 07 C3 AC AF D0 B9 1E EC CB D0 C5 F7 0C 1A F7 3A FB 28 E5 FB 3E FB 3F FB 05 39 2F 6F 1E 86 7B 88 7B 7A 1A 5E AE 73 AC AE A0 9B A3 9D 1E 9D A3 05 C5 AE C0 AD CD 1B E6 C6 57 3F 47 61 6A 34 4E 1F 43 59 55 56 29 1A 7E 07 57 A8 70 BE 1E 89 FB BE 15 C5 BD B9 C5 C5 5A B9 50 50 5A 5C 52 52 BD 5C C5 1F 0E 23 0A F7 66 F3 F2 F7 63 20 0A F7 0E F8 1B 15 AE A7 9C B9 A3 1F E4 F7 40 05 F7 D5 FC 65 FC FD 21 0A F8 FD FB 99 06 4B 62 74 40 64 1F FC 36 FD B6 05 49 68 AC 4D CE 1B F7 92 F8 18 15 F7 78 F8 4E 05 9A FC 4E 06 0E 23 0A F7 65 F4 F2 F7 63 1F 1C 04 C5 07 F7 63 22 F2 FB 65 1E 1C FB 43 06 FB 66 23 23 FB 62 1F 1C FB 3B 07 FB 63 F3 24 F7 66 1E 1C 04 BB F7 35 15 FC FD F8 65 F7 D5 06 E4 FB 40 05 5D A3 A7 7A AE 1B CE AC C9 CD 68 1F FC 36 F9 B6 05 D6 64 62 A2 4B 1B F7 99 F8 FD 07 EF C2 22 0A 54 56 27 1E FC FD F8 FE 15 F8 4E 9A 07 F7 78 FC 4E 05 0E 1E A0 37 FF 0C 09 99 0C 0A 8B 0C 0B 1C 08 CD 14 F6 15 9F 13 00 05 01 01 24 34 3D 47 50 1F 1C 04 C5 07 F7 62 23 F3 FB 66 1E 1C FB 43 06 FB 65 22 24 FB 63 1F 1C FB 3B 07 FB 63 F4 24 F7 65 1E 0B 06 27 54 C0 F3 1F 1C 04 B5 07 F3 C2 C0 EF 1E 0B 56 23 1F 1C FB 4B 07 23 0B F8 9C FB 5B 15 1C 04 BD 06 0B 15 1C 04 BD 06 F7 66 F3 0B"
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 28,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 28,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "cmap",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 32,
-              "size": 4,
-              "name": "checksum",
-              "value": 2304100,
-              "hex": "0x232864"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 36,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 280,
-              "hex": "0x118"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 40,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 76,
-              "hex": "0x4C"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 280,
-              "size": 12,
-              "name": "table_data",
-              "struct_type": "cmap_table",
-              "children": {
-                "version": {
-                  "_type": "integer",
-                  "offset": 280,
-                  "size": 2,
-                  "name": "version",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "numTables": {
-                  "_type": "integer",
-                  "offset": 282,
-                  "size": 2,
-                  "description": "\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\u30EC\u30B3\u30FC\u30C9\u6570",
-                  "name": "numTables",
-                  "value": 1,
-                  "hex": "0x1"
-                },
-                "encoding_records": {
-                  "_type": "array",
-                  "offset": 284,
-                  "size": 8,
-                  "name": "encoding_records",
-                  "count": 1,
-                  "elements": [
-                    {
-                      "_type": "struct",
-                      "offset": 284,
-                      "size": 8,
-                      "name": "encoding_records",
-                      "struct_type": "cmap_encoding_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 284,
-                          "size": 2,
-                          "description": "\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0ID\uFF080=Unicode, 1=Macintosh, 3=Windows\uFF09",
-                          "name": "platformID",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 286,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 4,
-                          "hex": "0x4"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 288,
-                          "size": 4,
-                          "description": "cmap\u30C6\u30FC\u30D6\u30EB\u5148\u982D\u304B\u3089\u306E\u30B5\u30D6\u30C6\u30FC\u30D6\u30EB\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 12,
-                          "hex": "0xC"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 44,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 44,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "head",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 48,
-              "size": 4,
-              "name": "checksum",
-              "value": 3656673608,
-              "hex": "0xD9F46948"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 52,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 224,
-              "hex": "0xE0"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 56,
               "size": 4,
               "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
               "name": "length",
@@ -283,14 +109,14 @@
             },
             "table_data": {
               "_type": "struct",
-              "offset": 224,
+              "offset": 28,
               "size": 54,
               "name": "table_data",
               "struct_type": "head_table",
               "children": {
                 "majorVersion": {
                   "_type": "integer",
-                  "offset": 224,
+                  "offset": 28,
                   "size": 2,
                   "name": "majorVersion",
                   "value": 1,
@@ -298,7 +124,7 @@
                 },
                 "minorVersion": {
                   "_type": "integer",
-                  "offset": 226,
+                  "offset": 30,
                   "size": 2,
                   "name": "minorVersion",
                   "value": 0,
@@ -306,24 +132,24 @@
                 },
                 "fontRevision": {
                   "_type": "integer",
-                  "offset": 228,
+                  "offset": 32,
                   "size": 4,
                   "description": "\u30D5\u30A9\u30F3\u30C8\u30EA\u30D3\u30B8\u30E7\u30F3\uFF08Fixed 16.16\uFF09",
                   "name": "fontRevision",
-                  "value": 65601,
-                  "hex": "0x10041"
+                  "value": 65536,
+                  "hex": "0x10000"
                 },
                 "checksumAdjustment": {
                   "_type": "integer",
-                  "offset": 232,
+                  "offset": 36,
                   "size": 4,
                   "name": "checksumAdjustment",
-                  "value": 1672893054,
-                  "hex": "0x63B6527E"
+                  "value": 0,
+                  "hex": "0x0"
                 },
                 "magicNumber": {
                   "_type": "integer",
-                  "offset": 236,
+                  "offset": 40,
                   "size": 4,
                   "description": "\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC 0x5F0F3CF5",
                   "name": "magicNumber",
@@ -332,73 +158,73 @@
                 },
                 "flags": {
                   "_type": "integer",
-                  "offset": 240,
+                  "offset": 44,
                   "size": 2,
                   "name": "flags",
-                  "value": 16387,
-                  "hex": "0x4003"
+                  "value": 11,
+                  "hex": "0xB"
                 },
                 "unitsPerEm": {
                   "_type": "integer",
-                  "offset": 242,
+                  "offset": 46,
                   "size": 2,
                   "name": "unitsPerEm",
-                  "value": 2048,
-                  "hex": "0x800"
+                  "value": 1000,
+                  "hex": "0x3E8"
                 },
                 "created": {
                   "_type": "integer",
-                  "offset": 244,
+                  "offset": 48,
                   "size": 8,
                   "description": "\u4F5C\u6210\u65E5\u6642\uFF081904-01-01 00:00:00\u304B\u3089\u306E\u79D2\u6570\uFF09",
                   "name": "created",
-                  "value": 3582255600,
-                  "hex": "0xD584E1F0"
+                  "value": 0,
+                  "hex": "0x0"
                 },
                 "modified": {
                   "_type": "integer",
-                  "offset": 252,
+                  "offset": 56,
                   "size": 8,
                   "description": "\u66F4\u65B0\u65E5\u6642\uFF081904-01-01 00:00:00\u304B\u3089\u306E\u79D2\u6570\uFF09",
                   "name": "modified",
-                  "value": 3788386258,
-                  "hex": "0xE1CE2FD2"
+                  "value": 0,
+                  "hex": "0x0"
                 },
                 "xMin": {
                   "_type": "integer",
-                  "offset": 260,
+                  "offset": 64,
                   "size": 2,
                   "name": "xMin",
-                  "value": 206,
-                  "hex": "0xCE"
+                  "value": 0,
+                  "hex": "0x0"
                 },
                 "yMin": {
                   "_type": "integer",
-                  "offset": 262,
+                  "offset": 66,
                   "size": 2,
                   "name": "yMin",
-                  "value": -200,
-                  "hex": "0xFFFFFFFFFFFFFF38"
+                  "value": 0,
+                  "hex": "0x0"
                 },
                 "xMax": {
                   "_type": "integer",
-                  "offset": 264,
+                  "offset": 68,
                   "size": 2,
                   "name": "xMax",
-                  "value": 2096,
-                  "hex": "0x830"
+                  "value": 100,
+                  "hex": "0x64"
                 },
                 "yMax": {
                   "_type": "integer",
-                  "offset": 266,
+                  "offset": 70,
                   "size": 2,
                   "name": "yMax",
-                  "value": 1642,
-                  "hex": "0x66A"
+                  "value": 100,
+                  "hex": "0x64"
                 },
                 "macStyle": {
                   "_type": "bitfield",
-                  "offset": 268,
+                  "offset": 72,
                   "size": 2,
                   "name": "macStyle",
                   "raw_value": "0x0",
@@ -449,16 +275,16 @@
                 },
                 "lowestRecPPEM": {
                   "_type": "integer",
-                  "offset": 270,
+                  "offset": 74,
                   "size": 2,
                   "description": "\u6700\u5C0F\u53EF\u8AAD\u30B5\u30A4\u30BA\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
                   "name": "lowestRecPPEM",
-                  "value": 3,
-                  "hex": "0x3"
+                  "value": 8,
+                  "hex": "0x8"
                 },
                 "fontDirectionHint": {
                   "_type": "integer",
-                  "offset": 272,
+                  "offset": 76,
                   "size": 2,
                   "name": "fontDirectionHint",
                   "value": 2,
@@ -466,7 +292,7 @@
                 },
                 "indexToLocFormat": {
                   "_type": "integer",
-                  "offset": 274,
+                  "offset": 78,
                   "size": 2,
                   "description": "0=\u77ED\u3044\u30AA\u30D5\u30BB\u30C3\u30C8\u30011=\u9577\u3044\u30AA\u30D5\u30BB\u30C3\u30C8",
                   "name": "indexToLocFormat",
@@ -475,1205 +301,11 @@
                 },
                 "glyphDataFormat": {
                   "_type": "integer",
-                  "offset": 276,
+                  "offset": 80,
                   "size": 2,
                   "name": "glyphDataFormat",
                   "value": 0,
                   "hex": "0x0"
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 60,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 60,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "hhea",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 64,
-              "size": 4,
-              "name": "checksum",
-              "value": 278792212,
-              "hex": "0x109E0814"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 68,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 188,
-              "hex": "0xBC"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 72,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 36,
-              "hex": "0x24"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 188,
-              "size": 36,
-              "name": "table_data",
-              "struct_type": "hhea_table",
-              "children": {
-                "majorVersion": {
-                  "_type": "integer",
-                  "offset": 188,
-                  "size": 2,
-                  "name": "majorVersion",
-                  "value": 1,
-                  "hex": "0x1"
-                },
-                "minorVersion": {
-                  "_type": "integer",
-                  "offset": 190,
-                  "size": 2,
-                  "name": "minorVersion",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "ascender": {
-                  "_type": "integer",
-                  "offset": 192,
-                  "size": 2,
-                  "description": "\u30A2\u30BB\u30F3\u30C0\u30FC",
-                  "name": "ascender",
-                  "value": 1950,
-                  "hex": "0x79E"
-                },
-                "descender": {
-                  "_type": "integer",
-                  "offset": 194,
-                  "size": 2,
-                  "description": "\u30C7\u30A3\u30BB\u30F3\u30C0\u30FC",
-                  "name": "descender",
-                  "value": -494,
-                  "hex": "0xFFFFFFFFFFFFFE12"
-                },
-                "lineGap": {
-                  "_type": "integer",
-                  "offset": 196,
-                  "size": 2,
-                  "name": "lineGap",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "advanceWidthMax": {
-                  "_type": "integer",
-                  "offset": 198,
-                  "size": 2,
-                  "name": "advanceWidthMax",
-                  "value": 2350,
-                  "hex": "0x92E"
-                },
-                "minLeftSideBearing": {
-                  "_type": "integer",
-                  "offset": 200,
-                  "size": 2,
-                  "name": "minLeftSideBearing",
-                  "value": 206,
-                  "hex": "0xCE"
-                },
-                "minRightSideBearing": {
-                  "_type": "integer",
-                  "offset": 202,
-                  "size": 2,
-                  "name": "minRightSideBearing",
-                  "value": 206,
-                  "hex": "0xCE"
-                },
-                "xMaxExtent": {
-                  "_type": "integer",
-                  "offset": 204,
-                  "size": 2,
-                  "name": "xMaxExtent",
-                  "value": 2096,
-                  "hex": "0x830"
-                },
-                "caretSlopeRise": {
-                  "_type": "integer",
-                  "offset": 206,
-                  "size": 2,
-                  "name": "caretSlopeRise",
-                  "value": 1,
-                  "hex": "0x1"
-                },
-                "caretSlopeRun": {
-                  "_type": "integer",
-                  "offset": 208,
-                  "size": 2,
-                  "name": "caretSlopeRun",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "caretOffset": {
-                  "_type": "integer",
-                  "offset": 210,
-                  "size": 2,
-                  "name": "caretOffset",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "reserved1": {
-                  "_type": "integer",
-                  "offset": 212,
-                  "size": 2,
-                  "name": "reserved1",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "reserved2": {
-                  "_type": "integer",
-                  "offset": 214,
-                  "size": 2,
-                  "name": "reserved2",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "reserved3": {
-                  "_type": "integer",
-                  "offset": 216,
-                  "size": 2,
-                  "name": "reserved3",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "reserved4": {
-                  "_type": "integer",
-                  "offset": 218,
-                  "size": 2,
-                  "name": "reserved4",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "metricDataFormat": {
-                  "_type": "integer",
-                  "offset": 220,
-                  "size": 2,
-                  "name": "metricDataFormat",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "numberOfHMetrics": {
-                  "_type": "integer",
-                  "offset": 222,
-                  "size": 2,
-                  "description": "\u6C34\u5E73\u30E1\u30C8\u30EA\u30AF\u30B9\u6570",
-                  "name": "numberOfHMetrics",
-                  "value": 5,
-                  "hex": "0x5"
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 76,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 76,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "hmtx",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 80,
-              "size": 4,
-              "name": "checksum",
-              "value": 427033243,
-              "hex": "0x1974029B"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 84,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 164,
-              "hex": "0xA4"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 88,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 24,
-              "hex": "0x18"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 164,
-              "size": 24,
-              "name": "table_data",
-              "struct_type": "raw_data",
-              "children": {
-                "data": {
-                  "_type": "bytes",
-                  "offset": 164,
-                  "size": 24,
-                  "name": "data",
-                  "hex": "09 2E 00 FF 00 00 00 00 02 AB 00 00 04 00 00 00 08 CD 00 CE 00 CE 00 CE"
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 92,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 92,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "maxp",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 96,
-              "size": 4,
-              "name": "checksum",
-              "value": 479232,
-              "hex": "0x75000"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 100,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 156,
-              "hex": "0x9C"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 104,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 6,
-              "hex": "0x6"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 156,
-              "size": 6,
-              "name": "table_data",
-              "struct_type": "raw_data",
-              "children": {
-                "data": {
-                  "_type": "bytes",
-                  "offset": 156,
-                  "size": 6,
-                  "name": "data",
-                  "hex": "00 00 50 00 00 07"
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 108,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 108,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "meta",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 112,
-              "size": 4,
-              "name": "checksum",
-              "value": 1466321174,
-              "hex": "0x57664916"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 116,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 1072,
-              "hex": "0x430"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 120,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 712,
-              "hex": "0x2C8"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 1072,
-              "size": 712,
-              "name": "table_data",
-              "struct_type": "raw_data",
-              "children": {
-                "data": {
-                  "_type": "bytes",
-                  "offset": 1072,
-                  "size": 712,
-                  "name": "data",
-                  "hex": "00 00 00 01 00 00 00 00 00 00 00 28 00 00 00 02 61 70 70 6C 00 00 00 28 00 00 00 A0 62 69 6C 64 00 00 00 C8 00 00 02 00 00 00 00 01 00 00 00 00 18 00 00 00 00 00 00 00 00 04 00 04 00 00 00 00 52 54 51 65 48 68 77 65 41 68 77 46 43 30 67 54 41 54 52 51 41 67 59 46 44 6A 77 44 4F 57 34 4D 4F 67 74 4B 57 46 46 4D 55 31 38 37 4E 6A 4D 74 4F 52 41 6A 63 58 4A 6F 66 41 39 59 57 48 5A 79 71 57 59 79 4E 53 41 51 30 6C 46 76 69 6C 35 62 5A 36 4A 6D 44 67 33 55 51 46 52 65 56 48 4A 4A 58 48 6F 71 41 67 6B 33 65 6C 47 4E 5A 45 4F 6C 56 58 38 6A 48 67 67 39 50 54 63 42 6F 30 42 41 4F 78 68 58 47 51 3D 3D B3 8D EB 13 84 BC 36 D6 8C C9 2A F9 BB 88 2A F6 BD 75 CB 4E C8 C1 D1 1A 93 91 FC D3 B5 12 C6 6B 61 E9 AD 03 91 48 24 4C 20 02 E2 E6 73 AB CE E6 3C E3 76 FC AE C5 CD 46 CD 8E 26 32 31 83 1F A3 E3 BA CA 7B BA 03 1D D6 56 BD 8B CB 49 9D CB BD 1B 95 FA 3C 9D 99 8F EC 5C 0B F6 62 38 8A 2D A2 51 5E CA C8 E5 1F ED 10 12 89 10 F3 17 34 95 3C CF 30 55 05 ED 16 80 58 24 37 D4 F4 5D 1B B9 7D 76 B4 45 74 AE C3 7D 28 24 06 1A 73 53 64 76 2B A7 4C 1A 5D 31 57 2A D7 19 B3 F7 FA 29 51 B9 92 CF 35 A9 46 54 C5 11 76 62 F0 1D 1C B9 31 2F DA 92 B4 14 6A 09 49 49 17 61 40 43 BE AD 91 DC BE A3 A3 E1 70 EB 5C 15 C1 FF 7F B3 4B 1B 89 A8 EA 75 A8 26 0F 15 C6 64 93 29 28 91 2E 7E AC 64 8D 3F 46 03 D9 9A BE 25 CE 9C C8 AF 13 B2 44 DF 5C 7A C8 12 37 AD B9 54 38 0E 65 24 15 48 05 17 B0 3A 4F 7F C0 A8 70 EE BF 07 A8 85 07 93 B5 1C 71 69 54 9C DD 6E CE FE 91 81 0F F6 1F 27 FD 46 A6 E8 D0 63 BC 26 E6 9A F2 AB 36 BF 54 17 CF AF 41 75 41 C6 E1 C1 52 8E 5A 28 E0 76 17 D1 5D 10 19 A5 E1 51 1E 95 6C 55 F7 F9 D7 96 A7 8B BD 7C D0 57 22 D4 79 D9 48 AB F0 5E 95 38 8F E7 89 A1 BE BB 22 6E FB 37 7D 88 91 FC B2 C0 43 4C EE A2 00 46 78 C6 1B CA 8F 57 7B 5A BB 1E 2D 68 9C E5 73 D7 EF AF C1 09 BF A5 3B F4 65 4C 74 C6 74 FB 8F 07 E1 05 8F 9D D4 A6 4A 2D 4F 2B 2D 72 B1 CF AB AF E1 93 9B 40 58 54 D9 ED 4F E9 3A 43 4D D2 83 B8 17 FE F5 B8 B6 D5 E9 71 95 01 C6 50 38 55 7A 01 4E 09 C3 07 4B EC A1 AB 19 10 69 47 A7 4B 01 1A 8B 06 60 50 67 85 17 9E FD A3 9B CA 8B 20 24 83 94 19 4C 76 97 F1 D8 93 8D 91 2D 38 14 14 ED E4 3D CA 08 93 2D 61 7E 77 41 E2 26 84 9E B5 94"
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 124,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 124,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "name",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 128,
-              "size": 4,
-              "name": "checksum",
-              "value": 354311630,
-              "hex": "0x151E5DCE"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 132,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 472,
-              "hex": "0x1D8"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 136,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 600,
-              "hex": "0x258"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 472,
-              "size": 126,
-              "name": "table_data",
-              "struct_type": "name_table",
-              "children": {
-                "format": {
-                  "_type": "integer",
-                  "offset": 472,
-                  "size": 2,
-                  "name": "format",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "count": {
-                  "_type": "integer",
-                  "offset": 474,
-                  "size": 2,
-                  "description": "\u30CD\u30FC\u30E0\u30EC\u30B3\u30FC\u30C9\u6570",
-                  "name": "count",
-                  "value": 10,
-                  "hex": "0xA"
-                },
-                "stringOffset": {
-                  "_type": "integer",
-                  "offset": 476,
-                  "size": 2,
-                  "description": "\u30C6\u30FC\u30D6\u30EB\u5148\u982D\u304B\u3089\u306E\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u30AA\u30D5\u30BB\u30C3\u30C8",
-                  "name": "stringOffset",
-                  "value": 126,
-                  "hex": "0x7E"
-                },
-                "records": {
-                  "_type": "array",
-                  "offset": 478,
-                  "size": 120,
-                  "name": "records",
-                  "count": 10,
-                  "elements": [
-                    {
-                      "_type": "struct",
-                      "offset": 478,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 478,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 480,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 482,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 484,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 6,
-                          "hex": "0x6",
-                          "enum_label": "PostScriptName"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 486,
-                          "size": 2,
-                          "name": "length",
-                          "value": 10,
-                          "hex": "0xA"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 488,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 0,
-                          "hex": "0x0"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 490,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 490,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 492,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 494,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 496,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 0,
-                          "hex": "0x0",
-                          "enum_label": "Copyright"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 498,
-                          "size": 2,
-                          "name": "length",
-                          "value": 44,
-                          "hex": "0x2C"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 500,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 10,
-                          "hex": "0xA"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 502,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 502,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 504,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 506,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 508,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 1,
-                          "hex": "0x1",
-                          "enum_label": "FontFamily"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 510,
-                          "size": 2,
-                          "name": "length",
-                          "value": 22,
-                          "hex": "0x16"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 512,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 54,
-                          "hex": "0x36"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 514,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 514,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 516,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 518,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 520,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 2,
-                          "hex": "0x2",
-                          "enum_label": "FontSubfamily"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 522,
-                          "size": 2,
-                          "name": "length",
-                          "value": 14,
-                          "hex": "0xE"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 524,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 76,
-                          "hex": "0x4C"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 526,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 526,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 528,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 530,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 532,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 3,
-                          "hex": "0x3",
-                          "enum_label": "UniqueID"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 534,
-                          "size": 2,
-                          "name": "length",
-                          "value": 66,
-                          "hex": "0x42"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 536,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 90,
-                          "hex": "0x5A"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 538,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 538,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 540,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 542,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 544,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 4,
-                          "hex": "0x4",
-                          "enum_label": "FullName"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 546,
-                          "size": 2,
-                          "name": "length",
-                          "value": 22,
-                          "hex": "0x16"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 548,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 156,
-                          "hex": "0x9C"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 550,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 550,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 552,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 554,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 556,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 5,
-                          "hex": "0x5",
-                          "enum_label": "VersionString"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 558,
-                          "size": 2,
-                          "name": "length",
-                          "value": 16,
-                          "hex": "0x10"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 560,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 178,
-                          "hex": "0xB2"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 562,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 562,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 564,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 566,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 568,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 6,
-                          "hex": "0x6",
-                          "enum_label": "PostScriptName"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 570,
-                          "size": 2,
-                          "name": "length",
-                          "value": 20,
-                          "hex": "0x14"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 572,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 194,
-                          "hex": "0xC2"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 574,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 574,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 576,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 578,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 580,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 8,
-                          "hex": "0x8",
-                          "enum_label": "Manufacturer"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 582,
-                          "size": 2,
-                          "name": "length",
-                          "value": 20,
-                          "hex": "0x14"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 584,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 214,
-                          "hex": "0xD6"
-                        }
-                      }
-                    },
-                    {
-                      "_type": "struct",
-                      "offset": 586,
-                      "size": 12,
-                      "name": "records",
-                      "struct_type": "name_record",
-                      "children": {
-                        "platformID": {
-                          "_type": "integer",
-                          "offset": 586,
-                          "size": 2,
-                          "name": "platformID",
-                          "value": 3,
-                          "hex": "0x3"
-                        },
-                        "encodingID": {
-                          "_type": "integer",
-                          "offset": 588,
-                          "size": 2,
-                          "name": "encodingID",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "languageID": {
-                          "_type": "integer",
-                          "offset": 590,
-                          "size": 2,
-                          "name": "languageID",
-                          "value": 1033,
-                          "hex": "0x409"
-                        },
-                        "nameID": {
-                          "_type": "integer",
-                          "offset": 592,
-                          "size": 2,
-                          "name": "nameID",
-                          "value": 10,
-                          "hex": "0xA",
-                          "enum_label": "Description"
-                        },
-                        "length": {
-                          "_type": "integer",
-                          "offset": 594,
-                          "size": 2,
-                          "name": "length",
-                          "value": 240,
-                          "hex": "0xF0"
-                        },
-                        "offset": {
-                          "_type": "integer",
-                          "offset": 596,
-                          "size": 2,
-                          "description": "\u6587\u5B57\u5217\u30B9\u30C8\u30EC\u30FC\u30B8\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-                          "name": "offset",
-                          "value": 234,
-                          "hex": "0xEA"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        {
-          "_type": "struct",
-          "offset": 140,
-          "size": 16,
-          "name": "table_records",
-          "struct_type": "table_record",
-          "children": {
-            "tag": {
-              "_type": "string",
-              "offset": 140,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
-              "name": "tag",
-              "value": "post",
-              "encoding": "ascii"
-            },
-            "checksum": {
-              "_type": "integer",
-              "offset": 144,
-              "size": 4,
-              "name": "checksum",
-              "value": 4190231132,
-              "hex": "0xF9C1DA5C"
-            },
-            "offset": {
-              "_type": "integer",
-              "offset": 148,
-              "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
-              "name": "offset",
-              "value": 356,
-              "hex": "0x164"
-            },
-            "length": {
-              "_type": "integer",
-              "offset": 152,
-              "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
-              "name": "length",
-              "value": 114,
-              "hex": "0x72"
-            },
-            "table_data": {
-              "_type": "struct",
-              "offset": 356,
-              "size": 114,
-              "name": "table_data",
-              "struct_type": "post_table",
-              "children": {
-                "version": {
-                  "_type": "integer",
-                  "offset": 356,
-                  "size": 4,
-                  "description": "PostScript\u30C6\u30FC\u30D6\u30EB\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08Fixed 16.16\uFF09",
-                  "name": "version",
-                  "value": 131072,
-                  "hex": "0x20000"
-                },
-                "italicAngle": {
-                  "_type": "integer",
-                  "offset": 360,
-                  "size": 4,
-                  "description": "\u30A4\u30BF\u30EA\u30C3\u30AF\u89D2\u5EA6\uFF08Fixed 16.16\uFF09",
-                  "name": "italicAngle",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "underlinePosition": {
-                  "_type": "integer",
-                  "offset": 364,
-                  "size": 2,
-                  "name": "underlinePosition",
-                  "value": -143,
-                  "hex": "0xFFFFFFFFFFFFFF71"
-                },
-                "underlineThickness": {
-                  "_type": "integer",
-                  "offset": 366,
-                  "size": 2,
-                  "name": "underlineThickness",
-                  "value": 20,
-                  "hex": "0x14"
-                },
-                "isFixedPitch": {
-                  "_type": "integer",
-                  "offset": 368,
-                  "size": 4,
-                  "description": "\u7B49\u5E45\u30D5\u30A9\u30F3\u30C8\u306E\u5834\u5408\u306F\u975E\u30BC\u30ED",
-                  "name": "isFixedPitch",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "minMemType42": {
-                  "_type": "integer",
-                  "offset": 372,
-                  "size": 4,
-                  "name": "minMemType42",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "maxMemType42": {
-                  "_type": "integer",
-                  "offset": 376,
-                  "size": 4,
-                  "name": "maxMemType42",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "minMemType1": {
-                  "_type": "integer",
-                  "offset": 380,
-                  "size": 4,
-                  "name": "minMemType1",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "maxMemType1": {
-                  "_type": "integer",
-                  "offset": 384,
-                  "size": 4,
-                  "name": "maxMemType1",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "extra_data": {
-                  "_type": "bytes",
-                  "offset": 388,
-                  "size": 82,
-                  "description": "\u30D0\u30FC\u30B8\u30E7\u30F3\u4F9D\u5B58\u306E\u8FFD\u52A0\u30C7\u30FC\u30BF",
-                  "name": "extra_data",
-                  "hex": "00 07 00 00 00 01 00 02 00 03 01 02 01 03 01 04 12 6C 61 73 74 72 65 73 6F 72 74 74 65 6D 70 6C 61 74 65 17 6C 61 73 74 72 65 73 6F 72 74 68 69 67 68 73 75 72 72 6F 67 61 74 65 16 6C 61 73 74 72 65 73 6F 72 74 6C 6F 77 73 75 72 72 6F 67 61 74 65"
                 }
               }
             }

@@ -1,7 +1,7 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 102,
+  "size": 58,
   "name": "BMP",
   "struct_type": "bmp",
   "children": {
@@ -25,8 +25,8 @@
           "offset": 2,
           "size": 4,
           "name": "file_size",
-          "value": 102,
-          "hex": "0x66"
+          "value": 58,
+          "hex": "0x3A"
         },
         "reserved1": {
           "_type": "integer",
@@ -75,16 +75,16 @@
           "offset": 18,
           "size": 4,
           "name": "width",
-          "value": 4,
-          "hex": "0x4"
+          "value": 1,
+          "hex": "0x1"
         },
         "height": {
           "_type": "integer",
           "offset": 22,
           "size": 4,
           "name": "height",
-          "value": -4,
-          "hex": "0xFFFFFFFFFFFFFFFC"
+          "value": 1,
+          "hex": "0x1"
         },
         "planes": {
           "_type": "integer",
@@ -117,8 +117,8 @@
           "offset": 34,
           "size": 4,
           "name": "image_size",
-          "value": 48,
-          "hex": "0x30"
+          "value": 4,
+          "hex": "0x4"
         },
         "x_pixels_per_meter": {
           "_type": "integer",
@@ -157,9 +157,9 @@
     "pixel_data": {
       "_type": "bytes",
       "offset": 54,
-      "size": 48,
+      "size": 4,
       "name": "pixel_data",
-      "hex": "FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00"
+      "hex": "FF 00 00 00"
     }
   }
 }
