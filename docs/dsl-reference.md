@@ -173,6 +173,144 @@ ASCII/UTF-8文字列フィールドの値を指定した基数で整数に変換
 - ヌル終端文字（`\0`）と末尾の空白は自動的にトリミング
 - 変換に失敗した場合は0を返す（エラーにしない）
 
+#### `len(array_field)`
+
+配列フィールドの要素数を返します。
+
+```yaml
+# 配列の要素数を後続フィールドで参照
+- name: entries
+  type: uint16
+  repeat_count: "{num_entries}"
+- name: last_index
+  type: virtual
+  value: "{len(entries) - 1}"
+```
+
+- 引数: 配列フィールド名（1つ）
+- 戻り値: 配列の要素数（整数）
+- 空配列の場合は0を返す
+- 非配列フィールドを指定した場合はエラー
+
+#### `count(array_field)`
+
+`len()` のエイリアスです。可読性のために使い分けられます。
+
+#### `min(array_field)`
+
+数値配列フィールドの最小値を返します。
+
+```yaml
+- name: sizes
+  type: uint32
+  repeat_count: "{count}"
+- name: min_size
+  type: virtual
+  value: "{min(sizes)}"
+```
+
+- 引数: 数値配列フィールド名（1つ）
+- 戻り値: 配列内の最小値（整数）
+- 空配列の場合はエラー
+- 非数値配列の場合はエラー
+
+#### `max(array_field)`
+
+数値配列フィールドの最大値を返します。
+
+```yaml
+- name: sizes
+  type: uint32
+  repeat_count: "{count}"
+- name: max_size
+  type: virtual
+  value: "{max(sizes)}"
+```
+
+- 引数: 数値配列フィールド名（1つ）
+- 戻り値: 配列内の最大値（整数）
+- 空配列の場合はエラー
+- 非数値配列の場合はエラー
+
+#### `sum(array_field)`
+
+数値配列フィールドの合計値を返します。
+
+```yaml
+- name: sizes
+  type: uint32
+  repeat_count: "{count}"
+- name: total_size
+  type: virtual
+  value: "{sum(sizes)}"
+```
+
+- 引数: 数値配列フィールド名（1つ）
+- 戻り値: 配列内の合計値（整数）
+- 空配列の場合は0を返す
+- 非数値配列の場合はエラー
+
+#### `substr(string_field, start, length)`
+
+文字列フィールドから部分文字列を抽出します。マジック文字列の先頭一致判定などに使用します。
+
+```yaml
+# マジック文字列の先頭4文字を抽出して判定
+- name: magic
+  type: ascii
+  size: "8"
+- name: magic_prefix
+  type: virtual
+  value: "{substr(magic, 0, 4)}"
+```
+
+- 第1引数: 文字列フィールド名
+- 第2引数: 開始位置（0始まり）
+- 第3引数: 抽出する文字数
+- 戻り値: 部分文字列（string）
+- 開始位置が文字列長以上の場合は空文字列を返す
+- 長さが残り文字数を超える場合は末尾までを返す（クランプ）
+- 非文字列フィールドを指定した場合はエラー
+
+#### `concat(value1, value2, ...)`
+
+複数の値を文字列として結合します。数値は自動的に文字列に変換されます。
+
+```yaml
+# バージョン文字列の構築
+- name: major
+  type: uint8
+- name: minor
+  type: uint8
+- name: version_str
+  type: virtual
+  value: "{concat(major, '.', minor)}"
+```
+
+- 引数: 2つ以上（可変長）
+- 各引数を文字列に変換して結合
+- 数値、文字列リテラル、フィールド参照を混在可能
+- 戻り値: 結合された文字列（string）
+
+#### `contains(string_field, search)`
+
+文字列フィールドに指定した文字列が含まれるかを判定します。条件分岐での使用を想定しています。
+
+```yaml
+# 文字列フィールドに特定のパターンが含まれるか判定
+- name: description
+  type: ascii
+  size: "{desc_length}"
+- name: is_compressed
+  type: virtual
+  value: "{contains(description, 'compressed')}"
+```
+
+- 第1引数: 文字列フィールド名
+- 第2引数: 検索文字列（文字列リテラルまたは文字列フィールド）
+- 戻り値: 真偽値（bool）— 含む場合 true、含まない場合 false
+- 非文字列フィールドを指定した場合はエラー
+
 ## 列挙型（Enum）
 
 整数値をラベルにマッピングします:

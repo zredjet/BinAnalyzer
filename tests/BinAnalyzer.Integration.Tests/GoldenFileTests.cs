@@ -100,8 +100,8 @@ public class GoldenFileTests : IClassFixture<RealFileFixture>
         }
 
         var expected = File.ReadAllText(goldenPath);
-        actual.Should().Be(expected,
-            $"ゴールデンファイル {name}.json と一致しません。UPDATE_GOLDEN=1 で更新してください。");
+        // Use Assert.Equal instead of FluentAssertions to avoid FormatException with JSON braces
+        Assert.Equal(expected, actual);
 
         _output.WriteLine("Golden file match: OK");
     }

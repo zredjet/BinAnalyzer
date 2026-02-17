@@ -124,6 +124,14 @@ public static class ExpressionEvaluator
         {
             "until_marker" => EvaluateUntilMarker(func.Arguments, context),
             "parse_int" => EvaluateParseInt(func.Arguments, context),
+            "len" => EvaluateLen(func.Arguments, context),
+            "count" => EvaluateLen(func.Arguments, context),
+            "min" => EvaluateMinMaxSum(func.Arguments, context, "min"),
+            "max" => EvaluateMinMaxSum(func.Arguments, context, "max"),
+            "sum" => EvaluateMinMaxSum(func.Arguments, context, "sum"),
+            "substr" => EvaluateSubstr(func.Arguments, context),
+            "concat" => EvaluateConcat(func.Arguments, context),
+            "contains" => EvaluateContains(func.Arguments, context),
             _ => throw new InvalidOperationException($"Unknown function: '{func.Name}'"),
         };
     }
@@ -176,6 +184,118 @@ public static class ExpressionEvaluator
         {
             return 0L;
         }
+    }
+
+    private static object EvaluateLen(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "len requires exactly 1 argument");
+
+        var value = EvaluateNode(args[0], context);
+        if (value is not List<object> list)
+            throw new InvalidOperationException(
+                $"Argument to len() is not an array (actual type: {value?.GetType().Name ?? "null"})");
+
+        return (long)list.Count;
+    }
+
+    private static object EvaluateMinMaxSum(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context, string operation)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                $"{operation} requires exactly 1 argument");
+
+        var value = EvaluateNode(args[0], context);
+        if (value is not List<object> list)
+            throw new InvalidOperationException(
+                $"Argument to {operation}() is not an array (actual type: {value?.GetType().Name ?? "null"})");
+
+        if (list.Count == 0)
+        {
+            if (operation == "sum")
+                return 0L;
+            throw new InvalidOperationException(
+                $"{operation}() cannot operate on an empty array");
+        }
+
+        var result = ConvertToLong(list[0]);
+        for (var i = 1; i < list.Count; i++)
+        {
+            var current = ConvertToLong(list[i]);
+            result = operation switch
+            {
+                "min" => current < result ? current : result,
+                "max" => current > result ? current : result,
+                "sum" => result + current,
+                _ => throw new InvalidOperationException($"Unknown operation: {operation}"),
+            };
+        }
+
+        return result;
+    }
+
+    private static object EvaluateSubstr(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 3)
+            throw new InvalidOperationException(
+                "substr requires exactly 3 arguments: substr(string, start, length)");
+
+        var value = EvaluateNode(args[0], context);
+        if (value is not string str)
+            throw new InvalidOperationException(
+                $"First argument to substr() must be a string (actual type: {value?.GetType().Name ?? "null"})");
+
+        var start = (int)ConvertToLong(EvaluateNode(args[1], context));
+        var length = (int)ConvertToLong(EvaluateNode(args[2], context));
+
+        if (start >= str.Length || start < 0)
+            return "";
+
+        if (start + length > str.Length)
+            length = str.Length - start;
+
+        return str.Substring(start, length);
+    }
+
+    private static object EvaluateConcat(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count < 2)
+            throw new InvalidOperationException(
+                "concat requires at least 2 arguments");
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var arg in args)
+        {
+            var value = EvaluateNode(arg, context);
+            sb.Append(value?.ToString() ?? "");
+        }
+
+        return sb.ToString();
+    }
+
+    private static object EvaluateContains(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 2)
+            throw new InvalidOperationException(
+                "contains requires exactly 2 arguments: contains(string, search)");
+
+        var value = EvaluateNode(args[0], context);
+        if (value is not string str)
+            throw new InvalidOperationException(
+                $"First argument to contains() must be a string (actual type: {value?.GetType().Name ?? "null"})");
+
+        var searchValue = EvaluateNode(args[1], context);
+        if (searchValue is not string search)
+            throw new InvalidOperationException(
+                $"Second argument to contains() must be a string (actual type: {searchValue?.GetType().Name ?? "null"})");
+
+        return str.Contains(search);
     }
 
     private static long ConvertToLong(object value) => value switch
