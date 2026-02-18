@@ -631,6 +631,17 @@ public sealed class BinaryDecoder : IBinaryDecoder
         if (!format.Structs.TryGetValue(field.StructRef, out var structDef))
             throw new InvalidOperationException($"Struct '{field.StructRef}' not found");
 
+        // サイズ指定がある場合はバウンダリスコープ内でデコード
+        var hasSize = field.Size.HasValue || field.SizeExpression is not null || field.SizeRemaining;
+        if (hasSize)
+        {
+            var size = ResolveSize(field, context);
+            context.PushScope(size);
+            var result = DecodeStruct(structDef, format, context, field.Name);
+            context.PopScope();
+            return result;
+        }
+
         return DecodeStruct(structDef, format, context, field.Name);
     }
 

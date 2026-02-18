@@ -1,6 +1,7 @@
 using System.CommandLine;
 using BinAnalyzer.Core;
 using BinAnalyzer.Core.Decoded;
+using BinAnalyzer.Core.Diff;
 using BinAnalyzer.Core.Interfaces;
 using BinAnalyzer.Core.Models;
 using BinAnalyzer.Core.Validation;
@@ -189,13 +190,13 @@ rootCommand.SetAction((parseResult) =>
 });
 
 // diff サブコマンド
-var file1Arg = new Argument<FileInfo>("file1")
+var file1Arg = new Argument<string>("file1")
 {
-    Description = "比較元のバイナリファイル",
+    Description = "比較元のバイナリファイルまたはディレクトリ",
 };
-var file2Arg = new Argument<FileInfo>("file2")
+var file2Arg = new Argument<string>("file2")
 {
-    Description = "比較先のバイナリファイル",
+    Description = "比較先のバイナリファイルまたはディレクトリ",
 };
 var diffFormatOption = new Option<FileInfo>("-f", "--format")
 {
@@ -215,6 +216,16 @@ var diffOutputOption = new Option<string>("--output")
     DefaultValueFactory = _ => "flat",
 };
 
+var summaryOption = new Option<bool>("--summary")
+{
+    Description = "詳細差分の末尾に統計サマリーを追加表示",
+};
+
+var summaryOnlyOption = new Option<bool>("--summary-only")
+{
+    Description = "統計サマリーのみ表示（詳細差分を省略）",
+};
+
 var diffCommand = new Command("diff", "2つのバイナリファイルの構造的差分を表示")
 {
     file1Arg,
@@ -222,6 +233,8 @@ var diffCommand = new Command("diff", "2つのバイナリファイルの構造�
     diffFormatOption,
     diffColorOption,
     diffOutputOption,
+    summaryOption,
+    summaryOnlyOption,
 };
 
 diffCommand.SetAction((parseResult) =>
@@ -230,52 +243,143 @@ diffCommand.SetAction((parseResult) =>
     var f2 = parseResult.GetValue(file2Arg)!;
     var fmtFile = parseResult.GetValue(diffFormatOption)!;
 
-    if (!f1.Exists)
-    {
-        Console.Error.WriteLine($"エラー: ファイルが見つかりません: {f1.FullName}");
-        return 1;
-    }
-    if (!f2.Exists)
-    {
-        Console.Error.WriteLine($"エラー: ファイルが見つかりません: {f2.FullName}");
-        return 1;
-    }
     if (!fmtFile.Exists)
     {
         Console.Error.WriteLine($"エラー: フォーマットファイルが見つかりません: {fmtFile.FullName}");
         return 1;
     }
 
+    var isDir1 = Directory.Exists(f1);
+    var isDir2 = Directory.Exists(f2);
+
+    if (isDir1 != isDir2)
+    {
+        Console.Error.WriteLine("エラー: ファイルとディレクトリを混在して指定できません");
+        return 1;
+    }
+
+    var diffColorSetting = parseResult.GetValue(diffColorOption)!;
+    var diffColorMode = diffColorSetting switch
+    {
+        "always" => ColorMode.Always,
+        "never" => ColorMode.Never,
+        _ => ColorMode.Auto,
+    };
+
     try
     {
         var loader = new YamlFormatLoader();
         var format = loader.Load(fmtFile.FullName);
 
-        var decoder = new BinaryDecoder();
-        var decoded1 = decoder.Decode(File.ReadAllBytes(f1.FullName), format);
-        var decoded2 = decoder.Decode(File.ReadAllBytes(f2.FullName), format);
-
-        var diffColorSetting = parseResult.GetValue(diffColorOption)!;
-        var diffColorMode = diffColorSetting switch
+        if (isDir1 && isDir2)
         {
-            "always" => ColorMode.Always,
-            "never" => ColorMode.Never,
-            _ => ColorMode.Auto,
-        };
+            // === バッチモード ===
+            var leftFiles = Directory.GetFiles(f1).Select(Path.GetFileName).ToHashSet()!;
+            var rightFiles = Directory.GetFiles(f2).Select(Path.GetFileName).ToHashSet()!;
 
-        var outputFormat = parseResult.GetValue(diffOutputOption)!;
-        if (outputFormat == "tree")
-        {
-            var treeFormatter = new DiffTreeOutputFormatter(diffColorMode);
-            Console.Write(treeFormatter.Format(decoded1, decoded2));
-            return treeFormatter.HasDifferences ? 1 : 0;
+            var commonFiles = leftFiles.Intersect(rightFiles).OrderBy(f => f).ToList();
+            var leftOnly = leftFiles.Except(rightFiles).OrderBy(f => f).ToList();
+            var rightOnly = rightFiles.Except(leftFiles).OrderBy(f => f).ToList();
+
+            var decoder = new BinaryDecoder();
+            var entries = new List<BatchDiffFileEntry>();
+
+            foreach (var fileName in commonFiles)
+            {
+                try
+                {
+                    var decoded1 = decoder.Decode(File.ReadAllBytes(Path.Combine(f1, fileName!)), format);
+                    var decoded2 = decoder.Decode(File.ReadAllBytes(Path.Combine(f2, fileName!)), format);
+                    var diffResult = DiffEngine.Compare(decoded1, decoded2);
+
+                    entries.Add(new BatchDiffFileEntry
+                    {
+                        FileName = fileName!,
+                        Statistics = diffResult.Statistics,
+                        HasDifferences = diffResult.HasDifferences,
+                    });
+                }
+                catch (Exception ex)
+                {
+                    entries.Add(new BatchDiffFileEntry
+                    {
+                        FileName = fileName!,
+                        HasError = true,
+                        ErrorMessage = ex.Message,
+                    });
+                }
+            }
+
+            var batchResult = new BatchDiffResult
+            {
+                FileEntries = entries,
+                LeftOnlyFiles = leftOnly!,
+                RightOnlyFiles = rightOnly!,
+            };
+
+            var batchFormatter = new BatchDiffSummaryFormatter(diffColorMode);
+            Console.Write(batchFormatter.Format(batchResult));
+
+            return batchResult.HasDifferences ? 1 : 0;
         }
         else
         {
-            var diffResult = DiffEngine.Compare(decoded1, decoded2);
-            var formatter = new DiffOutputFormatter(diffColorMode);
-            Console.Write(formatter.Format(diffResult));
-            return diffResult.HasDifferences ? 1 : 0;
+            // === 既存ファイルモード ===
+            if (!File.Exists(f1))
+            {
+                Console.Error.WriteLine($"エラー: ファイルが見つかりません: {f1}");
+                return 1;
+            }
+            if (!File.Exists(f2))
+            {
+                Console.Error.WriteLine($"エラー: ファイルが見つかりません: {f2}");
+                return 1;
+            }
+
+            var decoder = new BinaryDecoder();
+            var decoded1 = decoder.Decode(File.ReadAllBytes(f1), format);
+            var decoded2 = decoder.Decode(File.ReadAllBytes(f2), format);
+
+            var outputFormat = parseResult.GetValue(diffOutputOption)!;
+            var showSummary = parseResult.GetValue(summaryOption);
+            var showSummaryOnly = parseResult.GetValue(summaryOnlyOption);
+
+            if (showSummaryOnly)
+            {
+                var diffResult = DiffEngine.Compare(decoded1, decoded2);
+                var summaryFormatter = new DiffSummaryFormatter(diffColorMode);
+                Console.Write(summaryFormatter.Format(diffResult.Statistics!));
+                return diffResult.HasDifferences ? 1 : 0;
+            }
+            else if (outputFormat == "tree")
+            {
+                var treeFormatter = new DiffTreeOutputFormatter(diffColorMode);
+                Console.Write(treeFormatter.Format(decoded1, decoded2));
+                var hasDiff = treeFormatter.HasDifferences;
+
+                if (showSummary)
+                {
+                    var diffResult = DiffEngine.Compare(decoded1, decoded2);
+                    var summaryFormatter = new DiffSummaryFormatter(diffColorMode);
+                    Console.Write(summaryFormatter.Format(diffResult.Statistics!));
+                }
+
+                return hasDiff ? 1 : 0;
+            }
+            else
+            {
+                var diffResult = DiffEngine.Compare(decoded1, decoded2);
+                var formatter = new DiffOutputFormatter(diffColorMode);
+                Console.Write(formatter.Format(diffResult));
+
+                if (showSummary)
+                {
+                    var summaryFormatter = new DiffSummaryFormatter(diffColorMode);
+                    Console.Write(summaryFormatter.Format(diffResult.Statistics!));
+                }
+
+                return diffResult.HasDifferences ? 1 : 0;
+            }
         }
     }
     catch (DecodeException dex)

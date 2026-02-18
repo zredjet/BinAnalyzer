@@ -10,7 +10,7 @@
 - **圧縮データ対応** — zlib / deflate 圧縮フィールドの展開・ネスト解析
 - **7種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv
 - **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）
-- **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示（フラット形式 / ツリー形式）
+- **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示（フラット形式 / ツリー形式）、ディレクトリ指定によるバッチdiffにも対応
 - **スキーマ図出力** — `schema` サブコマンドでフォーマット定義の struct 間参照関係を Mermaid / Graphviz DOT 形式で出力
 - **カラー出力** — 端末でのANSIカラー表示（auto / always / never）
 - **式・演算子** — 算術・比較・論理演算に加え、ビット演算（`&`, `|`, `^`, `<<`, `>>`）をサポート
@@ -87,6 +87,15 @@ dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bd
 
 # 2つのファイルの差分比較（ツリー形式）
 dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --output tree
+
+# 差分比較に統計サマリーを追加表示
+dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --summary
+
+# 統計サマリーのみ表示（詳細差分を省略）
+dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --summary-only
+
+# ディレクトリ内の全ファイルを一括比較（バッチdiff）
+dotnet run --project src/BinAnalyzer.Cli -- diff dir_v1/ dir_v2/ -f formats/png.bdef.yaml
 
 # フォーマット定義のスキーマ図をMermaid形式で出力
 dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml

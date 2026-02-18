@@ -4,11 +4,11 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | draft |
+| ステータス | implemented |
 | 優先度 | 中 |
 | 依存 | なし |
 | 作成日 | 2026-02-17 |
-| 更新日 | 2026-02-17 |
+| 更新日 | 2026-02-18 |
 
 ## 背景・動機
 
@@ -20,19 +20,19 @@
 
 ### 追加する機能
 
-- [ ] diff実行時に統計サマリーを表示するオプション（`--summary` または `--stats`）
-- [ ] サマリーに含める情報
+- [x] diff実行時に統計サマリーを表示するオプション（`--summary` または `--stats`）
+- [x] サマリーに含める情報
   - 変更フィールド数（Changed）
   - 追加フィールド数（Added）
   - 削除フィールド数（Removed）
   - 合計差分数
   - 一致率（変更なしフィールド数 / 全フィールド数）
-- [ ] サマリーのみ表示モード（詳細差分を省略して統計のみ出力）
+- [x] サマリーのみ表示モード（詳細差分を省略して統計のみ出力）
 
 ### 変更する既存機能
 
-- [ ] diff サブコマンド — `--summary` / `--stats` オプションの追加
-- [ ] DiffOutputFormatter / DiffTreeOutputFormatter — サマリー行の追記
+- [x] diff サブコマンド — `--summary` / `--summary-only` オプションの追加
+- [x] DiffSummaryFormatter 新設によるサマリー出力対応
 
 ### 変更しないもの（スコープ外）
 
@@ -41,14 +41,14 @@
 
 ## 受入条件
 
-1. [ ] `--summary` オプション指定時に統計サマリーが表示されること
-2. [ ] Changed / Added / Removed の件数が正しいこと
-3. [ ] 差分なし（identical）の場合、件数が全て0で表示されること
-4. [ ] `--summary` 単独指定時は統計のみ表示、詳細差分は省略されること
-5. [ ] `--summary` なしの場合は既存動作と完全互換であること
-6. [ ] flat / tree 両方の出力形式でサマリーが動作すること
-7. [ ] 終了コードは既存仕様を維持（0: 同一、1: 差分あり）
-8. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [x] `--summary` オプション指定時に統計サマリーが表示されること
+2. [x] Changed / Added / Removed の件数が正しいこと
+3. [x] 差分なし（identical）の場合、件数が全て0で表示されること
+4. [x] `--summary-only` 指定時は統計のみ表示、詳細差分は省略されること
+5. [x] `--summary` なしの場合は既存動作と完全互換であること
+6. [x] flat / tree 両方の出力形式でサマリーが動作すること
+7. [x] 終了コードは既存仕様を維持（0: 同一、1: 差分あり）
+8. [x] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -64,10 +64,10 @@
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/dsl-reference.md — 変更不要
-- [ ] docs/architecture.md — 変更不要
-- [ ] CLAUDE.md — 変更不要
-- [ ] README.md — CLI使用法のdiffセクション更新
+- [x] docs/dsl-reference.md — 変更不要
+- [x] docs/architecture.md — 変更不要
+- [x] CLAUDE.md — 変更不要
+- [x] README.md — CLI使用法のdiffセクション更新
 
 ---
 
@@ -77,13 +77,31 @@
 
 ### 設計方針
 
+- `DiffEngine` の全リーフ比較メソッドで `CompareContext` を通してフィールド数をカウント
+- `DiffStatistics` レコード（Core）で Changed/Added/Removed/Unchanged を保持し、一致率を算出
+- `DiffSummaryFormatter`（Output）でサマリー行をフォーマット
+- CLI に `--summary`（詳細+サマリー）と `--summary-only`（サマリーのみ）を追加
+- tree モードで `--summary` 指定時は内部的に `DiffEngine.Compare()` も実行して統計を取得
+
 ### モデル変更
+
+- `DiffStatistics` レコード新設（Core/Diff）
+- `DiffResult.Statistics` プロパティ追加
+- `DiffEngine` 内部に `CompareContext` クラス導入、全 `Compare*` メソッドの引数を `List<DiffEntry>` → `CompareContext` に変更
 
 ### インタフェース変更
 
+- `DiffEngine.Compare()` の戻り値 `DiffResult` に `Statistics` が常に設定される
+- `DiffSummaryFormatter.Format(DiffStatistics)` メソッド新設
+
 ### 代替案
 
+- `DiffResult.Entries` から事後的にカウント → 一致フィールド数が取れないため不採用
+- `DiffTreeOutputFormatter` にも統計カウントを埋め込む → 複雑になるため、tree モードでは `DiffEngine.Compare()` を追加実行する方式を採用
+
 ### 懸念事項
+
+- tree モードで `--summary` 指定時にデコード結果を2回走査する（tree表示 + DiffEngine.Compare）が、パフォーマンス影響は軽微
 
 ---
 
@@ -93,10 +111,26 @@
 
 ### 実装中の設計変更
 
+- プラン通り実装。特に設計変更なし。
+
 ### 追加したテスト
 
 | テストクラス | テスト名 | 対応する受入条件 |
 |---|---|---|
-| | | |
+| DiffStatisticsTests | Compare_IdenticalStructs_AllUnchanged | AC2, AC3 |
+| DiffStatisticsTests | Compare_ChangedFields_CountsCorrectly | AC2 |
+| DiffStatisticsTests | Compare_AddedFields_CountsCorrectly | AC2 |
+| DiffStatisticsTests | Compare_RemovedFields_CountsCorrectly | AC2 |
+| DiffStatisticsTests | Compare_MixedChanges_StatisticsCorrect | AC2 |
+| DiffStatisticsTests | Compare_NestedStruct_CountsLeafFields | AC2 |
+| DiffStatisticsTests | Compare_ArrayDiff_CountsElements | AC2 |
+| DiffStatisticsTests | MatchRate_AllIdentical_Returns1 | AC3 |
+| DiffStatisticsTests | MatchRate_NoFields_Returns1 | AC3 |
+| DiffSummaryOutputTests | Summary_NoDifferences_ShowsZeroCounts | AC1, AC3 |
+| DiffSummaryOutputTests | Summary_WithDifferences_ShowsCorrectCounts | AC1, AC2 |
+| DiffSummaryOutputTests | Summary_ShowsMatchRate | AC1 |
+| DiffSummaryOutputTests | SummaryOnly_OmitsDetailedDiff | AC4 |
+| DiffSummaryOutputTests | SummaryWithDetails_ShowsBothOutputs | AC1 |
+| DiffSummaryOutputTests | ExistingBehavior_NoSummaryFlag_Unchanged | AC5 |
 
 ### 気づき・今後の課題

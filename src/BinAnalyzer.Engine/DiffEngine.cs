@@ -5,100 +5,122 @@ namespace BinAnalyzer.Engine;
 
 public static class DiffEngine
 {
-    public static DiffResult Compare(DecodedStruct left, DecodedStruct right)
+    private sealed class CompareContext
     {
-        var entries = new List<DiffEntry>();
-        CompareNodes(left, right, "", entries);
-        return new DiffResult { Entries = entries };
+        public List<DiffEntry> Entries { get; } = new();
+        public int TotalLeafFields { get; set; }
     }
 
-    private static void CompareNodes(DecodedNode left, DecodedNode right, string path, List<DiffEntry> entries)
+    public static DiffResult Compare(DecodedStruct left, DecodedStruct right)
+    {
+        var context = new CompareContext();
+        CompareNodes(left, right, "", context);
+
+        var changedCount = context.Entries.Count(e => e.Kind == DiffKind.Changed);
+        var addedCount = context.Entries.Count(e => e.Kind == DiffKind.Added);
+        var removedCount = context.Entries.Count(e => e.Kind == DiffKind.Removed);
+        var unchangedCount = context.TotalLeafFields - changedCount - addedCount - removedCount;
+
+        return new DiffResult
+        {
+            Entries = context.Entries,
+            Statistics = new DiffStatistics(changedCount, addedCount, removedCount, unchangedCount),
+        };
+    }
+
+    private static void CompareNodes(DecodedNode left, DecodedNode right, string path, CompareContext context)
     {
         if (left.GetType() != right.GetType())
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, path, FormatNodeType(left), FormatNodeType(right)));
+            context.TotalLeafFields++;
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, FormatNodeType(left), FormatNodeType(right)));
             return;
         }
 
         switch (left)
         {
             case DecodedInteger li when right is DecodedInteger ri:
-                CompareInteger(li, ri, path, entries);
+                CompareInteger(li, ri, path, context);
                 break;
             case DecodedString ls when right is DecodedString rs:
-                CompareString(ls, rs, path, entries);
+                CompareString(ls, rs, path, context);
                 break;
             case DecodedBytes lb when right is DecodedBytes rb:
-                CompareBytes(lb, rb, path, entries);
+                CompareBytes(lb, rb, path, context);
                 break;
             case DecodedFloat lf when right is DecodedFloat rf:
-                CompareFloat(lf, rf, path, entries);
+                CompareFloat(lf, rf, path, context);
                 break;
             case DecodedBitfield lbf when right is DecodedBitfield rbf:
-                CompareBitfield(lbf, rbf, path, entries);
+                CompareBitfield(lbf, rbf, path, context);
                 break;
             case DecodedStruct lst when right is DecodedStruct rst:
-                CompareStruct(lst, rst, path, entries);
+                CompareStruct(lst, rst, path, context);
                 break;
             case DecodedArray la when right is DecodedArray ra:
-                CompareArray(la, ra, path, entries);
+                CompareArray(la, ra, path, context);
                 break;
             case DecodedCompressed lc when right is DecodedCompressed rc:
-                CompareCompressed(lc, rc, path, entries);
+                CompareCompressed(lc, rc, path, context);
                 break;
             case DecodedFlags lfl when right is DecodedFlags rfl:
-                CompareFlags(lfl, rfl, path, entries);
+                CompareFlags(lfl, rfl, path, context);
                 break;
             case DecodedVirtual lv when right is DecodedVirtual rv:
-                CompareVirtual(lv, rv, path, entries);
+                CompareVirtual(lv, rv, path, context);
                 break;
         }
     }
 
-    private static void CompareInteger(DecodedInteger left, DecodedInteger right, string path, List<DiffEntry> entries)
+    private static void CompareInteger(DecodedInteger left, DecodedInteger right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         if (left.Value != right.Value)
         {
             var oldVal = FormatIntegerValue(left);
             var newVal = FormatIntegerValue(right);
-            entries.Add(new DiffEntry(DiffKind.Changed, path, oldVal, newVal));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, oldVal, newVal));
         }
     }
 
-    private static void CompareString(DecodedString left, DecodedString right, string path, List<DiffEntry> entries)
+    private static void CompareString(DecodedString left, DecodedString right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         if (left.Value != right.Value)
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, path, $"\"{left.Value}\"", $"\"{right.Value}\""));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, $"\"{left.Value}\"", $"\"{right.Value}\""));
         }
     }
 
-    private static void CompareBytes(DecodedBytes left, DecodedBytes right, string path, List<DiffEntry> entries)
+    private static void CompareBytes(DecodedBytes left, DecodedBytes right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         if (!left.RawBytes.Span.SequenceEqual(right.RawBytes.Span))
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, path, FormatBytesValue(left.RawBytes), FormatBytesValue(right.RawBytes)));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, FormatBytesValue(left.RawBytes), FormatBytesValue(right.RawBytes)));
         }
     }
 
-    private static void CompareFloat(DecodedFloat left, DecodedFloat right, string path, List<DiffEntry> entries)
+    private static void CompareFloat(DecodedFloat left, DecodedFloat right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (left.Value != right.Value)
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, path, left.Value.ToString("G"), right.Value.ToString("G")));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, left.Value.ToString("G"), right.Value.ToString("G")));
         }
     }
 
-    private static void CompareBitfield(DecodedBitfield left, DecodedBitfield right, string path, List<DiffEntry> entries)
+    private static void CompareBitfield(DecodedBitfield left, DecodedBitfield right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         if (left.RawValue != right.RawValue)
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, path, $"0x{left.RawValue:X}", $"0x{right.RawValue:X}"));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, $"0x{left.RawValue:X}", $"0x{right.RawValue:X}"));
         }
     }
 
-    private static void CompareStruct(DecodedStruct left, DecodedStruct right, string path, List<DiffEntry> entries)
+    private static void CompareStruct(DecodedStruct left, DecodedStruct right, string path, CompareContext context)
     {
         var leftByName = new Dictionary<string, DecodedNode>();
         foreach (var child in left.Children)
@@ -114,11 +136,12 @@ public static class DiffEngine
             var childPath = string.IsNullOrEmpty(path) ? child.Name : $"{path}.{child.Name}";
             if (rightByName.TryGetValue(child.Name, out var rightChild))
             {
-                CompareNodes(child, rightChild, childPath, entries);
+                CompareNodes(child, rightChild, childPath, context);
             }
             else
             {
-                entries.Add(new DiffEntry(DiffKind.Removed, childPath, FormatLeafValue(child), null));
+                context.TotalLeafFields++;
+                context.Entries.Add(new DiffEntry(DiffKind.Removed, childPath, FormatLeafValue(child), null));
             }
         }
 
@@ -128,16 +151,17 @@ public static class DiffEngine
             if (!leftByName.ContainsKey(child.Name))
             {
                 var childPath = string.IsNullOrEmpty(path) ? child.Name : $"{path}.{child.Name}";
-                entries.Add(new DiffEntry(DiffKind.Added, childPath, null, FormatLeafValue(child)));
+                context.TotalLeafFields++;
+                context.Entries.Add(new DiffEntry(DiffKind.Added, childPath, null, FormatLeafValue(child)));
             }
         }
     }
 
-    private static void CompareArray(DecodedArray left, DecodedArray right, string path, List<DiffEntry> entries)
+    private static void CompareArray(DecodedArray left, DecodedArray right, string path, CompareContext context)
     {
         if (left.DiffKey is { Count: > 0 } diffKeys && CanUseKeyedComparison(left, right, diffKeys))
         {
-            CompareArrayByKey(left, right, path, diffKeys, entries);
+            CompareArrayByKey(left, right, path, diffKeys, context);
             return;
         }
 
@@ -146,21 +170,23 @@ public static class DiffEngine
         for (var i = 0; i < minCount; i++)
         {
             var elementPath = $"{path}[{i}]";
-            CompareNodes(left.Elements[i], right.Elements[i], elementPath, entries);
+            CompareNodes(left.Elements[i], right.Elements[i], elementPath, context);
         }
 
         // Extra elements in left (removed)
         for (var i = minCount; i < left.Elements.Count; i++)
         {
             var elementPath = $"{path}[{i}]";
-            entries.Add(new DiffEntry(DiffKind.Removed, elementPath, FormatLeafValue(left.Elements[i]), null));
+            context.TotalLeafFields++;
+            context.Entries.Add(new DiffEntry(DiffKind.Removed, elementPath, FormatLeafValue(left.Elements[i]), null));
         }
 
         // Extra elements in right (added)
         for (var i = minCount; i < right.Elements.Count; i++)
         {
             var elementPath = $"{path}[{i}]";
-            entries.Add(new DiffEntry(DiffKind.Added, elementPath, null, FormatLeafValue(right.Elements[i])));
+            context.TotalLeafFields++;
+            context.Entries.Add(new DiffEntry(DiffKind.Added, elementPath, null, FormatLeafValue(right.Elements[i])));
         }
     }
 
@@ -180,12 +206,12 @@ public static class DiffEngine
         return true;
     }
 
-    private static void CompareArrayByKey(DecodedArray left, DecodedArray right, string path, IReadOnlyList<string> keyFields, List<DiffEntry> entries)
+    private static void CompareArrayByKey(DecodedArray left, DecodedArray right, string path, IReadOnlyList<string> keyFields, CompareContext context)
     {
         var leftByKey = BuildKeyMap(left.Elements, keyFields);
         var rightByKey = BuildKeyMap(right.Elements, keyFields);
 
-        // Walk left elements in order: matched → recurse, unmatched → removed
+        // Walk left elements in order: matched -> recurse, unmatched -> removed
         foreach (var elem in left.Elements)
         {
             var compositeKey = ExtractCompositeKey(elem, keyFields)!;
@@ -193,22 +219,24 @@ public static class DiffEngine
 
             if (rightByKey.TryGetValue(compositeKey, out var rightElem))
             {
-                CompareNodes(elem, rightElem, elementPath, entries);
+                CompareNodes(elem, rightElem, elementPath, context);
             }
             else
             {
-                entries.Add(new DiffEntry(DiffKind.Removed, elementPath, FormatLeafValue(elem), null));
+                context.TotalLeafFields++;
+                context.Entries.Add(new DiffEntry(DiffKind.Removed, elementPath, FormatLeafValue(elem), null));
             }
         }
 
-        // Elements only in right → added (in right's order)
+        // Elements only in right -> added (in right's order)
         foreach (var elem in right.Elements)
         {
             var compositeKey = ExtractCompositeKey(elem, keyFields)!;
             if (!leftByKey.ContainsKey(compositeKey))
             {
                 var elementPath = BuildKeyedPath(path, keyFields, elem);
-                entries.Add(new DiffEntry(DiffKind.Added, elementPath, null, FormatLeafValue(elem)));
+                context.TotalLeafFields++;
+                context.Entries.Add(new DiffEntry(DiffKind.Added, elementPath, null, FormatLeafValue(elem)));
             }
         }
     }
@@ -275,46 +303,51 @@ public static class DiffEngine
         return $"{basePath}[{string.Join(",", pairs)}]";
     }
 
-    private static void CompareFlags(DecodedFlags left, DecodedFlags right, string path, List<DiffEntry> entries)
+    private static void CompareFlags(DecodedFlags left, DecodedFlags right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         if (left.RawValue != right.RawValue)
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, path, $"0x{left.RawValue:X}", $"0x{right.RawValue:X}"));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, $"0x{left.RawValue:X}", $"0x{right.RawValue:X}"));
         }
     }
 
-    private static void CompareVirtual(DecodedVirtual left, DecodedVirtual right, string path, List<DiffEntry> entries)
+    private static void CompareVirtual(DecodedVirtual left, DecodedVirtual right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         var leftStr = left.Value?.ToString() ?? "";
         var rightStr = right.Value?.ToString() ?? "";
         if (leftStr != rightStr)
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, path, leftStr, rightStr));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, path, leftStr, rightStr));
         }
     }
 
-    private static void CompareCompressed(DecodedCompressed left, DecodedCompressed right, string path, List<DiffEntry> entries)
+    private static void CompareCompressed(DecodedCompressed left, DecodedCompressed right, string path, CompareContext context)
     {
+        context.TotalLeafFields++;
         if (left.Algorithm != right.Algorithm)
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, $"{path}.algorithm", left.Algorithm, right.Algorithm));
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, $"{path}.algorithm", left.Algorithm, right.Algorithm));
         }
 
+        context.TotalLeafFields++;
         if (left.DecompressedSize != right.DecompressedSize)
         {
-            entries.Add(new DiffEntry(DiffKind.Changed, $"{path}.decompressed_size",
+            context.Entries.Add(new DiffEntry(DiffKind.Changed, $"{path}.decompressed_size",
                 left.DecompressedSize.ToString(), right.DecompressedSize.ToString()));
         }
 
         if (left.DecodedContent is not null && right.DecodedContent is not null)
         {
-            CompareStruct(left.DecodedContent, right.DecodedContent, path, entries);
+            CompareStruct(left.DecodedContent, right.DecodedContent, path, context);
         }
         else if (left.RawDecompressed is { } leftRaw && right.RawDecompressed is { } rightRaw)
         {
+            context.TotalLeafFields++;
             if (!leftRaw.Span.SequenceEqual(rightRaw.Span))
             {
-                entries.Add(new DiffEntry(DiffKind.Changed, path,
+                context.Entries.Add(new DiffEntry(DiffKind.Changed, path,
                     FormatBytesValue(leftRaw), FormatBytesValue(rightRaw)));
             }
         }

@@ -172,15 +172,17 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 2つのバイナリファイルを同じフォーマット定義で解析し、構造的な差分を表示します。
 
 ```
-binanalyzer diff <file1> <file2> -f <format> [--output <format>] [--color <mode>]
+binanalyzer diff <file1|dir1> <file2|dir2> -f <format> [--output <format>] [--color <mode>] [--summary] [--summary-only]
 ```
 
 ### 引数
 
 | 引数 | 説明 |
 |------|------|
-| `file1` | 比較元のバイナリファイル |
-| `file2` | 比較先のバイナリファイル |
+| `file1` / `dir1` | 比較元のバイナリファイルまたはディレクトリ |
+| `file2` / `dir2` | 比較先のバイナリファイルまたはディレクトリ |
+
+両方にディレクトリを指定するとバッチモードになります。ファイルとディレクトリの混在指定はエラーになります。
 
 ### オプション
 
@@ -189,6 +191,8 @@ binanalyzer diff <file1> <file2> -f <format> [--output <format>] [--color <mode>
 | `-f, --format <file>` | フォーマット定義ファイル（`.bdef.yaml`）**必須** | — |
 | `--output <format>` | 出力形式（`flat`, `tree`） | `flat` |
 | `--color <mode>` | カラー出力（`auto`, `always`, `never`） | `auto` |
+| `--summary` | 詳細差分の末尾に統計サマリー（Changed/Added/Removed件数、一致率）を追加表示 | — |
+| `--summary-only` | 統計サマリーのみ表示（詳細差分を省略） | — |
 
 ### 出力形式
 
@@ -212,7 +216,51 @@ dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f fo
 
 # ツリー形式
 dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml --output tree
+
+# 詳細差分 + 統計サマリー
+dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml --summary
+
+# 統計サマリーのみ（詳細省略）
+dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml --summary-only
 ```
+
+### バッチモード（ディレクトリ指定）
+
+2つのディレクトリを指定すると、同名ファイル同士を自動的にペアリングして一括比較します。
+
+```bash
+# ディレクトリ内の全ファイルを一括比較
+dotnet run --project src/BinAnalyzer.Cli -- diff dir_v1/ dir_v2/ -f formats/png.bdef.yaml
+```
+
+バッチモードではファイルごとの比較結果がサマリーレポートとして出力されます:
+
+```
+--- バッチdiffレポート ---
+
+ファイル比較結果:
+
+  ファイル名                         結果     変更  追加  削除
+  ----------------------------------------------------------------------
+  file1.bin                          同一
+  file2.bin                          差分あり     3     1     0
+  file3.bin                          エラー   decode failed
+
+左ディレクトリのみ (1 件):
+  - file4.bin
+
+右ディレクトリのみ (1 件):
+  + file5.bin
+
+合計: 3 ファイル比較, 1 同一, 1 差分あり, 1 エラー
+```
+
+バッチモード固有の動作:
+
+- `--output`, `--summary`, `--summary-only` オプションは無視されます（バッチレポートが常に出力）
+- ファイルペアリングはファイル名で突合（非再帰、サブディレクトリは対象外）
+- 各ファイルのデコードエラーは個別にキャッチされ、バッチ全体は中断しません
+- 終了コード: `0` = 全ファイル同一、`1` = 差分あり・エラーあり・片方のみのファイルあり
 
 ## カラー出力
 
@@ -316,6 +364,12 @@ dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bd
 
 # 2つのファイルの差分比較（ツリー形式）
 dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --output tree
+
+# 差分比較に統計サマリーを追加表示
+dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --summary
+
+# 統計サマリーのみ表示（詳細差分を省略）
+dotnet run --project src/BinAnalyzer.Cli -- diff v1.png v2.png -f formats/png.bdef.yaml --summary-only
 
 # バリデーションをスキップして解析
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --no-validate

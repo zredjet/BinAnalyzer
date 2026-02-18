@@ -1,0 +1,267 @@
+name: FAT
+endianness: little
+root: fat_image
+
+enums:
+  media_type:
+    - value: 0xF0
+      label: REMOVABLE
+      description: "リムーバブルメディア"
+    - value: 0xF8
+      label: FIXED_DISK
+      description: "固定ディスク"
+    - value: 0xF9
+      label: FLOPPY_3_5_HD
+      description: "3.5インチ 1.44MB"
+    - value: 0xFD
+      label: FLOPPY_5_25_DD
+      description: "5.25インチ 360KB"
+
+flags:
+  dir_attributes:
+    bit_size: 8
+    fields:
+      - name: READ_ONLY
+        bit: 0
+      - name: HIDDEN
+        bit: 1
+      - name: SYSTEM
+        bit: 2
+      - name: VOLUME_LABEL
+        bit: 3
+      - name: DIRECTORY
+        bit: 4
+      - name: ARCHIVE
+        bit: 5
+
+structs:
+  # ============================================================
+  # Root: FAT Image
+  # ============================================================
+  fat_image:
+    - name: boot_sector
+      type: struct
+      struct: boot_sector
+    - name: root_directory
+      type: struct
+      struct: root_directory
+      seek: "{(reserved_sector_count + num_fats * fat_size_16) * bytes_per_sector}"
+      size: "{root_entry_count * 32}"
+      if: "{root_entry_count > 0}"
+
+  # ============================================================
+  # Boot Sector: Common BPB (36 bytes) + Extended BPB (476 bytes)
+  # ============================================================
+  boot_sector:
+    - name: jump_boot
+      type: bytes
+      size: "3"
+      description: "ジャンプ命令"
+    - name: oem_name
+      type: ascii
+      size: "8"
+      description: "OEM名"
+    - name: bytes_per_sector
+      type: uint16
+    - name: sectors_per_cluster
+      type: uint8
+    - name: reserved_sector_count
+      type: uint16
+    - name: num_fats
+      type: uint8
+    - name: root_entry_count
+      type: uint16
+    - name: total_sectors_16
+      type: uint16
+    - name: media_type
+      type: uint8
+      enum: media_type
+    - name: fat_size_16
+      type: uint16
+    - name: sectors_per_track
+      type: uint16
+    - name: num_heads
+      type: uint16
+    - name: hidden_sectors
+      type: uint32
+    - name: total_sectors_32
+      type: uint32
+    # --- Virtual fields ---
+    - name: fat_type_hint
+      type: virtual
+      value: "{root_entry_count == 0 ? 1 : 0}"
+      description: "0=FAT12/16, 1=FAT32"
+    - name: total_sectors
+      type: virtual
+      value: "{total_sectors_16 != 0 ? total_sectors_16 : total_sectors_32}"
+      description: "有効な総セクタ数"
+    # --- Extended BPB (switch) ---
+    - name: extended_bpb
+      type: switch
+      size: "476"
+      switch_on: "{fat_type_hint}"
+      cases:
+        "0": fat16_extended_bpb
+        "1": fat32_extended_bpb
+
+  # ============================================================
+  # FAT12/16 Extended BPB (476 bytes)
+  # ============================================================
+  fat16_extended_bpb:
+    - name: drive_number
+      type: uint8
+    - name: reserved1
+      type: uint8
+      padding: true
+    - name: boot_signature
+      type: uint8
+      description: "拡張ブートシグネチャ（0x29）"
+    - name: volume_id
+      type: uint32
+    - name: volume_label
+      type: ascii
+      size: "11"
+    - name: fs_type_string
+      type: ascii
+      size: "8"
+      description: "FAT12/FAT16"
+    - name: boot_code
+      type: bytes
+      size: "448"
+      padding: true
+    - name: boot_signature_word
+      type: uint16
+      validate: "{boot_signature_word == 0xAA55}"
+      description: "ブートセクタシグネチャ（0xAA55）"
+
+  # ============================================================
+  # FAT32 Extended BPB (476 bytes)
+  # ============================================================
+  fat32_extended_bpb:
+    - name: fat_size_32
+      type: uint32
+      description: "FATあたりのセクタ数（FAT32）"
+    - name: ext_flags
+      type: uint16
+    - name: fs_version
+      type: uint16
+    - name: root_cluster
+      type: uint32
+      description: "ルートディレクトリの開始クラスタ"
+    - name: fs_info_sector
+      type: uint16
+      description: "FSInfoセクタ番号"
+    - name: backup_boot_sector
+      type: uint16
+      description: "バックアップブートセクタ番号"
+    - name: reserved
+      type: bytes
+      size: "12"
+      padding: true
+    - name: drive_number
+      type: uint8
+    - name: reserved1
+      type: uint8
+      padding: true
+    - name: boot_signature
+      type: uint8
+      description: "拡張ブートシグネチャ（0x29）"
+    - name: volume_id
+      type: uint32
+    - name: volume_label
+      type: ascii
+      size: "11"
+    - name: fs_type_string
+      type: ascii
+      size: "8"
+      description: "FAT32"
+    - name: boot_code
+      type: bytes
+      size: "420"
+      padding: true
+    - name: boot_signature_word
+      type: uint16
+      validate: "{boot_signature_word == 0xAA55}"
+      description: "ブートセクタシグネチャ（0xAA55）"
+
+  # ============================================================
+  # Root Directory (FAT12/16 only)
+  # ============================================================
+  root_directory:
+    - name: entries
+      type: struct
+      struct: dir_entry
+      repeat: eof
+
+  # ============================================================
+  # Directory Entry (32 bytes)
+  # ============================================================
+  dir_entry:
+    - name: filename
+      type: ascii
+      size: "8"
+    - name: extension
+      type: ascii
+      size: "3"
+    - name: attributes
+      type: uint8
+      flags: dir_attributes
+    - name: reserved_nt
+      type: uint8
+      padding: true
+    - name: creation_time_tenths
+      type: uint8
+    - name: creation_time
+      type: uint16
+    - name: creation_date
+      type: uint16
+    - name: last_access_date
+      type: uint16
+    - name: first_cluster_high
+      type: uint16
+    - name: modification_time
+      type: uint16
+    - name: modification_date
+      type: uint16
+    - name: first_cluster_low
+      type: uint16
+    - name: file_size
+      type: uint32
+    # --- Modification timestamp decode ---
+    - name: mod_year
+      type: virtual
+      value: "{((modification_date >> 9) & 0x7F) + 1980}"
+    - name: mod_month
+      type: virtual
+      value: "{(modification_date >> 5) & 0x0F}"
+    - name: mod_day
+      type: virtual
+      value: "{modification_date & 0x1F}"
+    - name: mod_hour
+      type: virtual
+      value: "{(modification_time >> 11) & 0x1F}"
+    - name: mod_minute
+      type: virtual
+      value: "{(modification_time >> 5) & 0x3F}"
+    - name: mod_second
+      type: virtual
+      value: "{(modification_time & 0x1F) * 2}"
+    # --- Creation timestamp decode ---
+    - name: create_year
+      type: virtual
+      value: "{((creation_date >> 9) & 0x7F) + 1980}"
+    - name: create_month
+      type: virtual
+      value: "{(creation_date >> 5) & 0x0F}"
+    - name: create_day
+      type: virtual
+      value: "{creation_date & 0x1F}"
+    - name: create_hour
+      type: virtual
+      value: "{(creation_time >> 11) & 0x1F}"
+    - name: create_minute
+      type: virtual
+      value: "{(creation_time >> 5) & 0x3F}"
+    - name: create_second
+      type: virtual
+      value: "{(creation_time & 0x1F) * 2}"

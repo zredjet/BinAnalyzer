@@ -1,0 +1,423 @@
+name: X509
+endianness: big
+root: certificate
+
+enums:
+  asn1_tag:
+    - value: 0x01
+      label: BOOLEAN
+    - value: 0x02
+      label: INTEGER
+    - value: 0x03
+      label: BIT_STRING
+    - value: 0x04
+      label: OCTET_STRING
+    - value: 0x05
+      label: "NULL"
+    - value: 0x06
+      label: OBJECT_IDENTIFIER
+    - value: 0x0C
+      label: UTF8String
+    - value: 0x13
+      label: PrintableString
+    - value: 0x16
+      label: IA5String
+    - value: 0x17
+      label: UTCTime
+    - value: 0x18
+      label: GeneralizedTime
+    - value: 0x30
+      label: SEQUENCE
+    - value: 0x31
+      label: SET
+    - value: 0xA0
+      label: CONTEXT_0
+      description: "[0] EXPLICIT (version)"
+    - value: 0xA3
+      label: CONTEXT_3
+      description: "[3] EXPLICIT (extensions)"
+
+  x509_version:
+    - value: 0
+      label: v1
+    - value: 1
+      label: v2
+    - value: 2
+      label: v3
+
+structs:
+  # ============================================================
+  # Root: Certificate SEQUENCE
+  # ============================================================
+  certificate:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: certificate_content
+      size: "{length}"
+
+  certificate_content:
+    - name: tbs_certificate
+      type: struct
+      struct: tbs_certificate
+    - name: sig_algorithm
+      type: struct
+      struct: asn1_tlv_bytes
+    - name: signature
+      type: struct
+      struct: signature_bitstring
+
+  # ============================================================
+  # TBS Certificate
+  # ============================================================
+  tbs_certificate:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: tbs_content
+      size: "{length}"
+
+  tbs_content:
+    - name: version_explicit
+      type: struct
+      struct: version_explicit
+    - name: serial_number
+      type: struct
+      struct: asn1_tlv_bytes
+    - name: tbs_sig_algorithm
+      type: struct
+      struct: asn1_tlv_bytes
+    - name: issuer
+      type: struct
+      struct: x509_name
+    - name: validity
+      type: struct
+      struct: validity_sequence
+    - name: subject
+      type: struct
+      struct: x509_name
+    - name: spki
+      type: struct
+      struct: asn1_tlv_bytes
+    - name: extensions_explicit
+      type: struct
+      struct: extensions_explicit
+      if: "{remaining > 0}"
+
+  # ============================================================
+  # Version [0] EXPLICIT
+  # ============================================================
+  version_explicit:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: length
+      type: uint8
+    - name: version_integer
+      type: struct
+      struct: version_integer
+      size: "{length}"
+
+  version_integer:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: length
+      type: uint8
+    - name: value
+      type: uint8
+      enum: x509_version
+
+  # ============================================================
+  # ASN.1 TLV with raw bytes (for INTEGER, SEQUENCE blobs, etc.)
+  # ============================================================
+  asn1_tlv_bytes:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: data
+      type: bytes
+      size: "{length}"
+
+  # ============================================================
+  # X.509 Name (Issuer / Subject)
+  # ============================================================
+  x509_name:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: name_content
+      size: "{length}"
+
+  name_content:
+    - name: rdn_sets
+      type: struct
+      struct: rdn_set
+      repeat: eof
+
+  rdn_set:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: rdn_content
+      size: "{length}"
+
+  rdn_content:
+    - name: attrs
+      type: struct
+      struct: attr_sequence
+      repeat: eof
+
+  attr_sequence:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: attr_content
+      size: "{length}"
+
+  attr_content:
+    - name: oid_tag
+      type: uint8
+      enum: asn1_tag
+    - name: oid_length
+      type: uint8
+    - name: oid_value
+      type: bytes
+      size: "{oid_length}"
+    - name: value_tag
+      type: uint8
+      enum: asn1_tag
+    - name: value_length
+      type: uint8
+    - name: value
+      type: ascii
+      size: "{value_length}"
+
+  # ============================================================
+  # Validity (NotBefore / NotAfter)
+  # ============================================================
+  validity_sequence:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: validity_content
+      size: "{length}"
+
+  validity_content:
+    - name: not_before
+      type: struct
+      struct: asn1_time
+    - name: not_after
+      type: struct
+      struct: asn1_time
+
+  asn1_time:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: length
+      type: uint8
+    - name: value
+      type: ascii
+      size: "{length}"
+
+  # ============================================================
+  # Extensions [3] EXPLICIT
+  # ============================================================
+  extensions_explicit:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: extensions_seq
+      type: struct
+      struct: extensions_seq
+      size: "{length}"
+
+  extensions_seq:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: extensions_content
+      size: "{length}"
+
+  extensions_content:
+    - name: entries
+      type: struct
+      struct: extension
+      repeat: eof
+
+  extension:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: extension_content
+      size: "{length}"
+
+  extension_content:
+    - name: oid_tag
+      type: uint8
+      enum: asn1_tag
+    - name: oid_length
+      type: uint8
+    - name: oid_value
+      type: bytes
+      size: "{oid_length}"
+    - name: value_data
+      type: bytes
+      size: remaining
+
+  # ============================================================
+  # Signature BIT STRING
+  # ============================================================
+  signature_bitstring:
+    - name: tag
+      type: uint8
+      enum: asn1_tag
+    - name: len0
+      type: uint8
+    - name: len1
+      type: uint8
+      if: "{len0 == 0x81}"
+    - name: len2
+      type: uint16
+      if: "{len0 == 0x82}"
+    - name: length
+      type: virtual
+      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
+    - name: content
+      type: struct
+      struct: signature_content
+      size: "{length}"
+
+  signature_content:
+    - name: unused_bits
+      type: uint8
+    - name: data
+      type: bytes
+      size: remaining
