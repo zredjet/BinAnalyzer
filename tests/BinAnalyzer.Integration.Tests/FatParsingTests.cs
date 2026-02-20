@@ -108,17 +108,17 @@ public class FatParsingTests
         var entriesArray = rootDir.Children.First(c => c.Name == "entries")
             .Should().BeOfType<DecodedArray>().Subject;
 
-        // Volume label: attributes = 0x08 (VOLUME_LABEL bit)
+        // Volume label: attributes = 0x08 (VOLUME_LABEL bit) — now decoded as DecodedFlags
         Navigate((DecodedStruct)entriesArray.Elements[0], "attributes")
-            .Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0x08);
+            .Should().BeOfType<DecodedFlags>().Which.RawValue.Should().Be(0x08);
 
         // HELLO.TXT: attributes = 0x20 (ARCHIVE bit)
         Navigate((DecodedStruct)entriesArray.Elements[1], "attributes")
-            .Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0x20);
+            .Should().BeOfType<DecodedFlags>().Which.RawValue.Should().Be(0x20);
 
         // SUBDIR: attributes = 0x10 (DIRECTORY bit)
         Navigate((DecodedStruct)entriesArray.Elements[2], "attributes")
-            .Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0x10);
+            .Should().BeOfType<DecodedFlags>().Which.RawValue.Should().Be(0x10);
     }
 
     [Fact]

@@ -235,12 +235,40 @@
           "hex": "0x80"
         },
         "characteristics": {
-          "_type": "integer",
+          "_type": "flags",
           "offset": 86,
           "size": 2,
           "name": "characteristics",
-          "value": 34,
-          "hex": "0x22"
+          "raw_value": "0x22",
+          "flags": {
+            "RELOCS_STRIPPED": {
+              "set": false
+            },
+            "EXECUTABLE_IMAGE": {
+              "set": true
+            },
+            "LINE_NUMS_STRIPPED": {
+              "set": false
+            },
+            "LOCAL_SYMS_STRIPPED": {
+              "set": false
+            },
+            "LARGE_ADDRESS_AWARE": {
+              "set": true
+            },
+            "32BIT_MACHINE": {
+              "set": false
+            },
+            "DEBUG_STRIPPED": {
+              "set": false
+            },
+            "SYSTEM": {
+              "set": false
+            },
+            "DLL": {
+              "set": false
+            }
+          }
         }
       }
     },
@@ -339,12 +367,46 @@
               "hex": "0x0"
             },
             "characteristics": {
-              "_type": "integer",
+              "_type": "flags",
               "offset": 124,
               "size": 4,
               "name": "characteristics",
-              "value": 512,
-              "hex": "0x200"
+              "raw_value": "0x200",
+              "flags": {
+                "CNT_CODE": {
+                  "set": false
+                },
+                "CNT_INITIALIZED_DATA": {
+                  "set": false
+                },
+                "CNT_UNINITIALIZED_DATA": {
+                  "set": false
+                },
+                "LNK_NRELOC_OVFL": {
+                  "set": false
+                },
+                "MEM_DISCARDABLE": {
+                  "set": false
+                },
+                "MEM_NOT_CACHED": {
+                  "set": false
+                },
+                "MEM_NOT_PAGED": {
+                  "set": false
+                },
+                "MEM_SHARED": {
+                  "set": false
+                },
+                "MEM_EXECUTE": {
+                  "set": false
+                },
+                "MEM_READ": {
+                  "set": false
+                },
+                "MEM_WRITE": {
+                  "set": false
+                }
+              }
             }
           }
         }

@@ -128,12 +128,45 @@
       ]
     },
     "access_flags": {
-      "_type": "integer",
+      "_type": "flags",
       "offset": 20,
       "size": 2,
       "name": "access_flags",
-      "value": 33,
-      "hex": "0x21"
+      "raw_value": "0x21",
+      "flags": {
+        "ACC_PUBLIC": {
+          "set": true,
+          "meaning": "public"
+        },
+        "ACC_FINAL": {
+          "set": false,
+          "meaning": ""
+        },
+        "ACC_SUPER": {
+          "set": true,
+          "meaning": "super"
+        },
+        "ACC_INTERFACE": {
+          "set": false,
+          "meaning": ""
+        },
+        "ACC_ABSTRACT": {
+          "set": false,
+          "meaning": ""
+        },
+        "ACC_SYNTHETIC": {
+          "set": false,
+          "meaning": ""
+        },
+        "ACC_ANNOTATION": {
+          "set": false,
+          "meaning": ""
+        },
+        "ACC_ENUM": {
+          "set": false,
+          "meaning": ""
+        }
+      }
     },
     "this_class": {
       "_type": "integer",

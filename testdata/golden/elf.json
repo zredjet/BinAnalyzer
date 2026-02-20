@@ -220,12 +220,22 @@
                   "enum_label": "PT_LOAD"
                 },
                 "p_flags": {
-                  "_type": "integer",
+                  "_type": "flags",
                   "offset": 68,
                   "size": 4,
                   "name": "p_flags",
-                  "value": 5,
-                  "hex": "0x5"
+                  "raw_value": "0x5",
+                  "flags": {
+                    "PF_X": {
+                      "set": true
+                    },
+                    "PF_W": {
+                      "set": false
+                    },
+                    "PF_R": {
+                      "set": true
+                    }
+                  }
                 },
                 "p_offset": {
                   "_type": "integer",

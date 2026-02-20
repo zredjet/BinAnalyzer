@@ -101,9 +101,13 @@ public class ElfParsingTests
         pType.Value.Should().Be(1);
         pType.EnumLabel.Should().Be("PT_LOAD");
 
-        // p_flags has flags: p_flags annotation, but still decodes as DecodedInteger
-        var pFlags = phdr.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        pFlags.Value.Should().Be(5);
+        // p_flags has flags: p_flags annotation, now decodes as DecodedFlags
+        var pFlags = phdr.Children[1].Should().BeOfType<DecodedFlags>().Subject;
+        pFlags.RawValue.Should().Be(5);
+        pFlags.FlagStates.Should().HaveCount(3);
+        pFlags.FlagStates.Should().Contain(f => f.Name == "PF_X" && f.IsSet);
+        pFlags.FlagStates.Should().Contain(f => f.Name == "PF_W" && !f.IsSet);
+        pFlags.FlagStates.Should().Contain(f => f.Name == "PF_R" && f.IsSet);
     }
 
     [Fact]

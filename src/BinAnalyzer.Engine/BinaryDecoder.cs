@@ -255,7 +255,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         return result;
     }
 
-    private DecodedInteger DecodeIntegerField(
+    private DecodedNode DecodeIntegerField(
         FieldDefinition field,
         FormatDefinition format,
         DecodeContext context,
@@ -280,6 +280,21 @@ public sealed class BinaryDecoder : IBinaryDecoder
 
         var size = context.Position - offset;
         context.SetVariable(field.Name, value);
+
+        // flags展開（整数型フィールドのFlagsRef対応）
+        if (field.FlagsRef is not null && format.Flags.TryGetValue(field.FlagsRef, out var flagsDef))
+        {
+            var flagStates = DecodeFlagValues((uint)value, flagsDef);
+            return new DecodedFlags
+            {
+                Name = field.Name,
+                Offset = offset,
+                Size = size,
+                RawValue = value,
+                FlagStates = flagStates,
+                Description = field.Description,
+            };
+        }
 
         string? enumLabel = null;
         string? enumDesc = null;
@@ -1057,6 +1072,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true, Validation = b.Validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm },
         DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = true, Validation = i.Validation },
         DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = true, Validation = s.Validation },
+        DecodedFlags fl => new DecodedFlags { Name = fl.Name, Offset = fl.Offset, Size = fl.Size, RawValue = fl.RawValue, FlagStates = fl.FlagStates, Description = fl.Description, IsPadding = true, Validation = fl.Validation },
         _ => node, // struct/array等はパディングとしてマークしない
     };
 
@@ -1066,6 +1082,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = i.IsPadding, Validation = validation },
         DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = s.IsPadding, Validation = validation },
         DecodedFloat f => new DecodedFloat { Name = f.Name, Offset = f.Offset, Size = f.Size, Value = f.Value, IsSinglePrecision = f.IsSinglePrecision, Description = f.Description, IsPadding = f.IsPadding, Validation = validation },
+        DecodedFlags fl => new DecodedFlags { Name = fl.Name, Offset = fl.Offset, Size = fl.Size, RawValue = fl.RawValue, FlagStates = fl.FlagStates, Description = fl.Description, IsPadding = fl.IsPadding, Validation = validation },
         _ => node, // struct/array/bitfield等はバリデーションをサポートしない
     };
 

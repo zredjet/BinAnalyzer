@@ -327,10 +327,34 @@ public class FormatValidatorTests
         result.Warnings.Should().NotContain(d => d.Code == "VAL103");
     }
 
-    // --- VAL104: FlagsRef がascii型以外のフィールドに指定 ---
+    // --- VAL104: FlagsRef がascii型・整数型以外のフィールドに指定 ---
 
     [Fact]
-    public void VAL104_FlagsRefOnNonAsciiField_ReportsWarning()
+    public void VAL104_FlagsRefOnNonAsciiNonIntegerField_ReportsWarning()
+    {
+        var format = CreateFormat(
+            new Dictionary<string, StructDefinition>
+            {
+                ["root"] = Struct("root",
+                    new FieldDefinition { Name = "value", Type = FieldType.Float32, FlagsRef = "my_flags" }),
+            },
+            flags: new Dictionary<string, FlagsDefinition>
+            {
+                ["my_flags"] = new()
+                {
+                    Name = "my_flags",
+                    BitSize = 32,
+                    Fields = [new FlagFieldDefinition("flag1", 0, 1)],
+                },
+            });
+
+        var result = FormatValidator.Validate(format);
+
+        result.Warnings.Should().Contain(d => d.Code == "VAL104" && d.FieldName == "value");
+    }
+
+    [Fact]
+    public void VAL104_FlagsRefOnIntegerField_DoesNotReportWarning()
     {
         var format = CreateFormat(
             new Dictionary<string, StructDefinition>
@@ -350,7 +374,7 @@ public class FormatValidatorTests
 
         var result = FormatValidator.Validate(format);
 
-        result.Warnings.Should().Contain(d => d.Code == "VAL104" && d.FieldName == "value");
+        result.Warnings.Should().NotContain(d => d.Code == "VAL104");
     }
 
     // --- VAL105: switch に default がない ---

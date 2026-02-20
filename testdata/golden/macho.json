@@ -68,12 +68,25 @@
           "hex": "0x18"
         },
         "flags": {
-          "_type": "integer",
+          "_type": "flags",
           "offset": 24,
           "size": 4,
           "name": "flags",
-          "value": 2097284,
-          "hex": "0x200084"
+          "raw_value": "0x200084",
+          "flags": {
+            "MH_NOUNDEFS": {
+              "set": false
+            },
+            "MH_DYLDLINK": {
+              "set": true
+            },
+            "MH_TWOLEVEL": {
+              "set": true
+            },
+            "MH_PIE": {
+              "set": true
+            }
+          }
         },
         "reserved": {
           "_type": "integer",

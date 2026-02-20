@@ -198,7 +198,7 @@ public static class FormatValidator
     }
 
     /// <summary>VAL102: FlagsRef が存在しないflags名を参照</summary>
-    /// <summary>VAL104: FlagsRef がascii型以外のフィールドに指定されている</summary>
+    /// <summary>VAL104: FlagsRef がascii型・整数型以外のフィールドに指定されている</summary>
     private static void ValidateFlagsRef(
         FieldDefinition field, string structName,
         FormatDefinition format, List<ValidationDiagnostic> diagnostics)
@@ -213,10 +213,10 @@ public static class FormatValidator
                 structName, field.Name));
         }
 
-        if (field.Type != FieldType.Ascii)
+        if (field.Type != FieldType.Ascii && !IsIntegerType(field.Type))
         {
             diagnostics.Add(Warning("VAL104",
-                $"フィールド '{field.Name}' ({field.Type}) にflags参照が指定されていますが、flags参照はascii型フィールドでのみ有効です",
+                $"フィールド '{field.Name}' ({field.Type}) にflags参照が指定されていますが、flags参照はascii型または整数型フィールドでのみ有効です",
                 structName, field.Name));
         }
     }

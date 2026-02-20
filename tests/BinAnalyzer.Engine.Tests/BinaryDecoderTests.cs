@@ -325,6 +325,129 @@ public class BinaryDecoderTests
         footer.Name.Should().Be("footer");
     }
 
+    [Fact]
+    public void Decode_UInt32WithFlags_ReturnsDecodedFlags()
+    {
+        var format = CreateFormatWithFlags("main",
+            new Dictionary<string, FlagsDefinition>
+            {
+                ["test_flags"] = new()
+                {
+                    Name = "test_flags",
+                    BitSize = 32,
+                    Fields =
+                    [
+                        new FlagFieldDefinition("bit0", 0, 1),
+                        new FlagFieldDefinition("bit1", 1, 1),
+                        new FlagFieldDefinition("bit2", 2, 1),
+                    ],
+                },
+            },
+            new FieldDefinition
+            {
+                Name = "flags",
+                Type = FieldType.UInt32,
+                FlagsRef = "test_flags",
+            });
+        var data = new byte[] { 0x00, 0x00, 0x00, 0x05 }; // BE: 5 = 0b101
+
+        var result = _decoder.Decode(data, format);
+
+        var field = result.Children[0].Should().BeOfType<DecodedFlags>().Subject;
+        field.RawValue.Should().Be(5);
+        field.FlagStates.Should().HaveCount(3);
+        field.FlagStates.Should().Contain(f => f.Name == "bit0" && f.IsSet);
+        field.FlagStates.Should().Contain(f => f.Name == "bit1" && !f.IsSet);
+        field.FlagStates.Should().Contain(f => f.Name == "bit2" && f.IsSet);
+    }
+
+    [Fact]
+    public void Decode_UInt8WithFlags_ReturnsDecodedFlags()
+    {
+        var format = CreateFormatWithFlags("main",
+            new Dictionary<string, FlagsDefinition>
+            {
+                ["byte_flags"] = new()
+                {
+                    Name = "byte_flags",
+                    BitSize = 8,
+                    Fields =
+                    [
+                        new FlagFieldDefinition("bit0", 0, 1),
+                        new FlagFieldDefinition("bit7", 7, 1),
+                    ],
+                },
+            },
+            new FieldDefinition
+            {
+                Name = "flags",
+                Type = FieldType.UInt8,
+                FlagsRef = "byte_flags",
+            });
+        var data = new byte[] { 0x81 }; // 0b10000001
+
+        var result = _decoder.Decode(data, format);
+
+        var field = result.Children[0].Should().BeOfType<DecodedFlags>().Subject;
+        field.RawValue.Should().Be(0x81);
+        field.FlagStates.Should().HaveCount(2);
+        field.FlagStates.Should().Contain(f => f.Name == "bit0" && f.IsSet);
+        field.FlagStates.Should().Contain(f => f.Name == "bit7" && f.IsSet);
+    }
+
+    [Fact]
+    public void Decode_IntegerWithFlags_VariableBindingPreservesIntegerValue()
+    {
+        var format = CreateFormatWithFlags("main",
+            new Dictionary<string, FlagsDefinition>
+            {
+                ["test_flags"] = new()
+                {
+                    Name = "test_flags",
+                    BitSize = 16,
+                    Fields =
+                    [
+                        new FlagFieldDefinition("bit0", 0, 1),
+                    ],
+                },
+            },
+            new FieldDefinition
+            {
+                Name = "flags_field",
+                Type = FieldType.UInt16,
+                FlagsRef = "test_flags",
+            },
+            new FieldDefinition
+            {
+                Name = "masked",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{flags_field & 0xFF}"),
+            });
+        var data = new byte[] { 0x00, 0x05 }; // BE: 5
+
+        var result = _decoder.Decode(data, format);
+
+        result.Children[0].Should().BeOfType<DecodedFlags>();
+        var virtual_ = result.Children[1].Should().BeOfType<DecodedVirtual>().Subject;
+        virtual_.Value.Should().Be(5L);
+    }
+
+    [Fact]
+    public void Decode_IntegerWithoutFlags_StillReturnsDecodedInteger()
+    {
+        var format = CreateFormat("main", new FieldDefinition
+        {
+            Name = "value",
+            Type = FieldType.UInt32,
+        });
+        var data = new byte[] { 0x00, 0x00, 0x00, 0x2A }; // 42
+
+        var result = _decoder.Decode(data, format);
+
+        var field = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        field.Value.Should().Be(42);
+    }
+
     private static FormatDefinition CreateFormat(string rootName, params FieldDefinition[] fields)
     {
         return new FormatDefinition
@@ -333,6 +456,29 @@ public class BinaryDecoderTests
             Endianness = Endianness.Big,
             Enums = new Dictionary<string, EnumDefinition>(),
             Flags = new Dictionary<string, FlagsDefinition>(),
+            Structs = new Dictionary<string, StructDefinition>
+            {
+                [rootName] = new()
+                {
+                    Name = rootName,
+                    Fields = fields.ToList(),
+                },
+            },
+            RootStruct = rootName,
+        };
+    }
+
+    private static FormatDefinition CreateFormatWithFlags(
+        string rootName,
+        Dictionary<string, FlagsDefinition> flags,
+        params FieldDefinition[] fields)
+    {
+        return new FormatDefinition
+        {
+            Name = "Test",
+            Endianness = Endianness.Big,
+            Enums = new Dictionary<string, EnumDefinition>(),
+            Flags = flags,
             Structs = new Dictionary<string, StructDefinition>
             {
                 [rootName] = new()

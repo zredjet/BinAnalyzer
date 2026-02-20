@@ -358,6 +358,36 @@ flags:
   flags: chunk_type_flags
 ```
 
+整数型フィールド（uint8/uint16/uint32/uint64等）にもフラグを適用できます。
+この場合、デコード結果は各ビットの状態がツリー表示されます:
+
+```yaml
+flags:
+  p_flags:
+    bit_size: 32
+    fields:
+      - name: PF_X
+        bit: 0
+      - name: PF_W
+        bit: 1
+      - name: PF_R
+        bit: 2
+
+structs:
+  phdr:
+    - name: p_flags
+      type: uint32
+      flags: p_flags
+```
+
+式からの変数参照は整数値として解決されるため、ビット演算も利用できます:
+
+```yaml
+- name: is_executable
+  type: virtual
+  value: "{p_flags & 1}"
+```
+
 ## 繰り返しモード
 
 ### データ末尾まで繰り返し
