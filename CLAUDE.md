@@ -24,6 +24,7 @@ DSL(.bdef.yaml) → [DSLパーサー] → IR(中間表現) → [バイナリデ�
 - **BinAnalyzer.Engine** — バイナリデコーダーエンジン。BCL + Compressionに依存。
 - **BinAnalyzer.Output** — 出力フォーマッター(ツリー等)。BCLのみ。
 - **BinAnalyzer.Tui** — 対話型ターミナルUI（TUI）。Terminal.Guiに依存。
+- **BinAnalyzer.Web** — Blazor WebAssembly版（ブラウザUI）。サーバーなし静的サイト。
 - **BinAnalyzer.Cli** — CLIエントリポイント。
 
 ### 設計上の重要ポイント

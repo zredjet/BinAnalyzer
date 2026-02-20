@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <RootNamespace>BinAnalyzer.Web</RootNamespace>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BinAnalyzer.Web.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.*-*" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.*-*" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Compression\BinAnalyzer.Compression.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Output\BinAnalyzer.Output.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\formats\**\*.bdef.yaml" LinkBase="wwwroot\formats" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

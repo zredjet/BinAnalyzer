@@ -113,6 +113,23 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 全コマンド・オプションの詳細は [CLIリファレンス](docs/cli-usage.md) を参照してください。
 
+## Web版（Blazor WebAssembly）
+
+ブラウザ上でバイナリファイルをドラッグ&ドロップして構造解析できます。インストール不要。
+
+```bash
+# 起動
+dotnet run --project src/BinAnalyzer.Web
+
+# ブラウザで http://localhost:5000 にアクセス
+```
+
+- ファイルをドラッグ&ドロップまたはクリックで選択
+- 拡張子からフォーマットを自動検出（手動変更可）
+- デコード結果を折りたたみ・検索付きツリーで表示
+- JSON形式でダウンロード可能
+- 全処理がクライアントサイド（WASM）で完結（サーバー通信なし）
+
 ## フォーマット定義
 
 バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。

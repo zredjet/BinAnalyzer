@@ -17,6 +17,7 @@ BinAnalyzer/
 │   ├── BinAnalyzer.Engine/        # バイナリデコーダーエンジン（BCLのみ）
 │   ├── BinAnalyzer.Output/        # 出力フォーマッター（BCLのみ）
 │   ├── BinAnalyzer.Tui/            # 対話型ターミナルUI（Terminal.Gui）
+│   ├── BinAnalyzer.Web/           # Blazor WebAssembly版（ブラウザUI）
 │   └── BinAnalyzer.Cli/           # CLIエントリポイント
 ├── tests/
 │   ├── BinAnalyzer.Core.Tests/
@@ -53,6 +54,7 @@ BinAnalyzer/
 
 ```
 Cli → Dsl, Engine, Output, Tui
+Web → Dsl, Engine, Output, Compression（+ Blazor WASM）
 Dsl → Core（+ YamlDotNet）
 Engine → Core
 Output → Core
@@ -167,6 +169,14 @@ Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起�
 - **TuiState** — 状態管理（選択ノード、検索状態）。イベント駆動でペイン間を連携
 - **DecodedNodeTreeBuilder** — ITreeBuilder\<DecodedNode\> 実装。子ノード列挙ロジック
 - **NodeDetailFormatter** — DecodedNode → 詳細表示文字列リスト変換（テスト可能な純粋ロジック）
+
+### Blazor WebAssembly版 — Web/
+
+Blazor WebAssembly Standalone アプリケーション。サーバーなしの静的サイトとしてデプロイ可能。既存の Core / Dsl / Engine / Output / Compression ライブラリをブラウザ上で再利用:
+
+- **Program.cs** — WASM エントリポイント。HttpClient と FormatService を DI 登録
+- **FormatService** — HttpClient で `wwwroot/formats/` から YAML を取得し、`YamlFormatLoader.LoadFromString()` で IR に変換。キャッシュ付き
+- **Home.razor / Home.razor.cs** — メインページ。ファイルアップロード（ドラッグ&ドロップ）、フォーマット自動検出・手動選択、BinaryDecoder でデコード、HtmlOutputFormatter の出力を iframe srcdoc で表示、JsonOutputFormatter の出力を Blob URL でダウンロード
 
 フォーマット定義（IR）からスキーマ図を生成（ISchemaFormatter）:
 

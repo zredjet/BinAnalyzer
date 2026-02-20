@@ -1,0 +1,268 @@
+:root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-card: #0f3460;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0b0;
+    --accent: #e94560;
+    --accent-hover: #ff6b81;
+    --border: #2a2a4a;
+    --success: #4caf50;
+    --error: #f44336;
+    --drop-zone-bg: #1a2744;
+    --drop-zone-border: #3a5a8a;
+    --drop-zone-active: #e94560;
+    --button-bg: #e94560;
+    --button-hover: #ff6b81;
+    --button-disabled: #555;
+    --select-bg: #16213e;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}
+
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+/* Header */
+.app-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+    font-size: 1.8rem;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+}
+
+.app-header p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* Drop zone */
+.drop-zone {
+    border: 2px dashed var(--drop-zone-border);
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+    background: var(--drop-zone-bg);
+    transition: border-color 0.2s, background-color 0.2s;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+    border-color: var(--drop-zone-active);
+    background: rgba(233, 69, 96, 0.08);
+}
+
+.drop-zone-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.drop-zone p {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.drop-zone .file-name {
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.drop-zone .file-size {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* Controls row */
+.controls-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.control-group label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.control-group select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--select-bg);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.control-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Buttons */
+.btn {
+    padding: 0.55rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--button-bg);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--button-hover);
+}
+
+.btn-primary:disabled {
+    background-color: var(--button-disabled);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-secondary {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--border);
+}
+
+/* Status / error messages */
+.status-message {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.status-message.info {
+    background: rgba(233, 69, 96, 0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+}
+
+.status-message.error {
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+}
+
+.status-message.success {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid var(--success);
+    color: var(--success);
+}
+
+/* Result area */
+.result-area {
+    margin-top: 1rem;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.result-header h2 {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.result-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.result-iframe {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    min-height: 400px;
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 2px solid var(--text-secondary);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .control-group select {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}

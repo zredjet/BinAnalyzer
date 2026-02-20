@@ -1,0 +1,70 @@
+@page "/"
+@inject FormatService FormatService
+@inject IJSRuntime JS
+
+<div class="app-container">
+    <header class="app-header">
+        <h1>BinAnalyzer Web</h1>
+        <p>YAML-DSL でバイナリフォーマットを定義し、ブラウザ上で構造解析</p>
+    </header>
+
+    <div class="drop-zone @(_isDragOver ? "drag-over" : "")"
+         @ondragover="HandleDragOver"
+         @ondragover:preventDefault
+         @ondragleave="HandleDragLeave"
+         @ondrop:preventDefault>
+        <div class="drop-zone-icon">&#128194;</div>
+        @if (_fileName is not null)
+        {
+            <p class="file-name">@_fileName</p>
+            <p class="file-size">@FormatFileSize(_fileData!.Length)</p>
+        }
+        else
+        {
+            <p>ファイルをドラッグ＆ドロップ、またはクリックして選択</p>
+        }
+        <InputFile OnChange="HandleFileSelected" style="position:absolute;width:100%;height:100%;top:0;left:0;opacity:0;cursor:pointer;" />
+    </div>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>フォーマット</label>
+            <select @bind="_selectedFormatFile">
+                <option value="">-- 選択してください --</option>
+                @foreach (var f in _formats)
+                {
+                    <option value="@f.File">@f.Name</option>
+                }
+            </select>
+        </div>
+
+        <button class="btn btn-primary" @onclick="Decode" disabled="@(!CanDecode)">
+            @if (_isDecoding)
+            {
+                <span class="spinner"></span>
+            }
+            デコード
+        </button>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="status-message error">@_errorMessage</div>
+    }
+
+    @if (_htmlResult is not null)
+    {
+        <div class="result-area">
+            <div class="result-header">
+                <h2>デコード結果</h2>
+                <div class="result-actions">
+                    @if (_jsonResult is not null)
+                    {
+                        <button class="btn btn-secondary" @onclick="DownloadJson">JSON ダウンロード</button>
+                    }
+                </div>
+            </div>
+            <iframe class="result-iframe" srcdoc="@_htmlResult" sandbox="allow-scripts" @ref="_iframeRef"></iframe>
+        </div>
+    }
+</div>
