@@ -17,7 +17,7 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [-
 | オプション | 説明 | デフォルト |
 |------------|------|-----------|
 | `-f, --format <file>` | フォーマット定義ファイル（`.bdef.yaml`）**必須** | — |
-| `-o, --output <format>` | 出力形式（`tree`, `json`, `hexdump`, `html`, `map`, `csv`, `tsv`） | `tree` |
+| `-o, --output <format>` | 出力形式（`tree`, `json`, `hexdump`, `html`, `map`, `csv`, `tsv`, `tui`） | `tree` |
 | `--color <mode>` | カラー出力（`auto`, `always`, `never`） | `auto` |
 | `--no-validate` | フォーマット定義のバリデーションをスキップ | — |
 | `--on-error <mode>` | エラー時の動作（`stop`, `continue`） | `stop` |
@@ -136,6 +136,36 @@ CSV と同じ構造でタブ区切りの出力です。
 ```bash
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tsv
 ```
+
+### tui
+
+対話型ターミナルUI（TUI）を起動します。Terminal.Gui v2 ベースの3ペイン構成で、デコード結果を対話的に探索できます。
+
+```bash
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tui
+```
+
+#### レイアウト
+
+- **左上: Tree** — デコード結果のツリービュー。ノードの展開・折りたたみが可能
+- **右上: Detail** — 選択ノードの詳細情報（型、オフセット、サイズ、値など）
+- **下段: Hex** — 選択ノードに対応するバイト範囲のヘックスダンプ（`^^` マーカーでハイライト）
+
+#### キーバインド
+
+| キー | 動作 |
+|------|------|
+| `↑` / `↓` | ツリーノード間移動 |
+| `→` / `Enter` | ノード展開 |
+| `←` | ノード折りたたみ |
+| `Tab` | ペイン間移動 |
+| `e` | 全ノード展開 |
+| `c` | 全ノード折りたたみ |
+| `/` | 検索バーを表示 |
+| `n` | 次の検索結果へジャンプ |
+| `N`（Shift+n） | 前の検索結果へジャンプ |
+| `Escape` | 検索バーを閉じる |
+| `q` | TUI終了 |
 
 ## 出力フィルタ
 
@@ -388,4 +418,7 @@ dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml
 
 # スキーマ図をGraphviz DOT形式で出力
 dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
+
+# 対話型TUIで探索
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tui
 ```

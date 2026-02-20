@@ -16,11 +16,13 @@ BinAnalyzer/
 │   ├── BinAnalyzer.Dsl/           # YAML → IR変換（YamlDotNet）
 │   ├── BinAnalyzer.Engine/        # バイナリデコーダーエンジン（BCLのみ）
 │   ├── BinAnalyzer.Output/        # 出力フォーマッター（BCLのみ）
+│   ├── BinAnalyzer.Tui/            # 対話型ターミナルUI（Terminal.Gui）
 │   └── BinAnalyzer.Cli/           # CLIエントリポイント
 ├── tests/
 │   ├── BinAnalyzer.Core.Tests/
 │   ├── BinAnalyzer.Dsl.Tests/
 │   ├── BinAnalyzer.Engine.Tests/
+│   ├── BinAnalyzer.Tui.Tests/
 │   └── BinAnalyzer.Integration.Tests/
 ├── benchmarks/
 │   └── BinAnalyzer.Benchmarks/    # BenchmarkDotNetによるパフォーマンス計測
@@ -50,10 +52,11 @@ BinAnalyzer/
 ## 依存関係
 
 ```
-Cli → Dsl, Engine, Output
+Cli → Dsl, Engine, Output, Tui
 Dsl → Core（+ YamlDotNet）
 Engine → Core
 Output → Core
+Tui → Core（+ Terminal.Gui）
 Core → （なし）
 ```
 
@@ -151,6 +154,19 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **DiffOutputFormatter** — 2つのバイナリの構造的差分表示
 
 各フォーマッターはANSIカラー出力に対応（ColorMode: Auto / Always / Never）。
+
+### 対話型TUI — Tui/
+
+Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起動。3ペイン構成でデコード結果を対話的に探索:
+
+- **TuiApp** — エントリポイント。Application ライフサイクル管理、3ペインレイアウト構築、グローバルキーバインド
+- **TreePane** — TreeView\<DecodedNode\> によるツリービュー。展開/折りたたみ、ノード選択
+- **DetailPane** — 選択ノードの詳細情報表示（型、オフセット、サイズ、値など）
+- **HexPane** — 選択ノードに対応するバイト範囲のヘックスダンプ（`^^` マーカーでハイライト）
+- **SearchBar** — フィールド名によるインクリメンタル検索、検索結果間のジャンプ
+- **TuiState** — 状態管理（選択ノード、検索状態）。イベント駆動でペイン間を連携
+- **DecodedNodeTreeBuilder** — ITreeBuilder\<DecodedNode\> 実装。子ノード列挙ロジック
+- **NodeDetailFormatter** — DecodedNode → 詳細表示文字列リスト変換（テスト可能な純粋ロジック）
 
 フォーマット定義（IR）からスキーマ図を生成（ISchemaFormatter）:
 

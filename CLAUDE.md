@@ -23,6 +23,7 @@ DSL(.bdef.yaml) → [DSLパーサー] → IR(中間表現) → [バイナリデ�
 - **BinAnalyzer.Compression** — 外部NuGet依存の圧縮展開処理（bzip2/lzma/zstd/lz4）。SharpCompress, ZstdSharp.Port, K4os.Compression.LZ4に依存。
 - **BinAnalyzer.Engine** — バイナリデコーダーエンジン。BCL + Compressionに依存。
 - **BinAnalyzer.Output** — 出力フォーマッター(ツリー等)。BCLのみ。
+- **BinAnalyzer.Tui** — 対話型ターミナルUI（TUI）。Terminal.Guiに依存。
 - **BinAnalyzer.Cli** — CLIエントリポイント。
 
 ### 設計上の重要ポイント

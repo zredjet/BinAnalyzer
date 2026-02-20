@@ -8,7 +8,7 @@
 
 - **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
 - **圧縮データ対応** — zlib / deflate 圧縮フィールドの展開・ネスト解析
-- **7種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv
+- **8種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv, tui（対話型ターミナルUI）
 - **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）
 - **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示（フラット形式 / ツリー形式）、ディレクトリ指定によるバッチdiffにも対応
 - **スキーマ図出力** — `schema` サブコマンドでフォーマット定義の struct 間参照関係を Mermaid / Graphviz DOT 形式で出力
@@ -20,6 +20,7 @@
 - **アライメント / パディング** — フィールド・構造体レベルのバイト境界調整、パディング非表示
 - **エンディアン切り替え** — 構造体・フィールドレベルでエンディアンを上書き（優先順位: フィールド > 構造体 > フォーマットデフォルト）
 - **カスタムバリデーション** — `validate` 式でデコード後の値を検証し ✓/✗ で表示
+- **対話型TUI** — `--output tui` でツリー・詳細・ヘックスダンプの3ペイン構成の対話型UIを起動。ノード展開/折りたたみ、フィールド検索に対応
 - **エラー回復** — `--on-error continue` でデコードエラー後も解析を継続
 - **文字列テーブル参照** — ELF `.strtab` 等の文字列テーブルを整数フィールドから参照し文字列に解決
 
@@ -102,6 +103,9 @@ dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml
 
 # スキーマ図をGraphviz DOT形式で出力
 dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
+
+# 対話型TUIで探索（ツリー/詳細/ヘックスダンプの3ペイン表示）
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tui
 
 # カラー出力を強制
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always

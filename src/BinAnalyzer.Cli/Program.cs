@@ -8,6 +8,7 @@ using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl;
 using BinAnalyzer.Engine;
 using BinAnalyzer.Output;
+using BinAnalyzer.Tui;
 
 var fileArg = new Argument<FileInfo>("file")
 {
@@ -22,7 +23,7 @@ var formatOption = new Option<FileInfo>("-f", "--format")
 
 var outputOption = new Option<string>("-o", "--output")
 {
-    Description = "出力形式 (tree, json, hexdump, html, map, csv, tsv)",
+    Description = "出力形式 (tree, json, hexdump, html, map, csv, tsv, tui)",
     DefaultValueFactory = _ => "tree",
 };
 
@@ -129,6 +130,13 @@ rootCommand.SetAction((parseResult) =>
                 return 0;
             }
             decoded = filtered;
+        }
+
+        if (outputFormat == "tui")
+        {
+            var tuiApp = new TuiApp();
+            tuiApp.Run(decoded, data, file.Name, formatFile.Name);
+            return 0;
         }
 
         var colorMode = colorSetting switch
