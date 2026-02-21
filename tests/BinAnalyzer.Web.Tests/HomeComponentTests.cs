@@ -366,10 +366,13 @@ public sealed class HomeComponentTests : BunitContext
         // JSON ダウンロードクリック
         cut.Find("button.btn-secondary").Click();
 
-        var invocation = JSInterop.VerifyInvoke("downloadFile");
-        invocation.Arguments.Should().HaveCount(3);
-        invocation.Arguments[0].Should().Be("image.json"); // ファイル名
-        invocation.Arguments[1].Should().Be("application/json"); // content-type
-        invocation.Arguments[2].Should().NotBeNull(); // base64 data
+        cut.WaitForAssertion(() =>
+        {
+            var invocation = JSInterop.VerifyInvoke("downloadFile");
+            invocation.Arguments.Should().HaveCount(3);
+            invocation.Arguments[0].Should().Be("image.json"); // ファイル名
+            invocation.Arguments[1].Should().Be("application/json"); // content-type
+            invocation.Arguments[2].Should().NotBeNull(); // base64 data
+        });
     }
 }
