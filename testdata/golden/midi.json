@@ -102,92 +102,83 @@
               "value": 4,
               "hex": "0x4"
             },
-            "track_data": {
-              "_type": "struct",
+            "events": {
+              "_type": "array",
               "offset": 22,
               "size": 4,
-              "name": "track_data",
-              "struct_type": "midi_event_list",
-              "children": {
-                "events": {
-                  "_type": "array",
+              "name": "events",
+              "count": 1,
+              "elements": [
+                {
+                  "_type": "struct",
                   "offset": 22,
                   "size": 4,
                   "name": "events",
-                  "count": 1,
-                  "elements": [
-                    {
-                      "_type": "struct",
+                  "struct_type": "midi_event",
+                  "children": {
+                    "delta_time": {
+                      "_type": "integer",
                       "offset": 22,
-                      "size": 4,
-                      "name": "events",
-                      "struct_type": "midi_event",
+                      "size": 1,
+                      "description": "\u30C7\u30EB\u30BF\u30BF\u30A4\u30E0\uFF08VLQ\u30A8\u30F3\u30B3\u30FC\u30C9\uFF09",
+                      "name": "delta_time",
+                      "value": 0,
+                      "hex": "0x0"
+                    },
+                    "status": {
+                      "_type": "integer",
+                      "offset": 23,
+                      "size": 1,
+                      "description": "\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30A4\u30C8",
+                      "name": "status",
+                      "value": 255,
+                      "hex": "0xFF"
+                    },
+                    "event_data": {
+                      "_type": "struct",
+                      "offset": 24,
+                      "size": 2,
+                      "name": "event_data",
+                      "struct_type": "system_event_data",
                       "children": {
-                        "delta_time": {
-                          "_type": "integer",
-                          "offset": 22,
-                          "size": 1,
-                          "description": "\u30C7\u30EB\u30BF\u30BF\u30A4\u30E0\uFF08VLQ\u30A8\u30F3\u30B3\u30FC\u30C9\uFF09",
-                          "name": "delta_time",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "status": {
-                          "_type": "integer",
-                          "offset": 23,
-                          "size": 1,
-                          "description": "\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30A4\u30C8",
-                          "name": "status",
-                          "value": 255,
-                          "hex": "0xFF"
-                        },
-                        "event_data": {
+                        "system_body": {
                           "_type": "struct",
                           "offset": 24,
                           "size": 2,
-                          "name": "event_data",
-                          "struct_type": "system_event_data",
+                          "name": "system_body",
+                          "struct_type": "meta_event_body",
                           "children": {
-                            "system_body": {
-                              "_type": "struct",
+                            "meta_type": {
+                              "_type": "integer",
                               "offset": 24,
-                              "size": 2,
-                              "name": "system_body",
-                              "struct_type": "meta_event_body",
-                              "children": {
-                                "meta_type": {
-                                  "_type": "integer",
-                                  "offset": 24,
-                                  "size": 1,
-                                  "description": "\u30E1\u30BF\u30A4\u30D9\u30F3\u30C8\u30BF\u30A4\u30D7\uFF080x2F=End of Track, 0x51=\u30C6\u30F3\u30DD, 0x58=\u62CD\u5B50\u8A18\u53F7\uFF09",
-                                  "name": "meta_type",
-                                  "value": 47,
-                                  "hex": "0x2F"
-                                },
-                                "meta_length": {
-                                  "_type": "integer",
-                                  "offset": 25,
-                                  "size": 1,
-                                  "name": "meta_length",
-                                  "value": 0,
-                                  "hex": "0x0"
-                                },
-                                "meta_data": {
-                                  "_type": "bytes",
-                                  "offset": 26,
-                                  "size": 0,
-                                  "name": "meta_data",
-                                  "hex": ""
-                                }
-                              }
+                              "size": 1,
+                              "description": "\u30E1\u30BF\u30A4\u30D9\u30F3\u30C8\u30BF\u30A4\u30D7\uFF080x2F=End of Track, 0x51=\u30C6\u30F3\u30DD, 0x58=\u62CD\u5B50\u8A18\u53F7\uFF09",
+                              "name": "meta_type",
+                              "value": 47,
+                              "hex": "0x2F"
+                            },
+                            "meta_length": {
+                              "_type": "integer",
+                              "offset": 25,
+                              "size": 1,
+                              "name": "meta_length",
+                              "value": 0,
+                              "hex": "0x0"
+                            },
+                            "meta_data": {
+                              "_type": "bytes",
+                              "offset": 26,
+                              "size": 0,
+                              "name": "meta_data",
+                              "hex": ""
                             }
                           }
                         }
                       }
                     }
-                  ]
+                  }
                 }
-              }
+              ]
             }
           }
         }

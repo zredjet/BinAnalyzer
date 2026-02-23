@@ -107,6 +107,8 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         sb.Append(prefix);
         sb.Append(node.Name);
         sb.Append(C($" [0x{node.Offset:X8}] ({node.Size} bytes) [{node.Elements.Count} items]", AnsiColors.Dim));
+        if (node.Truncated)
+            sb.Append(C($" (truncated: {node.TruncationReason ?? "limit reached"})", AnsiColors.Red));
         sb.AppendLine();
 
         var childIndent = isRoot ? "" : indent + (isLast ? "    " : (_useColor ? C("│   ", AnsiColors.Dim) : "│   "));
@@ -330,6 +332,8 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         sb.Append(prefix);
         sb.Append(C($"✗ {node.Name}", AnsiColors.Red));
         sb.Append(C($" [ERROR at 0x{node.Offset:X8}]: {node.ErrorMessage}", AnsiColors.Red));
+        if (node.SkippedBytes > 0)
+            sb.Append(C($" (skipped {node.SkippedBytes} bytes)", AnsiColors.Dim));
         sb.AppendLine();
     }
 

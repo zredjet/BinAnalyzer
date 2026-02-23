@@ -1,3 +1,4 @@
+using System.Numerics;
 using BinAnalyzer.Core.Expressions;
 
 namespace BinAnalyzer.Engine;
@@ -40,16 +41,25 @@ public static class ExpressionEvaluator
             ExpressionNode.LiteralInt lit => lit.Value,
             ExpressionNode.LiteralString lit => lit.Value,
             ExpressionNode.FieldReference field => ResolveField(field.FieldName, context),
+            ExpressionNode.StateReference stateRef => ResolveStateVariable(stateRef.StateName, context),
             ExpressionNode.BinaryOp binOp => EvaluateBinaryOp(binOp, context),
             ExpressionNode.UnaryOp unOp => EvaluateUnaryOp(unOp, context),
             ExpressionNode.FunctionCall func => EvaluateFunction(func, context),
             ExpressionNode.IndexAccess idx => ResolveIndexAccess(idx.ArrayName, idx.Index, context),
+            ExpressionNode.MemberAccess ma => ResolveMemberAccess(ma, context),
             ExpressionNode.Conditional cond =>
                 ConvertToBool(EvaluateNode(cond.Condition, context))
                     ? EvaluateNode(cond.TrueExpr, context)
                     : EvaluateNode(cond.FalseExpr, context),
             _ => throw new InvalidOperationException($"Unknown expression node type: {node.GetType().Name}"),
         };
+    }
+
+    private static object ResolveStateVariable(string stateName, DecodeContext context)
+    {
+        return context.GetStateVariable(stateName)
+            ?? throw new InvalidOperationException(
+                $"State variable '@{stateName}' has not been initialized. Use state_default to set an initial value.");
     }
 
     private static object ResolveField(string fieldName, DecodeContext context)
@@ -76,6 +86,21 @@ public static class ExpressionEvaluator
                 $"Array index {index} is out of range for '{arrayName}' (length: {list.Count})");
 
         return list[index];
+    }
+
+    private static object ResolveMemberAccess(ExpressionNode.MemberAccess ma, DecodeContext context)
+    {
+        var obj = EvaluateNode(ma.Object, context);
+        if (obj is not Dictionary<string, object> dict)
+            throw new InvalidOperationException(
+                $"Cannot access member '{ma.MemberName}': value is not a struct " +
+                $"(actual type: {obj?.GetType().Name ?? "null"})");
+
+        if (!dict.TryGetValue(ma.MemberName, out var value))
+            throw new InvalidOperationException(
+                $"Member '{ma.MemberName}' not found in struct");
+
+        return value;
     }
 
     private static object EvaluateBinaryOp(ExpressionNode.BinaryOp binOp, DecodeContext context)
@@ -132,6 +157,13 @@ public static class ExpressionEvaluator
             "substr" => EvaluateSubstr(func.Arguments, context),
             "concat" => EvaluateConcat(func.Arguments, context),
             "contains" => EvaluateContains(func.Arguments, context),
+            "hex" => EvaluateHex(func.Arguments, context),
+            "upper" => EvaluateUpper(func.Arguments, context),
+            "lower" => EvaluateLower(func.Arguments, context),
+            "trim" => EvaluateTrim(func.Arguments, context),
+            "popcount" => EvaluatePopcount(func.Arguments, context),
+            "abs" => EvaluateAbs(func.Arguments, context),
+            "log2" => EvaluateLog2(func.Arguments, context),
             _ => throw new InvalidOperationException($"Unknown function: '{func.Name}'"),
         };
     }
@@ -296,6 +328,99 @@ public static class ExpressionEvaluator
                 $"Second argument to contains() must be a string (actual type: {searchValue?.GetType().Name ?? "null"})");
 
         return str.Contains(search);
+    }
+
+    private static object EvaluateHex(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "hex requires exactly 1 argument: hex(value)");
+
+        var val = ConvertToLong(EvaluateNode(args[0], context));
+        return $"0x{val:X}";
+    }
+
+    private static object EvaluateUpper(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "upper requires exactly 1 argument: upper(string)");
+
+        var value = EvaluateNode(args[0], context);
+        if (value is not string str)
+            throw new InvalidOperationException(
+                $"Argument to upper() must be a string (actual type: {value?.GetType().Name ?? "null"})");
+
+        return str.ToUpperInvariant();
+    }
+
+    private static object EvaluateLower(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "lower requires exactly 1 argument: lower(string)");
+
+        var value = EvaluateNode(args[0], context);
+        if (value is not string str)
+            throw new InvalidOperationException(
+                $"Argument to lower() must be a string (actual type: {value?.GetType().Name ?? "null"})");
+
+        return str.ToLowerInvariant();
+    }
+
+    private static object EvaluateTrim(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "trim requires exactly 1 argument: trim(string)");
+
+        var value = EvaluateNode(args[0], context);
+        if (value is not string str)
+            throw new InvalidOperationException(
+                $"Argument to trim() must be a string (actual type: {value?.GetType().Name ?? "null"})");
+
+        return str.Trim(' ', '\t', '\r', '\n', '\0');
+    }
+
+    private static object EvaluatePopcount(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "popcount requires exactly 1 argument: popcount(value)");
+
+        var val = ConvertToLong(EvaluateNode(args[0], context));
+        return (long)BitOperations.PopCount((ulong)val);
+    }
+
+    private static object EvaluateAbs(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "abs requires exactly 1 argument: abs(value)");
+
+        var val = ConvertToLong(EvaluateNode(args[0], context));
+        return Math.Abs(val);
+    }
+
+    private static object EvaluateLog2(
+        IReadOnlyList<ExpressionNode> args, DecodeContext context)
+    {
+        if (args.Count != 1)
+            throw new InvalidOperationException(
+                "log2 requires exactly 1 argument: log2(value)");
+
+        var val = ConvertToLong(EvaluateNode(args[0], context));
+        if (val <= 0)
+            throw new InvalidOperationException(
+                $"log2 requires a positive integer, got: {val}");
+
+        return (long)BitOperations.Log2((ulong)val);
     }
 
     private static long ConvertToLong(object value) => value switch

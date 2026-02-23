@@ -1,0 +1,524 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 148,
+  "name": "HEIF",
+  "struct_type": "heif_file",
+  "children": {
+    "boxes": {
+      "_type": "array",
+      "offset": 0,
+      "size": 148,
+      "name": "boxes",
+      "count": 3,
+      "elements": [
+        {
+          "_type": "struct",
+          "offset": 0,
+          "size": 24,
+          "name": "boxes",
+          "struct_type": "iso_box",
+          "children": {
+            "box_size": {
+              "_type": "integer",
+              "offset": 0,
+              "size": 4,
+              "name": "box_size",
+              "value": 24,
+              "hex": "0x18"
+            },
+            "box_type": {
+              "_type": "string",
+              "offset": 4,
+              "size": 4,
+              "name": "box_type",
+              "value": "ftyp",
+              "encoding": "ascii"
+            },
+            "box_data": {
+              "_type": "struct",
+              "offset": 8,
+              "size": 16,
+              "name": "box_data",
+              "struct_type": "ftyp_box",
+              "children": {
+                "major_brand": {
+                  "_type": "string",
+                  "offset": 8,
+                  "size": 4,
+                  "description": "\u30E1\u30B8\u30E3\u30FC\u30D6\u30E9\u30F3\u30C9\uFF08\u4F8B: heic, heix, mif1\uFF09",
+                  "name": "major_brand",
+                  "value": "heic",
+                  "encoding": "ascii"
+                },
+                "minor_version": {
+                  "_type": "integer",
+                  "offset": 12,
+                  "size": 4,
+                  "description": "\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
+                  "name": "minor_version",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "compatible_brands": {
+                  "_type": "bytes",
+                  "offset": 16,
+                  "size": 8,
+                  "description": "\u4E92\u63DB\u30D6\u30E9\u30F3\u30C9\u30EA\u30B9\u30C8\uFF08\u54044\u30D0\u30A4\u30C8\u306EASCII\uFF09",
+                  "name": "compatible_brands",
+                  "hex": "68 65 69 63 6D 69 66 31"
+                }
+              }
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 24,
+          "size": 108,
+          "name": "boxes",
+          "struct_type": "iso_box",
+          "children": {
+            "box_size": {
+              "_type": "integer",
+              "offset": 24,
+              "size": 4,
+              "name": "box_size",
+              "value": 108,
+              "hex": "0x6C"
+            },
+            "box_type": {
+              "_type": "string",
+              "offset": 28,
+              "size": 4,
+              "name": "box_type",
+              "value": "meta",
+              "encoding": "ascii"
+            },
+            "box_data": {
+              "_type": "struct",
+              "offset": 32,
+              "size": 100,
+              "name": "box_data",
+              "struct_type": "meta_box",
+              "children": {
+                "version": {
+                  "_type": "integer",
+                  "offset": 32,
+                  "size": 1,
+                  "description": "FullBox \u30D0\u30FC\u30B8\u30E7\u30F3",
+                  "name": "version",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "flags": {
+                  "_type": "bytes",
+                  "offset": 33,
+                  "size": 3,
+                  "description": "FullBox \u30D5\u30E9\u30B0",
+                  "name": "flags",
+                  "hex": "00 00 00"
+                },
+                "children": {
+                  "_type": "array",
+                  "offset": 36,
+                  "size": 96,
+                  "name": "children",
+                  "count": 4,
+                  "elements": [
+                    {
+                      "_type": "struct",
+                      "offset": 36,
+                      "size": 32,
+                      "name": "children",
+                      "struct_type": "iso_box",
+                      "children": {
+                        "box_size": {
+                          "_type": "integer",
+                          "offset": 36,
+                          "size": 4,
+                          "name": "box_size",
+                          "value": 32,
+                          "hex": "0x20"
+                        },
+                        "box_type": {
+                          "_type": "string",
+                          "offset": 40,
+                          "size": 4,
+                          "name": "box_type",
+                          "value": "hdlr",
+                          "encoding": "ascii"
+                        },
+                        "box_data": {
+                          "_type": "struct",
+                          "offset": 44,
+                          "size": 24,
+                          "name": "box_data",
+                          "struct_type": "hdlr_box",
+                          "children": {
+                            "version": {
+                              "_type": "integer",
+                              "offset": 44,
+                              "size": 1,
+                              "name": "version",
+                              "value": 0,
+                              "hex": "0x0"
+                            },
+                            "flags": {
+                              "_type": "bytes",
+                              "offset": 45,
+                              "size": 3,
+                              "name": "flags",
+                              "hex": "00 00 00"
+                            },
+                            "pre_defined": {
+                              "_type": "integer",
+                              "offset": 48,
+                              "size": 4,
+                              "name": "pre_defined",
+                              "value": 0,
+                              "hex": "0x0"
+                            },
+                            "handler_type": {
+                              "_type": "string",
+                              "offset": 52,
+                              "size": 4,
+                              "description": "\u30CF\u30F3\u30C9\u30E9\u30BF\u30A4\u30D7\uFF08HEIF\u3067\u306F \u0027pict\u0027\uFF09",
+                              "name": "handler_type",
+                              "value": "pict",
+                              "encoding": "ascii"
+                            },
+                            "reserved": {
+                              "_type": "bytes",
+                              "offset": 56,
+                              "size": 12,
+                              "name": "reserved",
+                              "hex": "00 00 00 00 00 00 00 00 00 00 00 00"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "_type": "struct",
+                      "offset": 68,
+                      "size": 14,
+                      "name": "children",
+                      "struct_type": "iso_box",
+                      "children": {
+                        "box_size": {
+                          "_type": "integer",
+                          "offset": 68,
+                          "size": 4,
+                          "name": "box_size",
+                          "value": 14,
+                          "hex": "0xE"
+                        },
+                        "box_type": {
+                          "_type": "string",
+                          "offset": 72,
+                          "size": 4,
+                          "name": "box_type",
+                          "value": "pitm",
+                          "encoding": "ascii"
+                        },
+                        "box_data": {
+                          "_type": "struct",
+                          "offset": 76,
+                          "size": 6,
+                          "name": "box_data",
+                          "struct_type": "pitm_box",
+                          "children": {
+                            "version": {
+                              "_type": "integer",
+                              "offset": 76,
+                              "size": 1,
+                              "description": "FullBox \u30D0\u30FC\u30B8\u30E7\u30F3",
+                              "name": "version",
+                              "value": 0,
+                              "hex": "0x0"
+                            },
+                            "flags": {
+                              "_type": "bytes",
+                              "offset": 77,
+                              "size": 3,
+                              "name": "flags",
+                              "hex": "00 00 00"
+                            },
+                            "item_id": {
+                              "_type": "integer",
+                              "offset": 80,
+                              "size": 2,
+                              "description": "\u30D7\u30E9\u30A4\u30DE\u30EA\u30A2\u30A4\u30C6\u30E0ID\uFF08version 0\uFF09",
+                              "name": "item_id",
+                              "value": 1,
+                              "hex": "0x1"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "_type": "struct",
+                      "offset": 82,
+                      "size": 16,
+                      "name": "children",
+                      "struct_type": "iso_box",
+                      "children": {
+                        "box_size": {
+                          "_type": "integer",
+                          "offset": 82,
+                          "size": 4,
+                          "name": "box_size",
+                          "value": 16,
+                          "hex": "0x10"
+                        },
+                        "box_type": {
+                          "_type": "string",
+                          "offset": 86,
+                          "size": 4,
+                          "name": "box_type",
+                          "value": "iloc",
+                          "encoding": "ascii"
+                        },
+                        "box_data": {
+                          "_type": "struct",
+                          "offset": 90,
+                          "size": 8,
+                          "name": "box_data",
+                          "struct_type": "iloc_box",
+                          "children": {
+                            "version": {
+                              "_type": "integer",
+                              "offset": 90,
+                              "size": 1,
+                              "description": "FullBox \u30D0\u30FC\u30B8\u30E7\u30F3",
+                              "name": "version",
+                              "value": 0,
+                              "hex": "0x0"
+                            },
+                            "flags": {
+                              "_type": "bytes",
+                              "offset": 91,
+                              "size": 3,
+                              "name": "flags",
+                              "hex": "00 00 00"
+                            },
+                            "size_info": {
+                              "_type": "integer",
+                              "offset": 94,
+                              "size": 2,
+                              "description": "offset_size(4bit) \u002B length_size(4bit) \u002B base_offset_size(4bit) \u002B reserved/index_size(4bit)",
+                              "name": "size_info",
+                              "value": 17408,
+                              "hex": "0x4400"
+                            },
+                            "item_count": {
+                              "_type": "integer",
+                              "offset": 96,
+                              "size": 2,
+                              "description": "\u30A2\u30A4\u30C6\u30E0\u6570\uFF08version 0/1\uFF09",
+                              "name": "item_count",
+                              "value": 0,
+                              "hex": "0x0"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "_type": "struct",
+                      "offset": 98,
+                      "size": 34,
+                      "name": "children",
+                      "struct_type": "iso_box",
+                      "children": {
+                        "box_size": {
+                          "_type": "integer",
+                          "offset": 98,
+                          "size": 4,
+                          "name": "box_size",
+                          "value": 34,
+                          "hex": "0x22"
+                        },
+                        "box_type": {
+                          "_type": "string",
+                          "offset": 102,
+                          "size": 4,
+                          "name": "box_type",
+                          "value": "iinf",
+                          "encoding": "ascii"
+                        },
+                        "box_data": {
+                          "_type": "struct",
+                          "offset": 106,
+                          "size": 26,
+                          "name": "box_data",
+                          "struct_type": "iinf_box",
+                          "children": {
+                            "version": {
+                              "_type": "integer",
+                              "offset": 106,
+                              "size": 1,
+                              "description": "FullBox \u30D0\u30FC\u30B8\u30E7\u30F3",
+                              "name": "version",
+                              "value": 0,
+                              "hex": "0x0"
+                            },
+                            "flags": {
+                              "_type": "bytes",
+                              "offset": 107,
+                              "size": 3,
+                              "name": "flags",
+                              "hex": "00 00 00"
+                            },
+                            "entry_count": {
+                              "_type": "integer",
+                              "offset": 110,
+                              "size": 2,
+                              "description": "\u30A8\u30F3\u30C8\u30EA\u6570\uFF08version 0\uFF09",
+                              "name": "entry_count",
+                              "value": 1,
+                              "hex": "0x1"
+                            },
+                            "entries": {
+                              "_type": "array",
+                              "offset": 112,
+                              "size": 20,
+                              "name": "entries",
+                              "count": 1,
+                              "elements": [
+                                {
+                                  "_type": "struct",
+                                  "offset": 112,
+                                  "size": 20,
+                                  "name": "entries",
+                                  "struct_type": "iso_box",
+                                  "children": {
+                                    "box_size": {
+                                      "_type": "integer",
+                                      "offset": 112,
+                                      "size": 4,
+                                      "name": "box_size",
+                                      "value": 20,
+                                      "hex": "0x14"
+                                    },
+                                    "box_type": {
+                                      "_type": "string",
+                                      "offset": 116,
+                                      "size": 4,
+                                      "name": "box_type",
+                                      "value": "infe",
+                                      "encoding": "ascii"
+                                    },
+                                    "box_data": {
+                                      "_type": "struct",
+                                      "offset": 120,
+                                      "size": 12,
+                                      "name": "box_data",
+                                      "struct_type": "infe_box",
+                                      "children": {
+                                        "version": {
+                                          "_type": "integer",
+                                          "offset": 120,
+                                          "size": 1,
+                                          "description": "FullBox \u30D0\u30FC\u30B8\u30E7\u30F3",
+                                          "name": "version",
+                                          "value": 2,
+                                          "hex": "0x2"
+                                        },
+                                        "flags": {
+                                          "_type": "bytes",
+                                          "offset": 121,
+                                          "size": 3,
+                                          "name": "flags",
+                                          "hex": "00 00 00"
+                                        },
+                                        "item_id": {
+                                          "_type": "integer",
+                                          "offset": 124,
+                                          "size": 2,
+                                          "description": "\u30A2\u30A4\u30C6\u30E0ID\uFF08version 0-2\uFF09",
+                                          "name": "item_id",
+                                          "value": 1,
+                                          "hex": "0x1"
+                                        },
+                                        "item_protection_index": {
+                                          "_type": "integer",
+                                          "offset": 126,
+                                          "size": 2,
+                                          "description": "\u4FDD\u8B77\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+                                          "name": "item_protection_index",
+                                          "value": 0,
+                                          "hex": "0x0"
+                                        },
+                                        "item_type": {
+                                          "_type": "string",
+                                          "offset": 128,
+                                          "size": 4,
+                                          "description": "\u30A2\u30A4\u30C6\u30E0\u30BF\u30A4\u30D7\uFF08\u4F8B: \u0027hvc1\u0027, \u0027grid\u0027\uFF09",
+                                          "name": "item_type",
+                                          "value": "hvc1",
+                                          "encoding": "ascii"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "offset": 132,
+          "size": 16,
+          "name": "boxes",
+          "struct_type": "iso_box",
+          "children": {
+            "box_size": {
+              "_type": "integer",
+              "offset": 132,
+              "size": 4,
+              "name": "box_size",
+              "value": 16,
+              "hex": "0x10"
+            },
+            "box_type": {
+              "_type": "string",
+              "offset": 136,
+              "size": 4,
+              "name": "box_type",
+              "value": "mdat",
+              "encoding": "ascii"
+            },
+            "box_data": {
+              "_type": "struct",
+              "offset": 140,
+              "size": 8,
+              "name": "box_data",
+              "struct_type": "raw_data",
+              "children": {
+                "data": {
+                  "_type": "bytes",
+                  "offset": 140,
+                  "size": 8,
+                  "name": "data",
+                  "hex": "FF FF FF FF FF FF FF FF"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -55,17 +55,10 @@ structs:
       description: "MTrk"
     - name: length
       type: uint32
-    - name: track_data
-      type: switch
-      size: "{length}"
-      switch_on: "1"
-      cases:
-        "1": midi_event_list
-
-  midi_event_list:
     - name: events
       type: struct
       struct: midi_event
+      size: "{length}"
       repeat: eof
 
   midi_event:

@@ -75,6 +75,52 @@ public class SeekParsingTests
     }
 
     [Fact]
+    public void ParsesSeekBase()
+    {
+        var yaml = """
+            name: Test
+            root: main
+            structs:
+              main:
+                - name: section_start
+                  type: uint32
+                - name: data
+                  type: uint8
+                  seek_base: "{section_start}"
+                  seek: "{10}"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var field = format.Structs["main"].Fields[1];
+        field.SeekBaseExpression.Should().NotBeNull();
+        field.SeekBaseExpression!.OriginalText.Should().Be("{section_start}");
+        field.SeekExpression.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ParsesWithoutSeekBase()
+    {
+        var yaml = """
+            name: Test
+            root: main
+            structs:
+              main:
+                - name: data
+                  type: uint8
+                  seek: "{10}"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var field = format.Structs["main"].Fields[0];
+        field.SeekBaseExpression.Should().BeNull();
+        field.SeekExpression.Should().NotBeNull();
+    }
+
+    [Fact]
     public void ParsesWithoutSeek()
     {
         var yaml = """

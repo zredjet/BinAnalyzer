@@ -62,6 +62,9 @@ public sealed class FieldDefinition
     /// <summary>trueの場合、seekしたフィールドのデコード後に元の位置に復帰する。</summary>
     public bool SeekRestore { get; init; }
 
+    /// <summary>seekの基準オフセット式。指定時は実効オフセット = seek_base + seek となる。</summary>
+    public Expression? SeekBaseExpression { get; init; }
+
     /// <summary>このフィールドに適用するエンディアン。nullの場合は構造体またはフォーマットデフォルトを使用。</summary>
     public Endianness? Endianness { get; init; }
 
@@ -73,4 +76,22 @@ public sealed class FieldDefinition
 
     /// <summary>diff時に配列要素をキーベースで比較する場合の、要素内キーフィールド名リスト。単一キーは要素1のリスト。</summary>
     public IReadOnlyList<string>? DiffKey { get; init; }
+
+    /// <summary>テンプレート構造体参照時の引数リスト。テンプレートでない場合はnull。</summary>
+    public IReadOnlyList<StructArgument>? StructArgs { get; init; }
+
+    /// <summary>デコードした値を保存する状態変数名。</summary>
+    public string? State { get; init; }
+
+    /// <summary>状態変数を更新する条件式。nullの場合は常に更新。</summary>
+    public Expression? StateIf { get; init; }
+
+    /// <summary>状態変数の初期値。デコード開始時にまだ設定されていない場合に使用。</summary>
+    public long? StateDefault { get; init; }
+
+    /// <summary>繰り返し回数の上限式。この値を超えた場合に繰り返しを打ち切る。</summary>
+    public Expression? RepeatMax { get; init; }
+
+    /// <summary>連続エラー回数の上限式。連続してこの回数エラーが発生した場合に繰り返しを打ち切る。</summary>
+    public Expression? RepeatErrorLimit { get; init; }
 }

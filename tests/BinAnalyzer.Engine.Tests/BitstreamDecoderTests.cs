@@ -376,4 +376,419 @@ public class BitstreamDecoderTests
         var c = result.Children[2].Should().BeOfType<DecodedInteger>().Subject;
         c.BitOffset.Should().Be(7);
     }
+
+    // --- REQ-145: 制御フロー ---
+
+    private static FormatDefinition CreateMultiStructBitstreamFormat(
+        Dictionary<string, StructDefinition> structs, string root = "root")
+    {
+        return new FormatDefinition
+        {
+            Name = "test",
+            Endianness = Endianness.Big,
+            Enums = new Dictionary<string, EnumDefinition>(),
+            Flags = new Dictionary<string, FlagsDefinition>(),
+            Structs = structs,
+            RootStruct = root,
+        };
+    }
+
+    [Fact]
+    public void IfCondition_SkipsField_InBitstream()
+    {
+        // 1bit flag=0 → 4bit field skipped → 3bit rest
+        // 0_101_xxxx → flag=0, rest(3bit)=101=5
+        var format = CreateBitstreamFormat(
+            new FieldDefinition { Name = "flag", Type = FieldType.UInt8, Size = 1 },
+            new FieldDefinition
+            {
+                Name = "optional_val", Type = FieldType.UInt8, Size = 4,
+                Condition = ExpressionParser.Parse("{flag == 1}"),
+            },
+            new FieldDefinition { Name = "rest", Type = FieldType.UInt8, Size = 3 }
+        );
+
+        var decoder = new BinaryDecoder();
+        // 0_101_xxxx = 0101_xxxx → 0x50
+        var result = decoder.Decode(new byte[] { 0x50 }, format);
+
+        result.Children.Should().HaveCount(2); // flag + rest (optional_val skipped)
+        var flag = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        flag.Value.Should().Be(0);
+
+        var rest = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        rest.Value.Should().Be(5); // 101 = 5
+    }
+
+    [Fact]
+    public void IfCondition_IncludesField_InBitstream()
+    {
+        // 1bit flag=1 → 4bit field included → 3bit rest
+        // 1_1010_011 = 1101_0011 = 0xD3
+        var format = CreateBitstreamFormat(
+            new FieldDefinition { Name = "flag", Type = FieldType.UInt8, Size = 1 },
+            new FieldDefinition
+            {
+                Name = "optional_val", Type = FieldType.UInt8, Size = 4,
+                Condition = ExpressionParser.Parse("{flag == 1}"),
+            },
+            new FieldDefinition { Name = "rest", Type = FieldType.UInt8, Size = 3 }
+        );
+
+        var decoder = new BinaryDecoder();
+        // 1_1010_011 = 1101_0011 = 0xD3
+        var result = decoder.Decode(new byte[] { 0xD3 }, format);
+
+        result.Children.Should().HaveCount(3); // flag + optional_val + rest
+        var flag = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        flag.Value.Should().Be(1);
+
+        var optVal = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        optVal.Value.Should().Be(0b1010); // 1010 = 10
+
+        var rest = result.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        rest.Value.Should().Be(0b011); // 011 = 3
+    }
+
+    [Fact]
+    public void RepeatCount_IntegerFields_InBitstream()
+    {
+        // 4bit × 3 = 12 bits = 1.5 bytes → need 2 bytes
+        // Values: 0xA=1010, 0xB=1011, 0xC=1100
+        // 1010_1011_1100_xxxx → 0xAB, 0xCx
+        var format = CreateBitstreamFormat(
+            new FieldDefinition
+            {
+                Name = "items", Type = FieldType.UInt8, Size = 4,
+                Repeat = new RepeatMode.Count(ExpressionParser.Parse("3")),
+            }
+        );
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(new byte[] { 0xAB, 0xC0 }, format);
+
+        // repeat produces an array node
+        var array = result.Children[0].Should().BeOfType<DecodedArray>().Subject;
+        array.Elements.Should().HaveCount(3);
+
+        var v0 = array.Elements[0].Should().BeOfType<DecodedInteger>().Subject;
+        v0.Value.Should().Be(0xA);
+
+        var v1 = array.Elements[1].Should().BeOfType<DecodedInteger>().Subject;
+        v1.Value.Should().Be(0xB);
+
+        var v2 = array.Elements[2].Should().BeOfType<DecodedInteger>().Subject;
+        v2.Value.Should().Be(0xC);
+    }
+
+    [Fact]
+    public void Switch_SelectsBitstreamStruct()
+    {
+        // 2bit selector → switch to bitstream struct
+        // selector=01 → case1 (reads 6 bits)
+        // 01_110100 = 0111_0100 = 0x74
+        var structs = new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                IsBitstream = true,
+                Fields =
+                [
+                    new FieldDefinition { Name = "selector", Type = FieldType.UInt8, Size = 2 },
+                    new FieldDefinition
+                    {
+                        Name = "body",
+                        Type = FieldType.Switch,
+                        SwitchOn = ExpressionParser.Parse("{selector}"),
+                        SwitchCases =
+                        [
+                            new SwitchCase(ExpressionParser.Parse("{0}"), "case0"),
+                            new SwitchCase(ExpressionParser.Parse("{1}"), "case1"),
+                        ],
+                        SwitchDefault = "case0",
+                    },
+                ],
+            },
+            ["case0"] = new()
+            {
+                Name = "case0",
+                IsBitstream = true,
+                Fields = [new FieldDefinition { Name = "a", Type = FieldType.UInt8, Size = 6 }],
+            },
+            ["case1"] = new()
+            {
+                Name = "case1",
+                IsBitstream = true,
+                Fields = [new FieldDefinition { Name = "b", Type = FieldType.UInt8, Size = 6 }],
+            },
+        };
+
+        var format = CreateMultiStructBitstreamFormat(structs);
+        var decoder = new BinaryDecoder();
+        // 01_110100 = 0111_0100 = 0x74
+        var result = decoder.Decode(new byte[] { 0x74 }, format);
+
+        result.Children.Should().HaveCount(2);
+        var selector = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        selector.Value.Should().Be(1);
+
+        var body = result.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var b = body.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        b.Value.Should().Be(0b110100); // 110100 = 52
+    }
+
+    [Fact]
+    public void Virtual_ComputedValue_InBitstream()
+    {
+        // 4bit value, virtual computed, 4bit rest
+        // 1010_0110 = 0xA6
+        var format = CreateBitstreamFormat(
+            new FieldDefinition { Name = "a", Type = FieldType.UInt8, Size = 4 },
+            new FieldDefinition
+            {
+                Name = "computed",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{a * 2}"),
+            },
+            new FieldDefinition { Name = "b", Type = FieldType.UInt8, Size = 4 }
+        );
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(new byte[] { 0xA6 }, format);
+
+        result.Children.Should().HaveCount(3);
+
+        var a = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        a.Value.Should().Be(0xA); // 1010 = 10
+
+        var computed = result.Children[1].Should().BeOfType<DecodedVirtual>().Subject;
+        computed.Value.Should().Be(20L); // 10 * 2
+
+        // Virtual in bitstream should have BitOffset
+        computed.BitOffset.Should().NotBeNull();
+
+        var b = result.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        b.Value.Should().Be(0x6); // 0110 = 6
+    }
+
+    [Fact]
+    public void NestedBitstreamStruct_ContinuesBitPosition()
+    {
+        // Parent bitstream: 4bit header, then nested bitstream struct with 4bit field
+        // Total: 8 bits = 1 byte
+        // 1010_0110 = 0xA6
+        var structs = new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                IsBitstream = true,
+                Fields =
+                [
+                    new FieldDefinition { Name = "header", Type = FieldType.UInt8, Size = 4 },
+                    new FieldDefinition
+                    {
+                        Name = "nested",
+                        Type = FieldType.Struct,
+                        StructRef = "inner",
+                    },
+                ],
+            },
+            ["inner"] = new()
+            {
+                Name = "inner",
+                IsBitstream = true,
+                Fields =
+                [
+                    new FieldDefinition { Name = "val", Type = FieldType.UInt8, Size = 4 },
+                ],
+            },
+        };
+
+        var format = CreateMultiStructBitstreamFormat(structs);
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(new byte[] { 0xA6 }, format);
+
+        result.Children.Should().HaveCount(2);
+
+        var header = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        header.Value.Should().Be(0xA); // 1010 = 10
+
+        var nested = result.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var val = nested.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        val.Value.Should().Be(0x6); // 0110 = 6 (continues from bit 4)
+        val.BitOffset.Should().Be(4); // starts at bit 4
+    }
+
+    [Fact]
+    public void BitOffset_CorrectAfterControlFlow()
+    {
+        // 1bit flag, virtual, 3bit value → bit offsets should be consistent
+        // 1_101_xxxx = 0xD0
+        var format = CreateBitstreamFormat(
+            new FieldDefinition { Name = "flag", Type = FieldType.UInt8, Size = 1 },
+            new FieldDefinition
+            {
+                Name = "computed",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{flag + 10}"),
+            },
+            new FieldDefinition { Name = "val", Type = FieldType.UInt8, Size = 3 }
+        );
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(new byte[] { 0xD0 }, format);
+
+        result.Children.Should().HaveCount(3);
+
+        var flag = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        flag.BitOffset.Should().Be(0);
+        flag.Value.Should().Be(1);
+
+        var computed = result.Children[1].Should().BeOfType<DecodedVirtual>().Subject;
+        computed.BitOffset.Should().Be(1); // after 1 bit
+        computed.Value.Should().Be(11L);
+
+        var val = result.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        val.BitOffset.Should().Be(1); // virtual doesn't consume bits
+        val.Value.Should().Be(0b101); // 101 = 5
+    }
+
+    // --- REQ-153: LSB-first bit order ---
+
+    private static FormatDefinition CreateLsbBitstreamFormat(params FieldDefinition[] fields)
+    {
+        return new FormatDefinition
+        {
+            Name = "test",
+            Endianness = Endianness.Big,
+            Enums = new Dictionary<string, EnumDefinition>(),
+            Flags = new Dictionary<string, FlagsDefinition>(),
+            Structs = new Dictionary<string, StructDefinition>
+            {
+                ["root"] = new()
+                {
+                    Name = "root",
+                    IsBitstream = true,
+                    BitOrder = BitOrder.Lsb,
+                    Fields = fields.ToList(),
+                },
+            },
+            RootStruct = "root",
+        };
+    }
+
+    [Fact]
+    public void LsbFirstReadsLowBitsFirst()
+    {
+        // 0xA5 = 10100101
+        // LSB-first, read 4 bits: bits 0-3 = 0101 = 5
+        var format = CreateLsbBitstreamFormat(
+            new FieldDefinition { Name = "a", Type = FieldType.UInt8, Size = 4 }
+        );
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(new byte[] { 0xA5 }, format);
+
+        var a = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        a.Value.Should().Be(5); // 0101 = 5 (low nibble of 0xA5)
+    }
+
+    [Fact]
+    public void LsbFirstMultiByteField()
+    {
+        // Two bytes: 0x3F, 0xC0
+        // Binary: 00111111 11000000
+        // LSB-first: read 12 bits across byte boundary
+        // Byte 0: bits 0-7 = 00111111 → all 8 bits = 0x3F
+        // Byte 1: bits 0-3 = 0000 → 4 bits = 0
+        // result = byte0_8bits | (byte1_4bits << 8) = 0x3F | (0x00 << 8) = 0x03F
+        var format = CreateLsbBitstreamFormat(
+            new FieldDefinition { Name = "a", Type = FieldType.UInt16, Size = 12 }
+        );
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(new byte[] { 0x3F, 0xC0 }, format);
+
+        var a = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        // 0x3F = 00111111, first 8 bits (LSB) → 0x3F
+        // 0xC0 = 11000000, next 4 bits (LSB) → 0000 = 0
+        // result = 0x3F | (0 << 8) = 0x03F = 63
+        a.Value.Should().Be(0x03F);
+    }
+
+    [Fact]
+    public void MsbFirstExplicitSameAsDefault()
+    {
+        // bit_order: msb (explicit) should behave same as default (null)
+        var formatExplicit = new FormatDefinition
+        {
+            Name = "test",
+            Endianness = Endianness.Big,
+            Enums = new Dictionary<string, EnumDefinition>(),
+            Flags = new Dictionary<string, FlagsDefinition>(),
+            Structs = new Dictionary<string, StructDefinition>
+            {
+                ["root"] = new()
+                {
+                    Name = "root",
+                    IsBitstream = true,
+                    BitOrder = BitOrder.Msb,
+                    Fields =
+                    [
+                        new FieldDefinition { Name = "a", Type = FieldType.UInt8, Size = 4 },
+                        new FieldDefinition { Name = "b", Type = FieldType.UInt8, Size = 4 },
+                    ],
+                },
+            },
+            RootStruct = "root",
+        };
+
+        var formatDefault = CreateBitstreamFormat(
+            new FieldDefinition { Name = "a", Type = FieldType.UInt8, Size = 4 },
+            new FieldDefinition { Name = "b", Type = FieldType.UInt8, Size = 4 }
+        );
+
+        var data = new byte[] { 0xA5 };
+        var decoder = new BinaryDecoder();
+
+        var resultExplicit = decoder.Decode(data, formatExplicit);
+        var resultDefault = decoder.Decode(data, formatDefault);
+
+        var aExplicit = resultExplicit.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        var aDefault = resultDefault.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        aExplicit.Value.Should().Be(aDefault.Value);
+
+        var bExplicit = resultExplicit.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        var bDefault = resultDefault.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        bExplicit.Value.Should().Be(bDefault.Value);
+    }
+
+    [Fact]
+    public void LsbFirstSequentialReads()
+    {
+        // 0xA5 = 10100101
+        // LSB-first sequential reads:
+        // read 3 bits: bits 0-2 = 101 = 5
+        // read 3 bits: bits 3-5 = 100 = 4
+        // read 2 bits: bits 6-7 = 10 = 2
+        var format = CreateLsbBitstreamFormat(
+            new FieldDefinition { Name = "a", Type = FieldType.UInt8, Size = 3 },
+            new FieldDefinition { Name = "b", Type = FieldType.UInt8, Size = 3 },
+            new FieldDefinition { Name = "c", Type = FieldType.UInt8, Size = 2 }
+        );
+
+        var decoder = new BinaryDecoder();
+        var result = decoder.Decode(new byte[] { 0xA5 }, format);
+
+        var a = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        a.Value.Should().Be(5); // bits[2:0] = 101 = 5
+
+        var b = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        b.Value.Should().Be(4); // bits[5:3] = 100 = 4
+
+        var c = result.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        c.Value.Should().Be(2); // bits[7:6] = 10 = 2
+    }
 }

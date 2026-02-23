@@ -11,10 +11,16 @@ public sealed class YamlStructModel
     public int? Align { get; set; }
 
     [YamlMember(Alias = "string_table")]
-    public bool? StringTable { get; set; }
+    public object? StringTable { get; set; }
 
     [YamlMember(Alias = "mode")]
     public string? Mode { get; set; }
+
+    [YamlMember(Alias = "bit_order")]
+    public string? BitOrder { get; set; }
+
+    [YamlMember(Alias = "resync_marker")]
+    public List<int>? ResyncMarker { get; set; }
 
     [YamlMember(Alias = "fields")]
     public List<YamlFieldModel> Fields { get; set; } = new();

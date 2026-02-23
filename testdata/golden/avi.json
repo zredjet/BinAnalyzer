@@ -211,7 +211,8 @@
                               "size": 0,
                               "name": "dwReserved",
                               "error_message": "Cannot read 16 bytes at position 0x48: only 12 bytes remaining in scope",
-                              "field_type": "Bytes"
+                              "field_type": "Bytes",
+                              "skipped_bytes": 16
                             }
                           }
                         }

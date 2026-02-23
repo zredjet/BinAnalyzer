@@ -29,8 +29,12 @@ public static class FormatValidator
                 ValidateStringTable(field, structName, diagnostics);
                 ValidateLengthPrefixed(field, structName, diagnostics);
                 ValidateChecksum(field, structName, diagnostics);
+                ValidateState(field, structName, diagnostics);
+                ValidateRepeatGuard(field, structName, diagnostics);
+                ValidateBitstreamCrossRef(field, structName, structDef, format, diagnostics);
             }
 
+            ValidateBitOrderOnNonBitstream(structDef, diagnostics);
             ValidateStructAlign(structDef, diagnostics);
         }
 
@@ -45,6 +49,7 @@ public static class FormatValidator
 
     /// <summary>VAL001: struct型フィールドの StructRef が未指定</summary>
     /// <summary>VAL002: StructRef が存在しないstruct名を参照</summary>
+    /// <summary>VAL116: テンプレートstructの必須パラメータ未指定</summary>
     private static void ValidateStructRef(
         FieldDefinition field, string structName,
         FormatDefinition format, List<ValidationDiagnostic> diagnostics)
@@ -63,6 +68,10 @@ public static class FormatValidator
                     $"フィールド '{field.Name}' が参照するstruct '{field.StructRef}' は定義されていません",
                     structName, field.Name));
             }
+            else
+            {
+                ValidateTemplateArgs(field, structName, format, diagnostics);
+            }
         }
         else if (field.Type != FieldType.Switch && field.StructRef is not null)
         {
@@ -72,6 +81,31 @@ public static class FormatValidator
                     $"フィールド '{field.Name}' が参照するstruct '{field.StructRef}' は定義されていません",
                     structName, field.Name));
             }
+        }
+    }
+
+    /// <summary>VAL116: テンプレートstructの必須パラメータが引数なしで参照されている</summary>
+    private static void ValidateTemplateArgs(
+        FieldDefinition field, string structName,
+        FormatDefinition format, List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.StructRef is null || !format.Structs.TryGetValue(field.StructRef, out var targetStruct))
+            return;
+
+        var requiredParams = targetStruct.Parameters
+            .Where(p => !p.DefaultValue.HasValue)
+            .ToList();
+
+        if (requiredParams.Count == 0)
+            return;
+
+        if (field.StructArgs is null || field.StructArgs.Count == 0)
+        {
+            var paramNames = string.Join(", ", requiredParams.Select(p => p.Name));
+            diagnostics.Add(Warning("VAL116",
+                $"フィールド '{field.Name}' がテンプレートstruct '{field.StructRef}' を引数なしで参照していますが、" +
+                $"必須パラメータ ({paramNames}) が未指定です",
+                structName, field.Name));
         }
     }
 
@@ -404,6 +438,14 @@ public static class FormatValidator
                 $"フィールド '{field.Name}' に seek_restore が指定されていますが、seek が指定されていません",
                 structName, field.Name));
         }
+
+        // VAL015: seek_base without seek
+        if (field.SeekBaseExpression is not null && field.SeekExpression is null)
+        {
+            diagnostics.Add(Error("VAL015",
+                $"フィールド '{field.Name}' に seek_base が指定されていますが、seek が指定されていません",
+                structName, field.Name));
+        }
     }
 
     /// <summary>VAL012: string_table が整数型以外のフィールドに指定されている</summary>
@@ -449,6 +491,9 @@ public static class FormatValidator
     /// <summary>VAL113: 未知のチェックサムアルゴリズム</summary>
     /// <summary>VAL114: 整数系アルゴリズムが非整数フィールドに指定</summary>
     /// <summary>VAL115: ハッシュ系アルゴリズムが非bytesフィールドに指定</summary>
+    /// <summary>VAL018: fieldsとrange/rangesが同時指定</summary>
+    /// <summary>VAL019: rangeとrangesが同時指定</summary>
+    /// <summary>VAL119: exclude_selfがrange/rangesなしで指定</summary>
     private static void ValidateChecksum(
         FieldDefinition field, string structName,
         List<ValidationDiagnostic> diagnostics)
@@ -477,6 +522,138 @@ public static class FormatValidator
             diagnostics.Add(Error("VAL115",
                 $"フィールド '{field.Name}' にハッシュ系チェックサムアルゴリズム '{algorithm}' が指定されていますが、bytes型以外のフィールドには使用できません",
                 structName, field.Name));
+        }
+
+        // VAL018: fields（非空）と range/ranges が同時指定
+        var hasFields = field.Checksum.FieldNames.Count > 0;
+        var hasRange = field.Checksum.Range is not null;
+        var hasRanges = field.Checksum.Ranges is { Count: > 0 };
+        if (hasFields && (hasRange || hasRanges))
+        {
+            diagnostics.Add(Error("VAL018",
+                $"フィールド '{field.Name}' のチェックサムに fields と range/ranges が同時に指定されています。どちらか一方のみ指定してください",
+                structName, field.Name));
+        }
+
+        // VAL019: range と ranges が同時指定
+        if (hasRange && hasRanges)
+        {
+            diagnostics.Add(Error("VAL019",
+                $"フィールド '{field.Name}' のチェックサムに range と ranges が同時に指定されています。どちらか一方のみ指定してください",
+                structName, field.Name));
+        }
+
+        // VAL119: exclude_self が range/ranges なしで指定
+        if (field.Checksum.ExcludeSelf && !hasRange && !hasRanges)
+        {
+            diagnostics.Add(Warning("VAL119",
+                $"フィールド '{field.Name}' のチェックサムに exclude_self が指定されていますが、range/ranges が指定されていないため無視されます",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL017: state_if を指定するには state が必要</summary>
+    /// <summary>VAL117: state_default を指定するには state が必要</summary>
+    private static void ValidateState(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.StateIf is not null && field.State is null)
+        {
+            diagnostics.Add(Error("VAL017",
+                $"フィールド '{field.Name}' に state_if が指定されていますが、state が指定されていません",
+                structName, field.Name));
+        }
+
+        if (field.StateDefault.HasValue && field.State is null)
+        {
+            diagnostics.Add(Warning("VAL117",
+                $"フィールド '{field.Name}' に state_default が指定されていますが、state が指定されていません",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL120: repeat_max が繰り返しフィールド以外に指定されている</summary>
+    /// <summary>VAL121: repeat_error_limit が繰り返しフィールド以外に指定されている</summary>
+    private static void ValidateRepeatGuard(
+        FieldDefinition field, string structName,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (field.RepeatMax is not null && field.Repeat is RepeatMode.None)
+        {
+            diagnostics.Add(Warning("VAL120",
+                $"フィールド '{field.Name}' に repeat_max が指定されていますが、繰り返しフィールドでのみ有効です",
+                structName, field.Name));
+        }
+
+        if (field.RepeatErrorLimit is not null && field.Repeat is RepeatMode.None)
+        {
+            diagnostics.Add(Warning("VAL121",
+                $"フィールド '{field.Name}' に repeat_error_limit が指定されていますが、繰り返しフィールドでのみ有効です",
+                structName, field.Name));
+        }
+    }
+
+    /// <summary>VAL118: ビットストリーム構造体のstruct/switchが非ビットストリーム構造体を参照</summary>
+    private static void ValidateBitstreamCrossRef(
+        FieldDefinition field, string structName,
+        StructDefinition structDef, FormatDefinition format,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (!structDef.IsBitstream)
+            return;
+
+        // struct フィールド: 参照先が非ビットストリーム → 警告
+        if (field.Type == FieldType.Struct && field.StructRef is not null
+            && format.Structs.TryGetValue(field.StructRef, out var targetStruct)
+            && !targetStruct.IsBitstream)
+        {
+            diagnostics.Add(Warning("VAL118",
+                $"ビットストリーム構造体 '{structName}' のフィールド '{field.Name}' が非ビットストリーム構造体 '{field.StructRef}' を参照しています。" +
+                $"ビットストリーム内ではビットストリーム構造体のみ参照することを推奨します",
+                structName, field.Name));
+        }
+
+        // switch フィールド: 各case・defaultの参照先チェック
+        if (field.Type == FieldType.Switch)
+        {
+            if (field.SwitchCases is not null)
+            {
+                foreach (var switchCase in field.SwitchCases)
+                {
+                    if (format.Structs.TryGetValue(switchCase.StructRef, out var caseStruct)
+                        && !caseStruct.IsBitstream)
+                    {
+                        diagnostics.Add(Warning("VAL118",
+                            $"ビットストリーム構造体 '{structName}' のswitch '{field.Name}' のcase '{switchCase.StructRef}' が非ビットストリーム構造体です。" +
+                            $"ビットストリーム内ではビットストリーム構造体のみ参照することを推奨します",
+                            structName, field.Name));
+                    }
+                }
+            }
+
+            if (field.SwitchDefault is not null
+                && format.Structs.TryGetValue(field.SwitchDefault, out var defaultStruct)
+                && !defaultStruct.IsBitstream)
+            {
+                diagnostics.Add(Warning("VAL118",
+                    $"ビットストリーム構造体 '{structName}' のswitch '{field.Name}' のdefault '{field.SwitchDefault}' が非ビットストリーム構造体です。" +
+                    $"ビットストリーム内ではビットストリーム構造体のみ参照することを推奨します",
+                    structName, field.Name));
+            }
+        }
+    }
+
+    /// <summary>VAL122: 非ビットストリーム構造体にBitOrderが指定されている</summary>
+    private static void ValidateBitOrderOnNonBitstream(
+        StructDefinition structDef,
+        List<ValidationDiagnostic> diagnostics)
+    {
+        if (structDef.BitOrder is not null && !structDef.IsBitstream)
+        {
+            diagnostics.Add(Warning("VAL122",
+                $"構造体 '{structDef.Name}' に bit_order が指定されていますが、mode: bitstream ではありません",
+                structDef.Name, null));
         }
     }
 

@@ -115,6 +115,219 @@ public class BitstreamParsingTests
         var loader = new YamlFormatLoader();
         var act = () => loader.LoadFromString(yaml);
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*non-integer field*data*");
+            .WithMessage("*unsupported field*data*");
+    }
+
+    [Fact]
+    public void Load_BitstreamWithVirtual_Succeeds()
+    {
+        var yaml = """
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                mode: bitstream
+                fields:
+                  - name: a
+                    type: uint8
+                    size: "4"
+                  - name: computed
+                    type: virtual
+                    value: "{a}"
+                  - name: b
+                    type: uint8
+                    size: "4"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var fields = format.Structs["root"].Fields;
+        fields.Should().HaveCount(3);
+        fields[1].Type.Should().Be(FieldType.Virtual);
+    }
+
+    [Fact]
+    public void Load_BitstreamWithSwitch_Succeeds()
+    {
+        var yaml = """
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                mode: bitstream
+                fields:
+                  - name: tag
+                    type: uint8
+                    size: "2"
+                  - name: body
+                    type: switch
+                    switch_on: "{tag}"
+                    cases:
+                      "0": case0
+                      "1": case1
+                    default: case0
+              case0:
+                mode: bitstream
+                fields:
+                  - name: val
+                    type: uint8
+                    size: "6"
+              case1:
+                mode: bitstream
+                fields:
+                  - name: val
+                    type: uint8
+                    size: "6"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var fields = format.Structs["root"].Fields;
+        fields.Should().HaveCount(2);
+        fields[1].Type.Should().Be(FieldType.Switch);
+    }
+
+    [Fact]
+    public void Load_BitstreamWithStruct_Succeeds()
+    {
+        var yaml = """
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                mode: bitstream
+                fields:
+                  - name: header
+                    type: uint8
+                    size: "4"
+                  - name: nested
+                    type: struct
+                    struct: inner
+              inner:
+                mode: bitstream
+                fields:
+                  - name: val
+                    type: uint8
+                    size: "4"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var fields = format.Structs["root"].Fields;
+        fields.Should().HaveCount(2);
+        fields[1].Type.Should().Be(FieldType.Struct);
+    }
+
+    // --- REQ-153: bit_order ---
+
+    [Fact]
+    public void ParsesBitOrderLsb()
+    {
+        var yaml = """
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                mode: bitstream
+                bit_order: lsb
+                fields:
+                  - name: value
+                    type: uint8
+                    size: "8"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var structDef = format.Structs["root"];
+        structDef.IsBitstream.Should().BeTrue();
+        structDef.BitOrder.Should().Be(BitOrder.Lsb);
+    }
+
+    [Fact]
+    public void ParsesBitOrderMsb()
+    {
+        var yaml = """
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                mode: bitstream
+                bit_order: msb
+                fields:
+                  - name: value
+                    type: uint8
+                    size: "8"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(yaml);
+
+        var structDef = format.Structs["root"];
+        structDef.IsBitstream.Should().BeTrue();
+        structDef.BitOrder.Should().Be(BitOrder.Msb);
+    }
+
+    [Fact]
+    public void BitOrderDefaultIsNull()
+    {
+        var loader = new YamlFormatLoader();
+        var format = loader.LoadFromString(BitstreamYaml);
+
+        var structDef = format.Structs["bitfields"];
+        structDef.IsBitstream.Should().BeTrue();
+        structDef.BitOrder.Should().BeNull();
+    }
+
+    [Fact]
+    public void ThrowsForInvalidBitOrder()
+    {
+        var yaml = """
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                mode: bitstream
+                bit_order: middle
+                fields:
+                  - name: value
+                    type: uint8
+                    size: "8"
+            """;
+
+        var loader = new YamlFormatLoader();
+        var act = () => loader.LoadFromString(yaml);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Unknown bit_order*middle*");
+    }
+
+    [Fact]
+    public void ThrowsForBitOrderOnNonBitstream()
+    {
+        var yaml = """
+            name: test
+            endianness: big
+            root: root
+            structs:
+              root:
+                bit_order: lsb
+                fields:
+                  - name: value
+                    type: uint8
+            """;
+
+        var loader = new YamlFormatLoader();
+        var act = () => loader.LoadFromString(yaml);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*bit_order*not*bitstream*");
     }
 }

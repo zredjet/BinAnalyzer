@@ -72,12 +72,11 @@ structs:
     - name: id3v2_header
       type: struct
       struct: id3v2_header
-    - name: id3v2_body
-      type: switch
+    - name: frames
+      type: struct
+      struct: id3v2_frame
       size: "{tag_size}"
-      switch_on: "1"
-      cases:
-        "1": id3v2_frames
+      repeat: eof
       description: "ID3v2タグ本体（フレーム群）"
     - name: mpeg_frame_header
       type: struct
@@ -123,12 +122,6 @@ structs:
       type: virtual
       value: "{(size_b0 << 21) | (size_b1 << 14) | (size_b2 << 7) | size_b3}"
       description: "シンクセーフ整数から算出したタグサイズ"
-
-  id3v2_frames:
-    - name: frames
-      type: struct
-      struct: id3v2_frame
-      repeat: eof
 
   id3v2_frame:
     - name: frame_id

@@ -23,6 +23,7 @@
 - **対話型TUI** — `--output tui` でツリー・詳細・ヘックスダンプの3ペイン構成の対話型UIを起動。ノード展開/折りたたみ、フィールド検索に対応
 - **エラー回復** — `--on-error continue` でデコードエラー後も解析を継続
 - **文字列テーブル参照** — ELF `.strtab` 等の文字列テーブルを整数フィールドから参照し文字列に解決
+- **パイプライン統合** — stdin入力（`-` / `--stdin`）、`--quiet` モード（終了コードのみ）、`--error-format json`（マシンリーダブルなエラー出力）、パイプ切断ハンドリング
 
 ## クイックスタート
 
@@ -109,6 +110,18 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 # カラー出力を強制
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always
+
+# stdinからデコード（パイプ入力）
+curl -s https://example.com/image.png | dotnet run --project src/BinAnalyzer.Cli -- - -f formats/png.bdef.yaml
+
+# バリデーションのみ（CI/CD向け、終了コードで判定）
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --quiet; echo $?
+
+# JSON出力をパイプで後処理
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o json | jq '.header'
+
+# エラーをJSON形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --error-format json 2>errors.json
 ```
 
 全コマンド・オプションの詳細は [CLIリファレンス](docs/cli-usage.md) を参照してください。
@@ -134,7 +147,7 @@ dotnet run --project src/BinAnalyzer.Web
 
 バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。
 
-サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（PNG, BMP, WAV, ZIP, ELF, PDF, JPEG, ICO, MIDI, PCAP, WebP, MP3, TAR, FLAC, Java Class, GIF, PE, Mach-O, SQLite, TIFF）。
+サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（7z, AVI, BMP, CBOR, DNS, ELF, FAT, FLAC, FLV, GIF, GZIP, HEIF, ICC, ICO, Java Class, JPEG, LZ4, Mach-O, MIDI, MP3, MP4, MessagePack, OGG, OTF, Parquet, PCAP, PDF, PE, PNG, Protobuf, SQLite, TAR, TIFF, WASM, WAV, WebP, X.509, ZIP — 計38種）。
 
 ### エディタ補完（JSON Schema）
 

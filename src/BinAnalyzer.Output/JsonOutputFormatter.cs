@@ -99,6 +99,13 @@ public sealed class JsonOutputFormatter : IOutputFormatter
         writer.WriteString("name", node.Name);
         writer.WriteNumber("count", node.Elements.Count);
 
+        if (node.Truncated)
+        {
+            writer.WriteBoolean("truncated", true);
+            if (node.TruncationReason is not null)
+                writer.WriteString("truncation_reason", node.TruncationReason);
+        }
+
         writer.WritePropertyName("elements");
         writer.WriteStartArray();
         foreach (var element in node.Elements)
@@ -303,6 +310,8 @@ public sealed class JsonOutputFormatter : IOutputFormatter
         writer.WriteString("error_message", node.ErrorMessage);
         if (node.FieldType is not null)
             writer.WriteString("field_type", node.FieldType);
+        if (node.SkippedBytes > 0)
+            writer.WriteNumber("skipped_bytes", node.SkippedBytes);
         writer.WriteEndObject();
     }
 

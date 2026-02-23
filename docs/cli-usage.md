@@ -3,14 +3,14 @@
 ## 基本コマンド
 
 ```
-binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [--on-error <mode>] [--filter <pattern>...]
+binanalyzer [<file>] -f <format> [-o <output>] [--color <mode>] [--no-validate] [--on-error <mode>] [--max-repeat <N>] [--filter <pattern>...] [--stdin] [-q] [--error-format <format>]
 ```
 
 ### 引数
 
 | 引数 | 説明 |
 |------|------|
-| `file` | 解析対象のバイナリファイル |
+| `file` | 解析対象のバイナリファイル（`-` でstdin入力、省略時は `--stdin` が必要） |
 
 ### オプション
 
@@ -22,6 +22,10 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [-
 | `--no-validate` | フォーマット定義のバリデーションをスキップ | — |
 | `--on-error <mode>` | エラー時の動作（`stop`, `continue`） | `stop` |
 | `--filter <pattern>` | 出力フィルタ（フィールドパスパターン、複数指定可） | — |
+| `--stdin` | 標準入力からバイナリデータを読み込む | — |
+| `-q, --quiet` | デコード結果を出力せず、終了コードのみ返す（バリデーション用途） | — |
+| `--max-repeat <N>` | 繰り返し回数のグローバル上限（フォーマット定義の `repeat_max` が優先） | — |
+| `--error-format <format>` | エラー出力形式（`text`, `json`） | `text` |
 
 ### 終了コード
 
@@ -29,6 +33,7 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [-
 |--------|------|
 | `0` | 正常終了 |
 | `1` | エラー（ファイル未検出、フォーマット定義エラー、デコードエラー等） |
+| `2` | バリデーション失敗（デコード成功だが `validate` 式が false） |
 
 ### エラー回復
 
@@ -45,6 +50,22 @@ binanalyzer <file> -f <format> [-o <output>] [--color <mode>] [--no-validate] [-
 # エラーを無視して解析を継続
 dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml --on-error continue
 ```
+
+### 繰り返しガード
+
+`--max-repeat` オプションで全繰り返しフィールドにグローバルな上限を設定できます。壊れたバイナリで巨大な繰り返しカウントが検出された場合のメモリ枯渇やハングを防止します。
+
+フォーマット定義のフィールドレベルで `repeat_max` が指定されている場合、そちらが優先されます。
+
+```bash
+# 繰り返しを最大1000要素に制限
+dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml --max-repeat 1000
+
+# エラー回復と併用
+dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml --on-error continue --max-repeat 500
+```
+
+ガードにより打ち切られた配列はツリー出力で `(truncated: ...)` と表示され、JSON出力では `truncated: true` と `truncation_reason` フィールドが追加されます。
 
 ### バリデーション
 
@@ -362,6 +383,69 @@ dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
 dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml -o dot | dot -Tsvg -o schema.svg
 ```
 
+## パイプライン統合
+
+CLIはパイプラインやCI/CDスクリプトでの利用を想定した機能を備えています。
+
+### stdin入力
+
+`-`（ハイフン）または `--stdin` オプションで標準入力からバイナリデータを読み込めます。
+
+```bash
+# ネットワーク取得と組み合わせ
+curl -s https://example.com/file.png | binanalyzer - -f formats/png.bdef.yaml
+
+# --stdin オプション
+curl -s https://example.com/file.png | binanalyzer --stdin -f formats/png.bdef.yaml
+
+# dd で切り出したデータを解析
+dd if=disk.img bs=512 count=1 2>/dev/null | binanalyzer - -f formats/mbr.yaml
+```
+
+### バリデーション専用モード（`--quiet`）
+
+`--quiet` / `-q` オプションを指定すると、stdoutへのデコード結果出力を抑制し、終了コードのみを返します。CI/CDでのバイナリ構造検証に適しています。
+
+```bash
+# バリデーションのみ実行（結果は終了コードで判定）
+binanalyzer image.png -f formats/png.bdef.yaml --quiet
+echo $?  # 0=成功, 1=エラー, 2=validate式失敗
+```
+
+`--quiet` でもstderrへの警告・エラー出力は行われます。
+
+### JSON形式エラー出力
+
+`--error-format json` を指定すると、stderrへのエラー出力がJSON形式になります。
+
+```bash
+# エラーをJSON形式で取得
+binanalyzer broken.bin -f formats/png.bdef.yaml --error-format json 2>errors.json
+```
+
+JSON出力例:
+
+```json
+{"type":"error","message":"ファイルが見つかりません: broken.bin"}
+```
+
+```json
+{"type":"decode_error","message":"...","offset":123,"offset_hex":"0x0000007B","field_path":"header.magic","field_type":"bytes","hint":"..."}
+```
+
+```json
+{"type":"validation","errors":[{"code":"VAL001","message":"...","struct":"header","field":"magic"}],"warnings":[]}
+```
+
+### パイプ切断ハンドリング
+
+stdout がパイプで接続されている場合、受信側が閉じた（broken pipe）際にクラッシュせず正常終了（exit 0）します。
+
+```bash
+# head で最初の1行だけ取得してもクラッシュしない
+binanalyzer image.png -f formats/png.bdef.yaml -o json | head -1
+```
+
 ## 使用例
 
 ```bash
@@ -421,4 +505,19 @@ dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
 
 # 対話型TUIで探索
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tui
+
+# stdin からデコード（ - 指定）
+cat image.png | dotnet run --project src/BinAnalyzer.Cli -- - -f formats/png.bdef.yaml
+
+# stdin からデコード（--stdin オプション）
+cat image.png | dotnet run --project src/BinAnalyzer.Cli -- --stdin -f formats/png.bdef.yaml
+
+# バリデーションのみ（quiet モード）
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --quiet; echo $?
+
+# JSON出力をパイプで後処理
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o json | jq '.header'
+
+# エラーをJSON形式で出力
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --error-format json 2>errors.json
 ```

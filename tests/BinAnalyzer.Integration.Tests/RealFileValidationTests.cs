@@ -66,6 +66,9 @@ public class RealFileValidationTests : IClassFixture<RealFileFixture>
     [InlineData("parquet.bdef.yaml", "test.parquet", "Parquet", 2)]
     [InlineData("protobuf.bdef.yaml", "test.protobuf", "Protobuf", 1)]
     [InlineData("ogg.bdef.yaml", "test.ogg", "OGG", 1)]
+    [InlineData("heif.bdef.yaml", "test.heif", "HEIF", 1)]
+    [InlineData("msgpack.bdef.yaml", "test.msgpack", "MessagePack", 1)]
+    [InlineData("cbor.bdef.yaml", "test.cbor", "CBOR", 1)]
     public void RealFile_DecodesSuccessfully(
         string formatFile, string fileName, string expectedName, int minChildren)
     {

@@ -311,6 +311,158 @@ public class SeekTests
         result.Children[2].Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(3);
     }
 
+    // --- seek_base tests ---
+
+    [Fact]
+    public void SeekBase_AddsBaseToSeekOffset()
+    {
+        // data: [0x00, 0x00, 0x00, 0x00, 0x00, 0xAB]
+        // seek_base=2, seek=3 → effective offset = 5
+        var format = CreateFormat("main",
+            new FieldDefinition
+            {
+                Name = "value",
+                Type = FieldType.UInt8,
+                SeekBaseExpression = ExpressionParser.Parse("{2}"),
+                SeekExpression = ExpressionParser.Parse("{3}"),
+            });
+
+        var data = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0xAB };
+        var result = _decoder.Decode(data, format);
+
+        var node = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        node.Value.Should().Be(0xAB);
+        node.Offset.Should().Be(5);
+    }
+
+    [Fact]
+    public void SeekBase_WithFieldReferences()
+    {
+        // data: [base_val=0x02, rel_offset=0x03, 0x00, 0x00, 0x00, 0xCD]
+        // seek_base={base_val}=2, seek={rel_offset}=3 → offset 5
+        var format = CreateFormat("main",
+            new FieldDefinition { Name = "base_val", Type = FieldType.UInt8 },
+            new FieldDefinition { Name = "rel_offset", Type = FieldType.UInt8 },
+            new FieldDefinition
+            {
+                Name = "value",
+                Type = FieldType.UInt8,
+                SeekBaseExpression = ExpressionParser.Parse("{base_val}"),
+                SeekExpression = ExpressionParser.Parse("{rel_offset}"),
+            });
+
+        var data = new byte[] { 0x02, 0x03, 0x00, 0x00, 0x00, 0xCD };
+        var result = _decoder.Decode(data, format);
+
+        var node = result.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        node.Value.Should().Be(0xCD);
+    }
+
+    [Fact]
+    public void SeekBase_WithSeekRestore()
+    {
+        // data: [base=0x02, rel=0x01, 0x00, 0xEF, 0x00]
+        // seek_base=2, seek=1 → offset 3 → 0xEF, then restore
+        // next field at offset 2
+        var format = CreateFormat("main",
+            new FieldDefinition { Name = "base_val", Type = FieldType.UInt8 },
+            new FieldDefinition { Name = "rel_offset", Type = FieldType.UInt8 },
+            new FieldDefinition
+            {
+                Name = "remote",
+                Type = FieldType.UInt8,
+                SeekBaseExpression = ExpressionParser.Parse("{base_val}"),
+                SeekExpression = ExpressionParser.Parse("{rel_offset}"),
+                SeekRestore = true,
+            },
+            new FieldDefinition { Name = "next", Type = FieldType.UInt8 });
+
+        var data = new byte[] { 0x02, 0x01, 0xAA, 0xEF, 0x00 };
+        var result = _decoder.Decode(data, format);
+
+        result.Children.Should().HaveCount(4);
+        result.Children[2].Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0xEF);
+        // After restore, next field continues from offset 2
+        result.Children[3].Should().BeOfType<DecodedInteger>().Which.Offset.Should().Be(2);
+        result.Children[3].Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0xAA);
+    }
+
+    [Fact]
+    public void SeekBase_PreservesAbsoluteSeek()
+    {
+        // Without seek_base, seek is absolute — existing behavior unchanged
+        var format = CreateFormat("main",
+            new FieldDefinition
+            {
+                Name = "value",
+                Type = FieldType.UInt8,
+                SeekExpression = ExpressionParser.Parse("{3}"),
+            });
+
+        var data = new byte[] { 0x00, 0x00, 0x00, 0xBB };
+        var result = _decoder.Decode(data, format);
+
+        var node = result.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        node.Value.Should().Be(0xBB);
+        node.Offset.Should().Be(3);
+    }
+
+    [Fact]
+    public void SeekBase_WithPerElementSeek()
+    {
+        // data: [section_start=0x04, 0x00, 0x00, 0x00, 0x0A, 0x0B, 0x0C]
+        // offsets array: [0, 1, 2] (relative to section_start=4)
+        // per-element: seek_base={section_start}, seek={offsets[_index]}
+        var format = CreateFormat("main",
+            new FieldDefinition { Name = "section_start", Type = FieldType.UInt8 },
+            new FieldDefinition
+            {
+                Name = "offsets",
+                Type = FieldType.UInt8,
+                Repeat = new RepeatMode.Count(ExpressionParser.Parse("{3}")),
+            },
+            new FieldDefinition
+            {
+                Name = "values",
+                Type = FieldType.UInt8,
+                Repeat = new RepeatMode.Count(ExpressionParser.Parse("{3}")),
+                SeekBaseExpression = ExpressionParser.Parse("{section_start}"),
+                SeekExpression = ExpressionParser.Parse("{offsets[_index]}"),
+                SeekRestore = true,
+            });
+
+        // section_start=4, offsets=[0,1,2], then data at offset 4,5,6 = 0x0A,0x0B,0x0C
+        var data = new byte[] { 0x04, 0x00, 0x01, 0x02, 0x0A, 0x0B, 0x0C };
+        var result = _decoder.Decode(data, format);
+
+        var values = result.Children[2].Should().BeOfType<DecodedArray>().Subject;
+        values.Elements.Should().HaveCount(3);
+        values.Elements[0].Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0x0A);
+        values.Elements[1].Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0x0B);
+        values.Elements[2].Should().BeOfType<DecodedInteger>().Which.Value.Should().Be(0x0C);
+    }
+
+    [Fact]
+    public void SeekBase_ZeroBase()
+    {
+        // seek_base=0 + seek=offset → equivalent to absolute seek
+        var format = CreateFormat("main",
+            new FieldDefinition { Name = "offset", Type = FieldType.UInt8 },
+            new FieldDefinition
+            {
+                Name = "value",
+                Type = FieldType.UInt8,
+                SeekBaseExpression = ExpressionParser.Parse("{0}"),
+                SeekExpression = ExpressionParser.Parse("{offset}"),
+            });
+
+        var data = new byte[] { 0x03, 0x00, 0x00, 0xDD };
+        var result = _decoder.Decode(data, format);
+
+        var node = result.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        node.Value.Should().Be(0xDD);
+    }
+
     private static FormatDefinition CreateFormat(string rootName, params FieldDefinition[] fields)
     {
         return new FormatDefinition

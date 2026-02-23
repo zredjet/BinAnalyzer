@@ -113,67 +113,58 @@
         }
       }
     },
-    "id3v2_body": {
-      "_type": "struct",
+    "frames": {
+      "_type": "array",
       "offset": 10,
       "size": 12,
-      "name": "id3v2_body",
-      "struct_type": "id3v2_frames",
-      "children": {
-        "frames": {
-          "_type": "array",
+      "name": "frames",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
           "offset": 10,
           "size": 12,
           "name": "frames",
-          "count": 1,
-          "elements": [
-            {
-              "_type": "struct",
+          "struct_type": "id3v2_frame",
+          "children": {
+            "frame_id": {
+              "_type": "string",
               "offset": 10,
-              "size": 12,
-              "name": "frames",
-              "struct_type": "id3v2_frame",
-              "children": {
-                "frame_id": {
-                  "_type": "string",
-                  "offset": 10,
-                  "size": 4,
-                  "description": "\u30D5\u30EC\u30FC\u30E0\u8B58\u5225\u5B50\uFF08TIT2, TPE1, TALB\u7B49\uFF09",
-                  "name": "frame_id",
-                  "value": "TIT2",
-                  "encoding": "ascii"
-                },
-                "frame_size": {
-                  "_type": "integer",
-                  "offset": 14,
-                  "size": 4,
-                  "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA",
-                  "name": "frame_size",
-                  "value": 2,
-                  "hex": "0x2"
-                },
-                "frame_flags": {
-                  "_type": "integer",
-                  "offset": 18,
-                  "size": 2,
-                  "description": "\u30D5\u30EC\u30FC\u30E0\u30D5\u30E9\u30B0",
-                  "name": "frame_flags",
-                  "value": 0,
-                  "hex": "0x0"
-                },
-                "frame_data": {
-                  "_type": "bytes",
-                  "offset": 20,
-                  "size": 2,
-                  "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u672C\u4F53",
-                  "name": "frame_data",
-                  "hex": "03 41"
-                }
-              }
+              "size": 4,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u8B58\u5225\u5B50\uFF08TIT2, TPE1, TALB\u7B49\uFF09",
+              "name": "frame_id",
+              "value": "TIT2",
+              "encoding": "ascii"
+            },
+            "frame_size": {
+              "_type": "integer",
+              "offset": 14,
+              "size": 4,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA",
+              "name": "frame_size",
+              "value": 2,
+              "hex": "0x2"
+            },
+            "frame_flags": {
+              "_type": "integer",
+              "offset": 18,
+              "size": 2,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u30D5\u30E9\u30B0",
+              "name": "frame_flags",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "frame_data": {
+              "_type": "bytes",
+              "offset": 20,
+              "size": 2,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u672C\u4F53",
+              "name": "frame_data",
+              "hex": "03 41"
             }
-          ]
+          }
         }
-      }
+      ]
     },
     "mpeg_frame_header": {
       "_type": "struct",

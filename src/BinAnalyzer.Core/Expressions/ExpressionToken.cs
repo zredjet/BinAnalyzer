@@ -5,6 +5,7 @@ public enum ExpressionTokenType
     Integer,
     String,
     Identifier,
+    AtIdentifier,
     Plus,
     Minus,
     Star,
@@ -31,6 +32,7 @@ public enum ExpressionTokenType
     Colon,
     LeftBracket,
     RightBracket,
+    Dot,
     Eof,
 }
 

@@ -733,6 +733,48 @@ public class FormatValidatorTests
         result.Warnings.Should().NotContain(d => d.Code == "VAL110");
     }
 
+    // --- VAL015: seek_base が seek なしで指定されている ---
+
+    [Fact]
+    public void VAL015_SeekBaseWithoutSeek_ReportsError()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "data",
+                    Type = FieldType.UInt8,
+                    SeekBaseExpression = ExpressionParser.Parse("{10}"),
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(d => d.Code == "VAL015" && d.FieldName == "data");
+    }
+
+    [Fact]
+    public void SeekBaseWithSeek_NoValidationError()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "data",
+                    Type = FieldType.UInt8,
+                    SeekBaseExpression = ExpressionParser.Parse("{10}"),
+                    SeekExpression = ExpressionParser.Parse("{5}"),
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+
+        result.Errors.Should().NotContain(d => d.Code == "VAL015");
+    }
+
     // --- エラーメッセージにstruct名・フィールド名が含まれること ---
 
     [Fact]
@@ -750,5 +792,318 @@ public class FormatValidatorTests
         error.StructName.Should().Be("root");
         error.FieldName.Should().Be("broken_field");
         error.Message.Should().Contain("broken_field");
+    }
+
+    // --- VAL118: ビットストリーム構造体が非ビットストリーム構造体を参照 ---
+
+    [Fact]
+    public void Validate_BitstreamStructRefToNonBitstream_Warning()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                IsBitstream = true,
+                Fields =
+                [
+                    new FieldDefinition { Name = "header", Type = FieldType.UInt8 },
+                    new FieldDefinition
+                    {
+                        Name = "child",
+                        Type = FieldType.Struct,
+                        StructRef = "normal_struct",
+                    },
+                ],
+            },
+            ["normal_struct"] = new()
+            {
+                Name = "normal_struct",
+                IsBitstream = false,
+                Fields = [new FieldDefinition { Name = "val", Type = FieldType.UInt8 }],
+            },
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.Warnings.Should().Contain(d => d.Code == "VAL118"
+            && d.FieldName == "child");
+    }
+
+    [Fact]
+    public void Validate_BitstreamSwitchToNonBitstream_Warning()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                IsBitstream = true,
+                Fields =
+                [
+                    new FieldDefinition { Name = "tag", Type = FieldType.UInt8 },
+                    new FieldDefinition
+                    {
+                        Name = "body",
+                        Type = FieldType.Switch,
+                        SwitchOn = ExpressionParser.Parse("{tag}"),
+                        SwitchCases =
+                        [
+                            new SwitchCase(ExpressionParser.Parse("{0}"), "normal_case"),
+                        ],
+                        SwitchDefault = "normal_case",
+                    },
+                ],
+            },
+            ["normal_case"] = new()
+            {
+                Name = "normal_case",
+                IsBitstream = false,
+                Fields = [new FieldDefinition { Name = "val", Type = FieldType.UInt8 }],
+            },
+        });
+
+        var result = FormatValidator.Validate(format);
+        // Should have VAL118 warnings for both the case and default
+        result.Warnings.Should().Contain(d => d.Code == "VAL118"
+            && d.FieldName == "body");
+    }
+
+    [Fact]
+    public void Validate_BitstreamStructRefToBitstream_NoWarning()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                IsBitstream = true,
+                Fields =
+                [
+                    new FieldDefinition { Name = "header", Type = FieldType.UInt8 },
+                    new FieldDefinition
+                    {
+                        Name = "child",
+                        Type = FieldType.Struct,
+                        StructRef = "bitstream_struct",
+                    },
+                ],
+            },
+            ["bitstream_struct"] = new()
+            {
+                Name = "bitstream_struct",
+                IsBitstream = true,
+                Fields = [new FieldDefinition { Name = "val", Type = FieldType.UInt8 }],
+            },
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.Warnings.Should().NotContain(d => d.Code == "VAL118");
+    }
+
+    // --- VAL018: fieldsとrange/rangesが同時指定 ---
+
+    [Fact]
+    public void VAL018_FieldNamesAndRange_ReportsError()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "crc", Type = FieldType.UInt32,
+                    Checksum = new ChecksumSpec
+                    {
+                        Algorithm = "crc32",
+                        FieldNames = ["data"],
+                        Range = new ChecksumRange
+                        {
+                            OffsetExpression = ExpressionParser.Parse("0"),
+                            SizeExpression = ExpressionParser.Parse("4"),
+                        },
+                    },
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(d => d.Code == "VAL018" && d.FieldName == "crc");
+    }
+
+    [Fact]
+    public void VAL018_FieldNamesAndRanges_ReportsError()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "crc", Type = FieldType.UInt32,
+                    Checksum = new ChecksumSpec
+                    {
+                        Algorithm = "crc32",
+                        FieldNames = ["data"],
+                        Ranges =
+                        [
+                            new ChecksumRange
+                            {
+                                OffsetExpression = ExpressionParser.Parse("0"),
+                                SizeExpression = ExpressionParser.Parse("4"),
+                            },
+                        ],
+                    },
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(d => d.Code == "VAL018" && d.FieldName == "crc");
+    }
+
+    // --- VAL019: rangeとrangesが同時指定 ---
+
+    [Fact]
+    public void VAL019_RangeAndRanges_ReportsError()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "crc", Type = FieldType.UInt32,
+                    Checksum = new ChecksumSpec
+                    {
+                        Algorithm = "crc32",
+                        FieldNames = [],
+                        Range = new ChecksumRange
+                        {
+                            OffsetExpression = ExpressionParser.Parse("0"),
+                            SizeExpression = ExpressionParser.Parse("4"),
+                        },
+                        Ranges =
+                        [
+                            new ChecksumRange
+                            {
+                                OffsetExpression = ExpressionParser.Parse("0"),
+                                SizeExpression = ExpressionParser.Parse("4"),
+                            },
+                        ],
+                    },
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(d => d.Code == "VAL019" && d.FieldName == "crc");
+    }
+
+    // --- VAL119: exclude_selfがrange/rangesなしで指定 ---
+
+    [Fact]
+    public void VAL119_ExcludeSelfWithoutRange_ReportsWarning()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "crc", Type = FieldType.UInt32,
+                    Checksum = new ChecksumSpec
+                    {
+                        Algorithm = "crc32",
+                        FieldNames = ["data"],
+                        ExcludeSelf = true,
+                    },
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.Warnings.Should().Contain(d => d.Code == "VAL119" && d.FieldName == "crc");
+    }
+
+    [Fact]
+    public void ChecksumWithRangeOnly_NoError()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "crc", Type = FieldType.UInt32,
+                    Checksum = new ChecksumSpec
+                    {
+                        Algorithm = "crc32",
+                        FieldNames = [],
+                        Range = new ChecksumRange
+                        {
+                            OffsetExpression = ExpressionParser.Parse("0"),
+                            SizeExpression = ExpressionParser.Parse("4"),
+                        },
+                    },
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.Errors.Should().NotContain(d => d.Code == "VAL018");
+        result.Errors.Should().NotContain(d => d.Code == "VAL019");
+    }
+
+    [Fact]
+    public void ChecksumWithFieldsOnly_StillValid()
+    {
+        var format = CreateFormat(new Dictionary<string, StructDefinition>
+        {
+            ["root"] = Struct("root",
+                new FieldDefinition
+                {
+                    Name = "crc", Type = FieldType.UInt32,
+                    Checksum = new ChecksumSpec
+                    {
+                        Algorithm = "crc32",
+                        FieldNames = ["data"],
+                    },
+                }),
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.Errors.Should().NotContain(d => d.Code == "VAL018");
+        result.Errors.Should().NotContain(d => d.Code == "VAL019");
+    }
+
+    // --- VAL122: bit_order on non-bitstream struct ---
+
+    [Fact]
+    public void VAL122_BitOrderOnNonBitstreamWarns()
+    {
+        var format = CreateFormat(structs: new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                IsBitstream = false,
+                BitOrder = BitOrder.Lsb,
+                Fields = [new FieldDefinition { Name = "value", Type = FieldType.UInt8 }],
+            },
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.Warnings.Should().Contain(d => d.Code == "VAL122");
+    }
+
+    [Fact]
+    public void VAL122_BitOrderOnBitstreamNoWarning()
+    {
+        var format = CreateFormat(structs: new Dictionary<string, StructDefinition>
+        {
+            ["root"] = new()
+            {
+                Name = "root",
+                IsBitstream = true,
+                BitOrder = BitOrder.Lsb,
+                Fields = [new FieldDefinition { Name = "value", Type = FieldType.UInt8, Size = 8 }],
+            },
+        });
+
+        var result = FormatValidator.Validate(format);
+        result.Warnings.Should().NotContain(d => d.Code == "VAL122");
     }
 }

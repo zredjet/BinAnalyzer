@@ -148,6 +148,9 @@ public sealed class YamlFieldModel
     [YamlMember(Alias = "seek_restore")]
     public bool? SeekRestore { get; set; }
 
+    [YamlMember(Alias = "seek_base")]
+    public string? SeekBase { get; set; }
+
     [YamlMember(Alias = "endianness")]
     public string? Endianness { get; set; }
 
@@ -159,6 +162,21 @@ public sealed class YamlFieldModel
 
     [YamlMember(Alias = "diff_key")]
     public object? DiffKey { get; set; }
+
+    [YamlMember(Alias = "state")]
+    public string? State { get; set; }
+
+    [YamlMember(Alias = "state_if")]
+    public string? StateIf { get; set; }
+
+    [YamlMember(Alias = "state_default")]
+    public long? StateDefault { get; set; }
+
+    [YamlMember(Alias = "repeat_max")]
+    public string? RepeatMax { get; set; }
+
+    [YamlMember(Alias = "repeat_error_limit")]
+    public string? RepeatErrorLimit { get; set; }
 }
 
 public sealed class YamlChecksumModel
@@ -168,6 +186,24 @@ public sealed class YamlChecksumModel
 
     [YamlMember(Alias = "fields")]
     public List<string> Fields { get; set; } = new();
+
+    [YamlMember(Alias = "range")]
+    public YamlChecksumRangeModel? Range { get; set; }
+
+    [YamlMember(Alias = "ranges")]
+    public List<YamlChecksumRangeModel>? Ranges { get; set; }
+
+    [YamlMember(Alias = "exclude_self")]
+    public bool? ExcludeSelf { get; set; }
+}
+
+public sealed class YamlChecksumRangeModel
+{
+    [YamlMember(Alias = "offset")]
+    public string Offset { get; set; } = "";
+
+    [YamlMember(Alias = "size")]
+    public string Size { get; set; } = "";
 }
 
 public sealed class YamlBitfieldEntryModel

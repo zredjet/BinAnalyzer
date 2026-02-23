@@ -49,6 +49,18 @@ public static class ExpressionTokenizer
                 continue;
             }
 
+            if (ch == '@')
+            {
+                var start = i;
+                i++; // skip '@'
+                if (i >= input.Length || (!char.IsLetter(input[i]) && input[i] != '_'))
+                    throw new FormatException($"Expected identifier after '@' at position {start}");
+                while (i < input.Length && (char.IsLetterOrDigit(input[i]) || input[i] == '_'))
+                    i++;
+                tokens.Add(new ExpressionToken(ExpressionTokenType.AtIdentifier, input[(start + 1)..i], start));
+                continue;
+            }
+
             if (char.IsLetter(ch) || ch == '_')
             {
                 var start = i;
@@ -102,6 +114,10 @@ public static class ExpressionTokenizer
                     break;
                 case ']':
                     tokens.Add(new ExpressionToken(ExpressionTokenType.RightBracket, "]", i));
+                    i++;
+                    break;
+                case '.':
+                    tokens.Add(new ExpressionToken(ExpressionTokenType.Dot, ".", i));
                     i++;
                     break;
                 case ',':

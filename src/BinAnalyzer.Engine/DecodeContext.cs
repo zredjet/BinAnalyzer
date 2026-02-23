@@ -10,7 +10,8 @@ public sealed class DecodeContext
     private int _position;
     private readonly Stack<Scope> _scopeStack = new();
     private readonly Endianness _defaultEndianness;
-    private readonly Dictionary<string, ReadOnlyMemory<byte>> _stringTables = new();
+    private readonly Dictionary<string, (ReadOnlyMemory<byte> Data, StringTableEncoding Encoding)> _stringTables = new();
+    private readonly Dictionary<string, object> _stateVariables = new();
 
     public DecodeContext(ReadOnlyMemory<byte> data, Endianness endianness)
     {
@@ -70,6 +71,15 @@ public sealed class DecodeContext
         _scopeStack.Push(new Scope(_position, CurrentScope.End, endianness, isOverlay: true));
     }
 
+    /// <summary>
+    /// 境界もエンディアンスも変更せず、変数スコープのみ作成するオーバーレイスコープをプッシュする。
+    /// テンプレートパラメータの分離に使用。
+    /// </summary>
+    public void PushVariableScope()
+    {
+        _scopeStack.Push(new Scope(_position, CurrentScope.End, endianness: null, isOverlay: true));
+    }
+
     public void PopScope()
     {
         if (_scopeStack.Count <= 1)
@@ -101,23 +111,56 @@ public sealed class DecodeContext
         return padding;
     }
 
-    public void RegisterStringTable(string name, int offset, int size)
+    public void SetStateVariable(string name, object value)
+        => _stateVariables[name] = value;
+
+    public object? GetStateVariable(string name)
+        => _stateVariables.TryGetValue(name, out var value) ? value : null;
+
+    public bool HasStateVariable(string name)
+        => _stateVariables.ContainsKey(name);
+
+    public void RegisterStringTable(string name, int offset, int size, StringTableEncoding encoding)
     {
-        _stringTables[name] = _data.Slice(offset, size);
+        _stringTables[name] = (_data.Slice(offset, size), encoding);
     }
 
     public string? LookupString(string tableName, int offset)
     {
-        if (!_stringTables.TryGetValue(tableName, out var table))
+        if (!_stringTables.TryGetValue(tableName, out var entry))
             return null;
+        var (table, encoding) = entry;
         if (offset < 0 || offset >= table.Length)
             return null;
 
         var span = table.Span;
-        var end = offset;
-        while (end < span.Length && span[end] != 0)
-            end++;
-        return System.Text.Encoding.ASCII.GetString(span[offset..end]);
+
+        if (encoding is StringTableEncoding.Utf16Le or StringTableEncoding.Utf16Be)
+        {
+            // UTF-16: 2バイト null (0x00, 0x00) 終端
+            var end = offset;
+            while (end + 1 < span.Length)
+            {
+                if (span[end] == 0 && span[end + 1] == 0)
+                    break;
+                end += 2;
+            }
+            var enc = encoding == StringTableEncoding.Utf16Le
+                ? Encoding.Unicode
+                : Encoding.BigEndianUnicode;
+            return enc.GetString(span[offset..end]);
+        }
+        else
+        {
+            // ASCII / UTF-8: 1バイト null (0x00) 終端
+            var end = offset;
+            while (end < span.Length && span[end] != 0)
+                end++;
+            var enc = encoding == StringTableEncoding.Utf8
+                ? Encoding.UTF8
+                : Encoding.ASCII;
+            return enc.GetString(span[offset..end]);
+        }
     }
 
     public void SetVariable(string name, object value)
@@ -348,19 +391,26 @@ public sealed class DecodeContext
 
     // --- Bitstream mode ---
     private BitReader? _bitReader;
+    private int _bitstreamDepth;
 
     public bool IsBitstreamMode => _bitReader is not null;
     public int? CurrentBitOffset => _bitReader?.BitPosition;
 
-    public void EnterBitstreamMode()
+    public void EnterBitstreamMode(BitOrder bitOrder = BitOrder.Msb)
     {
-        _bitReader = new BitReader(this);
+        if (_bitstreamDepth == 0)
+            _bitReader = new BitReader(this, bitOrder);
+        _bitstreamDepth++;
     }
 
     public void ExitBitstreamMode()
     {
-        _bitReader!.AlignToByte();
-        _bitReader = null;
+        _bitstreamDepth--;
+        if (_bitstreamDepth == 0)
+        {
+            _bitReader!.AlignToByte();
+            _bitReader = null;
+        }
     }
 
     public long ReadBitsAsLong(int bitCount)
@@ -387,13 +437,15 @@ public sealed class DecodeContext
     private sealed class BitReader
     {
         private readonly DecodeContext _context;
-        private int _bitPosition;   // 0–7: 現在バイト内の次に読み取るビット位置（MSB=0）
+        private readonly BitOrder _bitOrder;
+        private int _bitPosition;   // 0–7: 現在バイト内の次に読み取るビット位置
         private byte _currentByte;
         private bool _hasByte;
 
-        public BitReader(DecodeContext context)
+        public BitReader(DecodeContext context, BitOrder bitOrder = BitOrder.Msb)
         {
             _context = context;
+            _bitOrder = bitOrder;
         }
 
         public int BitPosition => _bitPosition;
@@ -404,6 +456,11 @@ public sealed class DecodeContext
                 throw new InvalidOperationException(
                     $"Bit read count must be 1–64, got {count}");
 
+            return _bitOrder == BitOrder.Lsb ? ReadBitsLsb(count) : ReadBitsMsb(count);
+        }
+
+        private long ReadBitsMsb(int count)
+        {
             long result = 0;
             var remaining = count;
 
@@ -412,10 +469,6 @@ public sealed class DecodeContext
                 if (!_hasByte)
                 {
                     _currentByte = _context.ReadUInt8();
-                    // ReadUInt8 advances _position, but we're consuming bits from this byte.
-                    // We need to "un-advance" since we manage position via bits.
-                    // Actually, ReadUInt8 already advanced _position. We keep that byte cached
-                    // and only read next byte when all 8 bits are consumed.
                     _bitPosition = 0;
                     _hasByte = true;
                 }
@@ -424,13 +477,49 @@ public sealed class DecodeContext
                 var bitsToRead = Math.Min(remaining, availableInByte);
 
                 // Extract bitsToRead bits from _currentByte starting at _bitPosition (MSB-first)
-                // Shift the current byte left to align the target bits to MSB, then shift right
                 var shift = availableInByte - bitsToRead;
                 var mask = (1 << bitsToRead) - 1;
                 var bits = (_currentByte >> shift) & mask;
 
                 result = (result << bitsToRead) | (uint)bits;
                 _bitPosition += bitsToRead;
+                remaining -= bitsToRead;
+
+                if (_bitPosition >= 8)
+                {
+                    _hasByte = false;
+                    _bitPosition = 0;
+                }
+            }
+
+            return result;
+        }
+
+        private long ReadBitsLsb(int count)
+        {
+            long result = 0;
+            var totalBitsRead = 0;
+            var remaining = count;
+
+            while (remaining > 0)
+            {
+                if (!_hasByte)
+                {
+                    _currentByte = _context.ReadUInt8();
+                    _bitPosition = 0;
+                    _hasByte = true;
+                }
+
+                var availableInByte = 8 - _bitPosition;
+                var bitsToRead = Math.Min(remaining, availableInByte);
+
+                // Extract bitsToRead bits from _currentByte starting at _bitPosition (LSB-first)
+                var mask = (1 << bitsToRead) - 1;
+                var bits = (_currentByte >> _bitPosition) & mask;
+
+                result |= (long)(uint)bits << totalBitsRead;
+                _bitPosition += bitsToRead;
+                totalBitsRead += bitsToRead;
                 remaining -= bitsToRead;
 
                 if (_bitPosition >= 8)

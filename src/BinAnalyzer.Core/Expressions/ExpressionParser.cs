@@ -16,7 +16,8 @@ namespace BinAnalyzer.Core.Expressions;
 ///   add_expr     → mul_expr (("+" | "-") mul_expr)*
 ///   mul_expr     → unary_expr (("*" | "/" | "%") unary_expr)*
 ///   unary_expr   → ("-" | "not") unary_expr | primary
-///   primary      → INTEGER | STRING | IDENTIFIER | IDENTIFIER "(" arg_list? ")" | IDENTIFIER "[" ternary_expr "]" | "(" or_expr ")"
+///   primary      → INTEGER | STRING | IDENTIFIER postfix* | IDENTIFIER "(" arg_list? ")" | IDENTIFIER "[" ternary_expr "]" postfix* | "(" or_expr ")"
+///   postfix      → "." IDENTIFIER
 ///   arg_list     → or_expr ("," or_expr)*
 /// </summary>
 public sealed class ExpressionParser
@@ -246,9 +247,16 @@ public sealed class ExpressionParser
                 return new ExpressionNode.LiteralString(token.Value);
             }
 
+            case ExpressionTokenType.AtIdentifier:
+            {
+                var token = Advance();
+                return new ExpressionNode.StateReference(token.Value);
+            }
+
             case ExpressionTokenType.Identifier:
             {
                 var token = Advance();
+                // 関数呼び出し
                 if (Current.Type == ExpressionTokenType.LeftParen)
                 {
                     Advance(); // consume '('
@@ -263,15 +271,34 @@ public sealed class ExpressionParser
                         throw new FormatException($"Expected ')' at position {Current.Position}");
                     return new ExpressionNode.FunctionCall(token.Value, args);
                 }
+
+                ExpressionNode node;
+                // インデックスアクセス
                 if (Current.Type == ExpressionTokenType.LeftBracket)
                 {
                     Advance(); // consume '['
                     var indexExpr = ParseTernaryExpr();
                     if (!Match(ExpressionTokenType.RightBracket))
                         throw new FormatException($"Expected ']' at position {Current.Position}");
-                    return new ExpressionNode.IndexAccess(token.Value, indexExpr);
+                    node = new ExpressionNode.IndexAccess(token.Value, indexExpr);
                 }
-                return new ExpressionNode.FieldReference(token.Value);
+                else
+                {
+                    node = new ExpressionNode.FieldReference(token.Value);
+                }
+
+                // ドットチェーン（後置メンバーアクセス）
+                while (Current.Type == ExpressionTokenType.Dot)
+                {
+                    Advance(); // consume '.'
+                    if (Current.Type != ExpressionTokenType.Identifier)
+                        throw new FormatException(
+                            $"Expected member name after '.' at position {Current.Position}");
+                    var memberName = Advance().Value;
+                    node = new ExpressionNode.MemberAccess(node, memberName);
+                }
+
+                return node;
             }
 
             case ExpressionTokenType.LeftParen:

@@ -121,6 +121,8 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
         sb.Append("<span class=\"name\">").Append(E(node.Name)).Append("</span>");
         sb.Append(" <span class=\"meta\">[0x").Append(node.Offset.ToString("X8")).Append("] (")
             .Append(node.Size).Append(" bytes) [").Append(node.Elements.Count).Append(" items]</span>");
+        if (node.Truncated)
+            sb.Append(" <span class=\"invalid\">(truncated: ").Append(E(node.TruncationReason ?? "limit reached")).Append(")</span>");
         sb.AppendLine("</div>");
         sb.Append("  <div class=\"children\"").Append(depth > 1 ? " style=\"display:none\"" : "").AppendLine(">");
         for (var i = 0; i < node.Elements.Count; i++)
@@ -342,6 +344,8 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
         sb.Append("  <span class=\"invalid\">✗ ").Append(E(node.Name)).Append("</span>");
         sb.Append(" <span class=\"meta\">[ERROR at 0x").Append(node.Offset.ToString("X8")).Append("]: </span>");
         sb.Append("<span class=\"invalid\">").Append(E(node.ErrorMessage)).Append("</span>");
+        if (node.SkippedBytes > 0)
+            sb.Append(" <span class=\"meta\">(skipped ").Append(node.SkippedBytes).Append(" bytes)</span>");
         sb.AppendLine();
         sb.AppendLine("</div>");
     }

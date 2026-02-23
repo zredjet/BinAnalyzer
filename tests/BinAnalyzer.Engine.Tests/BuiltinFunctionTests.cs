@@ -303,6 +303,223 @@ public class BuiltinFunctionTests
         ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(2);
     }
 
+    // --- hex ---
+
+    [Fact]
+    public void Hex_Returns0xFF()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 255L);
+        var expr = ExpressionParser.Parse("{hex(v)}");
+        ExpressionEvaluator.EvaluateAsString(expr, ctx).Should().Be("0xFF");
+    }
+
+    [Fact]
+    public void Hex_Zero_Returns0x0()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 0L);
+        var expr = ExpressionParser.Parse("{hex(v)}");
+        ExpressionEvaluator.EvaluateAsString(expr, ctx).Should().Be("0x0");
+    }
+
+    [Fact]
+    public void Hex_LargeValue()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 0x12345678L);
+        var expr = ExpressionParser.Parse("{hex(v)}");
+        ExpressionEvaluator.EvaluateAsString(expr, ctx).Should().Be("0x12345678");
+    }
+
+    // --- upper ---
+
+    [Fact]
+    public void Upper_ConvertsToUppercase()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("s", "abc");
+        var expr = ExpressionParser.Parse("{upper(s)}");
+        ExpressionEvaluator.EvaluateAsString(expr, ctx).Should().Be("ABC");
+    }
+
+    [Fact]
+    public void Upper_NonString_Throws()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("n", 42L);
+        var expr = ExpressionParser.Parse("{upper(n)}");
+        var act = () => ExpressionEvaluator.Evaluate(expr, ctx);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*must be a string*");
+    }
+
+    // --- lower ---
+
+    [Fact]
+    public void Lower_ConvertsToLowercase()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("s", "ABC");
+        var expr = ExpressionParser.Parse("{lower(s)}");
+        ExpressionEvaluator.EvaluateAsString(expr, ctx).Should().Be("abc");
+    }
+
+    [Fact]
+    public void Lower_NonString_Throws()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("n", 42L);
+        var expr = ExpressionParser.Parse("{lower(n)}");
+        var act = () => ExpressionEvaluator.Evaluate(expr, ctx);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*must be a string*");
+    }
+
+    // --- trim ---
+
+    [Fact]
+    public void Trim_RemovesWhitespaceAndNull()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("s", "  hello\0\0");
+        var expr = ExpressionParser.Parse("{trim(s)}");
+        ExpressionEvaluator.EvaluateAsString(expr, ctx).Should().Be("hello");
+    }
+
+    [Fact]
+    public void Trim_AllNulls_ReturnsEmpty()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("s", "\0\0");
+        var expr = ExpressionParser.Parse("{trim(s)}");
+        ExpressionEvaluator.EvaluateAsString(expr, ctx).Should().Be("");
+    }
+
+    [Fact]
+    public void Trim_NonString_Throws()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("n", 42L);
+        var expr = ExpressionParser.Parse("{trim(n)}");
+        var act = () => ExpressionEvaluator.Evaluate(expr, ctx);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*must be a string*");
+    }
+
+    // --- popcount ---
+
+    [Fact]
+    public void Popcount_0xFF_Returns8()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 0xFFL);
+        var expr = ExpressionParser.Parse("{popcount(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(8);
+    }
+
+    [Fact]
+    public void Popcount_Zero_ReturnsZero()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 0L);
+        var expr = ExpressionParser.Parse("{popcount(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(0);
+    }
+
+    [Fact]
+    public void Popcount_One_ReturnsOne()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 1L);
+        var expr = ExpressionParser.Parse("{popcount(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(1);
+    }
+
+    // --- abs ---
+
+    [Fact]
+    public void Abs_Negative_ReturnsPositive()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", -42L);
+        var expr = ExpressionParser.Parse("{abs(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(42);
+    }
+
+    [Fact]
+    public void Abs_Positive_ReturnsSame()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 42L);
+        var expr = ExpressionParser.Parse("{abs(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(42);
+    }
+
+    [Fact]
+    public void Abs_Zero_ReturnsZero()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 0L);
+        var expr = ExpressionParser.Parse("{abs(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(0);
+    }
+
+    // --- log2 ---
+
+    [Fact]
+    public void Log2_256_Returns8()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 256L);
+        var expr = ExpressionParser.Parse("{log2(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(8);
+    }
+
+    [Fact]
+    public void Log2_1_Returns0()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 1L);
+        var expr = ExpressionParser.Parse("{log2(v)}");
+        ExpressionEvaluator.EvaluateAsLong(expr, ctx).Should().Be(0);
+    }
+
+    [Fact]
+    public void Log2_Zero_Throws()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 0L);
+        var expr = ExpressionParser.Parse("{log2(v)}");
+        var act = () => ExpressionEvaluator.Evaluate(expr, ctx);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*positive integer*");
+    }
+
+    [Fact]
+    public void Log2_Negative_Throws()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", -1L);
+        var expr = ExpressionParser.Parse("{log2(v)}");
+        var act = () => ExpressionEvaluator.Evaluate(expr, ctx);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*positive integer*");
+    }
+
+    // --- unknown function ---
+
+    [Fact]
+    public void UnknownFunction_Throws()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("v", 1L);
+        var expr = ExpressionParser.Parse("{unknown(v)}");
+        var act = () => ExpressionEvaluator.Evaluate(expr, ctx);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Unknown function*");
+    }
+
     // --- existing functions still work ---
 
     [Fact]

@@ -1,0 +1,272 @@
+name: MessagePack
+endianness: big
+root: msgpack_root
+
+structs:
+  msgpack_root:
+    - name: value
+      type: struct
+      struct: msgpack_value
+
+  msgpack_value:
+    - name: format_byte
+      type: uint8
+      description: "MessagePack フォーマットバイト"
+    - name: data
+      type: switch
+      switch_on: "{format_byte}"
+      cases:
+        # nil
+        "0xc0": nil_value
+        # bool
+        "0xc2": false_value
+        "0xc3": true_value
+        # bin 8/16/32
+        "0xc4": bin8_value
+        "0xc5": bin16_value
+        "0xc6": bin32_value
+        # ext 8/16/32
+        "0xc7": ext8_value
+        "0xc8": ext16_value
+        "0xc9": ext32_value
+        # float 32/64
+        "0xca": float32_value
+        "0xcb": float64_value
+        # uint 8/16/32/64
+        "0xcc": uint8_value
+        "0xcd": uint16_value
+        "0xce": uint32_value
+        "0xcf": uint64_value
+        # int 8/16/32/64
+        "0xd0": int8_value
+        "0xd1": int16_value
+        "0xd2": int32_value
+        "0xd3": int64_value
+        # fixext 1/2/4/8/16
+        "0xd4": fixext1_value
+        "0xd5": fixext2_value
+        "0xd6": fixext4_value
+        "0xd7": fixext8_value
+        "0xd8": fixext16_value
+        # str 8/16/32
+        "0xd9": str8_value
+        "0xda": str16_value
+        "0xdb": str32_value
+        # array 16/32
+        "0xdc": array16_value
+        "0xdd": array32_value
+        # map 16/32
+        "0xde": map16_value
+        "0xdf": map32_value
+      default: fixtype_value
+
+  # === Fix types (default branch) ===
+  # format_byte のビットパターンで分岐:
+  #   0x00-0x7f: positive fixint (データなし)
+  #   0x80-0x8f: fixmap (下位4ビットがエントリ数)
+  #   0x90-0x9f: fixarray (下位4ビットが要素数)
+  #   0xa0-0xbf: fixstr (下位5ビットがバイト長)
+  #   0xe0-0xff: negative fixint (データなし)
+  fixtype_value:
+    # fixmap: 0x80-0x8f
+    - name: fixmap_entries
+      type: struct
+      struct: map_entry
+      repeat_count: "{format_byte - 0x80}"
+      if: "{format_byte >= 0x80 and format_byte <= 0x8f}"
+      description: "fixmap エントリ（下位4ビットがペア数）"
+    # fixarray: 0x90-0x9f
+    - name: fixarray_elements
+      type: struct
+      struct: msgpack_value
+      repeat_count: "{format_byte - 0x90}"
+      if: "{format_byte >= 0x90 and format_byte <= 0x9f}"
+      description: "fixarray 要素（下位4ビットが要素数）"
+    # fixstr: 0xa0-0xbf
+    - name: fixstr_data
+      type: bytes
+      size: "{format_byte - 0xa0}"
+      if: "{format_byte >= 0xa0 and format_byte <= 0xbf}"
+      description: "fixstr データ（下位5ビットがバイト長）"
+    # positive fixint (0x00-0x7f) と negative fixint (0xe0-0xff) はデータなし
+
+  # === nil / bool ===
+  nil_value: []
+  false_value: []
+  true_value: []
+
+  # === Integer types ===
+  uint8_value:
+    - name: value
+      type: uint8
+  uint16_value:
+    - name: value
+      type: uint16
+  uint32_value:
+    - name: value
+      type: uint32
+  uint64_value:
+    - name: value
+      type: uint64
+  int8_value:
+    - name: value
+      type: int8
+  int16_value:
+    - name: value
+      type: int16
+  int32_value:
+    - name: value
+      type: int32
+  int64_value:
+    - name: value
+      type: int64
+
+  # === Float types ===
+  float32_value:
+    - name: value
+      type: bytes
+      size: "4"
+      description: "IEEE 754 float32"
+  float64_value:
+    - name: value
+      type: bytes
+      size: "8"
+      description: "IEEE 754 float64"
+
+  # === String types ===
+  str8_value:
+    - name: length
+      type: uint8
+    - name: data
+      type: bytes
+      size: "{length}"
+  str16_value:
+    - name: length
+      type: uint16
+    - name: data
+      type: bytes
+      size: "{length}"
+  str32_value:
+    - name: length
+      type: uint32
+    - name: data
+      type: bytes
+      size: "{length}"
+
+  # === Binary types ===
+  bin8_value:
+    - name: length
+      type: uint8
+    - name: data
+      type: bytes
+      size: "{length}"
+  bin16_value:
+    - name: length
+      type: uint16
+    - name: data
+      type: bytes
+      size: "{length}"
+  bin32_value:
+    - name: length
+      type: uint32
+    - name: data
+      type: bytes
+      size: "{length}"
+
+  # === Array types ===
+  array16_value:
+    - name: count
+      type: uint16
+    - name: elements
+      type: struct
+      struct: msgpack_value
+      repeat_count: "{count}"
+  array32_value:
+    - name: count
+      type: uint32
+    - name: elements
+      type: struct
+      struct: msgpack_value
+      repeat_count: "{count}"
+
+  # === Map types ===
+  map16_value:
+    - name: count
+      type: uint16
+    - name: entries
+      type: struct
+      struct: map_entry
+      repeat_count: "{count}"
+  map32_value:
+    - name: count
+      type: uint32
+    - name: entries
+      type: struct
+      struct: map_entry
+      repeat_count: "{count}"
+
+  map_entry:
+    - name: key
+      type: struct
+      struct: msgpack_value
+    - name: value
+      type: struct
+      struct: msgpack_value
+
+  # === Ext types ===
+  ext8_value:
+    - name: length
+      type: uint8
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "{length}"
+  ext16_value:
+    - name: length
+      type: uint16
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "{length}"
+  ext32_value:
+    - name: length
+      type: uint32
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "{length}"
+
+  # === Fixext types ===
+  fixext1_value:
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "1"
+  fixext2_value:
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "2"
+  fixext4_value:
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "4"
+  fixext8_value:
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "8"
+  fixext16_value:
+    - name: ext_type
+      type: int8
+    - name: data
+      type: bytes
+      size: "16"

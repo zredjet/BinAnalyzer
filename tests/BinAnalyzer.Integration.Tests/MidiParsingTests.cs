@@ -76,7 +76,7 @@ public class MidiParsingTests
         var trackLength = track.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         trackLength.Value.Should().Be(4);
 
-        track.Children[2].Name.Should().Be("track_data");
+        track.Children[2].Name.Should().Be("events");
     }
 
     [Fact]
@@ -89,11 +89,8 @@ public class MidiParsingTests
         var tracks = decoded.Children.Last().Should().BeOfType<DecodedArray>().Subject;
         var track = tracks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
 
-        // mtrk: magic(0), length(1), track_data(2, switch → midi_event_list)
-        var trackData = track.Children[2].Should().BeOfType<DecodedStruct>().Subject;
-
-        // midi_event_list: events (array)
-        var events = trackData.Children[0].Should().BeOfType<DecodedArray>().Subject;
+        // mtrk: magic(0), length(1), events(2, size+repeat:eof配列)
+        var events = track.Children[2].Should().BeOfType<DecodedArray>().Subject;
         events.Elements.Should().HaveCount(1);
 
         var evt = events.Elements[0].Should().BeOfType<DecodedStruct>().Subject;

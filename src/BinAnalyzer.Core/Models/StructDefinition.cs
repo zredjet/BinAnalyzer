@@ -16,9 +16,18 @@ public sealed class StructDefinition
     /// <summary>実行時に評価するエンディアン式。結果は 'little'/'big' 文字列。Endiannessと相互排他。</summary>
     public Expression? EndiannessExpression { get; init; }
 
-    /// <summary>trueの場合、この構造体のデコード結果のバイト列を文字列テーブルとして登録する。</summary>
-    public bool IsStringTable { get; init; }
+    /// <summary>非nullの場合、この構造体のデコード結果のバイト列を指定エンコーディングの文字列テーブルとして登録する。</summary>
+    public StringTableEncoding? StringTableEncoding { get; init; }
 
     /// <summary>trueの場合、この構造体はビットストリームモードで、フィールドのsizeはビット単位。</summary>
     public bool IsBitstream { get; init; }
+
+    /// <summary>ビットストリームモードのビットオーダー。nullの場合はMSB-first（デフォルト）。</summary>
+    public BitOrder? BitOrder { get; init; }
+
+    /// <summary>エラー回復時の再同期マーカーバイトパターン。</summary>
+    public byte[]? ResyncMarker { get; init; }
+
+    /// <summary>テンプレートパラメータ定義。パラメータなしstructは空リスト。</summary>
+    public IReadOnlyList<TemplateParameter> Parameters { get; init; } = Array.Empty<TemplateParameter>();
 }

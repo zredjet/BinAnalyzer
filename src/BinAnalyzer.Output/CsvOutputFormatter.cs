@@ -109,7 +109,9 @@ public sealed class CsvOutputFormatter : IOutputFormatter
         DecodedFlags flagsNode => ("flags", $"0x{flagsNode.RawValue:X}"),
         DecodedVirtual virtualNode => ("virtual", virtualNode.Value.ToString() ?? ""),
         DecodedCompressed compressedNode => ("compressed", $"{compressedNode.Algorithm} ({compressedNode.CompressedSize} -> {compressedNode.DecompressedSize} bytes)"),
-        DecodedError errorNode => ("error", errorNode.ErrorMessage),
+        DecodedError errorNode => ("error", errorNode.SkippedBytes > 0
+            ? $"{errorNode.ErrorMessage} (skipped {errorNode.SkippedBytes} bytes)"
+            : errorNode.ErrorMessage),
         _ => ("unknown", ""),
     };
 

@@ -69,10 +69,12 @@ Core → （なし）
 IRはバイナリフォーマットの正規表現。YAML構文から独立しています。
 
 - **FormatDefinition** — 最上位: 名前、エンディアン、列挙型、フラグ、構造体、ルート構造体
-- **StructDefinition** — 名前付きフィールドの集合（エンディアン上書き、アライメント、文字列テーブルフラグ、ビットストリームモードフラグ）
-- **FieldDefinition** — 型、サイズ、enum/flags参照、繰り返しモード、switch、期待値、条件式、アライメント、パディング、値式（virtual用）、seekオフセット式、seek復帰フラグ、エンディアン上書き、バリデーション式、文字列テーブル参照、diffキー（単一キーまたは複合キーリスト）
+- **StructDefinition** — 名前付きフィールドの集合（エンディアン上書き、アライメント、文字列テーブルフラグ、ビットストリームモードフラグ、テンプレートパラメータリスト）
+- **FieldDefinition** — 型、サイズ、enum/flags参照、繰り返しモード、switch、期待値、条件式、アライメント、パディング、値式（virtual用）、seekオフセット式、seek復帰フラグ、エンディアン上書き、バリデーション式、文字列テーブル参照、diffキー（単一キーまたは複合キーリスト）、テンプレートstruct引数リスト
 - **EnumDefinition / FlagsDefinition** — 値のマッピング
 - **ChecksumSpec** — チェックサム検証仕様（アルゴリズム名とフィールド名リスト）
+- **TemplateParameter** — テンプレートstructのパラメータ定義（名前、オプションのデフォルト値）
+- **StructArgument** — struct参照時のテンプレート引数（名前付き/位置引数、リテラル値/式）
 - **SwitchCase / BitfieldEntry / RepeatMode** — switch分岐、ビットフィールド、繰り返しモードの定義
 
 ### 式システム — Core/Expressions/
@@ -89,7 +91,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 フォーマット定義の静的検証。デコード前にエラーと警告を検出。
 
-- **FormatValidator** — 全フィールド・struct定義の整合性チェック（VAL001〜VAL011: エラー、VAL101〜VAL112: 警告）
+- **FormatValidator** — 全フィールド・struct定義の整合性チェック（VAL001〜VAL011: エラー、VAL101〜VAL116: 警告）
 - **ValidationResult** — 診断結果コレクション（IsValid, Errors, Warnings）
 - **ValidationDiagnostic** — 個別診断: 重大度、コード、メッセージ、struct名、フィールド名
 
@@ -130,9 +132,9 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### バイナリデコーダー — Engine/
 
-- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り
-- **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価
-- **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決のオーケストレーター
+- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）
+- **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価。`@state_name` による状態変数の参照にも対応
+- **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決、テンプレート引数の解決・バインドのオーケストレーター
 - **Crc32Calculator** — ISO 3309準拠のCRC-32計算器（PNG/ZIP互換）
 - **EncodingHelper** — Shift-JISエンコーディング登録・キャッシュヘルパー
 - **DiffEngine** — 2つのDecodedStructを再帰比較し、変更・追加・削除の差分リストを生成
@@ -140,7 +142,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 ### DSLパーサー — Dsl/
 
 - **YamlModels/** — YamlDotNetデシリアライズ用DTO（IRとは別クラス）
-- **YamlToIrMapper** — YAML DTOをIRに変換、式のパース、参照の検証
+- **YamlToIrMapper** — YAML DTOをIRに変換、式のパース、参照の検証、テンプレートstructキー・参照のパース
 - **YamlFormatLoader** — IFormatLoader実装。インポートの再帰解決と定義マージを担当
 
 ### 出力フォーマッター — Output/
@@ -199,3 +201,5 @@ Blazor WebAssembly Standalone アプリケーション。サーバーなしの�
 12. **エラー回復モード** — `--on-error continue` でデコードエラー後も解析を継続。エラー箇所はDecodedErrorノードとして結果ツリーに含まれる。DecodeResultでエラーリストも返却
 13. **文字列テーブル参照** — IsStringTable構造体のバイト列をDecodeContextに登録し、整数フィールドのStringTableRefでNUL終端文字列をルックアップ。ELFの.strtab等で使用
 14. **ビットストリームモード** — `mode: bitstream` 構造体内ではフィールドのsizeがビット単位で解釈される。DecodeContext.BitReaderがMSB-firstのビット単位読み取りを提供し、構造体終了時に自動バイトアライン。既存bitfield型とは独立して共存
+15. **テンプレートパラメータバインディング** — パラメータ付きstruct定義（`tlv(tag_size=1, len_size=1)`）をサポート。DSL層でキー文字列・struct参照文字列をパースし、IRのTemplateParameter/StructArgumentに変換。デコード時にBinaryDecoderが引数を解決（位置/名前付き/式の3種類）し、PushVariableScope()でオーバーレイスコープを作成してパラメータを変数としてバインド。PopScope時に自動クリーンアップされ、親スコープへの漏洩を防止
+16. **ステートフル変数** — `state`/`state_if`/`state_default`フィールドプロパティで状態変数を管理。DecodeContextにスコープスタックとは独立したDictionary\<string, object\>を保持し、PushScope/PopScopeの影響を受けずデコードセッション全体で永続。式内では`@state_name`プレフィックスで参照し、通常のフィールド変数との名前空間を分離。MIDIランニングステータス等のステートフルパースに対応

@@ -1,0 +1,115 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 6,
+  "name": "MessagePack",
+  "struct_type": "msgpack_root",
+  "children": {
+    "value": {
+      "_type": "struct",
+      "offset": 0,
+      "size": 6,
+      "name": "value",
+      "struct_type": "msgpack_value",
+      "children": {
+        "format_byte": {
+          "_type": "integer",
+          "offset": 0,
+          "size": 1,
+          "description": "MessagePack \u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30A4\u30C8",
+          "name": "format_byte",
+          "value": 129,
+          "hex": "0x81"
+        },
+        "data": {
+          "_type": "struct",
+          "offset": 1,
+          "size": 5,
+          "name": "data",
+          "struct_type": "fixtype_value",
+          "children": {
+            "fixmap_entries": {
+              "_type": "array",
+              "offset": 1,
+              "size": 5,
+              "name": "fixmap_entries",
+              "count": 1,
+              "elements": [
+                {
+                  "_type": "struct",
+                  "offset": 1,
+                  "size": 5,
+                  "name": "fixmap_entries",
+                  "struct_type": "map_entry",
+                  "children": {
+                    "key": {
+                      "_type": "struct",
+                      "offset": 1,
+                      "size": 4,
+                      "name": "key",
+                      "struct_type": "msgpack_value",
+                      "children": {
+                        "format_byte": {
+                          "_type": "integer",
+                          "offset": 1,
+                          "size": 1,
+                          "description": "MessagePack \u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30A4\u30C8",
+                          "name": "format_byte",
+                          "value": 163,
+                          "hex": "0xA3"
+                        },
+                        "data": {
+                          "_type": "struct",
+                          "offset": 2,
+                          "size": 3,
+                          "name": "data",
+                          "struct_type": "fixtype_value",
+                          "children": {
+                            "fixstr_data": {
+                              "_type": "bytes",
+                              "offset": 2,
+                              "size": 3,
+                              "description": "fixstr \u30C7\u30FC\u30BF\uFF08\u4E0B\u4F4D5\u30D3\u30C3\u30C8\u304C\u30D0\u30A4\u30C8\u9577\uFF09",
+                              "name": "fixstr_data",
+                              "hex": "6B 65 79"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "value": {
+                      "_type": "struct",
+                      "offset": 5,
+                      "size": 1,
+                      "name": "value",
+                      "struct_type": "msgpack_value",
+                      "children": {
+                        "format_byte": {
+                          "_type": "integer",
+                          "offset": 5,
+                          "size": 1,
+                          "description": "MessagePack \u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30A4\u30C8",
+                          "name": "format_byte",
+                          "value": 42,
+                          "hex": "0x2A"
+                        },
+                        "data": {
+                          "_type": "struct",
+                          "offset": 6,
+                          "size": 0,
+                          "name": "data",
+                          "struct_type": "fixtype_value",
+                          "children": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

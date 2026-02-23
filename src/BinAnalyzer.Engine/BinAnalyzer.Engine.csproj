@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="System.IO.Hashing" Version="9.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
     <ProjectReference Include="..\BinAnalyzer.Compression\BinAnalyzer.Compression.csproj" />
   </ItemGroup>

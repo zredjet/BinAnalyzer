@@ -5,5 +5,5 @@ namespace BinAnalyzer.Core.Interfaces;
 
 public interface IBinaryDecoder
 {
-    DecodedStruct Decode(ReadOnlyMemory<byte> data, FormatDefinition format);
+    DecodedStruct Decode(ReadOnlyMemory<byte> data, FormatDefinition format, DecodeOptions? options = null);
 }

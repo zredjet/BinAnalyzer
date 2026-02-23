@@ -76,8 +76,10 @@ public static class YamlToIrMapper
         Dictionary<string, YamlStructModel> yamlStructs)
     {
         var result = new Dictionary<string, StructDefinition>();
-        foreach (var (name, structModel) in yamlStructs)
+        foreach (var (rawKey, structModel) in yamlStructs)
         {
+            var (name, parameters) = ParseStructKey(rawKey);
+
             Expression? endiannessExpr = null;
             Endianness? endianness = null;
 
@@ -96,6 +98,22 @@ public static class YamlToIrMapper
                     $"Unknown struct mode '{structModel.Mode}' in struct '{name}'. Supported modes: bitstream");
 
             var isBitstream = structModel.Mode == "bitstream";
+
+            // bit_order パースとバリデーション
+            BitOrder? parsedBitOrder = structModel.BitOrder?.ToLowerInvariant() switch
+            {
+                null => null,
+                "msb" => BitOrder.Msb,
+                "lsb" => BitOrder.Lsb,
+                _ => throw new InvalidOperationException(
+                    $"Unknown bit_order '{structModel.BitOrder}' in struct '{name}'. Supported values: msb, lsb"),
+            };
+
+            if (parsedBitOrder is not null && !isBitstream)
+                throw new InvalidOperationException(
+                    $"bit_order is specified on struct '{name}' but mode is not 'bitstream'. " +
+                    $"bit_order is only valid with mode: bitstream");
+
             var fields = structModel.Fields.Select(MapField).ToList();
 
             // bitstream フィールド型バリデーション
@@ -103,10 +121,10 @@ public static class YamlToIrMapper
             {
                 foreach (var field in fields)
                 {
-                    if (!IsIntegerFieldType(field.Type))
+                    if (!IsAllowedInBitstreamStruct(field.Type))
                         throw new InvalidOperationException(
-                            $"Bitstream struct '{name}' contains non-integer field '{field.Name}' of type '{field.Type}'. " +
-                            $"Only integer types (uint8/16/32/64, int8/16/32/64) are allowed in bitstream structs.");
+                            $"Bitstream struct '{name}' contains unsupported field '{field.Name}' of type '{field.Type}'. " +
+                            $"Allowed types in bitstream structs: integer types, virtual, switch, struct.");
                 }
             }
 
@@ -114,11 +132,14 @@ public static class YamlToIrMapper
             {
                 Name = name,
                 Fields = fields,
+                Parameters = parameters,
                 Endianness = endianness,
                 EndiannessExpression = endiannessExpr,
                 Align = structModel.Align,
-                IsStringTable = structModel.StringTable ?? false,
+                StringTableEncoding = ParseStringTable(structModel.StringTable),
                 IsBitstream = isBitstream,
+                BitOrder = parsedBitOrder,
+                ResyncMarker = structModel.ResyncMarker?.Select(b => (byte)b).ToArray(),
             };
         }
         return result;
@@ -142,6 +163,7 @@ public static class YamlToIrMapper
         var repeat = ParseRepeatMode(yaml);
         var (switchOn, switchCases, switchDefault) = ParseSwitch(yaml);
         var (elementSize, elementSizeExpr) = ParseElementSize(yaml.ElementSize);
+        var (structRef, structArgs) = ParseStructRef(yaml.Struct);
 
         return new FieldDefinition
         {
@@ -152,7 +174,8 @@ public static class YamlToIrMapper
             SizeRemaining = sizeRemaining,
             EnumRef = yaml.Enum,
             FlagsRef = yaml.Flags,
-            StructRef = yaml.Struct,
+            StructRef = structRef,
+            StructArgs = structArgs,
             Repeat = repeat,
             SwitchOn = switchOn,
             SwitchCases = switchCases,
@@ -169,10 +192,16 @@ public static class YamlToIrMapper
             ValueExpression = yaml.Value is not null ? ExpressionParser.Parse(yaml.Value) : null,
             SeekExpression = yaml.Seek is not null ? ExpressionParser.Parse(yaml.Seek) : null,
             SeekRestore = yaml.SeekRestore ?? false,
+            SeekBaseExpression = yaml.SeekBase is not null ? ExpressionParser.Parse(yaml.SeekBase) : null,
             Endianness = ParseEndianness(yaml.Endianness),
             ValidationExpression = yaml.Validate is not null ? ExpressionParser.Parse(yaml.Validate) : null,
             StringTableRef = yaml.StringTable,
             DiffKey = MapDiffKey(yaml.DiffKey),
+            State = yaml.State,
+            StateIf = yaml.StateIf is not null ? ExpressionParser.Parse(yaml.StateIf) : null,
+            StateDefault = yaml.StateDefault,
+            RepeatMax = yaml.RepeatMax is not null ? ExpressionParser.Parse(yaml.RepeatMax) : null,
+            RepeatErrorLimit = yaml.RepeatErrorLimit is not null ? ExpressionParser.Parse(yaml.RepeatErrorLimit) : null,
         };
     }
 
@@ -311,10 +340,27 @@ public static class YamlToIrMapper
         if (yaml is null)
             return null;
 
+        ChecksumRange? range = yaml.Range is not null
+            ? new ChecksumRange
+            {
+                OffsetExpression = ExpressionParser.Parse(yaml.Range.Offset),
+                SizeExpression = ExpressionParser.Parse(yaml.Range.Size),
+            }
+            : null;
+
+        IReadOnlyList<ChecksumRange>? ranges = yaml.Ranges?.Select(r => new ChecksumRange
+        {
+            OffsetExpression = ExpressionParser.Parse(r.Offset),
+            SizeExpression = ExpressionParser.Parse(r.Size),
+        }).ToList();
+
         return new ChecksumSpec
         {
             Algorithm = yaml.Algorithm,
             FieldNames = yaml.Fields,
+            Range = range,
+            Ranges = ranges,
+            ExcludeSelf = yaml.ExcludeSelf ?? false,
         };
     }
 
@@ -338,6 +384,34 @@ public static class YamlToIrMapper
         }).ToList();
     }
 
+    private static StringTableEncoding? ParseStringTable(object? value)
+    {
+        return value switch
+        {
+            null => null,
+            bool b => b ? StringTableEncoding.Ascii : null,
+            string s when s.Equals("true", StringComparison.OrdinalIgnoreCase) => StringTableEncoding.Ascii,
+            string s when s.Equals("false", StringComparison.OrdinalIgnoreCase) => null,
+            IDictionary dict => ParseStringTableDict(dict),
+            _ => throw new InvalidOperationException(
+                $"Invalid string_table value: '{value}'. Expected true, false, or {{ encoding: ... }}"),
+        };
+    }
+
+    private static StringTableEncoding ParseStringTableDict(IDictionary dict)
+    {
+        var encodingValue = dict.Contains("encoding") ? dict["encoding"]?.ToString() : null;
+        return encodingValue?.ToLowerInvariant() switch
+        {
+            null or "ascii" => StringTableEncoding.Ascii,
+            "utf8" or "utf-8" => StringTableEncoding.Utf8,
+            "utf16le" or "utf-16le" or "utf16-le" => StringTableEncoding.Utf16Le,
+            "utf16be" or "utf-16be" or "utf16-be" => StringTableEncoding.Utf16Be,
+            _ => throw new InvalidOperationException(
+                $"Unknown string_table encoding: '{encodingValue}'. Supported: ascii, utf8, utf16le, utf16be"),
+        };
+    }
+
     private static IReadOnlyList<string>? MapDiffKey(object? value)
     {
         return value switch
@@ -351,6 +425,10 @@ public static class YamlToIrMapper
     private static bool IsIntegerFieldType(FieldType type) =>
         type is FieldType.UInt8 or FieldType.UInt16 or FieldType.UInt32 or FieldType.UInt64
             or FieldType.Int8 or FieldType.Int16 or FieldType.Int32 or FieldType.Int64;
+
+    private static bool IsAllowedInBitstreamStruct(FieldType type) =>
+        IsIntegerFieldType(type)
+        || type is FieldType.Virtual or FieldType.Switch or FieldType.Struct;
 
     /// <summary>
     /// ビット範囲指定をパースする。
@@ -368,5 +446,162 @@ public static class YamlToIrMapper
         var high = int.Parse(parts[0]);
         var low = int.Parse(parts[1]);
         return (high, low);
+    }
+
+    /// <summary>
+    /// 構造体定義キーをパースする。
+    /// "tlv(tag_size=1, len_size=1)" → ("tlv", [TemplateParameter("tag_size", 1), TemplateParameter("len_size", 1)])
+    /// "record(size)" → ("record", [TemplateParameter("size", null)])
+    /// "simple" → ("simple", [])
+    /// </summary>
+    internal static (string name, IReadOnlyList<TemplateParameter> parameters) ParseStructKey(string key)
+    {
+        var parenIndex = key.IndexOf('(');
+        if (parenIndex < 0)
+            return (key, Array.Empty<TemplateParameter>());
+
+        var name = key[..parenIndex].Trim();
+        var closeParen = key.LastIndexOf(')');
+        if (closeParen < parenIndex)
+            throw new InvalidOperationException($"Invalid struct key syntax: '{key}' — missing closing ')'");
+
+        var argsStr = key[(parenIndex + 1)..closeParen];
+        var parts = SplitArguments(argsStr);
+        var parameters = new List<TemplateParameter>();
+
+        foreach (var part in parts)
+        {
+            var trimmed = part.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+                continue;
+
+            var eqIndex = trimmed.IndexOf('=');
+            if (eqIndex >= 0)
+            {
+                var paramName = trimmed[..eqIndex].Trim();
+                var defaultStr = trimmed[(eqIndex + 1)..].Trim();
+                var defaultValue = long.Parse(defaultStr);
+                parameters.Add(new TemplateParameter(paramName, defaultValue));
+            }
+            else
+            {
+                parameters.Add(new TemplateParameter(trimmed, null));
+            }
+        }
+
+        return (name, parameters);
+    }
+
+    /// <summary>
+    /// フィールドのstruct参照文字列をパースする。
+    /// "tlv(tag_size=1, len_size=2)" → ("tlv", [StructArgument("tag_size", 1, null), ...])
+    /// "tlv(1, 2)" → ("tlv", [StructArgument(null, 1, null), ...])
+    /// "tlv({field_ref})" → ("tlv", [StructArgument(null, null, Expression)])
+    /// "simple" → ("simple", null)
+    /// </summary>
+    internal static (string? structRef, IReadOnlyList<StructArgument>? structArgs) ParseStructRef(string? rawRef)
+    {
+        if (rawRef is null)
+            return (null, null);
+
+        var parenIndex = rawRef.IndexOf('(');
+        if (parenIndex < 0)
+            return (rawRef, null);
+
+        var name = rawRef[..parenIndex].Trim();
+        var closeParen = rawRef.LastIndexOf(')');
+        if (closeParen < parenIndex)
+            throw new InvalidOperationException($"Invalid struct reference syntax: '{rawRef}' — missing closing ')'");
+
+        var argsStr = rawRef[(parenIndex + 1)..closeParen];
+        var parts = SplitArguments(argsStr);
+        var args = new List<StructArgument>();
+
+        foreach (var part in parts)
+        {
+            var trimmed = part.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+                continue;
+
+            // 名前付き引数のチェック: "param_name=value" or "param_name={expr}"
+            // ただし "{expr}" の中の = は名前付き引数ではない
+            string? paramName = null;
+            string valueStr = trimmed;
+            var eqIndex = FindNamedArgEquals(trimmed);
+            if (eqIndex >= 0)
+            {
+                paramName = trimmed[..eqIndex].Trim();
+                valueStr = trimmed[(eqIndex + 1)..].Trim();
+            }
+
+            // 式かリテラルかを判定
+            if (valueStr.Contains('{'))
+            {
+                var expr = ExpressionParser.Parse(valueStr);
+                args.Add(new StructArgument(paramName, null, expr));
+            }
+            else if (long.TryParse(valueStr, out var longValue))
+            {
+                args.Add(new StructArgument(paramName, longValue, null));
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Invalid struct argument value: '{valueStr}' in '{rawRef}'");
+            }
+        }
+
+        return (name, args.Count > 0 ? args : null);
+    }
+
+    /// <summary>
+    /// 名前付き引数の = 位置を検索する。{...} 内の = は無視する。
+    /// </summary>
+    private static int FindNamedArgEquals(string s)
+    {
+        var braceDepth = 0;
+        for (var i = 0; i < s.Length; i++)
+        {
+            switch (s[i])
+            {
+                case '{': braceDepth++; break;
+                case '}': braceDepth--; break;
+                case '=' when braceDepth == 0:
+                    // '==' は比較演算子なのでスキップ
+                    if (i + 1 < s.Length && s[i + 1] == '=')
+                        { i++; continue; }
+                    return i;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// ブレース深度を考慮してカンマで分割する。
+    /// "tag_size=1, len_size={x + 1}" → ["tag_size=1", "len_size={x + 1}"]
+    /// </summary>
+    internal static List<string> SplitArguments(string argsString)
+    {
+        var result = new List<string>();
+        var braceDepth = 0;
+        var start = 0;
+
+        for (var i = 0; i < argsString.Length; i++)
+        {
+            switch (argsString[i])
+            {
+                case '{': braceDepth++; break;
+                case '}': braceDepth--; break;
+                case ',' when braceDepth == 0:
+                    result.Add(argsString[start..i]);
+                    start = i + 1;
+                    break;
+            }
+        }
+
+        if (start < argsString.Length)
+            result.Add(argsString[start..]);
+
+        return result;
     }
 }

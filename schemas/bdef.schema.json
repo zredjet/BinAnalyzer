@@ -295,6 +295,10 @@
           "description": "seekしたフィールドのデコード後に元の位置に復帰",
           "default": false
         },
+        "seek_base": {
+          "type": "string",
+          "description": "seekの基準オフセット式。指定時は実効オフセット = seek_base + seek となる"
+        },
         "endianness": {
           "type": "string",
           "enum": ["big", "little", "be", "le"],
@@ -322,6 +326,26 @@
             }
           ],
           "description": "diff時に配列要素をキーベースで比較する場合の、要素内キーフィールド名。単一文字列または文字列リスト。repeat系属性を持つフィールドでのみ有効。"
+        },
+        "state": {
+          "type": "string",
+          "description": "フィールドの値を保存する状態変数名"
+        },
+        "state_if": {
+          "type": "string",
+          "description": "状態変数を更新する条件式"
+        },
+        "state_default": {
+          "type": "integer",
+          "description": "状態変数の初期値"
+        },
+        "repeat_max": {
+          "type": "string",
+          "description": "繰り返し回数の上限（式）。カウントがこの値を超えた場合に繰り返しを打ち切る。"
+        },
+        "repeat_error_limit": {
+          "type": "string",
+          "description": "連続エラー回数の上限（式）。連続して指定回数エラーが発生した場合に繰り返しを打ち切る。"
         }
       }
     },
@@ -353,13 +377,13 @@
     "checksum": {
       "type": "object",
       "description": "チェックサム検証の設定",
-      "required": ["algorithm", "fields"],
+      "required": ["algorithm"],
       "additionalProperties": false,
       "properties": {
         "algorithm": {
           "type": "string",
-          "enum": ["crc32", "crc16-ccitt", "crc16-ibm", "adler32", "md5", "sha1", "sha256"],
-          "description": "チェックサムアルゴリズム。整数系: crc32, crc16-ccitt, crc16-ibm, adler32。ハッシュ系: md5, sha1, sha256。"
+          "enum": ["crc32", "crc16-ccitt", "crc16-ibm", "adler32", "crc8", "crc8-maxim", "crc8-cdma2000", "crc64-ecma", "xxhash32", "xxhash64", "fletcher16", "fletcher32", "md5", "sha1", "sha256", "sha384", "sha512"],
+          "description": "チェックサムアルゴリズム。整数系: crc32, crc16-ccitt, crc16-ibm, adler32, crc8, crc8-maxim, crc8-cdma2000, crc64-ecma, xxhash32, xxhash64, fletcher16, fletcher32。ハッシュ系: md5, sha1, sha256, sha384, sha512。"
         },
         "fields": {
           "type": "array",
@@ -367,6 +391,38 @@
           "items": {
             "type": "string"
           }
+        },
+        "range": {
+          "$ref": "#/$defs/checksumRange",
+          "description": "バイトオフセットと長さで検証対象を指定する単一範囲"
+        },
+        "ranges": {
+          "type": "array",
+          "description": "複数のバイト範囲を指定して連結チェックサムを計算する",
+          "items": {
+            "$ref": "#/$defs/checksumRange"
+          }
+        },
+        "exclude_self": {
+          "type": "boolean",
+          "description": "trueの場合、チェックサムフィールド自身のバイト位置をゼロ埋めして計算する",
+          "default": false
+        }
+      }
+    },
+    "checksumRange": {
+      "type": "object",
+      "description": "チェックサムのバイト範囲指定",
+      "required": ["offset", "size"],
+      "additionalProperties": false,
+      "properties": {
+        "offset": {
+          "type": "string",
+          "description": "範囲の開始バイトオフセット（式）"
+        },
+        "size": {
+          "type": "string",
+          "description": "範囲のバイト長（式）"
         }
       }
     },
@@ -386,13 +442,40 @@
           "description": "繰り返し時の各要素のアライメント（バイト単位）"
         },
         "string_table": {
-          "type": "boolean",
-          "description": "trueの場合、この構造体のバイト列を文字列テーブルとして登録する。"
+          "oneOf": [
+            {
+              "type": "boolean",
+              "description": "trueの場合、ASCIIエンコーディングの文字列テーブルとして登録する（後方互換）。"
+            },
+            {
+              "type": "object",
+              "description": "エンコーディング指定付きの文字列テーブル登録。",
+              "additionalProperties": false,
+              "properties": {
+                "encoding": {
+                  "type": "string",
+                  "enum": ["ascii", "utf8", "utf-8", "utf16le", "utf-16le", "utf16-le", "utf16be", "utf-16be", "utf16-be"],
+                  "description": "文字列テーブルのエンコーディング。省略時はascii。"
+                }
+              }
+            }
+          ],
+          "description": "この構造体のバイト列を文字列テーブルとして登録する。trueまたは { encoding: ... } で指定。"
         },
         "mode": {
           "type": "string",
           "enum": ["bitstream"],
           "description": "構造体のモード。\"bitstream\" を指定すると、フィールドの size がビット単位として解釈される。整数型フィールドのみ使用可能。"
+        },
+        "bit_order": {
+          "type": "string",
+          "enum": ["msb", "lsb"],
+          "description": "ビットストリームのビットオーダー。\"msb\"（デフォルト）はMSB-first、\"lsb\"はLSB-first。mode: bitstream と併用。"
+        },
+        "resync_marker": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 255 },
+          "description": "エラー回復用の再同期マーカーバイトパターン"
         },
         "fields": {
           "type": "array",

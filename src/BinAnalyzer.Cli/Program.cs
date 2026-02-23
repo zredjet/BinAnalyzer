@@ -1,4 +1,6 @@
 using System.CommandLine;
+using System.Runtime.InteropServices;
+using BinAnalyzer.Cli;
 using BinAnalyzer.Core;
 using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Diff;
@@ -10,9 +12,26 @@ using BinAnalyzer.Engine;
 using BinAnalyzer.Output;
 using BinAnalyzer.Tui;
 
-var fileArg = new Argument<FileInfo>("file")
+// SIGPIPE無視（パイプ切断時のクラッシュ防止）
+if (!OperatingSystem.IsWindows())
 {
-    Description = "解析対象のバイナリファイル",
+    IgnoreSigpipe();
+}
+
+[DllImport("libc", SetLastError = true)]
+static extern nint signal(int signum, nint handler);
+
+static void IgnoreSigpipe()
+{
+    const int SIGPIPE = 13;
+    const nint SIG_IGN = 1;
+    signal(SIGPIPE, SIG_IGN);
+}
+
+var fileArg = new Argument<string?>("file")
+{
+    Description = "解析対象のバイナリファイル（'-' でstdin）",
+    Arity = ArgumentArity.ZeroOrOne,
 };
 
 var formatOption = new Option<FileInfo>("-f", "--format")
@@ -49,6 +68,27 @@ var onErrorOption = new Option<string>("--on-error")
     DefaultValueFactory = _ => "stop",
 };
 
+var stdinOption = new Option<bool>("--stdin")
+{
+    Description = "標準入力からバイナリデータを読み込む",
+};
+
+var quietOption = new Option<bool>("-q", "--quiet")
+{
+    Description = "デコード結果を出力せず、終了コードのみ返す",
+};
+
+var errorFormatOption = new Option<string>("--error-format")
+{
+    Description = "エラー出力形式 (text, json)",
+    DefaultValueFactory = _ => "text",
+};
+
+var maxRepeatOption = new Option<int?>("--max-repeat")
+{
+    Description = "繰り返し回数のグローバル上限（フォーマット定義の repeat_max が優先）",
+};
+
 var rootCommand = new RootCommand("BinAnalyzer - 汎用バイナリ構造解析ツール")
 {
     fileArg,
@@ -58,27 +98,50 @@ var rootCommand = new RootCommand("BinAnalyzer - 汎用バイナリ構造解析�
     noValidateOption,
     filterOption,
     onErrorOption,
+    stdinOption,
+    quietOption,
+    errorFormatOption,
+    maxRepeatOption,
 };
 
 rootCommand.SetAction((parseResult) =>
 {
-    var file = parseResult.GetValue(fileArg)!;
+    var filePath = parseResult.GetValue(fileArg);
     var formatFile = parseResult.GetValue(formatOption)!;
     var outputFormat = parseResult.GetValue(outputOption)!;
     var colorSetting = parseResult.GetValue(colorOption)!;
     var noValidate = parseResult.GetValue(noValidateOption);
     var filterPatterns = parseResult.GetValue(filterOption);
     var onError = parseResult.GetValue(onErrorOption);
+    var useStdin = parseResult.GetValue(stdinOption);
+    var quiet = parseResult.GetValue(quietOption);
+    var errorFormat = parseResult.GetValue(errorFormatOption)!;
 
-    if (!file.Exists)
+    var maxRepeat = parseResult.GetValue(maxRepeatOption);
+
+    var reporter = new CliErrorReporter(errorFormat);
+    var readFromStdin = useStdin || filePath == "-";
+
+    // 排他チェック
+    if (useStdin && filePath is not null && filePath != "-")
     {
-        Console.Error.WriteLine($"エラー: ファイルが見つかりません: {file.FullName}");
+        reporter.ReportError("--stdin とファイルパスは同時に指定できません");
+        return 1;
+    }
+    if (!readFromStdin && filePath is null)
+    {
+        reporter.ReportError("ファイルパスまたは --stdin が必要です");
+        return 1;
+    }
+    if (!readFromStdin && !File.Exists(filePath!))
+    {
+        reporter.ReportError($"ファイルが見つかりません: {filePath}");
         return 1;
     }
 
     if (!formatFile.Exists)
     {
-        Console.Error.WriteLine($"エラー: フォーマットファイルが見つかりません: {formatFile.FullName}");
+        reporter.ReportError($"フォーマットファイルが見つかりません: {formatFile.FullName}");
         return 1;
     }
 
@@ -92,31 +155,28 @@ rootCommand.SetAction((parseResult) =>
         {
             var validationResult = FormatValidator.Validate(format);
 
-            foreach (var warning in validationResult.Warnings)
-                Console.Error.WriteLine($"警告 [{warning.Code}]: {warning.Message}");
+            if (validationResult.Warnings.Any() || !validationResult.IsValid)
+                reporter.ReportValidationResult(validationResult);
 
             if (!validationResult.IsValid)
-            {
-                foreach (var error in validationResult.Errors)
-                    Console.Error.WriteLine($"エラー [{error.Code}]: {error.Message}");
                 return 1;
-            }
         }
 
-        var data = File.ReadAllBytes(file.FullName);
+        var data = ReadInputData(filePath, readFromStdin);
         var errorMode = onError == "continue" ? ErrorMode.Continue : ErrorMode.Stop;
+        var decodeOptions = maxRepeat.HasValue ? new DecodeOptions { MaxRepeat = maxRepeat.Value } : null;
 
         var decoder = new BinaryDecoder();
         DecodeResult? decodeResult = null;
         DecodedStruct decoded;
         if (errorMode == ErrorMode.Continue)
         {
-            decodeResult = decoder.DecodeWithRecovery(data, format, errorMode);
+            decodeResult = decoder.DecodeWithRecovery(data, format, errorMode, decodeOptions);
             decoded = decodeResult.Root;
         }
         else
         {
-            decoded = decoder.Decode(data, format);
+            decoded = decoder.Decode(data, format, decodeOptions);
         }
 
         // フィルタ適用
@@ -132,67 +192,77 @@ rootCommand.SetAction((parseResult) =>
             decoded = filtered;
         }
 
-        if (outputFormat == "tui")
+        if (!quiet)
         {
-            var tuiApp = new TuiApp();
-            tuiApp.Run(decoded, data, file.Name, formatFile.Name);
-            return 0;
-        }
-
-        var colorMode = colorSetting switch
-        {
-            "always" => ColorMode.Always,
-            "never" => ColorMode.Never,
-            _ => ColorMode.Auto,
-        };
-
-        string output;
-        if (outputFormat == "hexdump")
-        {
-            var hexFormatter = new HexDumpOutputFormatter(colorMode);
-            output = hexFormatter.Format(decoded, data);
-        }
-        else if (outputFormat == "map")
-        {
-            var mapFormatter = new MapOutputFormatter(colorMode);
-            output = mapFormatter.Format(decoded, data);
-        }
-        else
-        {
-            IOutputFormatter formatter = outputFormat switch
+            if (outputFormat == "tui")
             {
-                "json" => new JsonOutputFormatter(),
-                "html" => new HtmlOutputFormatter(),
-                "csv" => new CsvOutputFormatter(),
-                "tsv" => new CsvOutputFormatter(useTsv: true),
-                _ => new TreeOutputFormatter(colorMode),
+                var displayName = readFromStdin ? "<stdin>" : Path.GetFileName(filePath!);
+                var tuiApp = new TuiApp();
+                tuiApp.Run(decoded, data, displayName, formatFile.Name);
+                return 0;
+            }
+
+            var colorMode = colorSetting switch
+            {
+                "always" => ColorMode.Always,
+                "never" => ColorMode.Never,
+                _ => ColorMode.Auto,
             };
-            output = formatter.Format(decoded);
-        }
 
-        Console.Write(output);
-
-        // エラーサマリー
-        if (decodeResult?.Errors is { Count: > 0 } errors)
-        {
-            Console.Error.WriteLine();
-            Console.Error.WriteLine($"--- {errors.Count} 件のデコードエラー ---");
-            foreach (var err in errors)
+            string output;
+            if (outputFormat == "hexdump")
             {
-                Console.Error.WriteLine($"  [{err.FieldPath}] 0x{err.Offset:X8}: {err.Message}");
+                var hexFormatter = new HexDumpOutputFormatter(colorMode);
+                output = hexFormatter.Format(decoded, data);
+            }
+            else if (outputFormat == "map")
+            {
+                var mapFormatter = new MapOutputFormatter(colorMode);
+                output = mapFormatter.Format(decoded, data);
+            }
+            else
+            {
+                IOutputFormatter formatter = outputFormat switch
+                {
+                    "json" => new JsonOutputFormatter(),
+                    "html" => new HtmlOutputFormatter(),
+                    "csv" => new CsvOutputFormatter(),
+                    "tsv" => new CsvOutputFormatter(useTsv: true),
+                    _ => new TreeOutputFormatter(colorMode),
+                };
+                output = formatter.Format(decoded);
+            }
+
+            try
+            {
+                Console.Write(output);
+            }
+            catch (IOException)
+            {
+                // Broken pipe — 正常終了
+                return 0;
             }
         }
+
+        // エラーサマリー（quiet でも stderr に出力）
+        if (decodeResult?.Errors is { Count: > 0 } errors)
+        {
+            reporter.ReportDecodeErrors(errors);
+        }
+
+        if (HasValidationFailures(decoded))
+            return 2;
 
         return 0;
     }
     catch (DecodeException dex)
     {
-        Console.Error.Write(dex.FormatMessage());
+        reporter.ReportDecodeException(dex);
         return 1;
     }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"エラー: {ex.Message}");
+        reporter.ReportError(ex.Message);
         return 1;
     }
 });
@@ -470,3 +540,30 @@ schemaCommand.SetAction((parseResult) =>
 rootCommand.Subcommands.Add(schemaCommand);
 
 return rootCommand.Parse(args).Invoke();
+
+// --- ヘルパー関数 ---
+
+static byte[] ReadInputData(string? filePath, bool readFromStdin)
+{
+    if (readFromStdin)
+    {
+        using var ms = new MemoryStream();
+        using var stdin = Console.OpenStandardInput();
+        stdin.CopyTo(ms);
+        return ms.ToArray();
+    }
+    return File.ReadAllBytes(filePath!);
+}
+
+static bool HasValidationFailures(DecodedNode node)
+{
+    if (node.Validation is { Passed: false })
+        return true;
+    if (node is DecodedStruct s)
+        return s.Children.Any(HasValidationFailures);
+    if (node is DecodedArray a)
+        return a.Elements.Any(HasValidationFailures);
+    if (node is DecodedCompressed c && c.DecodedContent is not null)
+        return HasValidationFailures(c.DecodedContent);
+    return false;
+}
