@@ -1,6 +1,8 @@
 name: HEIF
 endianness: big
 root: heif_file
+imports:
+  - path: common/isobmff.bdef.yaml
 
 structs:
   heif_file:
@@ -45,26 +47,6 @@ structs:
         "'mdia'": container_box
       default: raw_data
 
-  container_box:
-    - name: children
-      type: struct
-      struct: iso_box
-      repeat: eof
-
-  ftyp_box:
-    - name: major_brand
-      type: ascii
-      size: "4"
-      description: "メジャーブランド（例: heic, heix, mif1）"
-    - name: minor_version
-      type: uint32
-      description: "マイナーバージョン"
-    - name: compatible_brands
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
-      description: "互換ブランドリスト（各4バイトのASCII）"
-
   meta_box:
     - name: version
       type: uint8
@@ -77,27 +59,6 @@ structs:
       type: struct
       struct: iso_box
       repeat: eof
-
-  hdlr_box:
-    - name: version
-      type: uint8
-    - name: flags
-      type: bytes
-      size: "3"
-    - name: pre_defined
-      type: uint32
-    - name: handler_type
-      type: ascii
-      size: "4"
-      description: "ハンドラタイプ（HEIFでは 'pict'）"
-    - name: reserved
-      type: bytes
-      size: "12"
-    - name: name
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
-      description: "ハンドラ名（UTF-8 文字列）"
 
   pitm_box:
     - name: version
@@ -190,21 +151,3 @@ structs:
       if: "{remaining > 0}"
       description: "アイテム名（null終端文字列）"
 
-  dref_box:
-    - name: version
-      type: uint8
-    - name: flags
-      type: bytes
-      size: "3"
-    - name: entry_count
-      type: uint32
-    - name: entries
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
-      description: "データ参照エントリ"
-
-  raw_data:
-    - name: data
-      type: bytes
-      size: remaining

@@ -46,7 +46,6 @@
                   "_type": "string",
                   "offset": 8,
                   "size": 4,
-                  "description": "\u30E1\u30B8\u30E3\u30FC\u30D6\u30E9\u30F3\u30C9\uFF08\u4F8B: heic, heix, mif1\uFF09",
                   "name": "major_brand",
                   "value": "heic",
                   "encoding": "ascii"
@@ -55,7 +54,6 @@
                   "_type": "integer",
                   "offset": 12,
                   "size": 4,
-                  "description": "\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
                   "name": "minor_version",
                   "value": 0,
                   "hex": "0x0"
@@ -64,7 +62,6 @@
                   "_type": "bytes",
                   "offset": 16,
                   "size": 8,
-                  "description": "\u4E92\u63DB\u30D6\u30E9\u30F3\u30C9\u30EA\u30B9\u30C8\uFF08\u54044\u30D0\u30A4\u30C8\u306EASCII\uFF09",
                   "name": "compatible_brands",
                   "hex": "68 65 69 63 6D 69 66 31"
                 }
@@ -183,7 +180,6 @@
                               "_type": "string",
                               "offset": 52,
                               "size": 4,
-                              "description": "\u30CF\u30F3\u30C9\u30E9\u30BF\u30A4\u30D7\uFF08HEIF\u3067\u306F \u0027pict\u0027\uFF09",
                               "name": "handler_type",
                               "value": "pict",
                               "encoding": "ascii"

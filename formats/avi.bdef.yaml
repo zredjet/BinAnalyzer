@@ -1,6 +1,8 @@
 name: AVI
 endianness: little
 root: avi
+imports:
+  - path: common/riff.bdef.yaml
 
 structs:
   avi:
@@ -227,8 +229,3 @@ structs:
     - name: dwSize
       type: uint32
       description: "チャンクデータサイズ"
-
-  raw_data:
-    - name: data
-      type: bytes
-      size: remaining

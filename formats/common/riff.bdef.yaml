@@ -1,0 +1,11 @@
+name: RIFF_Common
+root: _riff_common
+structs:
+  _riff_common:
+    - name: _unused
+      type: uint8
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

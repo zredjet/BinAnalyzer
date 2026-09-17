@@ -1,6 +1,8 @@
 name: WAV
 endianness: little
 root: wav
+imports:
+  - path: common/riff.bdef.yaml
 
 enums:
   audio_format:
@@ -123,7 +125,3 @@ structs:
       padding: true
       description: "ワード境界アライメント"
 
-  raw_data:
-    - name: data
-      type: bytes
-      size: remaining

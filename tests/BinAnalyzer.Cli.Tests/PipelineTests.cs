@@ -6,6 +6,7 @@ using Xunit;
 
 namespace BinAnalyzer.Cli.Tests;
 
+[Collection("CliTests")]
 public class PipelineTests
 {
     // プロジェクトルートからの相対パス

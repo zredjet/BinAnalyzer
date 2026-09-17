@@ -1,6 +1,8 @@
 name: MP4
 endianness: big
 root: mp4_file
+imports:
+  - path: common/isobmff.bdef.yaml
 
 structs:
   mp4_file:
@@ -49,26 +51,6 @@ structs:
         "'free'": raw_data
         "'skip'": raw_data
       default: raw_data
-
-  container_box:
-    - name: children
-      type: struct
-      struct: iso_box
-      repeat: eof
-
-  ftyp_box:
-    - name: major_brand
-      type: ascii
-      size: "4"
-      description: "メジャーブランド（例: isom, mp42, M4A ）"
-    - name: minor_version
-      type: uint32
-      description: "マイナーバージョン"
-    - name: compatible_brands
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
-      description: "互換ブランドリスト（各4バイトのASCII）"
 
   mvhd_box:
     - name: version
@@ -200,27 +182,6 @@ structs:
     - name: pre_defined
       type: uint16
 
-  hdlr_box:
-    - name: version
-      type: uint8
-    - name: flags
-      type: bytes
-      size: "3"
-    - name: pre_defined
-      type: uint32
-    - name: handler_type
-      type: ascii
-      size: "4"
-      description: "ハンドラタイプ（'vide'=映像, 'soun'=音声）"
-    - name: reserved
-      type: bytes
-      size: "12"
-    - name: name
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
-      description: "ハンドラ名（UTF-8 文字列）"
-
   smhd_box:
     - name: version
       type: uint8
@@ -246,20 +207,6 @@ structs:
       type: bytes
       size: "6"
       description: "オペレーションカラー（R, G, B 各 uint16）"
-
-  dref_box:
-    - name: version
-      type: uint8
-    - name: flags
-      type: bytes
-      size: "3"
-    - name: entry_count
-      type: uint32
-    - name: entries
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
-      description: "データ参照エントリ"
 
   stsd_box:
     - name: version
@@ -391,8 +338,3 @@ structs:
       type: uint16
     - name: media_rate_fraction
       type: uint16
-
-  raw_data:
-    - name: data
-      type: bytes
-      size: remaining

@@ -1,0 +1,60 @@
+name: ISOBMFF_Common
+root: _isobmff_common
+structs:
+  _isobmff_common:
+    - name: _unused
+      type: uint8
+
+  container_box:
+    - name: children
+      type: struct
+      struct: iso_box
+      repeat: eof
+
+  ftyp_box:
+    - name: major_brand
+      type: ascii
+      size: "4"
+    - name: minor_version
+      type: uint32
+    - name: compatible_brands
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+
+  hdlr_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: pre_defined
+      type: uint32
+    - name: handler_type
+      type: ascii
+      size: "4"
+    - name: reserved
+      type: bytes
+      size: "12"
+    - name: name
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+
+  dref_box:
+    - name: version
+      type: uint8
+    - name: flags
+      type: bytes
+      size: "3"
+    - name: entry_count
+      type: uint32
+    - name: entries
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining

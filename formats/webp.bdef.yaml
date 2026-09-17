@@ -1,6 +1,8 @@
 name: WebP
 endianness: little
 root: webp
+imports:
+  - path: common/riff.bdef.yaml
 
 structs:
   webp:
@@ -261,8 +263,3 @@ structs:
       type: bytes
       size: remaining
       description: "EXIFメタデータ"
-
-  raw_data:
-    - name: data
-      type: bytes
-      size: remaining

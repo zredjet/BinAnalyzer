@@ -383,6 +383,52 @@ dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
 dotnet run --project src/BinAnalyzer.Cli -- schema formats/png.bdef.yaml -o dot | dot -Tsvg -o schema.svg
 ```
 
+## validate サブコマンド
+
+フォーマット定義ファイルの静的検証を実行します。バイナリファイルは不要です。
+
+```
+binanalyzer validate <files...> [--format <format>] [--warnings-as-errors]
+```
+
+### 引数
+
+| 引数 | 説明 |
+|------|------|
+| `files` | 検証対象のフォーマット定義ファイル（1つ以上） |
+
+### オプション
+
+| オプション | 説明 | デフォルト |
+|---|---|---|
+| `--format <format>` | 出力形式（`text`, `json`） | `text` |
+| `--warnings-as-errors` | 警告をエラーとして扱う | — |
+
+### 終了コード
+
+| コード | 意味 |
+|---|---|
+| `0` | エラーなし（警告のみ or 問題なし） |
+| `1` | エラーあり（1つ以上のファイルでバリデーションエラー検出） |
+
+`--warnings-as-errors` 指定時は警告もエラー扱いとなり、警告のみの場合も終了コード1。
+
+### 使用例
+
+```bash
+# 単一ファイル検証
+dotnet run --project src/BinAnalyzer.Cli -- validate formats/png.bdef.yaml
+
+# 複数ファイル検証
+dotnet run --project src/BinAnalyzer.Cli -- validate formats/png.bdef.yaml formats/zip.bdef.yaml formats/elf.bdef.yaml
+
+# JSON出力
+dotnet run --project src/BinAnalyzer.Cli -- validate formats/png.bdef.yaml --format json
+
+# エラーのみ表示（警告抑制）
+dotnet run --project src/BinAnalyzer.Cli -- validate formats/png.bdef.yaml --warnings-as-errors
+```
+
 ## パイプライン統合
 
 CLIはパイプラインやCI/CDスクリプトでの利用を想定した機能を備えています。

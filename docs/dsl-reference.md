@@ -1464,6 +1464,70 @@ structs:
 - 循環インポートはエラー
 - 同名の定義が複数ファイルに存在する場合はエラー（名前衝突禁止）
 
+### 共通定義ライブラリ
+
+`formats/common/` ディレクトリに、複数のフォーマット定義で共有される構造体が用意されています。新しいフォーマット定義を作成する際に import して利用できます。
+
+| ファイル | 内容 | 提供する構造体 |
+|---|---|---|
+| `common/isobmff.bdef.yaml` | ISO Base Media File Format 共通構造体 | `container_box`, `ftyp_box`, `hdlr_box`, `dref_box`, `raw_data` |
+| `common/riff.bdef.yaml` | RIFF ファミリー共通構造体 | `raw_data` |
+
+#### ISO BMFF ライブラリの使用例
+
+MP4、HEIF 等の ISO BMFF ベースフォーマットで共通構造体を利用:
+
+```yaml
+name: MP4
+endianness: big
+root: mp4_file
+imports:
+  - path: common/isobmff.bdef.yaml
+structs:
+  mp4_file:
+    - name: boxes
+      type: struct
+      struct: iso_box
+      repeat: eof
+  iso_box:
+    # iso_box はフォーマット固有の switch cases を含むためローカル定義
+    # container_box, ftyp_box 等は import で利用
+    - name: box_data
+      type: switch
+      switch_on: "{box_type}"
+      cases:
+        "'ftyp'": ftyp_box       # common/isobmff から
+        "'moov'": container_box   # common/isobmff から
+      default: raw_data           # common/isobmff から
+```
+
+`container_box` は `iso_box` を参照しますが、`iso_box` はフォーマット側で定義されます。import マージ後の統合名前空間で名前解決されるため問題ありません。
+
+#### RIFF ライブラリの使用例
+
+WAV、AVI、WebP 等の RIFF ベースフォーマットで共通構造体を利用:
+
+```yaml
+name: WAV
+endianness: little
+root: wav
+imports:
+  - path: common/riff.bdef.yaml
+structs:
+  wav:
+    - name: chunks
+      type: struct
+      struct: riff_chunk
+      repeat: eof
+  riff_chunk:
+    - name: data
+      type: switch
+      switch_on: "{chunk_id}"
+      cases:
+        "'fmt '": fmt_chunk
+      default: raw_data    # common/riff から
+```
+
 ## 計算フィールド（Virtual）
 
 `virtual` 型はバイナリデータを読み取らず、式の評価結果を表示する計算フィールドです。サイズは常に0バイトです。

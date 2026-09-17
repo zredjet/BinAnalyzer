@@ -539,6 +539,190 @@ schemaCommand.SetAction((parseResult) =>
 
 rootCommand.Subcommands.Add(schemaCommand);
 
+// validate サブコマンド
+var validateFilesArg = new Argument<string[]>("files")
+{
+    Description = "検証対象のフォーマット定義ファイル (.bdef.yaml)",
+    Arity = ArgumentArity.OneOrMore,
+};
+
+var validateFormatOption = new Option<string>("--format")
+{
+    Description = "出力形式 (text, json)",
+    DefaultValueFactory = _ => "text",
+};
+
+var warningsAsErrorsOption = new Option<bool>("--warnings-as-errors")
+{
+    Description = "警告をエラーとして扱う",
+};
+
+var validateCommand = new Command("validate", "フォーマット定義ファイルの静的検証")
+{
+    validateFilesArg,
+    validateFormatOption,
+    warningsAsErrorsOption,
+};
+
+validateCommand.SetAction((parseResult) =>
+{
+    var files = parseResult.GetValue(validateFilesArg)!;
+    var outputFormat = parseResult.GetValue(validateFormatOption)!;
+    var warningsAsErrors = parseResult.GetValue(warningsAsErrorsOption);
+    var useJson = outputFormat == "json";
+
+    var hasError = false;
+    var okCount = 0;
+    var ngCount = 0;
+    var fileResults = new List<(string File, bool Valid, List<ValidationDiagnostic> Errors, List<ValidationDiagnostic> Warnings, string? ParseError)>();
+
+    foreach (var file in files)
+    {
+        if (!File.Exists(file))
+        {
+            fileResults.Add((file, false, [], [], $"ファイルが見つかりません: {file}"));
+            hasError = true;
+            ngCount++;
+            continue;
+        }
+
+        try
+        {
+            var loader = new YamlFormatLoader();
+            var format = loader.Load(file);
+            var validationResult = FormatValidator.Validate(format);
+
+            var errors = validationResult.Errors.ToList();
+            var warnings = validationResult.Warnings.ToList();
+
+            var fileValid = errors.Count == 0 && (!warningsAsErrors || warnings.Count == 0);
+            fileResults.Add((file, fileValid, errors, warnings, null));
+
+            if (!fileValid)
+            {
+                hasError = true;
+                ngCount++;
+            }
+            else
+            {
+                okCount++;
+            }
+        }
+        catch (Exception ex)
+        {
+            fileResults.Add((file, false, [], [], ex.Message));
+            hasError = true;
+            ngCount++;
+        }
+    }
+
+    if (useJson)
+    {
+        // JSON出力
+        using var ms = new MemoryStream();
+        using (var writer = new System.Text.Json.Utf8JsonWriter(ms, new System.Text.Json.JsonWriterOptions { Indented = true }))
+        {
+            writer.WriteStartArray();
+            foreach (var (file, valid, errors, warnings, parseError) in fileResults)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("file", file);
+                writer.WriteBoolean("valid", valid);
+
+                writer.WriteStartArray("errors");
+                if (parseError is not null)
+                {
+                    writer.WriteStartObject();
+                    writer.WriteString("code", "PARSE");
+                    writer.WriteString("message", parseError);
+                    writer.WriteEndObject();
+                }
+                foreach (var error in errors)
+                {
+                    writer.WriteStartObject();
+                    writer.WriteString("code", error.Code);
+                    writer.WriteString("message", error.Message);
+                    if (error.StructName is not null)
+                        writer.WriteString("struct", error.StructName);
+                    if (error.FieldName is not null)
+                        writer.WriteString("field", error.FieldName);
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndArray();
+
+                writer.WriteStartArray("warnings");
+                foreach (var warning in warnings)
+                {
+                    writer.WriteStartObject();
+                    writer.WriteString("code", warning.Code);
+                    writer.WriteString("message", warning.Message);
+                    if (warning.StructName is not null)
+                        writer.WriteString("struct", warning.StructName);
+                    if (warning.FieldName is not null)
+                        writer.WriteString("field", warning.FieldName);
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndArray();
+
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+        }
+        Console.WriteLine(System.Text.Encoding.UTF8.GetString(ms.ToArray()));
+    }
+    else
+    {
+        // テキスト出力
+        foreach (var (file, valid, errors, warnings, parseError) in fileResults)
+        {
+            if (parseError is not null)
+            {
+                Console.WriteLine($"{file}: NG");
+                Console.WriteLine($"  エラー [PARSE]: {parseError}");
+            }
+            else if (errors.Count == 0 && warnings.Count == 0)
+            {
+                Console.WriteLine($"{file}: OK");
+            }
+            else
+            {
+                var errorCount = errors.Count + (parseError is not null ? 1 : 0);
+                var warningCount = warnings.Count;
+
+                if (errorCount > 0)
+                {
+                    Console.WriteLine($"{file}: NG（エラー {errorCount} 件{(warningCount > 0 ? $", 警告 {warningCount} 件" : "")}）");
+                }
+                else if (warningsAsErrors)
+                {
+                    Console.WriteLine($"{file}: NG（警告 {warningCount} 件）");
+                }
+                else
+                {
+                    Console.WriteLine($"{file}: OK（警告 {warningCount} 件）");
+                }
+
+                foreach (var error in errors)
+                    Console.WriteLine($"  エラー [{error.Code}]: {error.Message}");
+                foreach (var warning in warnings)
+                    Console.WriteLine($"  警告 [{warning.Code}]: {warning.Message}");
+            }
+        }
+
+        // 複数ファイル時のみサマリー
+        if (files.Length > 1)
+        {
+            Console.WriteLine();
+            Console.WriteLine("--- サマリー ---");
+            Console.WriteLine($"検証: {files.Length} ファイル, OK: {okCount}, NG: {ngCount}");
+        }
+    }
+
+    return hasError ? 1 : 0;
+});
+
+rootCommand.Subcommands.Add(validateCommand);
+
 return rootCommand.Parse(args).Invoke();
 
 // --- ヘルパー関数 ---

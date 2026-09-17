@@ -46,7 +46,6 @@
                   "_type": "string",
                   "offset": 8,
                   "size": 4,
-                  "description": "\u30E1\u30B8\u30E3\u30FC\u30D6\u30E9\u30F3\u30C9\uFF08\u4F8B: isom, mp42, M4A \uFF09",
                   "name": "major_brand",
                   "value": "isom",
                   "encoding": "ascii"
@@ -55,7 +54,6 @@
                   "_type": "integer",
                   "offset": 12,
                   "size": 4,
-                  "description": "\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
                   "name": "minor_version",
                   "value": 512,
                   "hex": "0x200"
@@ -64,7 +62,6 @@
                   "_type": "bytes",
                   "offset": 16,
                   "size": 8,
-                  "description": "\u4E92\u63DB\u30D6\u30E9\u30F3\u30C9\u30EA\u30B9\u30C8\uFF08\u54044\u30D0\u30A4\u30C8\u306EASCII\uFF09",
                   "name": "compatible_brands",
                   "hex": "69 73 6F 6D 69 73 6F 32"
                 }
@@ -620,7 +617,6 @@
                                                       "_type": "string",
                                                       "offset": 296,
                                                       "size": 4,
-                                                      "description": "\u30CF\u30F3\u30C9\u30E9\u30BF\u30A4\u30D7\uFF08\u0027vide\u0027=\u6620\u50CF, \u0027soun\u0027=\u97F3\u58F0\uFF09",
                                                       "name": "handler_type",
                                                       "value": "soun",
                                                       "encoding": "ascii"
