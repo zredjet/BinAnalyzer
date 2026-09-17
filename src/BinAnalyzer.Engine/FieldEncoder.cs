@@ -84,7 +84,7 @@ public sealed class FieldEncoder : IFieldEncoder
     }
 
     /// <summary>10 進、または <c>0x</c> 接頭辞の 16 進（負号は先頭）。</summary>
-    internal static bool TryParseInteger(string text, out Int128 value)
+    public static bool TryParseInteger(string text, out Int128 value)
     {
         value = default;
         var negative = false;

@@ -58,7 +58,7 @@ BinAnalyzer/
 ## 依存関係
 
 ```
-Cli → Dsl, Engine, Output, Tui, Gui.Desktop
+Cli → Dsl, Engine, Output, Presentation, Tui, Gui.Desktop
 Gui.Desktop → Gui, Dsl（+ Photino.Blazor）
 Gui → Presentation, Dsl, Engine, Output, Compression（+ Microsoft.AspNetCore.Components.Web）
 Web → Gui, Dsl, Engine, Output, Compression（+ Blazor WASM）
@@ -176,6 +176,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - `FieldEditRules.Classify`（Core）がノード単体の編集可否を決め、`FieldEncoder`（Engine）が入力文字列を同じ長さのバイト列にする（範囲チェック、固定長文字列の 0x00 埋め、16 進バイト列）
 - `BinaryPatcher.Apply` はパッチを書いた後に再デコードし、変更範囲と `ChecksumCoverage` が重なる無効なチェックサムへ `ChecksumExpected` / `ChecksumExpectedHex` を書き戻す。チェックサムが別のチェックサムの範囲に含まれる場合は変化が無くなるまで反復する（上限 8 回）。アルゴリズム別の計算はデコーダの検証をそのまま使う
 - Presentation の `FieldEditability`（データ空間・長さ系フィールドの判定）と `ChecksumDependencies`（再計算対象の事前表示）は `NodeIndex` 上の純関数
+- CLI の `patch` サブコマンド（`Cli/PatchCommand.cs`、REQ-164）は同じ部品の薄いラッパー: 一度デコードして `NodeIndex.ByPath` でフィールドを引き、`FieldEncoder` → `BinaryPatcher` → 別ファイルへ出力。enum はラベルでも指定できる
 
 ### 表示ロジック — Presentation/
 
