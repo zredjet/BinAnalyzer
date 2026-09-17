@@ -8,7 +8,7 @@
 
 - **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
 - **圧縮データ対応** — zlib / deflate 圧縮フィールドの展開・ネスト解析
-- **8種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv, tui（対話型ターミナルUI）
+- **9種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv, tui（対話型ターミナルUI）, gui（デスクトップGUI）
 - **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）
 - **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示（フラット形式 / ツリー形式）、ディレクトリ指定によるバッチdiffにも対応
 - **スキーマ図出力** — `schema` サブコマンドでフォーマット定義の struct 間参照関係を Mermaid / Graphviz DOT 形式で出力
@@ -22,6 +22,7 @@
 - **エンディアン切り替え** — 構造体・フィールドレベルでエンディアンを上書き（優先順位: フィールド > 構造体 > フォーマットデフォルト）
 - **カスタムバリデーション** — `validate` 式でデコード後の値を検証し ✓/✗ で表示
 - **対話型TUI** — `--output tui` でツリー・詳細・ヘックスダンプの3ペイン構成の対話型UIを起動。ノード展開/折りたたみ、フィールド検索に対応
+- **デスクトップGUI / Web GUI** — `--output gui` で意味色分けヘックス・構造ツリー・インスペクター・構造マップが連動するGUIを起動（Photino.Blazor、Windows/macOS/Linux）。フォーマット定義の切り替え・エンディアン上書き・定義YAML表示・2ファイルの構造差分に対応。同じ画面をBlazor WebAssembly版（`src/BinAnalyzer.Web`）でも提供
 - **エラー回復** — `--on-error continue` でデコードエラー後も解析を継続
 - **文字列テーブル参照** — ELF `.strtab` 等の文字列テーブルを整数フィールドから参照し文字列に解決
 - **パイプライン統合** — stdin入力（`-` / `--stdin`）、`--quiet` モード（終了コードのみ）、`--error-format json`（マシンリーダブルなエラー出力）、パイプ切断ハンドリング
@@ -108,6 +109,9 @@ dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
 
 # 対話型TUIで探索（ツリー/詳細/ヘックスダンプの3ペイン表示）
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tui
+
+# デスクトップGUIで探索（ヘックス/ツリー/インスペクター/構造マップの連動表示）
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o gui
 
 # カラー出力を強制
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always

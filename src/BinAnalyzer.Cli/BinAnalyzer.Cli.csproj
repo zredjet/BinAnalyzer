@@ -13,6 +13,7 @@
     <ProjectReference Include="..\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
     <ProjectReference Include="..\BinAnalyzer.Output\BinAnalyzer.Output.csproj" />
     <ProjectReference Include="..\BinAnalyzer.Tui\BinAnalyzer.Tui.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Gui.Desktop\BinAnalyzer.Gui.Desktop.csproj" />
   </ItemGroup>
 
 </Project>

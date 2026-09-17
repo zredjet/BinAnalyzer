@@ -1,4 +1,4 @@
-@inject GuiSession Session
+@inherits SessionAwareComponent
 
 <div class="picker @(_dragOver ? "drag-over" : "")"
      @ondragenter="() => _dragOver = true" @ondragover:preventDefault="true" @ondragleave="() => _dragOver = false" @ondrop="() => _dragOver = false">

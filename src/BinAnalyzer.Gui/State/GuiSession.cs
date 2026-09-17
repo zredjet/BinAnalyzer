@@ -75,6 +75,7 @@ public sealed class GuiSession
         }
         catch (Exception ex)
         {
+            Console.Error.WriteLine($"[gui] format load failed: {ex}");
             PendingFile = file;
             Message = $"フォーマット定義の読み込みに失敗: {ex.Message}";
             Raise();

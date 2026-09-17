@@ -17,7 +17,7 @@ binanalyzer [<file>] -f <format> [-o <output>] [--color <mode>] [--no-validate] 
 | オプション | 説明 | デフォルト |
 |------------|------|-----------|
 | `-f, --format <file>` | フォーマット定義ファイル（`.bdef.yaml`）**必須** | — |
-| `-o, --output <format>` | 出力形式（`tree`, `json`, `hexdump`, `html`, `map`, `csv`, `tsv`, `tui`） | `tree` |
+| `-o, --output <format>` | 出力形式（`tree`, `json`, `hexdump`, `html`, `map`, `csv`, `tsv`, `tui`, `gui`） | `tree` |
 | `--color <mode>` | カラー出力（`auto`, `always`, `never`） | `auto` |
 | `--no-validate` | フォーマット定義のバリデーションをスキップ | — |
 | `--on-error <mode>` | エラー時の動作（`stop`, `continue`） | `stop` |
@@ -157,6 +157,32 @@ CSV と同じ構造でタブ区切りの出力です。
 ```bash
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tsv
 ```
+
+### gui
+
+デスクトップ GUI（Photino.Blazor）を起動します。ヘックスビュー・構造ツリー・インスペクター・構造マップがホバー／選択で連動し、右ペインでフォーマット定義（YAML）と 2 ファイルの構造差分を切り替えて表示できます。同じ画面は Web 版（`src/BinAnalyzer.Web`）でも利用できます。
+
+```bash
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o gui
+```
+
+#### レイアウト
+
+- **タイトルバー** — 開いているファイルのタブ。`+` で別のファイルを開く
+- **コマンドバー** — フォーマット定義の切り替え（拡張子で自動検出）、エンディアンの上書き（既定 / BE / LE）、ライブデコード、差分、フィールド検索（`Ctrl+K`、`**.width` のようなパスパターンも可）
+- **ヘックスビュー** — フィールド種別ごとに色分け（マジック / 長さ / タグ / 数値 / 文字列 / CRC / 圧縮 / パディング）。行末に「この行で決まる値」を注釈表示
+- **右ペイン: 構造** — ツリー＋インスペクター（型・位置・生バイト・値・enum・フラグ・検証）
+- **右ペイン: 定義** — フォーマット定義 YAML。選択フィールドの定義行をハイライト
+- **右ペイン: 差分** — 別タブ（または別ファイル）との構造差分。行クリックで該当フィールドを選択
+- **フッター** — 構造マップ（バイト数に比例した幅）とステータスバー
+
+#### 動作環境
+
+- Windows: WebView2 ランタイム（Windows 11 は標準搭載）
+- macOS: WKWebView（標準搭載）
+- Linux: `libwebkit2gtk-4.1` が必要（例: `sudo apt install libwebkit2gtk-4.1-0`）
+
+フォーマット定義は、実行ファイルの隣またはカレントディレクトリの `formats/` と、`-f` で指定したファイルから選択できます。
 
 ### tui
 

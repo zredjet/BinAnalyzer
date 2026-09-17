@@ -1,4 +1,4 @@
-@inject GuiSession Session
+@inherits SessionAwareComponent
 
 <nav class="navview" aria-label="メイン">
     <button class="nav" aria-current="@(Session.ShowPicker ? "page" : null)" title="ファイルを開く" @onclick="Session.RequestPicker">

@@ -276,4 +276,29 @@ public sealed class ComponentTests : BunitContext
         cut.Find(".infobar").ClassList.Should().Contain("bad");
         cut.Find(".infobar").TextContent.Should().Contain("チェックサム 2 / 3");
     }
+
+    [Fact]
+    public async Task ParameterlessComponents_RerenderOnSessionChange()
+    {
+        var (session, _) = await SetupAsync();
+        var title = Render<TitleBar>();
+        var nav = Render<NavRail>();
+        title.FindAll(".tab").Should().HaveCount(2);
+
+        var second = await session.OpenAsync(new BinAnalyzer.Gui.Abstractions.OpenedFile("second.png", TestPng.Bytes(width: 2)));
+        second.Should().NotBeNull();
+
+        title.WaitForAssertion(() =>
+        {
+            title.FindAll(".tab").Should().HaveCount(3);
+            title.Find(".tab.active").TextContent.Should().Contain("second.png");
+        });
+
+        session.Compare(session.Documents[0]);
+        nav.WaitForAssertion(() => nav.FindAll(".nav")[3].HasAttribute("disabled").Should().BeFalse());
+        var diff = Render<DiffView>();
+        diff.FindAll(".diffrow").Should().HaveCount(2);
+        session.ClearDiff();
+        diff.WaitForAssertion(() => diff.FindAll(".diffrow").Should().BeEmpty());
+    }
 }

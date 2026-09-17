@@ -1,4 +1,4 @@
-@inject GuiSession Session
+@inherits SessionAwareComponent
 
 <div class="popover compare" role="dialog" aria-label="比較するファイル">
     <div class="popover-title">@(Session.Active?.DisplayName) と比較</div>

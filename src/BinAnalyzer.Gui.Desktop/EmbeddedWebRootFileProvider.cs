@@ -23,6 +23,8 @@ public sealed class EmbeddedWebRootFileProvider : IFileProvider
         _assemblies = assemblies;
     }
 
+    private static readonly bool Debug = Environment.GetEnvironmentVariable("BINANALYZER_GUI_DEBUG") == "1";
+
     public IFileInfo GetFileInfo(string subpath)
     {
         var name = Normalize(subpath);
@@ -30,8 +32,10 @@ public sealed class EmbeddedWebRootFileProvider : IFileProvider
         {
             if (asm.GetManifestResourceInfo(name) is null)
                 continue;
+            if (Debug) Console.Error.WriteLine($"[gui] serve {subpath} -> {asm.GetName().Name}::{name}");
             return new EmbeddedFile(asm, name);
         }
+        if (Debug) Console.Error.WriteLine($"[gui] 404 {subpath} (normalized: {name})");
         return new NotFoundFileInfo(subpath);
     }
 
