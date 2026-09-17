@@ -249,9 +249,14 @@ Presentation → Core
 
 ### 気づき・今後の課題
 
-- Windows / Linux での動作確認（WebView2 ランタイム、`libwebkit2gtk-4.1`）。
-- `dotnet publish -r <rid>` の単一ファイル publish サイズ確認（`Photino.Native` の展開）。
-- `imports:` を使うフォーマット（avi/heif/mp4/webp/wav 等）は Web(WASM) では読めない（既存制限）。`YamlFormatLoader` にインポート解決コールバックを追加すれば `HttpFormatCatalog` から `formats/common/*` を取得できる → 後続要望。
-- 値の編集・書き戻し（REQ-164 依存）、スキーマ図の埋め込み表示、ブックマーク、展開ストリーム専用 UI は後続要望。
-- `DecodedInteger` が型名を持たないため型ラベルは `int32` のような近似（REQ-167 の課題と同じ）。
-- 巨大ファイル（数十 MB）でのヘックス仮想化・ツリー描画の体感性能は未計測。
+後続要望として起票済み:
+
+- REQ-169 — GUI での値の編集・書き戻し（REQ-164 依存）
+- REQ-170 — DSL インポート解決の抽象化（Web / WASM で `imports` 対応）
+- REQ-171 — デコード結果ノードに DSL 型名を保持（型ラベルの正確化。REQ-167 の課題と共通）
+- REQ-172 — DSL パーサーでの行番号保持（定義ビューの厳密なハイライト）
+- REQ-173 — GUI でのスキーマ図表示
+- REQ-174 — GUI ブックマークと注釈
+- REQ-175 — GUI 展開ストリームビュー
+- REQ-176 — GUI のマルチプラットフォーム検証とリリース配布（Windows / Linux、release.yml、CI スモーク）
+- REQ-177 — GUI の大容量ファイル性能
