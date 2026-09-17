@@ -16,14 +16,19 @@ BinAnalyzer/
 │   ├── BinAnalyzer.Dsl/           # YAML → IR変換（YamlDotNet）
 │   ├── BinAnalyzer.Engine/        # バイナリデコーダーエンジン（BCLのみ）
 │   ├── BinAnalyzer.Output/        # 出力フォーマッター（BCLのみ）
+│   ├── BinAnalyzer.Presentation/  # 表示用ViewModel・純関数（Coreのみ、UI非依存）
 │   ├── BinAnalyzer.Tui/            # 対話型ターミナルUI（Terminal.Gui）
-│   ├── BinAnalyzer.Web/           # Blazor WebAssembly版（ブラウザUI）
+│   ├── BinAnalyzer.Gui/           # GUI共通コンポーネント（Razor Class Library）
+│   ├── BinAnalyzer.Gui.Desktop/   # デスクトップGUIホスト（Photino.Blazor）
+│   ├── BinAnalyzer.Web/           # Blazor WebAssembly版（ブラウザUI、Guiをホスト）
 │   └── BinAnalyzer.Cli/           # CLIエントリポイント
 ├── tests/
 │   ├── BinAnalyzer.Core.Tests/
 │   ├── BinAnalyzer.Dsl.Tests/
 │   ├── BinAnalyzer.Engine.Tests/
+│   ├── BinAnalyzer.Presentation.Tests/
 │   ├── BinAnalyzer.Tui.Tests/
+│   ├── BinAnalyzer.Gui.Tests/     # bUnit コンポーネントテスト
 │   └── BinAnalyzer.Integration.Tests/
 ├── benchmarks/
 │   └── BinAnalyzer.Benchmarks/    # BenchmarkDotNetによるパフォーマンス計測
@@ -53,12 +58,15 @@ BinAnalyzer/
 ## 依存関係
 
 ```
-Cli → Dsl, Engine, Output, Tui
-Web → Dsl, Engine, Output, Compression（+ Blazor WASM）
+Cli → Dsl, Engine, Output, Tui, Gui.Desktop
+Gui.Desktop → Gui, Dsl（+ Photino.Blazor）
+Gui → Presentation, Dsl, Engine, Output, Compression（+ Microsoft.AspNetCore.Components.Web）
+Web → Gui, Dsl, Engine, Output, Compression（+ Blazor WASM）
 Dsl → Core（+ YamlDotNet）
 Engine → Core
 Output → Core
-Tui → Core（+ Terminal.Gui）
+Tui → Core, Presentation（+ Terminal.Gui）
+Presentation → Core
 Core → （なし）
 ```
 
@@ -159,6 +167,15 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 各フォーマッターはANSIカラー出力に対応（ColorMode: Auto / Always / Never）。
 
+### 表示ロジック — Presentation/
+
+デコード結果ツリー（`DecodedNode`）を表示用データに変換する純関数群。UI フレームワーク（Terminal.Gui / Blazor）に依存せず、TUI と GUI で共有する。
+
+- **NodeChildren** — 子ノード走査の単一情報源（struct は padding 除外、array は要素、compressed は展開後の内容）。`Descendants` で深さ優先列挙
+- **NodeDisplayText** — ツリー 1 行の表示文字列（`For`）、値部分のみ（`ValueOnly`）、型ラベル（`TypeLabel`）
+- **NodeDetailFormatter** — 詳細ペイン / インスペクター用の Key/Value 行（`DetailRow` に `DetailRowKind` でスタイルヒント付き）
+- **NodeSearch** — 名前による検索（`ByName`）
+
 ### 対話型TUI — Tui/
 
 Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起動。3ペイン構成でデコード結果を対話的に探索:
@@ -171,6 +188,17 @@ Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起�
 - **TuiState** — 状態管理（選択ノード、検索状態）。イベント駆動でペイン間を連携
 - **DecodedNodeTreeBuilder** — ITreeBuilder\<DecodedNode\> 実装。子ノード列挙ロジック
 - **NodeDetailFormatter** — DecodedNode → 詳細表示文字列リスト変換（テスト可能な純粋ロジック）
+
+### GUI — Gui/ , Gui.Desktop/
+
+`BinAnalyzer.Gui` は Razor Class Library で、Web（WASM）とデスクトップ（Photino.Blazor）の両方から同じコンポーネントをホストする。
+
+- **Abstractions/** — ホスト差分の抽象。`IFormatCatalog`（フォーマット定義の一覧・読込・拡張子検出）、`IFileSource`（ネイティブダイアログの有無とファイル取得）
+- **State/** — Blazor 非依存の状態。`GuiDocument`（タブ 1 枚: データ・フォーマット・エンディアン上書き・デコード結果・`NodeIndex`・選択/ホバー/展開/検索）、`GuiSession`（タブ集合・アクティブ・右ペイン種別・差分）、`DecodeService`（エラー継続モードで所要時間計測）
+- **Components/** — `GuiShell`（全体レイアウト）、`HexView` / `HexRowView`（`<Virtualize>`、512 行以下は非仮想化）、`HighlightStyle`（ホバーは `<style>` 1 ルールの再描画のみ）、`StructTree` / `Inspector`、`DefinitionView`（`YamlFieldLocator` で選択フィールド行を強調）、`DiffView`（`DiffEngine` の `DiffResult` に直接バインド）、`StructureMapView`、`CommandBar`、`FilePicker` ほか
+- **wwwroot/** — `gui.css` / `gui.js`。デスクトップ配信用に `_content/BinAnalyzer.Gui/...` の論理名で埋め込みリソースにも含める
+
+`BinAnalyzer.Gui.Desktop` は Photino.Blazor ホスト。`EmbeddedWebRootFileProvider` が埋め込みリソースから `index.html` と `_content/...` を配信するため物理 `wwwroot` が不要（CLI の単一ファイル publish を壊さない）。`DirectoryFormatCatalog` は exe 隣 / カレントの `formats/` と `-f` 指定ファイルを提供し、`YamlFormatLoader.Load(path)` で imports も解決する。CLI の `-o gui` は `GuiApp.Run` をインプロセスで呼ぶ（Windows では STA スレッド）。
 
 ### Blazor WebAssembly版 — Web/
 

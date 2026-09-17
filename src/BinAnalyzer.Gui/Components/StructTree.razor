@@ -1,0 +1,9 @@
+<div class="tree" role="tree">
+    <ul>
+        <StructTreeNode Document="Document" NodeId="0" Depth="0" />
+    </ul>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+}

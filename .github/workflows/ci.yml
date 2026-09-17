@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -41,3 +42,86 @@ jobs:
           dotnet test BinAnalyzer.slnx
           --no-build --configuration Release --verbosity normal
           --filter "Category=RealFile"
+
+  # REQ-176: self-contained 単一ファイルを各 OS で publish し、`-o tree` と `-o gui`（自動終了）が終了コード 0 で戻ることを確認する。
+  # Linux は WebKitGTK 不在時に終了コード 1 と案内メッセージを出すことも確認する。
+  gui-smoke:
+    name: GUI smoke (${{ matrix.rid }})
+    needs: build-and-test
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            exe: BinAnalyzer.Cli
+          - os: windows-latest
+            rid: win-x64
+            exe: BinAnalyzer.Cli.exe
+          - os: macos-latest
+            rid: osx-arm64
+            exe: BinAnalyzer.Cli
+    runs-on: ${{ matrix.os }}
+    env:
+      SAMPLE: testdata/smoke/sample.png
+      FORMAT: formats/png.bdef.yaml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Publish ${{ matrix.rid }}
+        run: >
+          dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj
+          --configuration Release
+          --runtime ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none
+          --output ./publish
+
+      - name: Smoke -o tree
+        shell: bash
+        run: ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o tree
+
+      - name: Install xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Smoke -o gui without WebKitGTK expects exit code 1 (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # xvfb-run は子プロセスの stderr を stdout に束ねるので、両方をまとめて取る
+          set +e
+          xvfb-run -a ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o gui > output.txt 2>&1
+          code=$?
+          set -e
+          cat output.txt
+          if [ "$code" -ne 1 ]; then echo "expected exit code 1, got $code"; exit 1; fi
+          grep -q "libwebkit2gtk-4.1" output.txt
+
+      - name: Install WebKitGTK (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libwebkit2gtk-4.1-0 libnotify4
+
+      - name: Smoke -o gui (auto-close)
+        shell: bash
+        env:
+          BINANALYZER_GUI_AUTOCLOSE: '3000'
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o gui
+          else
+            ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o gui
+          fi
+
+      - name: Report publish size
+        shell: bash
+        run: ls -l ./publish/${{ matrix.exe }}

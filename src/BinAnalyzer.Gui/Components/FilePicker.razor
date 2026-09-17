@@ -1,0 +1,76 @@
+@inherits SessionAwareComponent
+
+<div class="picker @(_dragOver ? "drag-over" : "")"
+     @ondragenter="() => _dragOver = true" @ondragover:preventDefault="true" @ondragleave="() => _dragOver = false" @ondrop="() => _dragOver = false">
+    @if (Session.PendingFile is { } pending)
+    {
+        <div class="picker-pending">
+            <p><b>@pending.Name</b>（@FormatSize(pending.Data.Length)）のフォーマットを選択してください。</p>
+            <select class="cmd combo" aria-label="フォーマット定義" @onchange="OnPendingFormatChanged">
+                <option value="">-- フォーマットを選択 --</option>
+                @foreach (var f in Session.Formats)
+                {
+                    <option value="@f.File">@f.Name</option>
+                }
+            </select>
+        </div>
+    }
+    <div class="picker-inner">
+        <p class="picker-title">バイナリファイルを開く</p>
+        <p class="picker-hint">ここにドロップするか、ファイルを選択してください（上限 @(MaxSizeMb) MB）。</p>
+        <label class="btn primary picker-btn">
+            ファイルを選択
+            <InputFile OnChange="OnInputFileChanged" multiple />
+        </label>
+        @if (Session.Files.SupportsNativePicker)
+        {
+            <button class="btn" @onclick="Session.PickAndOpenAsync">ダイアログで開く…</button>
+        }
+        @if (Session.Active is not null)
+        {
+            <button class="btn" @onclick="Session.CancelPicker">キャンセル</button>
+        }
+        @if (_error is not null)
+        {
+            <p class="picker-error">@_error</p>
+        }
+    </div>
+</div>
+
+@code {
+    private const int MaxSizeMb = 100;
+    private const long MaxSize = MaxSizeMb * 1024L * 1024L;
+    private bool _dragOver;
+    private string? _error;
+
+    private async Task OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        _error = null;
+        foreach (var file in e.GetMultipleFiles(16))
+        {
+            if (file.Size > MaxSize)
+            {
+                _error = $"{file.Name}: ファイルサイズが大きすぎます（上限 {MaxSizeMb} MB）。";
+                continue;
+            }
+            using var stream = file.OpenReadStream(MaxSize);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            await Session.OpenAsync(new OpenedFile(file.Name, ms.ToArray()));
+        }
+    }
+
+    private async Task OnPendingFormatChanged(ChangeEventArgs e)
+    {
+        var file = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(file))
+            await Session.OpenPendingAsync(file);
+    }
+
+    internal static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        _ => $"{bytes / (1024.0 * 1024.0):F1} MB",
+    };
+}

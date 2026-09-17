@@ -8,7 +8,7 @@
 
 - **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
 - **圧縮データ対応** — zlib / deflate 圧縮フィールドの展開・ネスト解析
-- **8種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv, tui（対話型ターミナルUI）
+- **9種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv, tui（対話型ターミナルUI）, gui（デスクトップGUI）
 - **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）
 - **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示（フラット形式 / ツリー形式）、ディレクトリ指定によるバッチdiffにも対応
 - **スキーマ図出力** — `schema` サブコマンドでフォーマット定義の struct 間参照関係を Mermaid / Graphviz DOT 形式で出力
@@ -22,6 +22,7 @@
 - **エンディアン切り替え** — 構造体・フィールドレベルでエンディアンを上書き（優先順位: フィールド > 構造体 > フォーマットデフォルト）
 - **カスタムバリデーション** — `validate` 式でデコード後の値を検証し ✓/✗ で表示
 - **対話型TUI** — `--output tui` でツリー・詳細・ヘックスダンプの3ペイン構成の対話型UIを起動。ノード展開/折りたたみ、フィールド検索に対応
+- **デスクトップGUI / Web GUI** — `--output gui` で意味色分けヘックス・構造ツリー・インスペクター・構造マップが連動するGUIを起動（Photino.Blazor、Windows/macOS/Linux）。フォーマット定義の切り替え・エンディアン上書き・定義YAML表示・2ファイルの構造差分に対応。同じ画面をBlazor WebAssembly版（`src/BinAnalyzer.Web`）でも提供
 - **エラー回復** — `--on-error continue` でデコードエラー後も解析を継続
 - **文字列テーブル参照** — ELF `.strtab` 等の文字列テーブルを整数フィールドから参照し文字列に解決
 - **パイプライン統合** — stdin入力（`-` / `--stdin`）、`--quiet` モード（終了コードのみ）、`--error-format json`（マシンリーダブルなエラー出力）、パイプ切断ハンドリング
@@ -109,6 +110,9 @@ dotnet run --project src/BinAnalyzer.Cli -- schema formats/otf.bdef.yaml -o dot
 # 対話型TUIで探索（ツリー/詳細/ヘックスダンプの3ペイン表示）
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o tui
 
+# デスクトップGUIで探索（ヘックス/ツリー/インスペクター/構造マップの連動表示）
+dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o gui
+
 # カラー出力を強制
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml --color always
 
@@ -126,6 +130,26 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 ```
 
 全コマンド・オプションの詳細は [CLIリファレンス](docs/cli-usage.md) を参照してください。
+
+## 配布バイナリ
+
+[Releases](https://github.com/zredjet/BinAnalyzer/releases) に、.NET ランタイム不要の単一実行ファイルを OS ごとに zip で置いています。いずれも `formats/`（フォーマット定義）と `schemas/`（JSON Schema）を同梱し、`-o gui` のデスクトップ GUI を含みます。
+
+| zip | 対象 |
+|---|---|
+| `BinAnalyzer-<ver>-win-x64.zip` | Windows 10 / 11（x64）。GUI には WebView2 ランタイムが必要（Windows 11 は標準搭載） |
+| `BinAnalyzer-<ver>-osx-arm64.zip` | macOS（Apple Silicon） |
+| `BinAnalyzer-<ver>-osx-x64.zip` | macOS（Intel） |
+| `BinAnalyzer-<ver>-linux-x64.zip` | Linux（x64、glibc）。GUI には WebKitGTK 4.1 が必要（`sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0 libnotify4`） |
+
+```bash
+unzip BinAnalyzer-<ver>-osx-arm64.zip
+cd BinAnalyzer-<ver>-osx-arm64
+./binanalyzer image.png -f formats/png.bdef.yaml
+./binanalyzer image.png -f formats/png.bdef.yaml -o gui
+```
+
+コード署名・公証はしていません。macOS でダウンロード直後に「開発元を検証できない」と出る場合は `xattr -d com.apple.quarantine binanalyzer` を実行してください。Windows の SmartScreen も同様に「詳細情報 → 実行」で進めます。
 
 ## Web版（Blazor WebAssembly）
 

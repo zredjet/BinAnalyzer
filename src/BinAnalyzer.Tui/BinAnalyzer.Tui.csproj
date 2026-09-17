@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Presentation\BinAnalyzer.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

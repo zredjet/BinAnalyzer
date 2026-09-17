@@ -11,6 +11,7 @@ using BinAnalyzer.Dsl;
 using BinAnalyzer.Engine;
 using BinAnalyzer.Output;
 using BinAnalyzer.Tui;
+using BinAnalyzer.Gui.Desktop;
 
 // SIGPIPE無視（パイプ切断時のクラッシュ防止）
 if (!OperatingSystem.IsWindows())
@@ -42,7 +43,7 @@ var formatOption = new Option<FileInfo>("-f", "--format")
 
 var outputOption = new Option<string>("-o", "--output")
 {
-    Description = "出力形式 (tree, json, hexdump, html, map, csv, tsv, tui)",
+    Description = "出力形式 (tree, json, hexdump, html, map, csv, tsv, tui, gui)",
     DefaultValueFactory = _ => "tree",
 };
 
@@ -200,6 +201,19 @@ rootCommand.SetAction((parseResult) =>
                 var tuiApp = new TuiApp();
                 tuiApp.Run(decoded, data, displayName, formatFile.Name);
                 return 0;
+            }
+
+            if (outputFormat == "gui")
+            {
+                // GUI はセッション側で再デコードする（フォーマット切替・エンディアン上書きのため）
+                var launch = new GuiLaunchOptions
+                {
+                    FilePath = readFromStdin ? null : Path.GetFullPath(filePath!),
+                    Data = data,
+                    DisplayName = readFromStdin ? "<stdin>" : Path.GetFileName(filePath!),
+                    FormatPath = formatFile.FullName,
+                };
+                return RunGui(launch);
             }
 
             var colorMode = colorSetting switch
@@ -726,6 +740,32 @@ rootCommand.Subcommands.Add(validateCommand);
 return rootCommand.Parse(args).Invoke();
 
 // --- ヘルパー関数 ---
+
+/// <summary>
+/// Photino はメインスレッド（macOS/Linux）または STA スレッド（Windows/WebView2）でメッセージループを回す必要がある。
+/// トップレベル文には [STAThread] を付けられないため、Windows では専用 STA スレッドで実行して待つ。
+/// </summary>
+static int RunGui(GuiLaunchOptions launch)
+{
+    var check = DesktopRuntimeCheck.Check();
+    if (!check.IsOk)
+    {
+        Console.Error.WriteLine("エラー: " + check.Message);
+        return 1;
+    }
+
+    launch = launch with { AutoCloseAfter = GuiAutoClose.FromEnvironment() };
+    var guiApp = new GuiApp();
+    if (!OperatingSystem.IsWindows())
+        return guiApp.Run(launch);
+
+    var exitCode = 0;
+    var thread = new Thread(() => exitCode = guiApp.Run(launch)) { IsBackground = false };
+    thread.SetApartmentState(ApartmentState.STA);
+    thread.Start();
+    thread.Join();
+    return exitCode;
+}
 
 static byte[] ReadInputData(string? filePath, bool readFromStdin)
 {

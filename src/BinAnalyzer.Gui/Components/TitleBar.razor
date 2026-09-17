@@ -1,0 +1,22 @@
+@inherits SessionAwareComponent
+
+<header class="titlebar">
+    <div class="app">
+        <svg class="logo" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3 21 9v6l-9 6-9-6V9l9-6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            <path d="M12 3v18M3 9l9 6 9-6" stroke="currentColor" stroke-width="1.6" opacity=".55" />
+        </svg>
+        <span>BinAnalyzer</span>
+    </div>
+    <div class="tabs" role="tablist" aria-label="開いているファイル">
+        @foreach (var doc in Session.Documents)
+        {
+            var isActive = doc == Session.Active && !Session.ShowPicker;
+            <button class="tab @(isActive ? "active" : "")" role="tab" aria-selected="@(isActive ? "true" : "false")" title="@(doc.FullPath ?? doc.DisplayName)" @onclick="() => Session.Activate(doc)">
+                @doc.DisplayName
+                <span class="x" role="button" aria-label="閉じる" @onclick="() => Session.Close(doc)" @onclick:stopPropagation="true">×</span>
+            </button>
+        }
+        <button class="tab add" aria-label="ファイルを開く" title="ファイルを開く" @onclick="Session.RequestPicker">+</button>
+    </div>
+</header>

@@ -8,6 +8,7 @@
 dotnet build
 dotnet test
 dotnet run --project src/BinAnalyzer.Cli -- <バイナリファイル> -f <フォーマットファイル>
+dotnet run --project src/BinAnalyzer.Cli -- <バイナリファイル> -f <フォーマットファイル> -o gui   # デスクトップGUI
 ```
 
 ## アーキテクチャ
@@ -23,8 +24,11 @@ DSL(.bdef.yaml) → [DSLパーサー] → IR(中間表現) → [バイナリデ�
 - **BinAnalyzer.Compression** — 外部NuGet依存の圧縮展開処理（bzip2/lzma/zstd/lz4）。SharpCompress, ZstdSharp.Port, K4os.Compression.LZ4に依存。
 - **BinAnalyzer.Engine** — バイナリデコーダーエンジン。BCL + Compressionに依存。
 - **BinAnalyzer.Output** — 出力フォーマッター(ツリー等)。BCLのみ。
+- **BinAnalyzer.Presentation** — デコード結果ツリーを表示用データ（表示文字列・詳細行・子走査・検索）に変換する純関数。Coreのみに依存、UIフレームワーク非依存。TUI/GUIで共有。
 - **BinAnalyzer.Tui** — 対話型ターミナルUI（TUI）。Terminal.Guiに依存。
-- **BinAnalyzer.Web** — Blazor WebAssembly版（ブラウザUI）。サーバーなし静的サイト。
+- **BinAnalyzer.Gui** — GUI共通コンポーネント（Razor Class Library）。Web/デスクトップの両方からホストされる。Presentation/Dsl/Engine/Outputに依存。
+- **BinAnalyzer.Gui.Desktop** — デスクトップGUIホスト。Photino.Blazorに依存。埋め込みリソースから静的資産を配信するので物理wwwrootは不要。
+- **BinAnalyzer.Web** — Blazor WebAssembly版（ブラウザUI）。サーバーなし静的サイト。トップページはGuiをホスト、旧ページは `/classic`。
 - **BinAnalyzer.Cli** — CLIエントリポイント。
 
 ### 設計上の重要ポイント

@@ -6,7 +6,10 @@
     <Project Path="src/BinAnalyzer.Compression/BinAnalyzer.Compression.csproj" />
     <Project Path="src/BinAnalyzer.Engine/BinAnalyzer.Engine.csproj" />
     <Project Path="src/BinAnalyzer.Output/BinAnalyzer.Output.csproj" />
+    <Project Path="src/BinAnalyzer.Presentation/BinAnalyzer.Presentation.csproj" />
     <Project Path="src/BinAnalyzer.Tui/BinAnalyzer.Tui.csproj" />
+    <Project Path="src/BinAnalyzer.Gui/BinAnalyzer.Gui.csproj" />
+    <Project Path="src/BinAnalyzer.Gui.Desktop/BinAnalyzer.Gui.Desktop.csproj" />
     <Project Path="src/BinAnalyzer.Web/BinAnalyzer.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -15,7 +18,9 @@
     <Project Path="tests/BinAnalyzer.Engine.Tests/BinAnalyzer.Engine.Tests.csproj" />
     <Project Path="tests/BinAnalyzer.Compression.Tests/BinAnalyzer.Compression.Tests.csproj" />
     <Project Path="tests/BinAnalyzer.Integration.Tests/BinAnalyzer.Integration.Tests.csproj" />
+    <Project Path="tests/BinAnalyzer.Presentation.Tests/BinAnalyzer.Presentation.Tests.csproj" />
     <Project Path="tests/BinAnalyzer.Tui.Tests/BinAnalyzer.Tui.Tests.csproj" />
+    <Project Path="tests/BinAnalyzer.Gui.Tests/BinAnalyzer.Gui.Tests.csproj" />
     <Project Path="tests/BinAnalyzer.Web.Tests/BinAnalyzer.Web.Tests.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">

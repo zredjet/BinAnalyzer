@@ -26,7 +26,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errorMode = ErrorMode.Stop;
         _errors = null;
         _globalMaxRepeat = options?.MaxRepeat;
-        var context = new DecodeContext(data, format.Endianness);
+        var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
         return DecodeStruct(rootStruct, format, context, format.Name);
     }
@@ -37,7 +37,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errorMode = errorMode;
         _errors = errorMode == ErrorMode.Continue ? new List<DecodeError>() : null;
         _globalMaxRepeat = options?.MaxRepeat;
-        var context = new DecodeContext(data, format.Endianness);
+        var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
         var root = DecodeStruct(rootStruct, format, context, format.Name);
         return new DecodeResult
@@ -979,6 +979,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     }
                     else
                     {
+                        var posBeforeElement = context.Position;
                         var element = DecodeElementWithScope(singleField, format, context, elementSize);
                         elements.Add(element);
                         consecutiveErrors = 0;
@@ -986,6 +987,15 @@ public sealed class BinaryDecoder : IBinaryDecoder
                         if (element is DecodedStruct)
                             PromoteDecodedValues(element, context);
                         SetPrevVariable(element, context);
+
+                        // エラー継続モードで要素が 1 バイトも消費できなかった場合（末尾の端数バイト等）、
+                        // 位置が進まず無限ループになるため打ち切る。
+                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                        {
+                            truncated = true;
+                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                            break;
+                        }
                     }
 
                     if (elementSavedPos is { } epos)
@@ -1391,6 +1401,14 @@ public sealed class BinaryDecoder : IBinaryDecoder
             return skipped > 0; // マーカー見つからず→ループ終了
         }
     }
+
+    /// <summary>要素自身または直下の子にデコードエラーが含まれるか。</summary>
+    private static bool ContainsError(DecodedNode element) => element switch
+    {
+        DecodedError => true,
+        DecodedStruct s => s.Children.Any(c => c is DecodedError),
+        _ => false,
+    };
 
     private static bool UsesIterationContext(ExpressionNode node) => node switch
     {

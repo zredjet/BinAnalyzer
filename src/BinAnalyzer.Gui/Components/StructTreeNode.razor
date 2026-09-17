@@ -1,0 +1,75 @@
+@{
+    var node = Document.Index.ById(NodeId);
+    var hasChildren = NodeChildren.HasChildren(node);
+    var expanded = hasChildren && Document.IsExpanded(NodeId);
+    var kind = Document.Index.KindOf(NodeId);
+    var selected = Document.SelectedId == NodeId;
+    var (validOk, validNg) = ValidationMarks(node);
+    var value = NodeDisplayText.ValueOnly(node);
+    var label = node is DecodedInteger { EnumLabel: { } l } ? l : null;
+    if (label is not null) value = ((DecodedInteger)node).Value.ToString();
+    var name = node is DecodedStruct s && s.StructType != s.Name ? $"{s.Name} → {s.StructType}" : node.Name;
+    var meta = $"{node.Offset:X8}"[4..] + "  " + node.Size + " B";
+}
+<li class="@(expanded ? "" : "collapsed")">
+    <button class="node @(selected ? "sel" : "")" role="treeitem" aria-expanded="@(hasChildren ? (expanded ? "true" : "false") : null)" aria-selected="@(selected ? "true" : "false")"
+            data-n="@NodeId" style="padding-left:@(4 + Depth * 2)px"
+            @onclick="() => Document.Select(NodeId)" @onmouseover="() => Document.Hover(NodeId)" @onmouseover:stopPropagation="true">
+        <svg class="chev @(hasChildren ? "" : "leaf")" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+             @onclick="() => Document.ToggleExpanded(NodeId)" @onclick:stopPropagation="true"><path d="M4 6l4 4 4-4" /></svg>
+        <i class="dot @FieldKindMapper.CssClass(kind)"></i>
+        <span class="nm">@name</span>
+        @if (value.Length > 0)
+        {
+            <span class="val">@value</span>
+        }
+        @if (label is not null)
+        {
+            <span class="lbl">@label</span>
+        }
+        @if (validOk)
+        {
+            <span class="ok">✓</span>
+        }
+        @if (validNg)
+        {
+            <span class="ng">✗</span>
+        }
+        <span class="meta">@meta</span>
+    </button>
+    @if (expanded)
+    {
+        var children = NodeChildren.Of(node).ToList();
+        <ul role="group">
+            @foreach (var child in children.Take(_limit))
+            {
+                <StructTreeNode Document="Document" NodeId="Document.Index.IdOf(child)" Depth="Depth + 1" />
+            }
+            @if (children.Count > _limit)
+            {
+                <li><button class="node more" @onclick="() => _limit += PageSize">さらに表示（残り @(children.Count - _limit)）</button></li>
+            }
+        </ul>
+    }
+</li>
+
+@code {
+    public const int PageSize = 500;
+
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+    [Parameter, EditorRequired] public int NodeId { get; set; }
+    [Parameter] public int Depth { get; set; }
+
+    private int _limit = PageSize;
+
+    private static (bool Ok, bool Ng) ValidationMarks(DecodedNode node)
+    {
+        bool? v = node switch
+        {
+            DecodedInteger { ChecksumValid: { } c } => c,
+            DecodedBytes { ChecksumValid: { } c } => c,
+            _ => node.ValidationPassed ?? node.Validation?.Passed,
+        };
+        return v switch { true => (true, false), false => (false, true), _ => (false, false) };
+    }
+}

@@ -20,10 +20,26 @@
     <ProjectReference Include="..\BinAnalyzer.Compression\BinAnalyzer.Compression.csproj" />
     <ProjectReference Include="..\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
     <ProjectReference Include="..\BinAnalyzer.Output\BinAnalyzer.Output.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Gui\BinAnalyzer.Gui.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\..\formats\**\*.bdef.yaml" LinkBase="wwwroot\formats" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+  <!--
+    フォーマット定義（../../formats）を wwwroot/formats に同期する。
+    以前は Content + LinkBase で参照していたが、.NET 10 の StaticWebAssets ではリンクされた Content が
+    コンテンツルート外となり 0 バイトで配信されるため、ビルド時に物理コピーして通常の wwwroot 資産として扱う。
+    コピー先は .gitignore 済み（format-list.json のみ追跡）。
+  -->
+  <Target Name="SyncFormatsToWwwroot" BeforeTargets="AssignTargetPaths;ResolveProjectStaticWebAssetsInputs">
+    <ItemGroup>
+      <_FormatSource Include="..\..\formats\**\*.bdef.yaml" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_FormatSource)"
+          DestinationFiles="@(_FormatSource->'$(MSBuildProjectDirectory)\wwwroot\formats\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <_CopiedFormats Include="wwwroot\formats\**\*.bdef.yaml" />
+      <Content Include="@(_CopiedFormats)" Exclude="@(Content)" />
+    </ItemGroup>
+  </Target>
 
 </Project>

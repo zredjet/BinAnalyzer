@@ -1,12 +1,33 @@
 using BinAnalyzer.Core.Decoded;
-using BinAnalyzer.Tui;
+using BinAnalyzer.Presentation;
 using FluentAssertions;
 using Xunit;
 
-namespace BinAnalyzer.Tui.Tests;
+namespace BinAnalyzer.Presentation.Tests;
 
 public sealed class NodeDetailFormatterTests
 {
+    [Fact]
+    public void Format_Offset_IsMonoRow()
+    {
+        var node = new DecodedInteger { Name = "x", Offset = 1, Size = 1, Value = 1 };
+        NodeDetailFormatter.Format(node).Should().Contain(d => d.Key == "Offset" && d.Kind == DetailRowKind.Mono);
+    }
+
+    [Fact]
+    public void Format_Flags_ChildRowsAreMarkedChild()
+    {
+        var node = new DecodedFlags
+        {
+            Name = "f", Offset = 0, Size = 1, RawValue = 1,
+            FlagStates = [new FlagState("a", true, 0, null), new FlagState("b", false, 1, "off")],
+        };
+        var rows = NodeDetailFormatter.Format(node);
+        rows.Where(r => r.Kind == DetailRowKind.Child).Should().HaveCount(2);
+        rows.Should().ContainRow("  a", "set");
+        rows.Should().ContainRow("  b", "off");
+    }
+
     [Fact]
     public void Format_Integer_ReturnsBasicDetails()
     {
@@ -20,12 +41,12 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Name", "width"));
-        details.Should().ContainEquivalentOf(("Type", "integer"));
-        details.Should().ContainEquivalentOf(("Value", "800"));
-        details.Should().ContainEquivalentOf(("Offset", "0x00000010 (16)"));
-        details.Should().ContainEquivalentOf(("Size", "4 bytes"));
-        details.Should().ContainEquivalentOf(("Hex", "0x320"));
+        details.Should().ContainRow("Name", "width");
+        details.Should().ContainRow("Type", "integer");
+        details.Should().ContainRow("Value", "800");
+        details.Should().ContainRow("Offset", "0x00000010 (16)");
+        details.Should().ContainRow("Size", "4 bytes");
+        details.Should().ContainRow("Hex", "0x320");
     }
 
     [Fact]
@@ -59,8 +80,8 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Enum", "RGBA"));
-        details.Should().ContainEquivalentOf(("Description", "Truecolor with alpha"));
+        details.Should().ContainRow("Enum", "RGBA");
+        details.Should().ContainRow("Description", "Truecolor with alpha");
     }
 
     [Fact]
@@ -77,9 +98,9 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "string"));
-        details.Should().ContainEquivalentOf(("Value", "PNG"));
-        details.Should().ContainEquivalentOf(("Encoding", "ASCII"));
+        details.Should().ContainRow("Type", "string");
+        details.Should().ContainRow("Value", "PNG");
+        details.Should().ContainRow("Encoding", "ASCII");
     }
 
     [Fact]
@@ -100,9 +121,9 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "struct"));
-        details.Should().ContainEquivalentOf(("StructType", "IHDR"));
-        details.Should().ContainEquivalentOf(("Children", "2 fields"));
+        details.Should().ContainRow("Type", "struct");
+        details.Should().ContainRow("StructType", "IHDR");
+        details.Should().ContainRow("Children", "2 fields");
     }
 
     [Fact]
@@ -122,8 +143,8 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "array"));
-        details.Should().ContainEquivalentOf(("Elements", "2 items"));
+        details.Should().ContainRow("Type", "array");
+        details.Should().ContainRow("Elements", "2 items");
     }
 
     [Fact]
@@ -139,8 +160,8 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "bytes"));
-        details.Should().ContainEquivalentOf(("Hex", "89 50 4E 47"));
+        details.Should().ContainRow("Type", "bytes");
+        details.Should().ContainRow("Hex", "89 50 4E 47");
     }
 
     [Fact]
@@ -157,7 +178,7 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "float32"));
+        details.Should().ContainRow("Type", "float32");
         details.Should().Contain(d => d.Key == "Value" && d.Value.StartsWith("3.14"));
     }
 
@@ -175,7 +196,7 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "float64"));
+        details.Should().ContainRow("Type", "float64");
     }
 
     [Fact]
@@ -193,10 +214,10 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "compressed"));
-        details.Should().ContainEquivalentOf(("Algorithm", "zlib"));
-        details.Should().ContainEquivalentOf(("Compressed", "100 bytes"));
-        details.Should().ContainEquivalentOf(("Decompressed", "500 bytes"));
+        details.Should().ContainRow("Type", "compressed");
+        details.Should().ContainRow("Algorithm", "zlib");
+        details.Should().ContainRow("Compressed", "100 bytes");
+        details.Should().ContainRow("Decompressed", "500 bytes");
     }
 
     [Fact]
@@ -212,8 +233,8 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "error"));
-        details.Should().ContainEquivalentOf(("Error", "unexpected EOF"));
+        details.Should().ContainRow("Type", "error");
+        details.Should().ContainRow("Error", "unexpected EOF");
     }
 
     [Fact]
@@ -246,7 +267,13 @@ public sealed class NodeDetailFormatterTests
 
         var details = NodeDetailFormatter.Format(node);
 
-        details.Should().ContainEquivalentOf(("Type", "virtual"));
-        details.Should().ContainEquivalentOf(("Value", "42"));
+        details.Should().ContainRow("Type", "virtual");
+        details.Should().ContainRow("Value", "42");
     }
+}
+
+internal static class DetailRowAssertions
+{
+    public static void ContainRow(this FluentAssertions.Collections.GenericCollectionAssertions<DetailRow> a, string key, string value)
+        => a.Contain(d => d.Key == key && d.Value == value, $"expected row ({key}, {value})");
 }

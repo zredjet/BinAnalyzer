@@ -1,0 +1,43 @@
+@{
+    var s = Document.Summary;
+    var bad = Document.DecodeFailure is not null || s.Errors > 0 || !s.AllChecksumsValid || !s.AllValidationsPassed;
+}
+<div class="infobar @(bad ? "bad" : "ok")" role="status">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" />@if (bad)
+        {<path d="M12 8v5M12 16h.01" />}
+        else
+        {<path d="M8 12l3 3 5-6" />}</svg>
+    <div class="msg">
+        @if (Document.DecodeFailure is not null)
+        {
+            <b>デコードに失敗しました。</b> @Document.DecodeFailure
+        }
+        else
+        {
+            @if (s.ChecksumTotal > 0)
+            {
+                <b>チェックサム @s.ChecksumValid / @s.ChecksumTotal が一致。</b>
+            }
+            @if (s.ValidationTotal > 0)
+            {
+                <span> 検証 @s.ValidationPassed / @s.ValidationTotal 通過。</span>
+            }
+            @if (s.Errors > 0)
+            {
+                <span class="ng"> デコードエラー @s.Errors 件。</span>
+            }
+            @if (s.CompressedStreams > 0)
+            {
+                <span> 圧縮ストリーム @s.CompressedStreams 件は展開して入れ子で解析済みです。</span>
+            }
+            @if (s.ChecksumTotal == 0 && s.ValidationTotal == 0 && s.Errors == 0 && s.CompressedStreams == 0)
+            {
+                <span>@Document.Index.FieldCount フィールドをデコードしました。</span>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+}

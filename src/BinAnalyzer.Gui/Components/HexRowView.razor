@@ -1,0 +1,96 @@
+@{
+    var (selStart, selEnd) = Document.SelectedRange;
+}
+<div class="row" @onmouseover="() => Document.Hover(-1)">
+    <span class="off">@Row.Offset.ToString("X8")</span>
+    <span class="bytes">
+        @for (var i = 0; i < Row.Cells.Length; i++)
+        {
+            var cell = Row.Cells[i];
+            if (cell is null)
+            {
+                <span class="b gap"></span>
+                continue;
+            }
+            var c = cell.Value;
+            var off = Row.Offset + i;
+            var sel = off >= selStart && off < selEnd;
+            var id = c.NodeId;
+            <span class="b @FieldKindMapper.CssClass(c.Kind) @(c.FieldStart ? "fs" : "") @(c.FieldEnd ? "fe" : "") @(sel ? "sel" : "")"
+                  data-n="@id" data-p="@c.AncestorPath"
+                  @onmouseover="() => Document.Hover(id)" @onmouseover:stopPropagation="true"
+                  @onclick="() => Document.Select(id)">@c.Value.ToString("X2")</span>
+        }
+    </span>
+    <span class="ascii">
+        @for (var i = 0; i < Row.Cells.Length; i++)
+        {
+            var cell = Row.Cells[i];
+            if (cell is null)
+            {
+                <span class="a"> </span>
+                continue;
+            }
+            var c = cell.Value;
+            var off = Row.Offset + i;
+            var sel = off >= selStart && off < selEnd;
+            var id = c.NodeId;
+            <span class="a @FieldKindMapper.CssClass(c.Kind) @(sel ? "sel" : "")" data-n="@id" data-p="@c.AncestorPath"
+                  @onmouseover="() => Document.Hover(id)" @onmouseover:stopPropagation="true"
+                  @onclick="() => Document.Select(id)">@Row.Ascii[i]</span>
+        }
+    </span>
+    <span class="ghost">
+        @foreach (var g in Row.Ghosts)
+        {
+            var id = g.NodeId;
+            <span class="g" data-n="@id" @onclick="() => Document.Select(id)">
+                <b>@g.Name</b>
+                @if (g.Style == GhostStyle.Ok)
+                {
+                    <em class="ok">✓</em>
+                }
+                else if (g.Style == GhostStyle.Ng)
+                {
+                    <em class="ng">✗</em>
+                    @g.ValueText
+                }
+                else
+                {
+                    @g.ValueText
+                }
+            </span>
+        }
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HexRow Row { get; set; } = null!;
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+
+    private HexRow? _renderedRow;
+    private (long, long) _renderedSelection = (-1, -1);
+    private bool _shouldRender = true;
+
+    protected override void OnParametersSet()
+    {
+        var sel = Document.SelectedRange;
+        var rowStart = Row.Offset;
+        var rowEnd = Row.Offset + HexRowBuilder.BytesPerRow;
+        var rowChanged = !ReferenceEquals(_renderedRow, Row);
+        var selectionChanged = sel != _renderedSelection;
+        var overlapsOld = Overlaps(_renderedSelection, rowStart, rowEnd);
+        var overlapsNew = Overlaps(sel, rowStart, rowEnd);
+        _shouldRender = _renderedRow is null || rowChanged || (selectionChanged && (overlapsOld || overlapsNew));
+        if (_shouldRender)
+        {
+            _renderedRow = Row;
+            _renderedSelection = sel;
+        }
+    }
+
+    protected override bool ShouldRender() => _shouldRender;
+
+    private static bool Overlaps((long Start, long End) range, long rowStart, long rowEnd)
+        => range.Start >= 0 && range.Start < rowEnd && range.End > rowStart;
+}

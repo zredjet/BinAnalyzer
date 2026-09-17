@@ -60,3 +60,32 @@ Apple M4 Max, 1 CPU, 16 logical and 16 physical cores
 | FormatHexdump | 1,456.4 ns | 6.46 ns | 5.73 ns | 1.4095 | 0.0114 | 11.52 KB |
 | FormatHtml | 2,321.8 ns | 9.14 ns | 8.10 ns | 6.3477 | 0.6332 | 51.95 KB |
 | FormatMap | 721.3 ns | 2.89 ns | 2.41 ns | 0.7477 | 0.0076 | 6.11 KB |
+
+## GUI 配布物（REQ-176）
+
+計測日: 2026-09-18 / macOS 15（Apple Silicon）/ .NET SDK 10.0.302 / Photino.Native 4.0.22
+
+publish オプション: `-c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true`
+
+| 項目 | 値 | 備考 |
+|---|---:|---|
+| 単一ファイルサイズ（osx-arm64, self-contained） | 93 MB | Razor コンポーネントを含むため `Microsoft.AspNetCore.App` 共有フレームワークが同梱される。参考: フレームワーク依存では 17 MB |
+| 初回起動（ネイティブ展開あり）`-o tree` | 1.12 s | `Photino.Native.dylib` と `libonigwrap.dylib`（計 約 1 MB）を `DOTNET_BUNDLE_EXTRACT_BASE_DIR` へ展開する時間を含む |
+| 2 回目以降 `-o tree` | 0.08 s | |
+| `-o gui` 窓表示までの overhead（初回展開あり） | 約 0.9 s | `BINANALYZER_GUI_AUTOCLOSE=3000` での総時間 3.94 s から自動終了待ち 3 s を引いた値 |
+| `-o gui` 窓表示までの overhead（2 回目以降） | 約 0.45 s | 同上、総時間 3.44 s |
+
+### 各 RID の配布物サイズ（release.yml dry run, 2026-09-18）
+
+| RID | 単一ファイル | 備考 |
+|---|---:|---|
+| win-x64 | 87 MB | `binanalyzer.exe`（WebView2Loader.dll を内包） |
+| linux-x64 | 87 MB | |
+| osx-arm64 | 93 MB | |
+| osx-x64 | 86 MB | |
+
+### 備考
+
+- 各 OS のサイズは release ワークフローの `Package` ステップのログ（`ls -l`）で確認できる。
+- サイズ削減（trimming、`InvariantGlobalization`、ASP.NET Core 共有フレームワークの部分参照）は REQ-177 以降の課題。
+

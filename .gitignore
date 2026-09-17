@@ -39,3 +39,6 @@ report.html
 BenchmarkDotNet.Artifacts/
 testdata/real/
 THIRD-PARTY-LICENSES.txt
+
+# Web: formats/ からビルド時に同期されるフォーマット定義（format-list.json のみ追跡）
+src/BinAnalyzer.Web/wwwroot/formats/**/*.bdef.yaml

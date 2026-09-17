@@ -1,0 +1,77 @@
+@inject IJSRuntime JS
+
+<section class="hexwrap" aria-label="ヘックスビュー">
+    <div class="hexhead">
+        <span>オフセット</span>
+        <span class="cols">
+            @for (var i = 0; i < HexRowBuilder.BytesPerRow; i++)
+            {
+                <span>@i.ToString("X2")</span>
+            }
+        </span>
+        <span>ASCII</span>
+        <span class="ghost-head">この行で決まる値</span>
+    </div>
+    <div class="hex" id="@_containerId" @onmouseleave="() => Document.Hover(-1)">
+        @if (_rows is not null)
+        {
+            @foreach (var row in _rows)
+            {
+                <HexRowView @key="row.Offset" Row="row" Document="Document" />
+            }
+        }
+        else
+        {
+            <Virtualize @ref="_virtualize" ItemsProvider="ProvideRows" ItemSize="26" OverscanCount="8" Context="row">
+                <HexRowView @key="row.Offset" Row="row" Document="Document" />
+            </Virtualize>
+        }
+    </div>
+</section>
+
+@code {
+    /// <summary>この行数以下なら仮想化せず全行を描画する（小さいファイル・テスト）。</summary>
+    public const int PlainRowLimit = 512;
+
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+
+    private readonly string _containerId = "hex-" + Guid.NewGuid().ToString("N")[..8];
+    private HexRowBuilder? _builtFor;
+    private HexRow[]? _rows;
+    private Virtualize<HexRow>? _virtualize;
+    private int _lastScrolledSelection = -2;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_builtFor, Document.Hex)) return;
+        _builtFor = Document.Hex;
+        _rows = Document.Hex.RowCount <= PlainRowLimit
+            ? Enumerable.Range(0, Document.Hex.RowCount).Select(Document.Hex.Build).ToArray()
+            : null;
+        _lastScrolledSelection = -2;
+    }
+
+    private ValueTask<ItemsProviderResult<HexRow>> ProvideRows(ItemsProviderRequest request)
+    {
+        var hex = Document.Hex;
+        var count = Math.Min(request.Count, hex.RowCount - request.StartIndex);
+        var items = new HexRow[Math.Max(0, count)];
+        for (var i = 0; i < items.Length; i++)
+            items[i] = hex.Build(request.StartIndex + i);
+        return ValueTask.FromResult(new ItemsProviderResult<HexRow>(items, hex.RowCount));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Document.SelectedId == _lastScrolledSelection) return;
+        _lastScrolledSelection = Document.SelectedId;
+        var (offset, _) = Document.SelectedRange;
+        if (offset < 0) return;
+        try
+        {
+            await JS.InvokeVoidAsync("binGui.scrollHexTo", _containerId, HexRowBuilder.RowIndexOf(offset) * 26);
+        }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+    }
+}

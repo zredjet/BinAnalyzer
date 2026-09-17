@@ -1,0 +1,32 @@
+@inject GuiSession Session
+
+<aside class="pane">
+    <div class="pane-tabs" role="tablist">
+        <button class="ptab" role="tab" aria-selected="@Sel(PaneKind.Structure)" @onclick="() => Session.SetPane(PaneKind.Structure)">構造 <span class="n">@Document.Index.FieldCount フィールド</span></button>
+        <button class="ptab" role="tab" aria-selected="@Sel(PaneKind.Definition)" @onclick="() => Session.SetPane(PaneKind.Definition)">定義 <span class="n">@Document.Format.File</span></button>
+        @if (Session.Diff is { } diff)
+        {
+            <button class="ptab" role="tab" aria-selected="@Sel(PaneKind.Diff)" @onclick="() => Session.SetPane(PaneKind.Diff)">差分 <span class="n">@diff.Result.Entries.Count</span></button>
+        }
+    </div>
+    @switch (Session.Pane)
+    {
+        case PaneKind.Definition:
+            <DefinitionView Document="Document" />
+            break;
+        case PaneKind.Diff when Session.Diff is not null:
+            <DiffView />
+            break;
+        default:
+            <div class="pane-view">
+                <StructTree Document="Document" />
+                <Inspector Document="Document" />
+            </div>
+            break;
+    }
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+    private string Sel(PaneKind p) => Session.Pane == p ? "true" : "false";
+}
