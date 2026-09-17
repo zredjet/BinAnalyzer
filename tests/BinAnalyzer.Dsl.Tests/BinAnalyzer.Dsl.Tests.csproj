@@ -19,4 +19,11 @@
     <ProjectReference Include="..\..\src\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\formats\wav.bdef.yaml" Link="formats\wav.bdef.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\formats\mp4.bdef.yaml" Link="formats\mp4.bdef.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\formats\common\riff.bdef.yaml" Link="formats\common\riff.bdef.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\formats\common\isobmff.bdef.yaml" Link="formats\common\isobmff.bdef.yaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

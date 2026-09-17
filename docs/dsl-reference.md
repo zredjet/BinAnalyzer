@@ -1464,6 +1464,18 @@ structs:
 - 循環インポートはエラー
 - 同名の定義が複数ファイルに存在する場合はエラー（名前衝突禁止）
 
+### インポートの解決手段
+
+インポート先の取得方法はホストごとに `IImportResolver`（`BinAnalyzer.Core.Interfaces`）で差し替えられます。ローダー（`YamlFormatLoader`）は相対パスの解決と内容の取得だけをリゾルバに委ね、循環検出・名前衝突チェック・マージは共通ロジックで行います。
+
+| API | 解決手段 | 用途 |
+|---|---|---|
+| `Load(path)` | `FileImportResolver`（インポート元ファイルのディレクトリ基準） | CLI / TUI / デスクトップ GUI |
+| `LoadAsync(yaml, basePath, resolver)` | 任意の `IImportResolver` | Web（`HttpImportResolver` が `formats/` 配下の相対 URL として HTTP 取得）、埋め込みリソースなど |
+| `LoadFromString(yaml)` | なし | `imports:` を含む定義は例外（互換維持） |
+
+`basePath` は YAML 自身の識別子（ファイルなら絶対パス、HTTP なら `formats/wav.bdef.yaml` のような相対 URL）で、相対インポートの基準と循環検出の起点になります。`ImportPath.Combine` が `.` / `..` を含む相対パスを字句的に結合するので、URL 系のリゾルバはファイルシステムを介さず同じ規則で解決できます。
+
 ### 共通定義ライブラリ
 
 `formats/common/` ディレクトリに、複数のフォーマット定義で共有される構造体が用意されています。新しいフォーマット定義を作成する際に import して利用できます。

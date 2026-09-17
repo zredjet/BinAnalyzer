@@ -9,6 +9,7 @@
   { "name": "FLV", "file": "flv.bdef.yaml", "extensions": [".flv"] },
   { "name": "GIF", "file": "gif.bdef.yaml", "extensions": [".gif"] },
   { "name": "GZIP", "file": "gzip.bdef.yaml", "extensions": [".gz", ".gzip"] },
+  { "name": "HEIF", "file": "heif.bdef.yaml", "extensions": [".heif", ".heic"] },
   { "name": "ICC", "file": "icc.bdef.yaml", "extensions": [".icc", ".icm"] },
   { "name": "ICO", "file": "ico.bdef.yaml", "extensions": [".ico"] },
   { "name": "Java Class", "file": "java-class.bdef.yaml", "extensions": [".class"] },
