@@ -26,7 +26,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errorMode = ErrorMode.Stop;
         _errors = null;
         _globalMaxRepeat = options?.MaxRepeat;
-        var context = new DecodeContext(data, format.Endianness);
+        var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
         return DecodeStruct(rootStruct, format, context, format.Name);
     }
@@ -37,7 +37,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errorMode = errorMode;
         _errors = errorMode == ErrorMode.Continue ? new List<DecodeError>() : null;
         _globalMaxRepeat = options?.MaxRepeat;
-        var context = new DecodeContext(data, format.Endianness);
+        var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
         var root = DecodeStruct(rootStruct, format, context, format.Name);
         return new DecodeResult
