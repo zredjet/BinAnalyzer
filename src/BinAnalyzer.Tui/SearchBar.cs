@@ -1,5 +1,6 @@
 using BinAnalyzer.Core.Decoded;
-using Terminal.Gui;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace BinAnalyzer.Tui;
 
@@ -10,12 +11,17 @@ internal sealed class SearchBar : View
     private readonly DecodedStruct _root;
     private readonly TuiState _state;
     private readonly TreePane _treePane;
+    private string? _lastQuery;
 
     public SearchBar(DecodedStruct root, TuiState state, TreePane treePane)
     {
         _root = root;
         _state = state;
         _treePane = treePane;
+
+        // A plain View cannot receive focus by default in Terminal.Gui 2.x; without this the
+        // TextField never gets focus and Esc/Enter fall through to the tree/global bindings.
+        CanFocus = true;
 
         var label = new Label
         {
@@ -48,14 +54,6 @@ internal sealed class SearchBar : View
                 OnSearchTextChanged();
         };
 
-        _textField.Accepting += (_, _) =>
-        {
-            var next = _state.NextSearchResult();
-            if (next is not null)
-                _treePane.GoTo(next);
-            UpdateResultLabel();
-        };
-
         _state.SearchResultsChanged += (_, _) => UpdateResultLabel();
     }
 
@@ -64,9 +62,29 @@ internal sealed class SearchBar : View
         // Re-search when focus is gained (text may have changed)
     }
 
+    /// <summary>
+    /// Enter in the search field: runs the search when the query changed,
+    /// otherwise jumps to the next match.
+    /// </summary>
+    public void Submit()
+    {
+        var query = _textField.Text;
+        if (query != _lastQuery)
+        {
+            PerformSearch();
+            return;
+        }
+
+        var next = _state.NextSearchResult();
+        if (next is not null)
+            _treePane.GoTo(next);
+        UpdateResultLabel();
+    }
+
     public void PerformSearch()
     {
         var query = _textField.Text;
+        _lastQuery = query;
         _state.Search(_root, query);
         if (_state.SearchResults.Count > 0)
             _treePane.GoTo(_state.SearchResults[0]);
@@ -90,6 +108,7 @@ internal sealed class SearchBar : View
     public void HideBar()
     {
         Visible = false;
+        _lastQuery = null;
         _state.Search(_root, "");
     }
 }

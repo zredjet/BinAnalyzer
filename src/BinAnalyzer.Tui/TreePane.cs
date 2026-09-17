@@ -1,5 +1,6 @@
 using BinAnalyzer.Core.Decoded;
-using Terminal.Gui;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace BinAnalyzer.Tui;
 

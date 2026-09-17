@@ -1,12 +1,16 @@
+using System.Collections.ObjectModel;
 using System.Text;
-using Terminal.Gui;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace BinAnalyzer.Tui;
 
 internal sealed class HexPane : FrameView
 {
     private readonly ReadOnlyMemory<byte> _data;
-    private readonly TextView _textView;
+    // ListView is the non-obsolete read-only, scrollable text presenter in Terminal.Gui 2.5
+    // (TextView is obsolete there). One item per hex-dump line.
+    private readonly ListView _listView;
     private readonly TuiState _state;
 
     public HexPane(ReadOnlyMemory<byte> data, TuiState state)
@@ -15,16 +19,15 @@ internal sealed class HexPane : FrameView
         _data = data;
         _state = state;
 
-        _textView = new TextView
+        _listView = new ListView
         {
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
-            ReadOnly = true,
         };
 
-        Add(_textView);
+        Add(_listView);
 
         _state.SelectedNodeChanged += (_, _) => UpdateHex();
     }
@@ -34,7 +37,7 @@ internal sealed class HexPane : FrameView
         var node = _state.SelectedNode;
         if (node is null)
         {
-            _textView.Text = "";
+            _listView.SetSource(new ObservableCollection<string>());
             Title = "Hex";
             return;
         }
@@ -42,10 +45,11 @@ internal sealed class HexPane : FrameView
         Title = $"Hex \u2014 {node.Name} [0x{node.Offset:X8}] ({node.Size} bytes)";
 
         var text = GenerateHexDump(_data.Span, node.Offset, node.Size);
-        _textView.Text = text;
+        var lines = text.Split(Environment.NewLine).Where(l => l.Length > 0);
+        _listView.SetSource(new ObservableCollection<string>(lines));
 
         // Scroll to the first highlighted line
-        _textView.MoveHome();
+        _listView.MoveHome(false);
     }
 
     internal static string GenerateHexDump(ReadOnlySpan<byte> data, long selectOffset, long selectSize)

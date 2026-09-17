@@ -1,10 +1,14 @@
-using Terminal.Gui;
+using System.Collections.ObjectModel;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace BinAnalyzer.Tui;
 
 internal sealed class DetailPane : FrameView
 {
-    private readonly TextView _textView;
+    // ListView is the non-obsolete read-only, scrollable text presenter in Terminal.Gui 2.5
+    // (TextView is obsolete there). One item per line.
+    private readonly ListView _listView;
     private readonly TuiState _state;
 
     public DetailPane(TuiState state)
@@ -12,16 +16,15 @@ internal sealed class DetailPane : FrameView
         Title = "Detail";
         _state = state;
 
-        _textView = new TextView
+        _listView = new ListView
         {
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
-            ReadOnly = true,
         };
 
-        Add(_textView);
+        Add(_listView);
 
         _state.SelectedNodeChanged += (_, _) => UpdateDetail();
     }
@@ -31,14 +34,13 @@ internal sealed class DetailPane : FrameView
         var node = _state.SelectedNode;
         if (node is null)
         {
-            _textView.Text = "";
+            _listView.SetSource(new ObservableCollection<string>());
             return;
         }
 
         var details = NodeDetailFormatter.Format(node);
         var maxKeyLen = details.Max(d => d.Key.Length);
-        var text = string.Join(Environment.NewLine,
-            details.Select(d => $"{d.Key.PadRight(maxKeyLen)}  {d.Value}"));
-        _textView.Text = text;
+        var lines = details.Select(d => $"{d.Key.PadRight(maxKeyLen)}  {d.Value}");
+        _listView.SetSource(new ObservableCollection<string>(lines));
     }
 }
