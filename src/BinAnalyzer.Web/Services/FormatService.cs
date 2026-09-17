@@ -8,6 +8,7 @@ public sealed class FormatService
 {
     private readonly HttpClient _http;
     private readonly YamlFormatLoader _loader = new();
+    private readonly HttpImportResolver _resolver;
     private readonly Dictionary<string, FormatDefinition> _cache = new();
     private readonly Dictionary<string, string> _yamlCache = new();
     private List<FormatEntry>? _formatList;
@@ -15,6 +16,7 @@ public sealed class FormatService
     public FormatService(HttpClient http)
     {
         _http = http;
+        _resolver = new HttpImportResolver(http);
     }
 
     public async Task<List<FormatEntry>> GetFormatListAsync()
@@ -33,7 +35,8 @@ public sealed class FormatService
             return cached;
 
         var yaml = await LoadYamlAsync(fileName);
-        var format = _loader.LoadFromString(yaml);
+        // imports は formats/ 配下の相対パスとして HTTP で解決する（REQ-170）
+        var format = await _loader.LoadAsync(yaml, FormatUrl(fileName), _resolver);
         _cache[fileName] = format;
         return format;
     }
@@ -44,10 +47,12 @@ public sealed class FormatService
         if (_yamlCache.TryGetValue(fileName, out var cached))
             return cached;
 
-        var yaml = await _http.GetStringAsync($"formats/{fileName}");
+        var yaml = await _http.GetStringAsync(FormatUrl(fileName));
         _yamlCache[fileName] = yaml;
         return yaml;
     }
+
+    private static string FormatUrl(string fileName) => $"formats/{fileName}";
 
     public async Task<FormatEntry?> DetectFormat(string fileExtension)
     {

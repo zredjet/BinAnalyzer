@@ -131,4 +131,49 @@ public sealed class FormatServiceTests
             .Count(u => u == "formats/png.bdef.yaml")
             .Should().Be(1, "YAML should be fetched only once");
     }
+
+    // ──────────────────────────────────────────────
+    // REQ-170: imports を HTTP 経由で解決
+    // ──────────────────────────────────────────────
+
+    private static string RealFormat(string relative)
+        => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "formats", relative));
+
+    [Fact]
+    public async Task LoadFormatAsync_WithImports_FetchesImportedLibraryOverHttp()
+    {
+        var (service, handler) = CreateService();
+        handler.Register("formats/wav.bdef.yaml", RealFormat("wav.bdef.yaml"));
+        handler.Register("formats/common/riff.bdef.yaml", RealFormat("common/riff.bdef.yaml"));
+
+        var format = await service.LoadFormatAsync("wav.bdef.yaml");
+
+        format.Name.Should().Be("WAV");
+        format.Structs.Should().ContainKey("raw_data", "common/riff.bdef.yaml から取り込まれる");
+        handler.RequestedUrls.Should().Equal("formats/wav.bdef.yaml", "formats/common/riff.bdef.yaml");
+    }
+
+    [Fact]
+    public async Task LoadFormatAsync_WithImports_CachesDefinition()
+    {
+        var (service, handler) = CreateService();
+        handler.Register("formats/wav.bdef.yaml", RealFormat("wav.bdef.yaml"));
+        handler.Register("formats/common/riff.bdef.yaml", RealFormat("common/riff.bdef.yaml"));
+
+        await service.LoadFormatAsync("wav.bdef.yaml");
+        await service.LoadFormatAsync("wav.bdef.yaml");
+
+        handler.RequestedUrls.Count(u => u == "formats/common/riff.bdef.yaml").Should().Be(1);
+    }
+
+    [Fact]
+    public async Task LoadFormatAsync_MissingImport_ThrowsWithResolvedUrl()
+    {
+        var (service, handler) = CreateService();
+        handler.Register("formats/wav.bdef.yaml", RealFormat("wav.bdef.yaml"));
+
+        var act = () => service.LoadFormatAsync("wav.bdef.yaml");
+
+        await act.Should().ThrowAsync<FileNotFoundException>().WithMessage("*formats/common/riff.bdef.yaml*");
+    }
 }

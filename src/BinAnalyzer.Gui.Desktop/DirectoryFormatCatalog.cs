@@ -6,7 +6,7 @@ namespace BinAnalyzer.Gui.Desktop;
 
 /// <summary>
 /// デスクトップ用カタログ。<c>formats/</c> ディレクトリ（exe の隣、またはカレント）と、
-/// CLI で <c>-f</c> 指定されたファイルを提供する。<c>YamlFormatLoader.Load(path)</c> を使うので imports も解決される。
+/// CLI で <c>-f</c> 指定されたファイルを提供する。imports は <see cref="FileImportResolver"/> でファイルシステムから解決する。
 /// </summary>
 public sealed class DirectoryFormatCatalog : IFormatCatalog
 {
@@ -78,16 +78,17 @@ public sealed class DirectoryFormatCatalog : IFormatCatalog
 
     public Task<IReadOnlyList<FormatCatalogEntry>> ListAsync() => Task.FromResult<IReadOnlyList<FormatCatalogEntry>>(_entries);
 
-    public Task<FormatDocument> LoadAsync(string file)
+    public async Task<FormatDocument> LoadAsync(string file)
     {
         if (_cache.TryGetValue(file, out var cached))
-            return Task.FromResult(cached);
+            return cached;
         if (!_files.TryGetValue(file, out var path))
             throw new FileNotFoundException($"フォーマット定義が見つかりません: {file}");
-        var definition = _loader.Load(path);
-        var doc = new FormatDocument(file, definition.Name, definition, File.ReadAllText(path));
+        var yaml = File.ReadAllText(path);
+        var definition = await _loader.LoadAsync(yaml, path, FileImportResolver.Instance);
+        var doc = new FormatDocument(file, definition.Name, definition, yaml);
         _cache[file] = doc;
-        return Task.FromResult(doc);
+        return doc;
     }
 
     public Task<FormatCatalogEntry?> DetectByExtensionAsync(string extension)

@@ -16,14 +16,16 @@ public sealed class YamlFormatLoader : IFormatLoader
         .IgnoreUnmatchedProperties()
         .Build();
 
+    /// <summary>ファイルから読み込む。imports はファイルシステム（<see cref="FileImportResolver"/>）で解決する。</summary>
     public FormatDefinition Load(string path)
     {
         var resolvedPath = Path.GetFullPath(path);
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var model = LoadAndResolveImports(resolvedPath, visited);
-        return YamlToIrMapper.Map(model);
+        var yaml = File.ReadAllText(resolvedPath);
+        // FileImportResolver は同期完了するタスクしか返さないので、ここでブロックしてもデッドロックしない。
+        return LoadAsync(yaml, resolvedPath, FileImportResolver.Instance).GetAwaiter().GetResult();
     }
 
+    /// <summary>YAML テキストから読み込む。imports は解決できないため、含まれていれば例外。</summary>
     public FormatDefinition LoadFromString(string yaml)
     {
         var model = Deserializer.Deserialize<YamlFormatModel>(yaml);
@@ -33,54 +35,45 @@ public sealed class YamlFormatLoader : IFormatLoader
         return YamlToIrMapper.Map(model);
     }
 
+    /// <summary>YAML テキストから読み込み、imports は <paramref name="basePath"/> のディレクトリ基準でファイルシステムから解決する。</summary>
     public FormatDefinition LoadFromString(string yaml, string basePath)
+        => LoadAsync(yaml, Path.GetFullPath(basePath), FileImportResolver.Instance).GetAwaiter().GetResult();
+
+    /// <summary>
+    /// YAML テキストから読み込み、imports は <paramref name="resolver"/> で解決する。
+    /// <paramref name="basePath"/> は YAML 自身の識別子（<see cref="FileImportResolver"/> なら絶対パス、HTTP なら相対 URL）で、
+    /// 相対インポートの基準と循環検出の起点になる。
+    /// </summary>
+    public async Task<FormatDefinition> LoadAsync(string yaml, string basePath, IImportResolver resolver)
     {
         var model = Deserializer.Deserialize<YamlFormatModel>(yaml);
-        if (model.Imports is { Count: > 0 })
-        {
-            var resolvedBase = Path.GetFullPath(basePath);
-            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { resolvedBase };
-            var baseDir = Path.GetDirectoryName(resolvedBase)!;
-            foreach (var import in model.Imports)
-            {
-                var importPath = Path.GetFullPath(Path.Combine(baseDir, import.Path));
-                if (!File.Exists(importPath))
-                    throw new FileNotFoundException(
-                        $"インポートファイルが見つかりません: {import.Path} (解決先: {importPath})");
-                var imported = LoadAndResolveImports(importPath, visited);
-                MergeDefinitions(model, imported, import.Path);
-            }
-        }
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { basePath };
+        await ResolveImportsAsync(model, basePath, resolver, visited).ConfigureAwait(false);
         return YamlToIrMapper.Map(model);
     }
 
-    private YamlFormatModel LoadAndResolveImports(string absolutePath, HashSet<string> visited)
+    private static async Task ResolveImportsAsync(
+        YamlFormatModel model, string basePath, IImportResolver resolver, HashSet<string> visited)
     {
-        if (!visited.Add(absolutePath))
-            throw new InvalidOperationException(
-                $"循環インポートを検出しました: {absolutePath}");
-
-        var yaml = File.ReadAllText(absolutePath);
-        var model = Deserializer.Deserialize<YamlFormatModel>(yaml);
-
         if (model.Imports is null or { Count: 0 })
-            return model;
-
-        var baseDir = Path.GetDirectoryName(absolutePath)!;
+            return;
 
         foreach (var import in model.Imports)
         {
-            var importPath = Path.GetFullPath(Path.Combine(baseDir, import.Path));
+            var resolved = resolver.Resolve(basePath, import.Path);
 
-            if (!File.Exists(importPath))
-                throw new FileNotFoundException(
-                    $"インポートファイルが見つかりません: {import.Path} (解決先: {importPath})");
+            if (!visited.Add(resolved))
+                throw new InvalidOperationException(
+                    $"循環インポートを検出しました: {resolved}");
 
-            var imported = LoadAndResolveImports(importPath, visited);
+            var yaml = await resolver.ReadAsync(resolved).ConfigureAwait(false)
+                ?? throw new FileNotFoundException(
+                    $"インポートファイルが見つかりません: {import.Path} (解決先: {resolved})");
+
+            var imported = Deserializer.Deserialize<YamlFormatModel>(yaml);
+            await ResolveImportsAsync(imported, resolved, resolver, visited).ConfigureAwait(false);
             MergeDefinitions(model, imported, import.Path);
         }
-
-        return model;
     }
 
     private static void MergeDefinitions(

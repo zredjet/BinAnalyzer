@@ -151,7 +151,8 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 - **YamlModels/** — YamlDotNetデシリアライズ用DTO（IRとは別クラス）
 - **YamlToIrMapper** — YAML DTOをIRに変換、式のパース、参照の検証、テンプレートstructキー・参照のパース
-- **YamlFormatLoader** — IFormatLoader実装。インポートの再帰解決と定義マージを担当
+- **YamlFormatLoader** — IFormatLoader実装。インポートの再帰解決（循環検出）と定義マージを担当。取得手段は `IImportResolver`（Core）に委ね、`Load(path)` は `FileImportResolver`、`LoadAsync(yaml, basePath, resolver)` は任意のリゾルバで解決する
+- **FileImportResolver / ImportPath** — 既定のファイルシステムリゾルバと、URL 系リゾルバ向けの字句的な相対パス結合（`.` / `..` の正規化）
 
 ### 出力フォーマッター — Output/
 
@@ -198,14 +199,15 @@ Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起�
 - **Components/** — `GuiShell`（全体レイアウト）、`HexView` / `HexRowView`（`<Virtualize>`、512 行以下は非仮想化）、`HighlightStyle`（ホバーは `<style>` 1 ルールの再描画のみ）、`StructTree` / `Inspector`、`DefinitionView`（`YamlFieldLocator` で選択フィールド行を強調）、`DiffView`（`DiffEngine` の `DiffResult` に直接バインド）、`StructureMapView`、`CommandBar`、`FilePicker` ほか
 - **wwwroot/** — `gui.css` / `gui.js`。デスクトップ配信用に `_content/BinAnalyzer.Gui/...` の論理名で埋め込みリソースにも含める
 
-`BinAnalyzer.Gui.Desktop` は Photino.Blazor ホスト。`EmbeddedWebRootFileProvider` が埋め込みリソースから `index.html` と `_content/...` を配信するため物理 `wwwroot` が不要（CLI の単一ファイル publish を壊さない）。`DirectoryFormatCatalog` は exe 隣 / カレントの `formats/` と `-f` 指定ファイルを提供し、`YamlFormatLoader.Load(path)` で imports も解決する。CLI の `-o gui` は `GuiApp.Run` をインプロセスで呼ぶ（Windows では STA スレッド）。
+`BinAnalyzer.Gui.Desktop` は Photino.Blazor ホスト。`EmbeddedWebRootFileProvider` が埋め込みリソースから `index.html` と `_content/...` を配信するため物理 `wwwroot` が不要（CLI の単一ファイル publish を壊さない）。`DirectoryFormatCatalog` は exe 隣 / カレントの `formats/` と `-f` 指定ファイルを提供し、`YamlFormatLoader.LoadAsync` + `FileImportResolver` で imports も解決する。CLI の `-o gui` は `GuiApp.Run` をインプロセスで呼ぶ（Windows では STA スレッド）。
 
 ### Blazor WebAssembly版 — Web/
 
 Blazor WebAssembly Standalone アプリケーション。サーバーなしの静的サイトとしてデプロイ可能。既存の Core / Dsl / Engine / Output / Compression ライブラリをブラウザ上で再利用:
 
 - **Program.cs** — WASM エントリポイント。HttpClient と FormatService を DI 登録
-- **FormatService** — HttpClient で `wwwroot/formats/` から YAML を取得し、`YamlFormatLoader.LoadFromString()` で IR に変換。キャッシュ付き
+- **FormatService** — HttpClient で `wwwroot/formats/` から YAML を取得し、`YamlFormatLoader.LoadAsync()` で IR に変換。キャッシュ付き
+- **HttpImportResolver** — `IImportResolver` の HTTP 実装。`imports:` の相対パスをインポート元 URL 基準で結合し（`formats/wav.bdef.yaml` → `formats/common/riff.bdef.yaml`）、404 は「見つからない」として扱う。これにより avi / heif / mp4 / wav / webp など共通型ライブラリを使う定義も Web で読める
 - **Home.razor / Home.razor.cs** — メインページ。ファイルアップロード（ドラッグ&ドロップ）、フォーマット自動検出・手動選択、BinaryDecoder でデコード、HtmlOutputFormatter の出力を iframe srcdoc で表示、JsonOutputFormatter の出力を Blob URL でダウンロード
 
 フォーマット定義（IR）からスキーマ図を生成（ISchemaFormatter）:
@@ -221,7 +223,7 @@ Blazor WebAssembly Standalone アプリケーション。サーバーなしの�
 4. **`size: remaining` は現在のスコープ境界を参照** — ファイル全体ではない
 5. **文字列フィールドにフラグを付与可能** — PNGチャンクタイプはASCII文字列かつビットフラグ; DecodedStringにオプションのFlags
 6. **バイナリ読み取りはBCLのみ** — BinaryPrimitives, ReadOnlyMemory\<byte\>, Span\<byte\>
-7. **DSLインポートはDSL層で解決** — インポートの再帰解決・マージはYamlFormatLoader内で完結し、Engineには単一のFormatDefinitionが渡される
+7. **DSLインポートはDSL層で解決** — インポートの再帰解決・マージはYamlFormatLoader内で完結し、Engineには単一のFormatDefinitionが渡される。取得手段（ファイル / HTTP）だけを `IImportResolver` に切り出し、全ホストで同じフォーマット群を扱う
 8. **アライメント・パディングはフィールド/構造体レベルで宣言的に指定** — DecodeContext.AlignTo()でバイト境界調整。パディングフラグはDecodedNodeに伝搬し、出力層でフィルタ
 9. **seekによる絶対オフセットジャンプ** — DecodeContext.Seek()で任意の絶対位置にジャンプ。seek_restoreでデコード後に元の位置に復帰。ポインタベースフォーマット（PE/ELF/ZIP/TIFF等）の解析に対応
 10. **エンディアンのスコープスタック** — 構造体・フィールドレベルでエンディアンを上書き可能。DecodeContextのオーバーレイスコープ（IsOverlay=true）でposition変更なしにエンディアンのみ切り替え。優先順位: フィールド > 構造体 > フォーマットデフォルト
