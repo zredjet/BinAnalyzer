@@ -72,7 +72,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       STAGING_DIR: BinAnalyzer-${{ inputs.version }}-${{ matrix.rid }}
-      SAMPLE: testdata/real/test.png
+      SAMPLE: testdata/smoke/sample.png
       FORMAT: formats/png.bdef.yaml
     steps:
       - uses: actions/checkout@v4

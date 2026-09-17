@@ -64,7 +64,7 @@ jobs:
             exe: BinAnalyzer.Cli
     runs-on: ${{ matrix.os }}
     env:
-      SAMPLE: testdata/real/test.png
+      SAMPLE: testdata/smoke/sample.png
       FORMAT: formats/png.bdef.yaml
     steps:
       - uses: actions/checkout@v4
