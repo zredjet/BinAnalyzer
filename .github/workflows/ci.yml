@@ -98,13 +98,14 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
+          # xvfb-run は子プロセスの stderr を stdout に束ねるので、両方をまとめて取る
           set +e
-          xvfb-run -a ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o gui 2> stderr.txt
+          xvfb-run -a ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o gui > output.txt 2>&1
           code=$?
           set -e
-          cat stderr.txt
+          cat output.txt
           if [ "$code" -ne 1 ]; then echo "expected exit code 1, got $code"; exit 1; fi
-          grep -q "libwebkit2gtk-4.1" stderr.txt
+          grep -q "libwebkit2gtk-4.1" output.txt
 
       - name: Install WebKitGTK (Linux)
         if: runner.os == 'Linux'
