@@ -1,0 +1,19 @@
+<div class="crumb" aria-label="パンくず">
+    @{
+        var node = Document.Selected ?? Document.Root;
+        var items = BreadcrumbBuilder.Build(node, Document.Index, Document.DisplayName);
+    }
+    @for (var i = 0; i < items.Count; i++)
+    {
+        var item = items[i];
+        if (i > 0)
+        {
+            <span class="sepc">›</span>
+        }
+        <button data-n="@item.NodeId" @onclick="() => Document.Select(item.NodeId)">@item.Label</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+}

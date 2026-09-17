@@ -20,6 +20,7 @@
     <ProjectReference Include="..\BinAnalyzer.Compression\BinAnalyzer.Compression.csproj" />
     <ProjectReference Include="..\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
     <ProjectReference Include="..\BinAnalyzer.Output\BinAnalyzer.Output.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Gui\BinAnalyzer.Gui.csproj" />
   </ItemGroup>
 
   <ItemGroup>

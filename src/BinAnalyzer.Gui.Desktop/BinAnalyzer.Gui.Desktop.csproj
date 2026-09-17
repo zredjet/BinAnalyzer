@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>BinAnalyzer.Gui.Desktop</RootNamespace>
+    <AddRazorSupportForMvc>false</AddRazorSupportForMvc>
+    <!-- Photino.Blazor 4.0.x は net8/net9 向けパッケージだが net10 でも動作する（REQ-168 スパイクで確認） -->
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BinAnalyzer.Gui.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.Blazor" Version="4.0.*" />
+    <!-- 推移的な 9.x を RCL と同じ 10.x に揃える -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.*-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinAnalyzer.Gui\BinAnalyzer.Gui.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

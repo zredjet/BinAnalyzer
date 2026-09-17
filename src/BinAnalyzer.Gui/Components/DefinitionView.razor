@@ -1,0 +1,86 @@
+@inject IJSRuntime JS
+
+<div class="pane-view">
+    <div class="defbar">
+        <span>@Document.Format.File</span><span class="grow"></span>
+        @if (_location is null && Document.Selected is not null)
+        {
+            <span class="hint">この構造体は本ファイル内に見つかりません（インポート定義の可能性）</span>
+        }
+    </div>
+    <pre class="yaml">@for (var i = 0; i < _lines.Length; i++)
+    {
+        var cls = i == _location?.FieldLine ? "line cur" : i == _location?.StructLine ? "line cur-struct" : "line";
+        <span class="@cls" id="@(i == _location?.FieldLine ? "yaml-cur" : null)">@foreach (var t in YamlHighlighter.Tokenize(_lines[i]))
+            {<span class="@TokenClass(t.Kind)">@t.Text</span>}
+</span>
+    }</pre>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+
+    private string[] _lines = [];
+    private string? _linesFor;
+    private YamlLocation? _location;
+    private int _locatedFor = -2;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_linesFor, Document.Format.YamlText))
+        {
+            _linesFor = Document.Format.YamlText;
+            _lines = Document.Format.YamlText.Replace("\r\n", "\n").Split('\n');
+            _locatedFor = -2;
+        }
+        if (_locatedFor == Document.SelectedId) return;
+        _locatedFor = Document.SelectedId;
+        _location = Locate();
+    }
+
+    private YamlLocation? Locate()
+    {
+        var node = Document.Selected;
+        if (node is null)
+            return YamlFieldLocator.Locate(Document.Format.YamlText, Document.Format.Definition.RootStruct, null);
+        var id = Document.Index.IdOf(node);
+        // フィールドは最寄りの祖先 struct のブロック内で定義されている。配列要素は親配列のフィールド定義を指す。
+        var fieldNode = node;
+        var fieldId = id;
+        if (Document.Index.ElementIndexOf(id) is not null)
+        {
+            fieldId = Document.Index.ParentIdOf(id);
+            fieldNode = Document.Index.ById(fieldId);
+        }
+        var structName = Document.Format.Definition.RootStruct;
+        for (var p = Document.Index.ParentIdOf(fieldId); p >= 0; p = Document.Index.ParentIdOf(p))
+        {
+            if (Document.Index.ById(p) is DecodedStruct ps)
+            {
+                structName = ps.StructType;
+                break;
+            }
+        }
+        if (fieldId == 0)
+            return YamlFieldLocator.Locate(Document.Format.YamlText, structName, null);
+        return YamlFieldLocator.Locate(Document.Format.YamlText, structName, fieldNode.Name);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_location?.FieldLine is null) return;
+        try { await JS.InvokeVoidAsync("binGui.scrollIntoView", "yaml-cur"); }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+    }
+
+    private static string TokenClass(YamlTokenKind kind) => kind switch
+    {
+        YamlTokenKind.Key => "k",
+        YamlTokenKind.String => "s",
+        YamlTokenKind.Number => "n",
+        YamlTokenKind.Comment => "c",
+        YamlTokenKind.Punct => "p",
+        _ => "",
+    };
+}

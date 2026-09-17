@@ -1,0 +1,59 @@
+@inject GuiSession Session
+
+@if (Session.Diff is { } diff)
+{
+    var st = diff.Result.Statistics;
+    <div class="pane-view">
+        <div class="diffsum">
+            <span class="mono">@diff.Left.DisplayName ⇄ @diff.Right.DisplayName</span>
+            <button class="mini" title="左右を入れ替え" @onclick="Session.SwapDiff">⇄</button>
+            <span>変更 @(st?.ChangedCount ?? 0)</span><span>追加 @(st?.AddedCount ?? 0)</span><span>削除 @(st?.RemovedCount ?? 0)</span>
+            <span class="grow"></span>
+            <button class="mini" title="差分を閉じる" @onclick="Session.ClearDiff">×</button>
+        </div>
+        <div class="difflist">
+            @if (diff.Result.Entries.Count == 0)
+            {
+                <p class="hint">差分はありません。</p>
+            }
+            @foreach (var e in diff.Result.Entries)
+            {
+                var node = diff.Left.Index.ByPath(e.FieldPath) ?? diff.Right.Index.ByPath(e.FieldPath);
+                var kindClass = node is not null && diff.Left.Index.ByPath(e.FieldPath) is { } ln
+                    ? FieldKindMapper.CssClass(diff.Left.Index.KindOf(ln))
+                    : e.Kind switch { BinAnalyzer.Core.Diff.DiffKind.Added => "k-crc", BinAnalyzer.Core.Diff.DiffKind.Removed => "k-error", _ => "k-num" };
+                <button class="diffrow @e.Kind.ToString().ToLowerInvariant()" @onclick="() => SelectPath(e.FieldPath)">
+                    <i class="m @kindClass"></i>
+                    <span class="p">@e.FieldPath</span>
+                    <span class="v">
+                        @if (e.OldValue is not null)
+                        {
+                            <span class="from">@e.OldValue</span>
+                        }
+                        @if (e.NewValue is not null)
+                        {
+                            <span class="to">@e.NewValue</span>
+                        }
+                    </span>
+                </button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private void SelectPath(string path)
+    {
+        if (Session.Diff is not { } diff) return;
+        if (diff.Left.Index.ByPath(path) is { } left)
+        {
+            Session.Activate(diff.Left);
+            diff.Left.Select(left);
+        }
+        else if (diff.Right.Index.ByPath(path) is { } right)
+        {
+            Session.Activate(diff.Right);
+            diff.Right.Select(right);
+        }
+    }
+}

@@ -1,0 +1,47 @@
+@inject GuiSession Session
+
+<div class="popover compare" role="dialog" aria-label="比較するファイル">
+    <div class="popover-title">@(Session.Active?.DisplayName) と比較</div>
+    @{
+        var others = Session.Documents.Where(d => d != Session.Active).ToList();
+    }
+    @if (others.Count == 0)
+    {
+        <p class="popover-hint">他に開いているタブがありません。</p>
+    }
+    @foreach (var doc in others)
+    {
+        var sameFormat = doc.Format.File == Session.Active?.Format.File;
+        <button class="popover-item" disabled="@(!sameFormat)" title="@(sameFormat ? "" : "フォーマットが異なります")" @onclick="() => Session.Compare(doc)">
+            @doc.DisplayName <span class="popover-sub">@doc.Format.File</span>
+        </button>
+    }
+    @if (Session.Files.SupportsNativePicker)
+    {
+        <button class="popover-item" @onclick="Session.PickAndCompareAsync">別のファイルを開いて比較…</button>
+    }
+    else
+    {
+        <label class="popover-item">
+            別のファイルを開いて比較…
+            <InputFile OnChange="OnFileChosen" />
+        </label>
+    }
+    <button class="btn" @onclick="Session.ToggleComparePicker">閉じる</button>
+</div>
+
+@code {
+    private async Task OnFileChosen(InputFileChangeEventArgs e)
+    {
+        var left = Session.Active;
+        if (left is null) return;
+        var file = e.File;
+        using var stream = file.OpenReadStream(100L * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var right = await Session.OpenAsync(new OpenedFile(file.Name, ms.ToArray()), left.Format.File, left.EndianOverride);
+        if (right is null) return;
+        Session.Activate(left);
+        Session.Compare(right);
+    }
+}

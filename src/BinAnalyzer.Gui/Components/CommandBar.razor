@@ -1,0 +1,134 @@
+@inject GuiSession Session
+
+<div class="cmdbar">
+    <select class="cmd combo" aria-label="フォーマット定義" title="フォーマット定義を選択" value="@Document.Format.File" @onchange="OnFormatChanged">
+        @foreach (var f in Session.Formats)
+        {
+            <option value="@f.File">@f.File</option>
+        }
+        @if (Session.Formats.All(f => f.File != Document.Format.File))
+        {
+            <option value="@Document.Format.File">@Document.Format.File</option>
+        }
+    </select>
+    <select class="cmd combo" aria-label="エンディアン" title="エンディアン（フォーマット既定を上書き）" value="@EndianValue" @onchange="OnEndianChanged">
+        <option value="">@(Document.Format.Definition.Endianness == Endianness.Big ? "BE" : "LE")（既定）</option>
+        <option value="big">BE</option>
+        <option value="little">LE</option>
+    </select>
+    <label class="switch" title="フォーマット・エンディアン変更時に即時再デコード">
+        <input type="checkbox" checked="@Session.LiveDecode" @onchange="e => Session.SetLiveDecode(e.Value is true)" />
+        <span class="track" aria-hidden="true"></span>
+        ライブデコード
+    </label>
+    @if (!Session.LiveDecode && (_pendingFormat is not null || _pendingEndianSet))
+    {
+        <button class="btn primary" @onclick="ApplyPendingAsync">再デコード</button>
+    }
+    <span class="live" title="デコード所要時間"><i></i>@Document.DecodeTime.TotalMilliseconds.ToString("F1") ms</span>
+    <span class="sep"></span>
+    <button class="cmd" title="別のファイルと構造差分を取る" @onclick="Session.ToggleComparePicker">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="7" height="16" rx="1.5" /><rect x="14" y="4" width="7" height="16" rx="1.5" /></svg>
+        <span class="txt">差分</span>
+    </button>
+    <button class="cmd" title="全て展開" @onclick="Document.ExpandAll">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8l8 8 8-8" /></svg>
+    </button>
+    <button class="cmd" title="全て折りたたむ" @onclick="Document.CollapseAll">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16l8-8 8 8" /></svg>
+    </button>
+    <span class="grow"></span>
+    <div class="search" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6" /><path d="M16 16l4 4" /></svg>
+        <input id="gui-search" type="text" placeholder="フィールドを検索  **.width" aria-label="フィールドを検索" @bind="_query" @bind:event="oninput" @onkeydown="OnSearchKey" />
+        @if (Document.SearchResults.Count > 0)
+        {
+            <span class="count">@(Document.SearchIndex + 1)/@Document.SearchResults.Count</span>
+            <button class="mini" title="前へ (Shift+Enter)" @onclick="Document.PreviousMatch">↑</button>
+            <button class="mini" title="次へ (Enter)" @onclick="Document.NextMatch">↓</button>
+        }
+        else
+        {
+            <kbd>Ctrl K</kbd>
+        }
+    </div>
+</div>
+@if (Session.ShowComparePicker)
+{
+    <ComparePicker />
+}
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+
+    private string _query = "";
+    private string? _pendingFormat;
+    private Endianness? _pendingEndian;
+    private bool _pendingEndianSet;
+
+    private string EndianValue => (_pendingEndianSet ? _pendingEndian : Document.EndianOverride) switch
+    {
+        Endianness.Big => "big",
+        Endianness.Little => "little",
+        _ => "",
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (_query != Document.SearchQuery && Document.SearchResults.Count == 0 && string.IsNullOrEmpty(Document.SearchQuery))
+            return;
+        _query = Document.SearchQuery;
+    }
+
+    private async Task OnFormatChanged(ChangeEventArgs e)
+    {
+        var file = e.Value?.ToString();
+        if (string.IsNullOrEmpty(file)) return;
+        if (Session.LiveDecode)
+            await Session.ChangeFormatAsync(Document, file);
+        else
+            _pendingFormat = file;
+    }
+
+    private void OnEndianChanged(ChangeEventArgs e)
+    {
+        Endianness? endian = e.Value?.ToString() switch
+        {
+            "big" => Endianness.Big,
+            "little" => Endianness.Little,
+            _ => null,
+        };
+        if (Session.LiveDecode)
+        {
+            Session.ChangeEndian(Document, endian);
+        }
+        else
+        {
+            _pendingEndian = endian;
+            _pendingEndianSet = true;
+        }
+    }
+
+    private async Task ApplyPendingAsync()
+    {
+        if (_pendingFormat is not null)
+            await Session.ChangeFormatAsync(Document, _pendingFormat);
+        if (_pendingEndianSet)
+            Session.ChangeEndian(Document, _pendingEndian);
+        _pendingFormat = null;
+        _pendingEndianSet = false;
+    }
+
+    private void OnSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter") return;
+        if (_query == Document.SearchQuery && Document.SearchResults.Count > 0)
+        {
+            if (e.ShiftKey) Document.PreviousMatch(); else Document.NextMatch();
+        }
+        else
+        {
+            Document.Search(_query);
+        }
+    }
+}

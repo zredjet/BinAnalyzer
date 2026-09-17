@@ -9,6 +9,7 @@ public sealed class FormatService
     private readonly HttpClient _http;
     private readonly YamlFormatLoader _loader = new();
     private readonly Dictionary<string, FormatDefinition> _cache = new();
+    private readonly Dictionary<string, string> _yamlCache = new();
     private List<FormatEntry>? _formatList;
 
     public FormatService(HttpClient http)
@@ -31,10 +32,21 @@ public sealed class FormatService
         if (_cache.TryGetValue(fileName, out var cached))
             return cached;
 
-        var yaml = await _http.GetStringAsync($"formats/{fileName}");
+        var yaml = await LoadYamlAsync(fileName);
         var format = _loader.LoadFromString(yaml);
         _cache[fileName] = format;
         return format;
+    }
+
+    /// <summary>フォーマット定義の YAML テキストを取得する（GUI の定義ビュー用）。</summary>
+    public async Task<string> LoadYamlAsync(string fileName)
+    {
+        if (_yamlCache.TryGetValue(fileName, out var cached))
+            return cached;
+
+        var yaml = await _http.GetStringAsync($"formats/{fileName}");
+        _yamlCache[fileName] = yaml;
+        return yaml;
     }
 
     public async Task<FormatEntry?> DetectFormat(string fileExtension)

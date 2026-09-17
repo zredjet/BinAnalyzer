@@ -1,0 +1,50 @@
+@inject GuiSession Session
+@implements IDisposable
+
+<div class="win gui-root">
+    <TitleBar />
+    <div class="body">
+        <NavRail />
+        <main class="work">
+            @if (Session.Message is not null)
+            {
+                <div class="msgbar" role="status">@Session.Message <button class="btn" @onclick="() => Session.SetMessage(null)">閉じる</button></div>
+            }
+            @if (Session.Active is null || Session.ShowPicker)
+            {
+                <FilePicker />
+            }
+            else
+            {
+                <CommandBar Document="Session.Active" />
+                <BreadcrumbBar Document="Session.Active" />
+                <HexView Document="Session.Active" />
+                <InfoBar Document="Session.Active" />
+            }
+        </main>
+        @if (Session.Active is not null)
+        {
+            <RightPane Document="Session.Active" />
+        }
+    </div>
+    <footer>
+        @if (Session.Active is not null)
+        {
+            <StructureMapView Document="Session.Active" />
+        }
+        <StatusBar Document="Session.Active" />
+    </footer>
+    <HighlightStyle />
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitializeAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

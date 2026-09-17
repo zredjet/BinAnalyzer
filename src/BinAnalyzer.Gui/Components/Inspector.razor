@@ -1,0 +1,93 @@
+@{
+    var node = Document.Selected ?? Document.Root;
+    var id = Document.Index.IdOf(node);
+    var kind = Document.Index.KindOf(id);
+    var path = Document.Index.PathOf(id);
+    var rows = NodeDetailFormatter.Format(node);
+    var raw = RawBytes(node, id);
+}
+<div class="inspector">
+    <div class="exp-head">
+        <span>インスペクター</span>
+        <span class="path">@(path.Length == 0 ? Document.Root.Name : path)</span>
+    </div>
+    <div class="exp-body">
+        <dl class="kv">
+            <dt>型</dt><dd class="mono">@NodeDisplayText.TypeLabel(node)</dd>
+            <dt>位置</dt><dd class="mono">0x@(node.Offset.ToString("X8")) (@node.Offset)&nbsp;&nbsp;@node.Size B@(node.BitOffset is { } bo ? $"  bit {bo}" : "")</dd>
+            @if (raw is not null)
+            {
+                <dt>生バイト</dt><dd class="raw"><span class="@FieldKindMapper.CssClass(kind)">@raw</span>@(node.Size > 16 ? $" … ({node.Size} B)" : "")</dd>
+            }
+            @foreach (var r in rows.Where(r => r.Key is not ("Name" or "Offset" or "Size" or "Type") && r.Kind != DetailRowKind.Child && r.Kind != DetailRowKind.Validation))
+            {
+                <dt>@KeyLabel(r.Key)</dt><dd class="@(r.Kind == DetailRowKind.Mono ? "mono" : "")">@r.Value</dd>
+            }
+            @if (Flags(node) is { Count: > 0 } flags)
+            {
+                <dt>フラグ</dt><dd class="flags">@foreach (var f in flags)
+                    {<span class="@(f.IsSet ? "on" : "")">@f.Name=@(f.Meaning ?? (f.IsSet ? "1" : "0"))</span>}</dd>
+            }
+            @if (node is DecodedBitfield bf)
+            {
+                <dt>ビット</dt><dd class="flags">@foreach (var f in bf.Fields)
+                    {<span>@f.Name=@f.Value@(f.EnumLabel is null ? "" : $" {f.EnumLabel}")</span>}</dd>
+            }
+            @foreach (var r in rows.Where(r => r.Kind == DetailRowKind.Validation))
+            {
+                var ok = !r.Value.StartsWith("FAIL", StringComparison.Ordinal) && r.Value != "invalid";
+                <dt>@(r.Key == "Checksum" ? "チェックサム" : "検証")</dt><dd class="valid"><span class="mono">@r.Value</span><span class="@(ok ? "ok" : "ng")">@(ok ? "✓" : "✗")</span></dd>
+            }
+            @if (node.Description is { Length: > 0 } desc)
+            {
+                <dt>説明</dt><dd class="note">@desc</dd>
+            }
+        </dl>
+        @if (node is DecodedCompressed c)
+        {
+            <div class="affect">@c.Algorithm を展開（@c.CompressedSize B → @c.DecompressedSize B）。@(c.DecodedContent is null ? "展開後の構造は定義されていません。" : "展開後の構造はツリーの子として辿れます。")</div>
+        }
+        else if (kind == FieldKind.Len && Document.Index.ParentOf(id) is { } parent)
+        {
+            <div class="affect">この値は <b>@(Document.Index.PathOf(parent))</b> 内の後続フィールドのサイズを決めている可能性があります。</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+
+    private string? RawBytes(DecodedNode node, int id)
+    {
+        if (!Document.Index.IsInFileSpace(id) || NodeChildren.HasChildren(node) && node is not DecodedCompressed) return null;
+        if (node.Size <= 0 || node.Offset < 0 || node.Offset >= Document.Data.Length) return null;
+        var len = (int)Math.Min(16, Math.Min(node.Size, Document.Data.Length - node.Offset));
+        return string.Join(" ", Document.Data.AsSpan((int)node.Offset, len).ToArray().Select(b => b.ToString("X2")));
+    }
+
+    private static IReadOnlyList<FlagState>? Flags(DecodedNode node) => node switch
+    {
+        DecodedFlags f => f.FlagStates,
+        DecodedString { Flags: { } fl } => fl,
+        _ => null,
+    };
+
+    private static string KeyLabel(string key) => key switch
+    {
+        "Value" => "値",
+        "Hex" => "16進",
+        "Enum" => "enum",
+        "Description" => "説明",
+        "String" => "文字列",
+        "Encoding" => "エンコーディング",
+        "StructType" => "構造体",
+        "Children" => "子",
+        "Elements" => "要素",
+        "RawValue" => "生の値",
+        "Algorithm" => "アルゴリズム",
+        "Compressed" => "圧縮後",
+        "Decompressed" => "展開後",
+        "Error" => "エラー",
+        _ => key,
+    };
+}

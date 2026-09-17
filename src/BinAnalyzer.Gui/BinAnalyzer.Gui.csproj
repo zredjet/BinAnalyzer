@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>BinAnalyzer.Gui</RootNamespace>
+    <AddRazorSupportForMvc>false</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BinAnalyzer.Gui.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.*-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Presentation\BinAnalyzer.Presentation.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Compression\BinAnalyzer.Compression.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
+    <ProjectReference Include="..\BinAnalyzer.Output\BinAnalyzer.Output.csproj" />
+  </ItemGroup>
+
+  <!-- デスクトップホストがアセンブリから静的資産を配信できるよう、wwwroot を埋め込みリソースにも含める -->
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot\**" LogicalName="_content/BinAnalyzer.Gui/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

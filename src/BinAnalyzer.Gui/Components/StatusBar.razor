@@ -1,0 +1,29 @@
+<div class="status">
+    @if (Document is null)
+    {
+        <span class="mono">ファイルを開いてください</span>
+    }
+    else
+    {
+        var node = Document.Selected;
+        <span class="mono sel-info">@(node is null ? "—" : $"{(Document.Index.PathOf(node) is { Length: > 0 } p ? p : Document.Root.Name)}  0x{node.Offset:X8}  {node.Size} B  {NodeDisplayText.TypeLabel(node)}")</span>
+        <span>@FilePicker.FormatSize(Document.Data.Length)</span>
+        <span>@Document.Format.Definition.Name</span>
+        <span>@(Endian(Document))</span>
+        <span class="grow"></span>
+        <span>検証 @Document.Summary.ValidationPassed / @Document.Summary.ValidationTotal</span>
+        <span>チェックサム @Document.Summary.ChecksumValid / @Document.Summary.ChecksumTotal</span>
+        <span>@Document.Index.FieldCount フィールド</span>
+    }
+</div>
+
+@code {
+    [Parameter] public GuiDocument? Document { get; set; }
+
+    private static string Endian(GuiDocument doc)
+    {
+        var e = doc.EndianOverride ?? doc.Format.Definition.Endianness;
+        var label = e == Endianness.Big ? "ビッグエンディアン" : "リトルエンディアン";
+        return doc.EndianOverride is null ? label : label + "（上書き）";
+    }
+}

@@ -1,0 +1,20 @@
+@inject GuiSession Session
+@implements IDisposable
+
+@if (Session.Active is { HoveredId: >= 0 } doc)
+{
+    var id = doc.HoveredId;
+    <style>
+        .gui-root [data-p*="/@(id)/"].b,
+        .gui-root [data-p*="/@(id)/"].a,
+        .gui-root [data-p*="/@(id)/"].sub { background: color-mix(in srgb, var(--c) 30%, transparent); }
+        .gui-root .node[data-n="@id"],
+        .gui-root .seg[data-n="@id"] { background: var(--layer-2); }
+    </style>
+}
+
+@code {
+    protected override void OnInitialized() => Session.HoverChanged += OnHover;
+    private void OnHover() => InvokeAsync(StateHasChanged);
+    public void Dispose() => Session.HoverChanged -= OnHover;
+}

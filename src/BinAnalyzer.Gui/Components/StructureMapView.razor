@@ -1,0 +1,26 @@
+<div class="map" aria-label="構造マップ" @onmouseleave="() => Document.Hover(-1)">
+    @foreach (var seg in Document.Map.Segments)
+    {
+        var segId = seg.NodeId;
+        var selected = Document.SelectedId >= 0 && Document.Index.IsAncestorOrSelf(Document.SelectedId, segId);
+        <div class="seg @(selected ? "sel" : "")" data-n="@segId" style="--w:@Math.Max(seg.Size, 1)" title="@(Document.Index.PathOf(segId)) (@seg.Size B)"
+             @onclick="() => Document.Select(segId)" @onmouseover="() => Document.Hover(segId)" @onmouseover:stopPropagation="true">
+            <span class="lab">@seg.Label</span>
+            <span class="subs">
+                @foreach (var band in seg.Bands)
+                {
+                    var bandId = band.NodeId;
+                    var bandSel = Document.SelectedId >= 0 && (Document.Index.IsAncestorOrSelf(Document.SelectedId, bandId) || Document.Index.IsAncestorOrSelf(bandId, Document.SelectedId));
+                    <i class="sub @FieldKindMapper.CssClass(band.Kind) @(bandSel ? "sel" : "")" data-n="@bandId" data-p="@Document.Index.AncestorIdPath(bandId)" style="--w:@Math.Max(band.Size, 1)"
+                       title="@(Document.Index.PathOf(bandId)) (@band.Size B)"
+                       @onclick="() => Document.Select(bandId)" @onclick:stopPropagation="true"
+                       @onmouseover="() => Document.Hover(bandId)" @onmouseover:stopPropagation="true"></i>
+                }
+            </span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+}
