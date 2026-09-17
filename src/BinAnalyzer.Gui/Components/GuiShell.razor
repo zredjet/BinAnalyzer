@@ -1,4 +1,5 @@
 @inject GuiSession Session
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="win gui-root">
@@ -38,13 +39,52 @@
 </div>
 
 @code {
+    private DotNetObjectReference<GuiShell>? _self;
+
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnChanged;
         await Session.InitializeAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("binGui.registerShortcuts", _self);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // JS が使えない環境（プリレンダリング等）ではショートカット無し
+        }
+    }
+
+    /// <summary>gui.js から呼ばれるキーボードショートカット（Ctrl+Z / Ctrl+Y / Ctrl+S）。</summary>
+    [JSInvokable]
+    public async Task OnShortcut(string name)
+    {
+        switch (name)
+        {
+            case "undo": Session.Undo(); break;
+            case "redo": Session.Redo(); break;
+            case "save":
+                if (Session.Active is { IsDirty: true } doc) await Session.SaveAsync(doc);
+                break;
+        }
+    }
+
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        if (_self is not null)
+        {
+            try { _ = JS.InvokeVoidAsync("binGui.unregisterShortcuts"); } catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+            _self.Dispose();
+            _self = null;
+        }
+    }
 }

@@ -12,11 +12,36 @@
         @foreach (var doc in Session.Documents)
         {
             var isActive = doc == Session.Active && !Session.ShowPicker;
-            <button class="tab @(isActive ? "active" : "")" role="tab" aria-selected="@(isActive ? "true" : "false")" title="@(doc.FullPath ?? doc.DisplayName)" @onclick="() => Session.Activate(doc)">
+            <button class="tab @(isActive ? "active" : "") @(doc.IsDirty ? "modified" : "")" role="tab" aria-selected="@(isActive ? "true" : "false")" title="@((doc.FullPath ?? doc.DisplayName) + (doc.IsDirty ? "（未保存の変更あり）" : ""))" @onclick="() => Session.Activate(doc)">
                 @doc.DisplayName
+                @if (doc.IsDirty)
+                {
+                    <span class="dirty" aria-label="未保存の変更あり">●</span>
+                }
                 <span class="x" role="button" aria-label="閉じる" @onclick="() => Session.Close(doc)" @onclick:stopPropagation="true">×</span>
             </button>
         }
         <button class="tab add" aria-label="ファイルを開く" title="ファイルを開く" @onclick="Session.RequestPicker">+</button>
     </div>
+    @if (Session.Active is { } active)
+    {
+        <div class="actions" role="toolbar" aria-label="編集と保存">
+            <button class="cmd undo" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled="@(!active.CanUndo)" @onclick="Session.Undo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" /></svg>
+            </button>
+            <button class="cmd redo" title="やり直す (Ctrl+Y)" aria-label="やり直す" disabled="@(!active.CanRedo)" @onclick="Session.Redo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m15 14 5-5-5-5" /><path d="M20 9H9a5 5 0 0 0 0 10h3" /></svg>
+            </button>
+            <button class="cmd save" title="@(Session.Files.SupportsNativePicker ? "保存 (Ctrl+S)" : "編集後のファイルをダウンロード (Ctrl+S)")" disabled="@(!active.IsDirty)" @onclick="() => Session.SaveAsync(active)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4" /><path d="M8 20v-6h8v6" /></svg>
+                <span class="txt">@(Session.Files.SupportsNativePicker ? "保存" : "ダウンロード")</span>
+            </button>
+            @if (Session.Files.SupportsNativePicker)
+            {
+                <button class="cmd saveas" title="名前を付けて保存" aria-label="名前を付けて保存" @onclick="() => Session.SaveAsync(active, chooseLocation: true)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4" /><path d="M12 11v7" /><path d="m9 15 3 3 3-3" /></svg>
+                </button>
+            }
+        </div>
+    }
 </header>

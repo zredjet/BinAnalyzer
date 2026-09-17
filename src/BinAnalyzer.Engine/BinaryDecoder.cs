@@ -5,6 +5,7 @@ using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Expressions;
 using BinAnalyzer.Core.Interfaces;
 using BinAnalyzer.Core.Models;
+using BinAnalyzer.Core.Patching;
 
 #pragma warning disable CA5350 // SHA-1 is used for checksum verification, not security
 #pragma warning disable CA5351 // MD5 is used for checksum verification, not security
@@ -328,6 +329,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 RawValue = value,
                 FlagStates = flagStates,
                 Description = field.Description,
+                DslType = field.Type,
             };
         }
 
@@ -347,13 +349,15 @@ public sealed class BinaryDecoder : IBinaryDecoder
         bool? checksumValid = null;
         long? checksumExpected = null;
         string? checksumAlgorithm = null;
+        IReadOnlyList<ByteRange>? checksumCoverage = null;
         if (field.Checksum is not null && siblings is not null)
         {
-            var (valid, expected) = VerifyChecksum(field.Checksum, value, siblings, context,
+            var (valid, expected, coverage) = VerifyChecksum(field.Checksum, value, siblings, context,
                 checksumFieldOffset: offset, checksumFieldSize: size);
             checksumValid = valid;
             checksumExpected = expected;
             checksumAlgorithm = field.Checksum.Algorithm;
+            checksumCoverage = coverage;
         }
 
         // 文字列テーブル参照
@@ -374,8 +378,12 @@ public sealed class BinaryDecoder : IBinaryDecoder
             ChecksumValid = checksumValid,
             ChecksumExpected = checksumExpected,
             ChecksumAlgorithm = checksumAlgorithm,
+            ChecksumCoverage = checksumCoverage,
             StringTableValue = stringTableValue,
             Description = field.Description,
+            DslType = field.Type,
+            Endianness = context.Endianness,
+            EnumRef = field.EnumRef,
         };
     }
 
@@ -420,13 +428,15 @@ public sealed class BinaryDecoder : IBinaryDecoder
         bool? checksumValid = null;
         long? checksumExpected = null;
         string? checksumAlgorithm = null;
+        IReadOnlyList<ByteRange>? checksumCoverage = null;
         if (field.Checksum is not null && siblings is not null)
         {
-            var (valid, expected) = VerifyChecksum(field.Checksum, rawValue, siblings, context,
+            var (valid, expected, coverage) = VerifyChecksum(field.Checksum, rawValue, siblings, context,
                 checksumFieldOffset: byteOffset, checksumFieldSize: (bitSize + 7) / 8);
             checksumValid = valid;
             checksumExpected = expected;
             checksumAlgorithm = field.Checksum.Algorithm;
+            checksumCoverage = coverage;
         }
 
         string? stringTableValue = null;
@@ -447,8 +457,11 @@ public sealed class BinaryDecoder : IBinaryDecoder
             ChecksumValid = checksumValid,
             ChecksumExpected = checksumExpected,
             ChecksumAlgorithm = checksumAlgorithm,
+            ChecksumCoverage = checksumCoverage,
             StringTableValue = stringTableValue,
             Description = field.Description,
+            DslType = field.Type,
+            EnumRef = field.EnumRef,
         };
     }
 
@@ -473,14 +486,16 @@ public sealed class BinaryDecoder : IBinaryDecoder
         bool? checksumValid = null;
         string? checksumExpectedHex = null;
         string? checksumAlgorithm = null;
+        IReadOnlyList<ByteRange>? checksumCoverage = null;
         if (field.Checksum is not null && siblings is not null
             && ChecksumAlgorithms.IsHashAlgorithm(field.Checksum.Algorithm))
         {
-            var (v, hex) = VerifyHashChecksum(field.Checksum, bytes, siblings, context,
+            var (v, hex, coverage) = VerifyHashChecksum(field.Checksum, bytes, siblings, context,
                 checksumFieldOffset: offset, checksumFieldSize: size);
             checksumValid = v;
             checksumExpectedHex = hex;
             checksumAlgorithm = field.Checksum.Algorithm;
+            checksumCoverage = coverage;
         }
 
         return new DecodedBytes
@@ -494,6 +509,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
             ChecksumValid = checksumValid,
             ChecksumExpectedHex = checksumExpectedHex,
             ChecksumAlgorithm = checksumAlgorithm,
+            ChecksumCoverage = checksumCoverage,
+            DslType = field.Type,
         };
     }
 
@@ -526,6 +543,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Encoding = "ascii",
             Flags = flagStates,
             Description = field.Description,
+            DslType = field.Type,
         };
     }
 
@@ -548,6 +566,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Value = value,
             Encoding = encodingName,
             Description = field.Description,
+            DslType = field.Type,
         };
     }
 
@@ -572,6 +591,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Value = value,
             Encoding = encodingName,
             Description = field.Description,
+            DslType = field.Type,
         };
     }
 
@@ -593,6 +613,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Value = value,
             IsSinglePrecision = isSingle,
             Description = field.Description,
+            DslType = field.Type,
+            Endianness = context.Endianness,
         };
     }
 
@@ -1503,20 +1525,20 @@ public sealed class BinaryDecoder : IBinaryDecoder
 
     private static DecodedNode SetPaddingFlag(DecodedNode node) => node switch
     {
-        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true, Validation = b.Validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm },
-        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = true, Validation = i.Validation },
-        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = true, Validation = s.Validation },
-        DecodedFlags fl => new DecodedFlags { Name = fl.Name, Offset = fl.Offset, Size = fl.Size, RawValue = fl.RawValue, FlagStates = fl.FlagStates, Description = fl.Description, IsPadding = true, Validation = fl.Validation },
+        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = true, Validation = b.Validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm, ChecksumCoverage = b.ChecksumCoverage, DslType = b.DslType },
+        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, BitOffset = i.BitOffset, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, ChecksumCoverage = i.ChecksumCoverage, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = true, Validation = i.Validation, DslType = i.DslType, Endianness = i.Endianness, EnumRef = i.EnumRef },
+        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = true, Validation = s.Validation, DslType = s.DslType },
+        DecodedFlags fl => new DecodedFlags { Name = fl.Name, Offset = fl.Offset, Size = fl.Size, RawValue = fl.RawValue, FlagStates = fl.FlagStates, Description = fl.Description, IsPadding = true, Validation = fl.Validation, DslType = fl.DslType },
         _ => node, // struct/array等はパディングとしてマークしない
     };
 
     private static DecodedNode SetValidation(DecodedNode node, Core.Decoded.ValidationInfo validation) => node switch
     {
-        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = b.IsPadding, Validation = validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm },
-        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = i.IsPadding, Validation = validation },
-        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = s.IsPadding, Validation = validation },
-        DecodedFloat f => new DecodedFloat { Name = f.Name, Offset = f.Offset, Size = f.Size, Value = f.Value, IsSinglePrecision = f.IsSinglePrecision, Description = f.Description, IsPadding = f.IsPadding, Validation = validation },
-        DecodedFlags fl => new DecodedFlags { Name = fl.Name, Offset = fl.Offset, Size = fl.Size, RawValue = fl.RawValue, FlagStates = fl.FlagStates, Description = fl.Description, IsPadding = fl.IsPadding, Validation = validation },
+        DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = b.IsPadding, Validation = validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm, ChecksumCoverage = b.ChecksumCoverage, DslType = b.DslType },
+        DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, BitOffset = i.BitOffset, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, ChecksumCoverage = i.ChecksumCoverage, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = i.IsPadding, Validation = validation, DslType = i.DslType, Endianness = i.Endianness, EnumRef = i.EnumRef },
+        DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = s.IsPadding, Validation = validation, DslType = s.DslType },
+        DecodedFloat f => new DecodedFloat { Name = f.Name, Offset = f.Offset, Size = f.Size, Value = f.Value, IsSinglePrecision = f.IsSinglePrecision, Description = f.Description, IsPadding = f.IsPadding, Validation = validation, DslType = f.DslType, Endianness = f.Endianness },
+        DecodedFlags fl => new DecodedFlags { Name = fl.Name, Offset = fl.Offset, Size = fl.Size, RawValue = fl.RawValue, FlagStates = fl.FlagStates, Description = fl.Description, IsPadding = fl.IsPadding, Validation = validation, DslType = fl.DslType },
         _ => node, // struct/array/bitfield等はバリデーションをサポートしない
     };
 
@@ -1804,31 +1826,34 @@ public sealed class BinaryDecoder : IBinaryDecoder
             EnumDescription = enumDesc,
             StringTableValue = stringTableValue,
             Description = field.Description,
+            DslType = field.Type,
+            EnumRef = field.EnumRef,
         };
     }
 
-    private static byte[] CollectChecksumData(
-        ChecksumSpec spec, IReadOnlyList<DecodedNode> siblings, DecodeContext context)
+    /// <summary>
+    /// <c>fields:</c> 指定のチェックサム算出範囲。兄弟ノードの [Offset, Offset+Size) をそのまま使う。
+    /// 見つからない名前は無視する（従来どおり）。
+    /// </summary>
+    private static List<ByteRange> ResolveChecksumFieldRanges(
+        ChecksumSpec spec, IReadOnlyList<DecodedNode> siblings)
     {
-        using var ms = new MemoryStream();
+        var ranges = new List<ByteRange>();
         foreach (var fieldName in spec.FieldNames)
         {
             var sibling = siblings.FirstOrDefault(n => n.Name == fieldName);
             if (sibling is null)
                 continue;
-
-            var slice = context.SliceOriginal((int)sibling.Offset, (int)sibling.Size);
-            ms.Write(slice.Span);
+            ranges.Add(new ByteRange(sibling.Offset, sibling.Size));
         }
-        return ms.ToArray();
+        return ranges;
     }
 
-    private static byte[] CollectChecksumRangeData(
-        IReadOnlyList<ChecksumRange> ranges, bool excludeSelf,
-        int checksumFieldOffset, int checksumFieldSize,
-        DecodeContext context)
+    /// <summary><c>range:</c> / <c>ranges:</c> 指定の算出範囲。式を評価し、データ境界を超えていれば例外。</summary>
+    private static List<ByteRange> ResolveChecksumExplicitRanges(
+        IReadOnlyList<ChecksumRange> ranges, DecodeContext context)
     {
-        using var ms = new MemoryStream();
+        var result = new List<ByteRange>(ranges.Count);
         foreach (var range in ranges)
         {
             var offset = (int)ExpressionEvaluator.EvaluateAsLong(range.OffsetExpression, context);
@@ -1839,14 +1864,44 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     $"Checksum range [{offset}..{offset + size}) exceeds data boundary (data length: {context.DataLength})",
                     offset, "(checksum)", "checksum");
 
-            var slice = context.SliceOriginal(offset, size).ToArray();
+            result.Add(new ByteRange(offset, size));
+        }
+        return result;
+    }
 
+    /// <summary>チェックサム仕様から算出範囲を解決し、対象バイト列も返す。<c>exclude_self</c> はバイト列側でゼロ埋めする。</summary>
+    private static (byte[] data, IReadOnlyList<ByteRange> coverage) CollectChecksumDataForSpec(
+        ChecksumSpec spec, IReadOnlyList<DecodedNode> siblings,
+        DecodeContext context,
+        int checksumFieldOffset, int checksumFieldSize)
+    {
+        List<ByteRange> ranges;
+        bool excludeSelf;
+        if (spec.Range is not null)
+        {
+            ranges = ResolveChecksumExplicitRanges([spec.Range], context);
+            excludeSelf = spec.ExcludeSelf;
+        }
+        else if (spec.Ranges is { Count: > 0 })
+        {
+            ranges = ResolveChecksumExplicitRanges(spec.Ranges, context);
+            excludeSelf = spec.ExcludeSelf;
+        }
+        else
+        {
+            ranges = ResolveChecksumFieldRanges(spec, siblings);
+            excludeSelf = false;
+        }
+
+        using var ms = new MemoryStream();
+        foreach (var range in ranges)
+        {
+            var slice = context.SliceOriginal((int)range.Offset, (int)range.Size).ToArray();
             if (excludeSelf)
-                ZeroFillOverlap(slice, offset, size, checksumFieldOffset, checksumFieldSize);
-
+                ZeroFillOverlap(slice, (int)range.Offset, (int)range.Size, checksumFieldOffset, checksumFieldSize);
             ms.Write(slice);
         }
-        return ms.ToArray();
+        return (ms.ToArray(), ranges);
     }
 
     private static void ZeroFillOverlap(
@@ -1863,30 +1918,12 @@ public sealed class BinaryDecoder : IBinaryDecoder
         Array.Clear(slice, localStart, localEnd - localStart);
     }
 
-    private static byte[] CollectChecksumDataForSpec(
-        ChecksumSpec spec, IReadOnlyList<DecodedNode> siblings,
-        DecodeContext context,
-        int checksumFieldOffset, int checksumFieldSize)
-    {
-        if (spec.Range is not null)
-            return CollectChecksumRangeData(
-                [spec.Range], spec.ExcludeSelf,
-                checksumFieldOffset, checksumFieldSize, context);
-
-        if (spec.Ranges is { Count: > 0 })
-            return CollectChecksumRangeData(
-                spec.Ranges, spec.ExcludeSelf,
-                checksumFieldOffset, checksumFieldSize, context);
-
-        return CollectChecksumData(spec, siblings, context);
-    }
-
-    private static (bool valid, long? expected) VerifyChecksum(
+    private static (bool valid, long? expected, IReadOnlyList<ByteRange> coverage) VerifyChecksum(
         ChecksumSpec spec, long actualValue,
         IReadOnlyList<DecodedNode> siblings, DecodeContext context,
         int checksumFieldOffset = 0, int checksumFieldSize = 0)
     {
-        var data = CollectChecksumDataForSpec(spec, siblings, context,
+        var (data, coverage) = CollectChecksumDataForSpec(spec, siblings, context,
             checksumFieldOffset, checksumFieldSize);
 
         long computed = spec.Algorithm.ToLowerInvariant() switch
@@ -1907,15 +1944,15 @@ public sealed class BinaryDecoder : IBinaryDecoder
         };
 
         var valid = actualValue == computed;
-        return (valid, valid ? null : computed);
+        return (valid, valid ? null : computed, coverage);
     }
 
-    private static (bool valid, string? expectedHex) VerifyHashChecksum(
+    private static (bool valid, string? expectedHex, IReadOnlyList<ByteRange> coverage) VerifyHashChecksum(
         ChecksumSpec spec, ReadOnlyMemory<byte> actualBytes,
         IReadOnlyList<DecodedNode> siblings, DecodeContext context,
         int checksumFieldOffset = 0, int checksumFieldSize = 0)
     {
-        var data = CollectChecksumDataForSpec(spec, siblings, context,
+        var (data, coverage) = CollectChecksumDataForSpec(spec, siblings, context,
             checksumFieldOffset, checksumFieldSize);
 
         byte[] computed = spec.Algorithm.ToLowerInvariant() switch
@@ -1929,7 +1966,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         };
 
         var valid = actualBytes.Span.SequenceEqual(computed);
-        return (valid, valid ? null : Convert.ToHexString(computed).ToLowerInvariant());
+        return (valid, valid ? null : Convert.ToHexString(computed).ToLowerInvariant(), coverage);
     }
 
     /// <summary>

@@ -44,6 +44,21 @@ internal sealed class FakeFileSource : IFileSource
     public Queue<OpenedFile?> Files { get; } = new();
     public bool SupportsNativePicker { get; init; } = true;
     public Task<OpenedFile?> PickAsync() => Task.FromResult(Files.Count > 0 ? Files.Dequeue() : null);
+
+    /// <summary>保存要求の記録（ファイル・データ・保存先選択の有無）。</summary>
+    public List<(OpenedFile File, byte[] Data, bool ChooseLocation)> Saved { get; } = [];
+    /// <summary>「名前を付けて保存」で返すパス。null ならキャンセル扱い。</summary>
+    public string? SaveAsPath { get; set; } = "/tmp/saved.bin";
+    public bool CancelSave { get; set; }
+
+    public Task<OpenedFile?> SaveAsync(OpenedFile file, byte[] data, bool chooseLocation)
+    {
+        Saved.Add((file, data, chooseLocation));
+        if (CancelSave) return Task.FromResult<OpenedFile?>(null);
+        var path = chooseLocation ? SaveAsPath : file.FullPath;
+        if (chooseLocation && path is null) return Task.FromResult<OpenedFile?>(null);
+        return Task.FromResult<OpenedFile?>(new OpenedFile(path is null ? file.Name : Path.GetFileName(path), data, path));
+    }
 }
 
 /// <summary>1x1 の最小 PNG（signature + IHDR + IDAT + IEND）。</summary>

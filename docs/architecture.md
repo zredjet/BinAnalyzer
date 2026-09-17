@@ -168,6 +168,15 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 各フォーマッターはANSIカラー出力に対応（ColorMode: Auto / Always / Never）。
 
+### 値の書き戻し — Core/Patching, Engine/FieldEncoder, Engine/BinaryPatcher
+
+読み取り専用だったエンジンに、固定長の書き戻しを追加する（REQ-169。CLI の `patch` コマンド REQ-164 と共有する基盤）。
+
+- `DecodedNode.DslType`（DSL の型）、`DecodedInteger.Endianness` / `EnumRef`、`DecodedInteger` / `DecodedBytes` の `ChecksumCoverage`（検証時に算出対象とした `ByteRange` の列）をデコーダが記録する。書き戻しに必要な符号・エンディアン・依存関係を、フォーマット定義を再走査せずにデコード結果だけから得るため
+- `FieldEditRules.Classify`（Core）がノード単体の編集可否を決め、`FieldEncoder`（Engine）が入力文字列を同じ長さのバイト列にする（範囲チェック、固定長文字列の 0x00 埋め、16 進バイト列）
+- `BinaryPatcher.Apply` はパッチを書いた後に再デコードし、変更範囲と `ChecksumCoverage` が重なる無効なチェックサムへ `ChecksumExpected` / `ChecksumExpectedHex` を書き戻す。チェックサムが別のチェックサムの範囲に含まれる場合は変化が無くなるまで反復する（上限 8 回）。アルゴリズム別の計算はデコーダの検証をそのまま使う
+- Presentation の `FieldEditability`（データ空間・長さ系フィールドの判定）と `ChecksumDependencies`（再計算対象の事前表示）は `NodeIndex` 上の純関数
+
 ### 表示ロジック — Presentation/
 
 デコード結果ツリー（`DecodedNode`）を表示用データに変換する純関数群。UI フレームワーク（Terminal.Gui / Blazor）に依存せず、TUI と GUI で共有する。
@@ -195,7 +204,8 @@ Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起�
 `BinAnalyzer.Gui` は Razor Class Library で、Web（WASM）とデスクトップ（Photino.Blazor）の両方から同じコンポーネントをホストする。
 
 - **Abstractions/** — ホスト差分の抽象。`IFormatCatalog`（フォーマット定義の一覧・読込・拡張子検出）、`IFileSource`（ネイティブダイアログの有無とファイル取得）
-- **State/** — Blazor 非依存の状態。`GuiDocument`（タブ 1 枚: データ・フォーマット・エンディアン上書き・デコード結果・`NodeIndex`・選択/ホバー/展開/検索）、`GuiSession`（タブ集合・アクティブ・右ペイン種別・差分）、`DecodeService`（エラー継続モードで所要時間計測）
+- **State/** — Blazor 非依存の状態。`GuiDocument`（タブ 1 枚: データ・フォーマット・エンディアン上書き・デコード結果・`NodeIndex`・選択/ホバー/展開/検索・編集履歴）、`GuiSession`（タブ集合・アクティブ・右ペイン種別・差分・保存）、`DecodeService`（エラー継続モードで所要時間計測）
+- **編集・書き戻し（REQ-169）** — `GuiDocument.Data` は「現在デコード・表示しているバイト列」で copy-on-write（編集のたびに新しい配列に差し替え、`Revision` が進む）。原本は `OriginalData`。`PreviewEdit` は Engine の `FieldEncoder` で入力をバイト列にし、Presentation の `ChecksumDependencies` で再計算対象を求める。`ApplyEdit` / `RevertField` は Engine の `BinaryPatcher` に委譲し、本体書き込み＋チェックサム再計算を 1 つの `EditRecord`（`ByteWrite` の束）として Undo / Redo スタックに積む。保存は `IFileSource.SaveAsync`（デスクトップ: `ShowSaveFileAsync`、Web: `downloadFile` でダウンロード）
 - **Components/** — `GuiShell`（全体レイアウト）、`HexView` / `HexRowView`（`<Virtualize>`、512 行以下は非仮想化）、`HighlightStyle`（ホバーは `<style>` 1 ルールの再描画のみ）、`StructTree` / `Inspector`、`DefinitionView`（`YamlFieldLocator` で選択フィールド行を強調）、`DiffView`（`DiffEngine` の `DiffResult` に直接バインド）、`StructureMapView`、`CommandBar`、`FilePicker` ほか
 - **wwwroot/** — `gui.css` / `gui.js`。デスクトップ配信用に `_content/BinAnalyzer.Gui/...` の論理名で埋め込みリソースにも含める
 

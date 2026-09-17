@@ -105,6 +105,38 @@ public sealed class GuiSession
     {
         doc.Changed += Raise;
         doc.HoverChanged += () => HoverChanged?.Invoke();
+        // 編集で Root が作り直されるので、そのタブを含む差分は無効にする
+        doc.DataChanged += () => InvalidateDiffFor(doc);
+    }
+
+    public void Undo() => Active?.Undo();
+    public void Redo() => Active?.Redo();
+
+    /// <summary>
+    /// 編集後のバイト列を保存する。<paramref name="chooseLocation"/> が true なら「名前を付けて保存」。
+    /// 保存先が無い（標準入力から開いた等）場合もダイアログを出す。成功なら true、キャンセル / 失敗なら false。
+    /// </summary>
+    public async Task<bool> SaveAsync(GuiDocument doc, bool chooseLocation = false)
+    {
+        if (!_documents.Contains(doc)) return false;
+        var file = new OpenedFile(doc.DisplayName, doc.Data, doc.FullPath);
+        OpenedFile? saved;
+        try
+        {
+            saved = await Files.SaveAsync(file, doc.Data, chooseLocation || doc.FullPath is null);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[gui] save failed: {ex}");
+            Message = $"保存に失敗しました: {ex.Message}";
+            Raise();
+            return false;
+        }
+        if (saved is null) return false;
+        doc.MarkSaved(saved);
+        Message = $"保存しました: {saved.FullPath ?? saved.Name}";
+        Raise();
+        return true;
     }
 
     public void Activate(GuiDocument doc)
