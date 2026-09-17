@@ -1,4 +1,5 @@
 using BinAnalyzer.Core.Decoded;
+using BinAnalyzer.Presentation;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -19,7 +20,7 @@ internal sealed class TreePane : FrameView
             Width = Dim.Fill(),
             Height = Dim.Fill(),
             TreeBuilder = new DecodedNodeTreeBuilder(),
-            AspectGetter = DecodedNodeTreeBuilder.GetDisplayText,
+            AspectGetter = NodeDisplayText.For,
         };
 
         _treeView.AddObject(root);

@@ -36,39 +36,6 @@ public sealed class TuiStateTests
     }
 
     [Fact]
-    public void CollectMatches_FindsByName_CaseInsensitive()
-    {
-        var root = CreateTestTree();
-
-        var results = TuiState.CollectMatches(root, "WIDTH");
-
-        results.Should().HaveCount(2);
-        results.Select(r => r.Name).Should().Contain("width");
-        results.Select(r => r.Name).Should().Contain("width_inner");
-    }
-
-    [Fact]
-    public void CollectMatches_NoMatch_ReturnsEmpty()
-    {
-        var root = CreateTestTree();
-
-        var results = TuiState.CollectMatches(root, "nonexistent");
-
-        results.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void CollectMatches_PartialMatch_FindsAll()
-    {
-        var root = CreateTestTree();
-
-        var results = TuiState.CollectMatches(root, "ght");
-
-        results.Should().HaveCount(1);
-        results[0].Name.Should().Be("height");
-    }
-
-    [Fact]
     public void Search_SetsResultsAndIndex()
     {
         var state = new TuiState();
@@ -166,45 +133,5 @@ public sealed class TuiStateTests
         state.Search(root, "width");
 
         fired.Should().BeTrue();
-    }
-
-    [Fact]
-    public void CollectMatches_InArray_FindsElements()
-    {
-        var root = new DecodedStruct
-        {
-            Name = "root",
-            StructType = "Root",
-            Offset = 0,
-            Size = 100,
-            Children =
-            [
-                new DecodedArray
-                {
-                    Name = "items",
-                    Offset = 0,
-                    Size = 100,
-                    Elements =
-                    [
-                        new DecodedStruct
-                        {
-                            Name = "item0",
-                            StructType = "Item",
-                            Offset = 0,
-                            Size = 50,
-                            Children =
-                            [
-                                new DecodedInteger { Name = "target_field", Offset = 0, Size = 4, Value = 1 },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        };
-
-        var results = TuiState.CollectMatches(root, "target");
-
-        results.Should().HaveCount(1);
-        results[0].Name.Should().Be("target_field");
     }
 }

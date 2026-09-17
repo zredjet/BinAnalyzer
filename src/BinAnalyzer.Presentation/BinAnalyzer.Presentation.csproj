@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BinAnalyzer.Presentation.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BinAnalyzer.Core\BinAnalyzer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

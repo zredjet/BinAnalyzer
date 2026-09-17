@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | ready |
+| ステータス | done |
 | 優先度 | 中 |
 | 依存 | なし |
 | 作成日 | 2026-09-17 |
@@ -28,19 +28,19 @@ Core は「ドメインモデル・依存ゼロ」、Output は「CLI 向け文�
 
 ### 追加する機能
 
-- [ ] 新プロジェクト `src/BinAnalyzer.Presentation`（依存: `BinAnalyzer.Core` のみ、外部 NuGet なし）
-- [ ] `NodeDisplayText.For(DecodedNode)` — `DecodedNodeTreeBuilder.GetDisplayText` を移動（public）
-- [ ] `NodeDisplayText.TypeLabel(DecodedNode)` — 型ラベル（`u32`, `ascii[4]`, `u32 (crc32)`, `bytes (zlib)` 等）。GUI インスペクター用
-- [ ] `NodeDetailFormatter.Format(DecodedNode)` — 移動して public 化。戻り値を `IReadOnlyList<DetailRow>`（`DetailRow(string Key, string Value, DetailRowKind Kind)`）に変更。`DetailRowKind` は `Text / Mono / Validation / Child`（TUI は Key/Value のみ使う）
-- [ ] `NodeSearch.ByName(DecodedNode root, string query)` — `TuiState.CollectMatches` を移動
-- [ ] `NodeChildren.Of(DecodedNode)` — 子ノード走査の単一情報源（struct は padding 除外、array は Elements、compressed は DecodedContent.Children、bitfield は子なし）
-- [ ] `NodeChildren.HasChildren(DecodedNode)` — `DecodedNodeTreeBuilder.CanExpand` 相当
+- [x] 新プロジェクト `src/BinAnalyzer.Presentation`（依存: `BinAnalyzer.Core` のみ、外部 NuGet なし）
+- [x] `NodeDisplayText.For(DecodedNode)` — `DecodedNodeTreeBuilder.GetDisplayText` を移動（public）
+- [x] `NodeDisplayText.TypeLabel(DecodedNode)` — 型ラベル（`u32`, `ascii[4]`, `u32 (crc32)`, `bytes (zlib)` 等）。GUI インスペクター用
+- [x] `NodeDetailFormatter.Format(DecodedNode)` — 移動して public 化。戻り値を `IReadOnlyList<DetailRow>`（`DetailRow(string Key, string Value, DetailRowKind Kind)`）に変更。`DetailRowKind` は `Text / Mono / Validation / Child`（TUI は Key/Value のみ使う）
+- [x] `NodeSearch.ByName(DecodedNode root, string query)` — `TuiState.CollectMatches` を移動
+- [x] `NodeChildren.Of(DecodedNode)` — 子ノード走査の単一情報源（struct は padding 除外、array は Elements、compressed は DecodedContent.Children、bitfield は子なし）
+- [x] `NodeChildren.HasChildren(DecodedNode)` — `DecodedNodeTreeBuilder.CanExpand` 相当
 
 ### 変更する既存機能
 
-- [ ] `BinAnalyzer.Tui` が `BinAnalyzer.Presentation` を参照し、上記ヘルパへ委譲する（`DecodedNodeTreeBuilder` は `ITreeBuilder<DecodedNode>` の薄いアダプタになる）
-- [ ] `tests/BinAnalyzer.Tui.Tests` のうち純粋関数のテストを `tests/BinAnalyzer.Presentation.Tests` へ移動（`NodeDetailFormatterTests`、`DecodedNodeTreeBuilderTests` の表示文字列部分、`TuiStateTests` の `CollectMatches_*`）
-- [ ] `BinAnalyzer.slnx` に `BinAnalyzer.Presentation` / `BinAnalyzer.Presentation.Tests` を追加
+- [x] `BinAnalyzer.Tui` が `BinAnalyzer.Presentation` を参照し、上記ヘルパへ委譲する（`DecodedNodeTreeBuilder` は `ITreeBuilder<DecodedNode>` の薄いアダプタになる）
+- [x] `tests/BinAnalyzer.Tui.Tests` のうち純粋関数のテストを `tests/BinAnalyzer.Presentation.Tests` へ移動（`NodeDetailFormatterTests`、`DecodedNodeTreeBuilderTests` の表示文字列部分、`TuiStateTests` の `CollectMatches_*`）
+- [x] `BinAnalyzer.slnx` に `BinAnalyzer.Presentation` / `BinAnalyzer.Presentation.Tests` を追加
 
 ### 変更しないもの（スコープ外）
 
@@ -50,14 +50,14 @@ Core は「ドメインモデル・依存ゼロ」、Output は「CLI 向け文�
 
 ## 受入条件
 
-1. [ ] `BinAnalyzer.Presentation.csproj` の依存が `BinAnalyzer.Core` のみであること（`dotnet list reference` / `dotnet list package` で確認）
-2. [ ] `NodeDisplayText.For` が移動前の `GetDisplayText` と全ノード種別で同一文字列を返すこと（既存テストを移動して通過）
-3. [ ] `NodeDetailFormatter.Format` が移動前と同一の Key/Value 列を返すこと（既存テストを移動して通過）
-4. [ ] `NodeSearch.ByName` が移動前の `CollectMatches` と同一結果を返すこと（既存テストを移動して通過）
-5. [ ] `NodeChildren.Of` が struct(padding除外)/array/compressed/その他 の4系統で正しい子を返すこと
-6. [ ] `NodeDisplayText.TypeLabel` が integer/string/bytes/checksum付き/compressed で期待ラベルを返すこと
-7. [ ] TUI（`-o tui`）の起動・ツリー表示・詳細表示が従来どおり動作すること（手動確認）
-8. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [x] `BinAnalyzer.Presentation.csproj` の依存が `BinAnalyzer.Core` のみであること（`dotnet list reference` / `dotnet list package` で確認）
+2. [x] `NodeDisplayText.For` が移動前の `GetDisplayText` と全ノード種別で同一文字列を返すこと（既存テストを移動して通過）
+3. [x] `NodeDetailFormatter.Format` が移動前と同一の Key/Value 列を返すこと（既存テストを移動して通過）
+4. [x] `NodeSearch.ByName` が移動前の `CollectMatches` と同一結果を返すこと（既存テストを移動して通過）
+5. [x] `NodeChildren.Of` が struct(padding除外)/array/compressed/その他 の4系統で正しい子を返すこと
+6. [x] `NodeDisplayText.TypeLabel` が integer/string/bytes/checksum付き/compressed で期待ラベルを返すこと
+7. [x] TUI（`-o tui`）の起動・ツリー表示・詳細表示が従来どおり動作すること（手動確認）
+8. [x] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -76,8 +76,8 @@ Core は「ドメインモデル・依存ゼロ」、Output は「CLI 向け文�
 ### 変更が必要なドキュメント
 
 - [ ] docs/dsl-reference.md — 変更不要
-- [ ] docs/architecture.md — プロジェクト構成・依存関係に Presentation を追加
-- [ ] CLAUDE.md — プロジェクト構成に Presentation を追加
+- [x] docs/architecture.md — プロジェクト構成・依存関係に Presentation を追加
+- [x] CLAUDE.md — プロジェクト構成に Presentation を追加
 - [ ] README.md — 変更不要
 
 ---
@@ -114,10 +114,23 @@ Core は「ドメインモデル・依存ゼロ」、Output は「CLI 向け文�
 
 ### 実装中の設計変更
 
+- `NodeDisplayText.ValueOnly(DecodedNode)` と `NodeChildren.Descendants(root)` を追加した（REQ-168 のゴースト注釈・索引構築で必要になることが明らかなため、同時に用意した）。
+- `DetailRowKind` は `Text / Mono / Validation / Child` の 4 値。TUI は Key/Value のみを使い、Kind は無視する。
+- `NodeChildren.HasChildren` は `DecodedBitfield` を「子なし」に統一した（旧 `CanExpand` は true を返していたが `GetChildren` は空だった）。TUI ではビットフィールド行の展開マークが消えるだけで、表示文字列・詳細行は不変。
+
 ### 追加したテスト
 
 | テストクラス | テスト名 | 対応する受入条件 |
 |---|---|---|
-| | | |
+| NodeDisplayTextTests | `For_*`（旧 `GetDisplayText_*` を移動、7 件） | 2 |
+| NodeDisplayTextTests | `ValueOnly_*`（2 件）、`TypeLabel_*`（Integer 3 ケース、String、Bytes、Compressed） | 6 |
+| NodeDetailFormatterTests | 旧 `Format_*` を移動（13 件）、`Format_Offset_IsMonoRow`、`Format_Flags_ChildRowsAreMarkedChild` | 3 |
+| NodeSearchTests | `ByName_*`（旧 `CollectMatches_*` を移動、4 件）、`ByName_EmptyQuery_ReturnsEmpty` | 4 |
+| NodeChildrenTests | `HasChildren_*` / `Of_*`（旧 `CanExpand_*` / `GetChildren_*` を移動、9 件）、`HasChildren_Bitfield_ReturnsFalse`、`Descendants_ReturnsPreOrder_WithoutPadding` | 5 |
+| （確認） | `dotnet list reference` で Core のみ、`dotnet list package` でパッケージなし | 1 |
+
+`dotnet test BinAnalyzer.slnx`: 全 1,277 件通過（Presentation.Tests 46 件）。
 
 ### 気づき・今後の課題
+
+- `DecodedInteger` は符号・DSL 型名を保持しないため `TypeLabel` は `int32` のようなサイズ由来の近似ラベルになる。正確な型名（`u32` / `i16`）が欲しければ Decoded モデルに型名を持たせる要望が別途必要。

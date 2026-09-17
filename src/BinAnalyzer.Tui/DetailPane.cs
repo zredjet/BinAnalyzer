@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using BinAnalyzer.Presentation;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
