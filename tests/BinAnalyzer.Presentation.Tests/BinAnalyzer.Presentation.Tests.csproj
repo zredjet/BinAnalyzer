@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BinAnalyzer.Presentation\BinAnalyzer.Presentation.csproj" />
+    <ProjectReference Include="..\..\src\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
   </ItemGroup>
 
 </Project>
