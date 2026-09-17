@@ -7,6 +7,7 @@
   "children": {
     "signature": {
       "_type": "string",
+      "type": "ascii",
       "offset": 0,
       "size": 3,
       "description": "FLV",
@@ -16,6 +17,7 @@
     },
     "version": {
       "_type": "integer",
+      "type": "uint8",
       "offset": 3,
       "size": 1,
       "description": "FLV\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u901A\u5E381\uFF09",
@@ -25,6 +27,7 @@
     },
     "flags": {
       "_type": "bitfield",
+      "type": "bitfield",
       "offset": 4,
       "size": 1,
       "name": "flags",
@@ -58,6 +61,7 @@
     },
     "data_offset": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 5,
       "size": 4,
       "description": "\u30D8\u30C3\u30C0\u30B5\u30A4\u30BA\uFF08\u901A\u5E389\uFF09",
@@ -67,6 +71,7 @@
     },
     "prev_tag_size_0": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 9,
       "size": 4,
       "description": "\u5148\u982D\u30A8\u30F3\u30C8\u30EA\u306E\u524D\u30BF\u30B0\u30B5\u30A4\u30BA\uFF08\u5E38\u306B0\uFF09",
@@ -76,6 +81,7 @@
     },
     "tags": {
       "_type": "array",
+      "type": "struct",
       "offset": 13,
       "size": 16,
       "name": "tags",
@@ -83,6 +89,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 13,
           "size": 16,
           "name": "tags",
@@ -90,6 +97,7 @@
           "children": {
             "tag_type": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 13,
               "size": 1,
               "name": "tag_type",
@@ -99,6 +107,7 @@
             },
             "data_size_b0": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 14,
               "size": 1,
               "description": "\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA \u30D0\u30A4\u30C80\uFF08MSB\uFF09",
@@ -108,6 +117,7 @@
             },
             "data_size_b1": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 15,
               "size": 1,
               "description": "\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA \u30D0\u30A4\u30C81",
@@ -117,6 +127,7 @@
             },
             "data_size_b2": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 16,
               "size": 1,
               "description": "\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA \u30D0\u30A4\u30C82\uFF08LSB\uFF09",
@@ -126,6 +137,7 @@
             },
             "data_size": {
               "_type": "virtual",
+              "type": "virtual",
               "offset": 17,
               "size": 0,
               "description": "\u30BF\u30B0\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA\uFF0824\u30D3\u30C3\u30C8\uFF09",
@@ -134,6 +146,7 @@
             },
             "timestamp_b0": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 17,
               "size": 1,
               "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7 \u30D0\u30A4\u30C80\uFF08\u4E0B\u4F4D24\u30D3\u30C3\u30C8\u306EMSB\uFF09",
@@ -143,6 +156,7 @@
             },
             "timestamp_b1": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 18,
               "size": 1,
               "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7 \u30D0\u30A4\u30C81",
@@ -152,6 +166,7 @@
             },
             "timestamp_b2": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 19,
               "size": 1,
               "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7 \u30D0\u30A4\u30C82\uFF08\u4E0B\u4F4D24\u30D3\u30C3\u30C8\u306ELSB\uFF09",
@@ -161,6 +176,7 @@
             },
             "timestamp_ext": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 20,
               "size": 1,
               "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\u62E1\u5F35\uFF08\u4E0A\u4F4D8\u30D3\u30C3\u30C8\uFF09",
@@ -170,6 +186,7 @@
             },
             "stream_id": {
               "_type": "bytes",
+              "type": "bytes",
               "offset": 21,
               "size": 3,
               "description": "\u30B9\u30C8\u30EA\u30FC\u30E0ID\uFF08\u5E38\u306B0\uFF09",
@@ -178,6 +195,7 @@
             },
             "data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 24,
               "size": 1,
               "name": "data",
@@ -185,6 +203,7 @@
               "children": {
                 "audio_header": {
                   "_type": "bitfield",
+                  "type": "bitfield",
                   "offset": 24,
                   "size": 1,
                   "name": "audio_header",
@@ -218,6 +237,7 @@
                 },
                 "audio_data": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 25,
                   "size": 0,
                   "name": "audio_data",
@@ -227,6 +247,7 @@
             },
             "prev_tag_size": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 25,
               "size": 4,
               "description": "\u524D\u30BF\u30B0\u306E\u5168\u4F53\u30B5\u30A4\u30BA\uFF08\u30D8\u30C3\u30C0\u542B\u3080\uFF09",

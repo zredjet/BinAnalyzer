@@ -32,7 +32,7 @@ public static class NodeDetailFormatter
         switch (node)
         {
             case DecodedInteger intNode:
-                details.Add(new("Type", "integer"));
+                details.Add(new("Type", intNode.TypeName ?? "integer"));
                 details.Add(new("Value", intNode.Value.ToString(), DetailRowKind.Mono));
                 if (intNode.Value is >= 16 or <= -16)
                     details.Add(new("Hex", $"0x{intNode.Value:X}", DetailRowKind.Mono));
@@ -47,18 +47,18 @@ public static class NodeDetailFormatter
                 break;
 
             case DecodedFloat floatNode:
-                details.Add(new("Type", floatNode.IsSinglePrecision ? "float32" : "float64"));
+                details.Add(new("Type", floatNode.TypeName ?? (floatNode.IsSinglePrecision ? "float32" : "float64")));
                 details.Add(new("Value", floatNode.Value.ToString("G"), DetailRowKind.Mono));
                 break;
 
             case DecodedString strNode:
-                details.Add(new("Type", "string"));
+                details.Add(new("Type", strNode.TypeName ?? "string"));
                 details.Add(new("Value", strNode.Value, DetailRowKind.Mono));
                 details.Add(new("Encoding", strNode.Encoding));
                 break;
 
             case DecodedBytes bytesNode:
-                details.Add(new("Type", "bytes"));
+                details.Add(new("Type", bytesNode.TypeName ?? "bytes"));
                 details.Add(new("Hex", FormatHexPreview(bytesNode.RawBytes.Span), DetailRowKind.Mono));
                 if (bytesNode.ChecksumValid.HasValue)
                     details.Add(new("Checksum", bytesNode.ChecksumValid.Value ? "valid" : "invalid", DetailRowKind.Validation));

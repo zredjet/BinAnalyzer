@@ -7,6 +7,7 @@
   "children": {
     "magic": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 0,
       "size": 2,
       "name": "magic",
@@ -15,6 +16,7 @@
     },
     "compression_method": {
       "_type": "integer",
+      "type": "uint8",
       "offset": 2,
       "size": 1,
       "name": "compression_method",
@@ -24,6 +26,7 @@
     },
     "flags": {
       "_type": "bitfield",
+      "type": "bitfield",
       "offset": 3,
       "size": 1,
       "name": "flags",
@@ -63,6 +66,7 @@
     },
     "mtime": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 4,
       "size": 4,
       "description": "\u66F4\u65B0\u65E5\u6642\uFF08UNIX\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
@@ -72,6 +76,7 @@
     },
     "xfl": {
       "_type": "integer",
+      "type": "uint8",
       "offset": 8,
       "size": 1,
       "description": "\u8FFD\u52A0\u30D5\u30E9\u30B0\uFF082=\u6700\u9AD8\u5727\u7E2E\u30014=\u6700\u901F\u5727\u7E2E\uFF09",
@@ -81,6 +86,7 @@
     },
     "os": {
       "_type": "integer",
+      "type": "uint8",
       "offset": 9,
       "size": 1,
       "name": "os",
@@ -90,6 +96,7 @@
     },
     "compressed_data": {
       "_type": "compressed",
+      "type": "deflate",
       "offset": 10,
       "size": 2,
       "description": "\u5727\u7E2E\u30C7\u30FC\u30BF\uFF08deflate\uFF09",
@@ -101,6 +108,7 @@
     },
     "crc32": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 12,
       "size": 4,
       "description": "CRC-32\uFF08\u5143\u30C7\u30FC\u30BF\u306ECRC\uFF09",
@@ -110,6 +118,7 @@
     },
     "isize": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 16,
       "size": 4,
       "description": "ISIZE\uFF08\u5143\u30C7\u30FC\u30BF\u306E\u30B5\u30A4\u30BA mod 2^32\uFF09",

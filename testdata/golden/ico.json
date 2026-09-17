@@ -7,6 +7,7 @@
   "children": {
     "reserved": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 0,
       "size": 2,
       "name": "reserved",
@@ -15,6 +16,7 @@
     },
     "type": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 2,
       "size": 2,
       "description": "1 = ICO\uFF08\u30A2\u30A4\u30B3\u30F3\uFF09\u30012 = CUR\uFF08\u30AB\u30FC\u30BD\u30EB\uFF09",
@@ -26,6 +28,7 @@
     },
     "count": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 4,
       "size": 2,
       "description": "\u30D5\u30A1\u30A4\u30EB\u5185\u306E\u753B\u50CF\u6570",
@@ -35,6 +38,7 @@
     },
     "entries": {
       "_type": "array",
+      "type": "struct",
       "offset": 6,
       "size": 16,
       "name": "entries",
@@ -42,6 +46,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 6,
           "size": 16,
           "name": "entries",
@@ -49,6 +54,7 @@
           "children": {
             "width": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 6,
               "size": 1,
               "description": "\u5E45\uFF08\u30D4\u30AF\u30BB\u30EB\u30010\u306F256\u3092\u610F\u5473\u3059\u308B\uFF09",
@@ -58,6 +64,7 @@
             },
             "height": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 7,
               "size": 1,
               "description": "\u9AD8\u3055\uFF08\u30D4\u30AF\u30BB\u30EB\u30010\u306F256\u3092\u610F\u5473\u3059\u308B\uFF09",
@@ -67,6 +74,7 @@
             },
             "color_count": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 8,
               "size": 1,
               "description": "\u30D1\u30EC\u30C3\u30C8\u306E\u8272\u6570\uFF08256\u8272\u4EE5\u4E0A\u306E\u5834\u5408\u306F0\uFF09",
@@ -76,6 +84,7 @@
             },
             "reserved": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 9,
               "size": 1,
               "name": "reserved",
@@ -84,6 +93,7 @@
             },
             "planes": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 10,
               "size": 2,
               "description": "\u30AB\u30E9\u30FC\u30D7\u30EC\u30FC\u30F3\u6570\uFF08ICO\uFF09\u307E\u305F\u306F\u30DB\u30C3\u30C8\u30B9\u30DD\u30C3\u30C8X\u5EA7\u6A19\uFF08CUR\uFF09",
@@ -93,6 +103,7 @@
             },
             "bpp": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 12,
               "size": 2,
               "description": "\u30D3\u30C3\u30C8/\u30D4\u30AF\u30BB\u30EB\uFF08ICO\uFF09\u307E\u305F\u306F\u30DB\u30C3\u30C8\u30B9\u30DD\u30C3\u30C8Y\u5EA7\u6A19\uFF08CUR\uFF09",
@@ -102,6 +113,7 @@
             },
             "bytes_in_res": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 14,
               "size": 4,
               "description": "\u753B\u50CF\u30C7\u30FC\u30BF\u306E\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
@@ -111,6 +123,7 @@
             },
             "image_offset": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 18,
               "size": 4,
               "description": "\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u753B\u50CF\u30C7\u30FC\u30BF\u307E\u3067\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
@@ -120,6 +133,7 @@
             },
             "image_magic": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 22,
               "size": 4,
               "description": "\u753B\u50CF\u5F62\u5F0F\u30B7\u30B0\u30CD\u30C1\u30E3\uFF080x89504E47 = PNG\u3001\u305D\u308C\u4EE5\u5916\u306FBMP DIB\u30D8\u30C3\u30C0\uFF09",
@@ -129,6 +143,7 @@
             },
             "image_data": {
               "_type": "error",
+              "type": "switch",
               "offset": 22,
               "size": 0,
               "name": "image_data",

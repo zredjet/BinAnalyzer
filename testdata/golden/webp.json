@@ -7,6 +7,7 @@
   "children": {
     "riff_magic": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 0,
       "size": 4,
       "description": "RIFF\u30B3\u30F3\u30C6\u30CA\u30DE\u30B8\u30C3\u30AF",
@@ -16,6 +17,7 @@
     },
     "file_size": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 4,
       "size": 4,
       "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA - 8\u30D0\u30A4\u30C8\uFF08RIFF\u30D8\u30C3\u30C0\u5206\uFF09",
@@ -25,6 +27,7 @@
     },
     "webp_magic": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 8,
       "size": 4,
       "description": "WEBP\u30D5\u30A9\u30FC\u30E0\u30BF\u30A4\u30D7",
@@ -34,6 +37,7 @@
     },
     "chunks": {
       "_type": "array",
+      "type": "struct",
       "offset": 12,
       "size": 18,
       "name": "chunks",
@@ -41,6 +45,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 12,
           "size": 18,
           "name": "chunks",
@@ -48,6 +53,7 @@
           "children": {
             "chunk_id": {
               "_type": "string",
+              "type": "ascii",
               "offset": 12,
               "size": 4,
               "name": "chunk_id",
@@ -56,6 +62,7 @@
             },
             "chunk_size": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 16,
               "size": 4,
               "name": "chunk_size",
@@ -64,6 +71,7 @@
             },
             "data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 20,
               "size": 10,
               "name": "data",
@@ -71,6 +79,7 @@
               "children": {
                 "frame_tag": {
                   "_type": "bitfield",
+                  "type": "bitfield",
                   "offset": 20,
                   "size": 3,
                   "name": "frame_tag",
@@ -104,6 +113,7 @@
                 },
                 "start_code": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 23,
                   "size": 3,
                   "description": "VP8\u30B9\u30BF\u30FC\u30C8\u30B3\u30FC\u30C9",
@@ -113,6 +123,7 @@
                 },
                 "width_and_scale": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 26,
                   "size": 2,
                   "description": "\u5E45\u3068\u6C34\u5E73\u30B9\u30B1\u30FC\u30EB\uFF08\u4E0B\u4F4D14\u30D3\u30C3\u30C8 = \u5E45\u3001\u4E0A\u4F4D2\u30D3\u30C3\u30C8 = \u30B9\u30B1\u30FC\u30EB\uFF09",
@@ -122,6 +133,7 @@
                 },
                 "height_and_scale": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 28,
                   "size": 2,
                   "description": "\u9AD8\u3055\u3068\u5782\u76F4\u30B9\u30B1\u30FC\u30EB\uFF08\u4E0B\u4F4D14\u30D3\u30C3\u30C8 = \u9AD8\u3055\u3001\u4E0A\u4F4D2\u30D3\u30C3\u30C8 = \u30B9\u30B1\u30FC\u30EB\uFF09",

@@ -7,6 +7,7 @@
   "children": {
     "version": {
       "_type": "string",
+      "type": "ascii",
       "offset": 0,
       "size": 8,
       "description": "PDF\u30D0\u30FC\u30B8\u30E7\u30F3\u30D8\u30C3\u30C0\uFF08\u4F8B: %PDF-1.7\uFF09",
@@ -16,6 +17,7 @@
     },
     "binary_comment": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 8,
       "size": 5,
       "description": "\u30D0\u30A4\u30CA\u30EA\u30DE\u30FC\u30AB\u30FC: % \u306E\u5F8C\u306B127\u8D85\u306E4\u30D0\u30A4\u30C8\u304C\u7D9A\u304D\u3001\u30D0\u30A4\u30CA\u30EA\u30B3\u30F3\u30C6\u30F3\u30C4\u3092\u793A\u3059",
@@ -24,6 +26,7 @@
     },
     "body": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 13,
       "size": 7,
       "description": "PDF\u672C\u4F53: \u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3001\u30B9\u30C8\u30EA\u30FC\u30E0\u3001xref\u3001\u30C8\u30EC\u30FC\u30E9\u3002\u30C6\u30AD\u30B9\u30C8\u30D9\u30FC\u30B9\u69CB\u9020\u306E\u305F\u3081\u30D0\u30A4\u30CA\u30EA\u30D5\u30A3\u30FC\u30EB\u30C9\u30EC\u30D9\u30EB\u306E\u89E3\u6790\u306B\u306F\u4E0D\u9069",

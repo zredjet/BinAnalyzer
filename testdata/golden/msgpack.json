@@ -7,6 +7,7 @@
   "children": {
     "value": {
       "_type": "struct",
+      "type": "struct",
       "offset": 0,
       "size": 6,
       "name": "value",
@@ -14,6 +15,7 @@
       "children": {
         "format_byte": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 0,
           "size": 1,
           "description": "MessagePack \u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30A4\u30C8",
@@ -23,6 +25,7 @@
         },
         "data": {
           "_type": "struct",
+          "type": "switch",
           "offset": 1,
           "size": 5,
           "name": "data",
@@ -30,6 +33,7 @@
           "children": {
             "fixmap_entries": {
               "_type": "array",
+              "type": "struct",
               "offset": 1,
               "size": 5,
               "name": "fixmap_entries",
@@ -37,6 +41,7 @@
               "elements": [
                 {
                   "_type": "struct",
+                  "type": "struct",
                   "offset": 1,
                   "size": 5,
                   "name": "fixmap_entries",
@@ -44,6 +49,7 @@
                   "children": {
                     "key": {
                       "_type": "struct",
+                      "type": "struct",
                       "offset": 1,
                       "size": 4,
                       "name": "key",
@@ -51,6 +57,7 @@
                       "children": {
                         "format_byte": {
                           "_type": "integer",
+                          "type": "uint8",
                           "offset": 1,
                           "size": 1,
                           "description": "MessagePack \u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30A4\u30C8",
@@ -60,6 +67,7 @@
                         },
                         "data": {
                           "_type": "struct",
+                          "type": "switch",
                           "offset": 2,
                           "size": 3,
                           "name": "data",
@@ -67,6 +75,7 @@
                           "children": {
                             "fixstr_data": {
                               "_type": "bytes",
+                              "type": "bytes",
                               "offset": 2,
                               "size": 3,
                               "description": "fixstr \u30C7\u30FC\u30BF\uFF08\u4E0B\u4F4D5\u30D3\u30C3\u30C8\u304C\u30D0\u30A4\u30C8\u9577\uFF09",
@@ -79,6 +88,7 @@
                     },
                     "value": {
                       "_type": "struct",
+                      "type": "struct",
                       "offset": 5,
                       "size": 1,
                       "name": "value",
@@ -86,6 +96,7 @@
                       "children": {
                         "format_byte": {
                           "_type": "integer",
+                          "type": "uint8",
                           "offset": 5,
                           "size": 1,
                           "description": "MessagePack \u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30A4\u30C8",
@@ -95,6 +106,7 @@
                         },
                         "data": {
                           "_type": "struct",
+                          "type": "switch",
                           "offset": 6,
                           "size": 0,
                           "name": "data",

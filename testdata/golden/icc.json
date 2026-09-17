@@ -7,6 +7,7 @@
   "children": {
     "header": {
       "_type": "struct",
+      "type": "struct",
       "offset": 0,
       "size": 128,
       "name": "header",
@@ -14,6 +15,7 @@
       "children": {
         "profile_size": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 0,
           "size": 4,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
@@ -23,6 +25,7 @@
         },
         "preferred_cmm": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 4,
           "size": 4,
           "description": "\u512A\u5148CMM\u30BF\u30A4\u30D7",
@@ -32,6 +35,7 @@
         },
         "version": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 8,
           "size": 4,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08major.minor.bugfix\uFF09",
@@ -40,6 +44,7 @@
         },
         "device_class": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 12,
           "size": 4,
           "name": "device_class",
@@ -50,6 +55,7 @@
         },
         "color_space": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 16,
           "size": 4,
           "name": "color_space",
@@ -59,6 +65,7 @@
         },
         "pcs": {
           "_type": "string",
+          "type": "ascii",
           "offset": 20,
           "size": 4,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u63A5\u7D9A\u7A7A\u9593\uFF08XYZ\u307E\u305F\u306FLab\uFF09",
@@ -68,6 +75,7 @@
         },
         "creation_date": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 24,
           "size": 12,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u4F5C\u6210\u65E5\u6642",
@@ -76,6 +84,7 @@
         },
         "signature": {
           "_type": "string",
+          "type": "ascii",
           "offset": 36,
           "size": 4,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D5\u30A1\u30A4\u30EB\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027acsp\u0027\uFF09",
@@ -85,6 +94,7 @@
         },
         "primary_platform": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 40,
           "size": 4,
           "name": "primary_platform",
@@ -95,6 +105,7 @@
         },
         "flags": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 44,
           "size": 4,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D5\u30E9\u30B0",
@@ -104,6 +115,7 @@
         },
         "device_manufacturer": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 48,
           "size": 4,
           "description": "\u30C7\u30D0\u30A4\u30B9\u88FD\u9020\u8005\u30B7\u30B0\u30CD\u30C1\u30E3",
@@ -113,6 +125,7 @@
         },
         "device_model": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 52,
           "size": 4,
           "description": "\u30C7\u30D0\u30A4\u30B9\u30E2\u30C7\u30EB\u30B7\u30B0\u30CD\u30C1\u30E3",
@@ -122,6 +135,7 @@
         },
         "attributes": {
           "_type": "integer",
+          "type": "uint64",
           "offset": 56,
           "size": 8,
           "description": "\u30C7\u30D0\u30A4\u30B9\u5C5E\u6027",
@@ -131,6 +145,7 @@
         },
         "rendering_intent": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 64,
           "size": 4,
           "name": "rendering_intent",
@@ -140,6 +155,7 @@
         },
         "pcs_illuminant": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 68,
           "size": 12,
           "description": "PCS\u7167\u660E\u4F53\u306EXYZ\u5024\uFF08s15Fixed16Number x 3\uFF09",
@@ -148,6 +164,7 @@
         },
         "creator": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 80,
           "size": 4,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u4F5C\u6210\u8005\u30B7\u30B0\u30CD\u30C1\u30E3",
@@ -157,6 +174,7 @@
         },
         "id": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 84,
           "size": 16,
           "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EBID\uFF08MD5\u30D5\u30A3\u30F3\u30AC\u30FC\u30D7\u30EA\u30F3\u30C8\uFF09",
@@ -165,6 +183,7 @@
         },
         "reserved": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 100,
           "size": 28,
           "description": "\u4E88\u7D04\u9818\u57DF\uFF08\u30BC\u30ED\uFF09",
@@ -175,6 +194,7 @@
     },
     "tag_table": {
       "_type": "struct",
+      "type": "struct",
       "offset": 128,
       "size": 4,
       "name": "tag_table",
@@ -182,6 +202,7 @@
       "children": {
         "tag_count": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 128,
           "size": 4,
           "description": "\u30BF\u30B0\u6570",
@@ -191,6 +212,7 @@
         },
         "tags": {
           "_type": "array",
+          "type": "struct",
           "offset": 132,
           "size": 0,
           "name": "tags",

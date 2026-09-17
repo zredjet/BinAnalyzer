@@ -67,7 +67,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
         StructDefinition structDef,
         FormatDefinition format,
         DecodeContext context,
-        string name)
+        string name,
+        FieldType? dslType = null)
     {
         var hasEndiannessOverride = structDef.Endianness.HasValue;
         if (hasEndiannessOverride)
@@ -126,6 +127,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Offset = startOffset,
             Size = context.Position - startOffset,
             Children = children,
+            DslType = dslType,
         };
     }
 
@@ -215,6 +217,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     SkippedBytes = skipped,
                     ErrorMessage = dex.Message,
                     FieldType = dex.FieldType,
+                    DslType = field.Type,
                 };
             }
             throw;
@@ -236,6 +239,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     SkippedBytes = skipped,
                     ErrorMessage = ex.Message,
                     FieldType = field.Type.ToString(),
+                    DslType = field.Type,
                 };
             }
             throw new DecodeException(
@@ -662,7 +666,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         if (field.StructRef is not null && format.Structs.TryGetValue(field.StructRef, out var structDef))
         {
             var innerContext = new DecodeContext(decompressed, context.Endianness);
-            decodedContent = DecodeStruct(structDef, format, innerContext, field.Name);
+            decodedContent = DecodeStruct(structDef, format, innerContext, field.Name, FieldType.Struct);
             rawDecompressed = null;
         }
 
@@ -677,6 +681,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             DecodedContent = decodedContent,
             RawDecompressed = rawDecompressed,
             Description = field.Description,
+            DslType = field.Type,
         };
     }
 
@@ -722,19 +727,19 @@ public sealed class BinaryDecoder : IBinaryDecoder
             context.PushScope(size);
             if (resolvedArgs is not null)
                 BindTemplateArgs(resolvedArgs, context);
-            result = DecodeStruct(structDef, format, context, field.Name);
+            result = DecodeStruct(structDef, format, context, field.Name, FieldType.Struct);
             context.PopScope();
         }
         else if (resolvedArgs is not null)
         {
             context.PushVariableScope();
             BindTemplateArgs(resolvedArgs, context);
-            result = DecodeStruct(structDef, format, context, field.Name);
+            result = DecodeStruct(structDef, format, context, field.Name, FieldType.Struct);
             context.PopScope();
         }
         else
         {
-            result = DecodeStruct(structDef, format, context, field.Name);
+            result = DecodeStruct(structDef, format, context, field.Name, FieldType.Struct);
         }
 
         // メンバーアクセス用に構造体を辞書として登録
@@ -785,12 +790,12 @@ public sealed class BinaryDecoder : IBinaryDecoder
         {
             var size = ResolveSize(field, context);
             context.PushScope(size);
-            switchResult = DecodeStruct(structDef, format, context, field.Name);
+            switchResult = DecodeStruct(structDef, format, context, field.Name, FieldType.Switch);
             context.PopScope();
         }
         else
         {
-            switchResult = DecodeStruct(structDef, format, context, field.Name);
+            switchResult = DecodeStruct(structDef, format, context, field.Name, FieldType.Switch);
         }
 
         // メンバーアクセス用に構造体を辞書として登録
@@ -1192,6 +1197,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                         Size = (int)prefixValue,
                         RawBytes = bytes,
                         Description = field.Description,
+                        DslType = field.Type,
                     };
                     elements.Add(lpElement);
 
@@ -1234,6 +1240,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             DiffKey = field.DiffKey,
             Truncated = truncated,
             TruncationReason = truncationReason,
+            DslType = field.Type,
         };
     }
 
@@ -1419,6 +1426,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 SkippedBytes = skipped,
                 ErrorMessage = message,
                 FieldType = fieldType,
+                DslType = singleField.Type,
             });
             return skipped > 0; // マーカー見つからず→ループ終了
         }
@@ -1740,6 +1748,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             RawValue = rawValue,
             Fields = fields,
             Description = field.Description,
+            DslType = field.Type,
         };
     }
 
@@ -1778,6 +1787,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Value = value,
             Description = field.Description,
             BitOffset = context.IsBitstreamMode ? context.CurrentBitOffset : null,
+            DslType = field.Type,
         };
     }
 

@@ -7,6 +7,7 @@
   "children": {
     "header": {
       "_type": "struct",
+      "type": "struct",
       "offset": 0,
       "size": 12,
       "name": "header",
@@ -14,6 +15,7 @@
       "children": {
         "transaction_id": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 0,
           "size": 2,
           "description": "\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3ID",
@@ -23,6 +25,7 @@
         },
         "flags": {
           "_type": "bitfield",
+          "type": "bitfield",
           "offset": 2,
           "size": 2,
           "name": "flags",
@@ -81,6 +84,7 @@
         },
         "qd_count": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 4,
           "size": 2,
           "description": "Question\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
@@ -90,6 +94,7 @@
         },
         "an_count": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 6,
           "size": 2,
           "description": "Answer\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
@@ -99,6 +104,7 @@
         },
         "ns_count": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 8,
           "size": 2,
           "description": "Authority\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
@@ -108,6 +114,7 @@
         },
         "ar_count": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 10,
           "size": 2,
           "description": "Additional\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
@@ -119,6 +126,7 @@
     },
     "payload": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 12,
       "size": 4,
       "description": "Questions\u3001Answers\u3001Authority\u3001Additional\u30BB\u30AF\u30B7\u30E7\u30F3\u3002DNS\u540D\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\uFF08\u9577\u3055\u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u4ED8\u304D\u30E9\u30D9\u30EB \u002B 0xC0xx\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\uFF09\u306FDSL\u306E\u8868\u73FE\u529B\u3092\u8D85\u3048\u308B\u305F\u3081\u69CB\u9020\u5316\u4E0D\u53EF",

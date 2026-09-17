@@ -7,6 +7,7 @@
   "children": {
     "signature": {
       "_type": "string",
+      "type": "ascii",
       "offset": 0,
       "size": 3,
       "description": "GIF\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027GIF\u0027\uFF09",
@@ -16,6 +17,7 @@
     },
     "version": {
       "_type": "string",
+      "type": "ascii",
       "offset": 3,
       "size": 3,
       "description": "\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002787a\u0027\u307E\u305F\u306F\u002789a\u0027\uFF09",
@@ -25,6 +27,7 @@
     },
     "logical_screen_desc": {
       "_type": "struct",
+      "type": "struct",
       "offset": 6,
       "size": 7,
       "name": "logical_screen_desc",
@@ -32,6 +35,7 @@
       "children": {
         "width": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 6,
           "size": 2,
           "name": "width",
@@ -40,6 +44,7 @@
         },
         "height": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 8,
           "size": 2,
           "name": "height",
@@ -48,6 +53,7 @@
         },
         "packed": {
           "_type": "bitfield",
+          "type": "bitfield",
           "offset": 10,
           "size": 1,
           "name": "packed",
@@ -81,6 +87,7 @@
         },
         "bg_color_index": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 11,
           "size": 1,
           "description": "\u80CC\u666F\u8272\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
@@ -90,6 +97,7 @@
         },
         "pixel_aspect_ratio": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 12,
           "size": 1,
           "name": "pixel_aspect_ratio",
@@ -100,6 +108,7 @@
     },
     "blocks": {
       "_type": "array",
+      "type": "struct",
       "offset": 13,
       "size": 1,
       "name": "blocks",
@@ -107,6 +116,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 13,
           "size": 1,
           "name": "blocks",
@@ -114,6 +124,7 @@
           "children": {
             "introducer": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 13,
               "size": 1,
               "name": "introducer",
@@ -123,6 +134,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 14,
               "size": 0,
               "name": "body",

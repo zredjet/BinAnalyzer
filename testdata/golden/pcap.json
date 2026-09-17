@@ -7,6 +7,7 @@
   "children": {
     "header": {
       "_type": "struct",
+      "type": "struct",
       "offset": 0,
       "size": 24,
       "name": "header",
@@ -14,6 +15,7 @@
       "children": {
         "magic": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 0,
           "size": 4,
           "description": "PCAP\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC\uFF08\u30EA\u30C8\u30EB\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3: 0xA1B2C3D4\uFF09",
@@ -27,6 +29,7 @@
         },
         "version_major": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 4,
           "size": 2,
           "name": "version_major",
@@ -35,6 +38,7 @@
         },
         "version_minor": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 6,
           "size": 2,
           "name": "version_minor",
@@ -43,6 +47,7 @@
         },
         "thiszone": {
           "_type": "integer",
+          "type": "int32",
           "offset": 8,
           "size": 4,
           "description": "GMT\u304B\u3089\u30ED\u30FC\u30AB\u30EB\u30BF\u30A4\u30E0\u30BE\u30FC\u30F3\u3078\u306E\u88DC\u6B63",
@@ -52,6 +57,7 @@
         },
         "sigfigs": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 12,
           "size": 4,
           "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\u306E\u7CBE\u5EA6\uFF08\u901A\u5E380\uFF09",
@@ -61,6 +67,7 @@
         },
         "snaplen": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 16,
           "size": 4,
           "description": "\u30AD\u30E3\u30D7\u30C1\u30E3\u30D1\u30B1\u30C3\u30C8\u306E\u6700\u5927\u9577",
@@ -70,6 +77,7 @@
         },
         "network": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 20,
           "size": 4,
           "name": "network",
@@ -82,6 +90,7 @@
     },
     "packets": {
       "_type": "array",
+      "type": "struct",
       "offset": 24,
       "size": 70,
       "name": "packets",
@@ -89,6 +98,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 24,
           "size": 70,
           "name": "packets",
@@ -96,6 +106,7 @@
           "children": {
             "ts_sec": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 24,
               "size": 4,
               "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF08\u79D2\uFF09",
@@ -105,6 +116,7 @@
             },
             "ts_usec": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 28,
               "size": 4,
               "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF08\u30DE\u30A4\u30AF\u30ED\u79D2\uFF09",
@@ -114,6 +126,7 @@
             },
             "incl_len": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 32,
               "size": 4,
               "description": "\u30AD\u30E3\u30D7\u30C1\u30E3\u3055\u308C\u305F\u30D0\u30A4\u30C8\u6570",
@@ -123,6 +136,7 @@
             },
             "orig_len": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 36,
               "size": 4,
               "description": "\u5143\u306E\u30D1\u30B1\u30C3\u30C8\u9577",
@@ -132,6 +146,7 @@
             },
             "data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 40,
               "size": 54,
               "name": "data",
@@ -139,6 +154,7 @@
               "children": {
                 "dst_mac": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 40,
                   "size": 6,
                   "description": "\u5B9B\u5148MAC\u30A2\u30C9\u30EC\u30B9",
@@ -147,6 +163,7 @@
                 },
                 "src_mac": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 46,
                   "size": 6,
                   "description": "\u9001\u4FE1\u5143MAC\u30A2\u30C9\u30EC\u30B9",
@@ -155,6 +172,7 @@
                 },
                 "ether_type": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 52,
                   "size": 2,
                   "description": "EtherType",
@@ -166,6 +184,7 @@
                 },
                 "payload": {
                   "_type": "struct",
+                  "type": "switch",
                   "offset": 54,
                   "size": 40,
                   "name": "payload",
@@ -173,6 +192,7 @@
                   "children": {
                     "version_ihl": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 54,
                       "size": 1,
                       "description": "\u30D0\u30FC\u30B8\u30E7\u30F3\uFF084\u30D3\u30C3\u30C8\uFF09\u002B IHL\uFF084\u30D3\u30C3\u30C8\uFF09",
@@ -182,6 +202,7 @@
                     },
                     "version": {
                       "_type": "virtual",
+                      "type": "virtual",
                       "offset": 55,
                       "size": 0,
                       "description": "IP\u30D0\u30FC\u30B8\u30E7\u30F3\uFF084 = IPv4\uFF09",
@@ -190,6 +211,7 @@
                     },
                     "ihl": {
                       "_type": "virtual",
+                      "type": "virtual",
                       "offset": 55,
                       "size": 0,
                       "description": "\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u30D8\u30C3\u30C0\u9577\uFF0832\u30D3\u30C3\u30C8\u30EF\u30FC\u30C9\u5358\u4F4D\uFF09",
@@ -198,6 +220,7 @@
                     },
                     "tos": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 55,
                       "size": 1,
                       "description": "\u30B5\u30FC\u30D3\u30B9\u30BF\u30A4\u30D7",
@@ -207,6 +230,7 @@
                     },
                     "total_length": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 56,
                       "size": 2,
                       "description": "\u30D1\u30B1\u30C3\u30C8\u5168\u9577",
@@ -216,6 +240,7 @@
                     },
                     "identification": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 58,
                       "size": 2,
                       "description": "\u8B58\u5225\u5B50",
@@ -225,6 +250,7 @@
                     },
                     "flags_fragment": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 60,
                       "size": 2,
                       "description": "\u30D5\u30E9\u30B0\uFF083\u30D3\u30C3\u30C8\uFF09\u002B \u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u30AA\u30D5\u30BB\u30C3\u30C8\uFF0813\u30D3\u30C3\u30C8\uFF09",
@@ -234,6 +260,7 @@
                     },
                     "flags": {
                       "_type": "virtual",
+                      "type": "virtual",
                       "offset": 62,
                       "size": 0,
                       "description": "\u30D5\u30E9\u30B0\uFF08bit 0=\u4E88\u7D04\u3001bit 1=DF\u3001bit 2=MF\uFF09",
@@ -242,6 +269,7 @@
                     },
                     "fragment_offset": {
                       "_type": "virtual",
+                      "type": "virtual",
                       "offset": 62,
                       "size": 0,
                       "description": "\u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u30AA\u30D5\u30BB\u30C3\u30C8\uFF088\u30D0\u30A4\u30C8\u5358\u4F4D\uFF09",
@@ -250,6 +278,7 @@
                     },
                     "ttl": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 62,
                       "size": 1,
                       "description": "\u751F\u5B58\u6642\u9593",
@@ -259,6 +288,7 @@
                     },
                     "protocol": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 63,
                       "size": 1,
                       "description": "\u30D7\u30ED\u30C8\u30B3\u30EB\u756A\u53F7",
@@ -270,6 +300,7 @@
                     },
                     "header_checksum": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 64,
                       "size": 2,
                       "description": "\u30D8\u30C3\u30C0\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0",
@@ -279,6 +310,7 @@
                     },
                     "src_ip": {
                       "_type": "bytes",
+                      "type": "bytes",
                       "offset": 66,
                       "size": 4,
                       "description": "\u9001\u4FE1\u5143IP\u30A2\u30C9\u30EC\u30B9",
@@ -287,6 +319,7 @@
                     },
                     "dst_ip": {
                       "_type": "bytes",
+                      "type": "bytes",
                       "offset": 70,
                       "size": 4,
                       "description": "\u5B9B\u5148IP\u30A2\u30C9\u30EC\u30B9",
@@ -295,6 +328,7 @@
                     },
                     "body": {
                       "_type": "struct",
+                      "type": "switch",
                       "offset": 74,
                       "size": 20,
                       "name": "body",
@@ -302,6 +336,7 @@
                       "children": {
                         "src_port": {
                           "_type": "integer",
+                          "type": "uint16",
                           "offset": 74,
                           "size": 2,
                           "name": "src_port",
@@ -310,6 +345,7 @@
                         },
                         "dst_port": {
                           "_type": "integer",
+                          "type": "uint16",
                           "offset": 76,
                           "size": 2,
                           "name": "dst_port",
@@ -318,6 +354,7 @@
                         },
                         "seq_number": {
                           "_type": "integer",
+                          "type": "uint32",
                           "offset": 78,
                           "size": 4,
                           "name": "seq_number",
@@ -326,6 +363,7 @@
                         },
                         "ack_number": {
                           "_type": "integer",
+                          "type": "uint32",
                           "offset": 82,
                           "size": 4,
                           "name": "ack_number",
@@ -334,6 +372,7 @@
                         },
                         "data_offset_flags": {
                           "_type": "bitfield",
+                          "type": "bitfield",
                           "offset": 86,
                           "size": 2,
                           "name": "data_offset_flags",
@@ -409,6 +448,7 @@
                         },
                         "window_size": {
                           "_type": "integer",
+                          "type": "uint16",
                           "offset": 88,
                           "size": 2,
                           "name": "window_size",
@@ -417,6 +457,7 @@
                         },
                         "checksum": {
                           "_type": "integer",
+                          "type": "uint16",
                           "offset": 90,
                           "size": 2,
                           "name": "checksum",
@@ -425,6 +466,7 @@
                         },
                         "urgent_pointer": {
                           "_type": "integer",
+                          "type": "uint16",
                           "offset": 92,
                           "size": 2,
                           "name": "urgent_pointer",
@@ -433,6 +475,7 @@
                         },
                         "payload": {
                           "_type": "bytes",
+                          "type": "bytes",
                           "offset": 94,
                           "size": 0,
                           "name": "payload",

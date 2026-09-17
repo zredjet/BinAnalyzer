@@ -7,6 +7,7 @@
   "children": {
     "soi": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 0,
       "size": 2,
       "description": "\u753B\u50CF\u958B\u59CB\u30DE\u30FC\u30AB\u30FC",
@@ -16,6 +17,7 @@
     },
     "segments": {
       "_type": "array",
+      "type": "struct",
       "offset": 2,
       "size": 38,
       "name": "segments",
@@ -23,6 +25,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 2,
           "size": 18,
           "name": "segments",
@@ -30,6 +33,7 @@
           "children": {
             "marker_prefix": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 2,
               "size": 1,
               "name": "marker_prefix",
@@ -38,6 +42,7 @@
             },
             "marker_type": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 3,
               "size": 1,
               "name": "marker_type",
@@ -48,6 +53,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 4,
               "size": 16,
               "name": "body",
@@ -55,6 +61,7 @@
               "children": {
                 "length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 4,
                   "size": 2,
                   "name": "length",
@@ -63,6 +70,7 @@
                 },
                 "body": {
                   "_type": "struct",
+                  "type": "struct",
                   "offset": 6,
                   "size": 14,
                   "name": "body",
@@ -70,6 +78,7 @@
                   "children": {
                     "identifier": {
                       "_type": "string",
+                      "type": "ascii",
                       "offset": 6,
                       "size": 5,
                       "description": "JFIF\u8B58\u5225\u5B50\uFF08\u0027JFIF\\0\u0027\uFF09",
@@ -79,6 +88,7 @@
                     },
                     "version_major": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 11,
                       "size": 1,
                       "description": "JFIF\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
@@ -88,6 +98,7 @@
                     },
                     "version_minor": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 12,
                       "size": 1,
                       "description": "JFIF\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
@@ -97,6 +108,7 @@
                     },
                     "density_units": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 13,
                       "size": 1,
                       "description": "\u5BC6\u5EA6\u5358\u4F4D\uFF080=\u5358\u4F4D\u306A\u3057\u30011=dpi\u30012=dpcm\uFF09",
@@ -108,6 +120,7 @@
                     },
                     "x_density": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 14,
                       "size": 2,
                       "description": "\u6C34\u5E73\u30D4\u30AF\u30BB\u30EB\u5BC6\u5EA6",
@@ -117,6 +130,7 @@
                     },
                     "y_density": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 16,
                       "size": 2,
                       "description": "\u5782\u76F4\u30D4\u30AF\u30BB\u30EB\u5BC6\u5EA6",
@@ -126,6 +140,7 @@
                     },
                     "thumbnail_width": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 18,
                       "size": 1,
                       "description": "\u30B5\u30E0\u30CD\u30A4\u30EB\u5E45\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
@@ -135,6 +150,7 @@
                     },
                     "thumbnail_height": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 19,
                       "size": 1,
                       "description": "\u30B5\u30E0\u30CD\u30A4\u30EB\u9AD8\u3055\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
@@ -150,6 +166,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 20,
           "size": 13,
           "name": "segments",
@@ -157,6 +174,7 @@
           "children": {
             "marker_prefix": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 20,
               "size": 1,
               "name": "marker_prefix",
@@ -165,6 +183,7 @@
             },
             "marker_type": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 21,
               "size": 1,
               "name": "marker_type",
@@ -175,6 +194,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 22,
               "size": 11,
               "name": "body",
@@ -182,6 +202,7 @@
               "children": {
                 "length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 22,
                   "size": 2,
                   "name": "length",
@@ -190,6 +211,7 @@
                 },
                 "body": {
                   "_type": "struct",
+                  "type": "struct",
                   "offset": 24,
                   "size": 9,
                   "name": "body",
@@ -197,6 +219,7 @@
                   "children": {
                     "precision": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 24,
                       "size": 1,
                       "name": "precision",
@@ -205,6 +228,7 @@
                     },
                     "height": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 25,
                       "size": 2,
                       "name": "height",
@@ -213,6 +237,7 @@
                     },
                     "width": {
                       "_type": "integer",
+                      "type": "uint16",
                       "offset": 27,
                       "size": 2,
                       "name": "width",
@@ -221,6 +246,7 @@
                     },
                     "num_components": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 29,
                       "size": 1,
                       "name": "num_components",
@@ -229,6 +255,7 @@
                     },
                     "components": {
                       "_type": "array",
+                      "type": "struct",
                       "offset": 30,
                       "size": 3,
                       "name": "components",
@@ -236,6 +263,7 @@
                       "elements": [
                         {
                           "_type": "struct",
+                          "type": "struct",
                           "offset": 30,
                           "size": 3,
                           "name": "components",
@@ -243,6 +271,7 @@
                           "children": {
                             "id": {
                               "_type": "integer",
+                              "type": "uint8",
                               "offset": 30,
                               "size": 1,
                               "name": "id",
@@ -251,6 +280,7 @@
                             },
                             "sampling": {
                               "_type": "integer",
+                              "type": "uint8",
                               "offset": 31,
                               "size": 1,
                               "name": "sampling",
@@ -259,6 +289,7 @@
                             },
                             "qt_id": {
                               "_type": "integer",
+                              "type": "uint8",
                               "offset": 32,
                               "size": 1,
                               "name": "qt_id",
@@ -277,6 +308,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 33,
           "size": 5,
           "name": "segments",
@@ -284,6 +316,7 @@
           "children": {
             "marker_prefix": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 33,
               "size": 1,
               "name": "marker_prefix",
@@ -292,6 +325,7 @@
             },
             "marker_type": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 34,
               "size": 1,
               "name": "marker_type",
@@ -302,6 +336,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 35,
               "size": 3,
               "name": "body",
@@ -309,6 +344,7 @@
               "children": {
                 "length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 35,
                   "size": 2,
                   "name": "length",
@@ -317,6 +353,7 @@
                 },
                 "sos_header": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 37,
                   "size": 1,
                   "name": "sos_header",
@@ -324,6 +361,7 @@
                 },
                 "compressed_data": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 38,
                   "size": 0,
                   "description": "\u30A8\u30F3\u30C8\u30ED\u30D4\u30FC\u7B26\u53F7\u5316\u30C7\u30FC\u30BF",
@@ -336,6 +374,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 38,
           "size": 2,
           "name": "segments",
@@ -343,6 +382,7 @@
           "children": {
             "marker_prefix": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 38,
               "size": 1,
               "name": "marker_prefix",
@@ -351,6 +391,7 @@
             },
             "marker_type": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 39,
               "size": 1,
               "name": "marker_type",
@@ -361,6 +402,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 40,
               "size": 0,
               "name": "body",

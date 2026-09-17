@@ -7,6 +7,7 @@
   "children": {
     "magic": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 0,
       "size": 4,
       "description": "Java\u30AF\u30E9\u30B9\u30D5\u30A1\u30A4\u30EB\u30DE\u30B8\u30C3\u30AF\uFF080xCAFEBABE\uFF09",
@@ -16,6 +17,7 @@
     },
     "minor_version": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 4,
       "size": 2,
       "name": "minor_version",
@@ -24,6 +26,7 @@
     },
     "major_version": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 6,
       "size": 2,
       "name": "major_version",
@@ -33,6 +36,7 @@
     },
     "constant_pool_count": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 8,
       "size": 2,
       "name": "constant_pool_count",
@@ -41,6 +45,7 @@
     },
     "constant_pool": {
       "_type": "array",
+      "type": "struct",
       "offset": 10,
       "size": 10,
       "name": "constant_pool",
@@ -48,6 +53,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 10,
           "size": 3,
           "name": "constant_pool",
@@ -55,6 +61,7 @@
           "children": {
             "tag": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 10,
               "size": 1,
               "name": "tag",
@@ -64,6 +71,7 @@
             },
             "info": {
               "_type": "struct",
+              "type": "switch",
               "offset": 11,
               "size": 2,
               "name": "info",
@@ -71,6 +79,7 @@
               "children": {
                 "name_index": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 11,
                   "size": 2,
                   "description": "\u30AF\u30E9\u30B9\u540D\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08CONSTANT_Utf8\uFF09",
@@ -84,6 +93,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 13,
           "size": 7,
           "name": "constant_pool",
@@ -91,6 +101,7 @@
           "children": {
             "tag": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 13,
               "size": 1,
               "name": "tag",
@@ -100,6 +111,7 @@
             },
             "info": {
               "_type": "struct",
+              "type": "switch",
               "offset": 14,
               "size": 6,
               "name": "info",
@@ -107,6 +119,7 @@
               "children": {
                 "length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 14,
                   "size": 2,
                   "name": "length",
@@ -115,6 +128,7 @@
                 },
                 "value": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 16,
                   "size": 4,
                   "description": "UTF-8\u30A8\u30F3\u30B3\u30FC\u30C9\u6587\u5B57\u5217\u30D0\u30A4\u30C8\u5217",
@@ -129,6 +143,7 @@
     },
     "access_flags": {
       "_type": "flags",
+      "type": "uint16",
       "offset": 20,
       "size": 2,
       "name": "access_flags",
@@ -170,6 +185,7 @@
     },
     "this_class": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 22,
       "size": 2,
       "description": "\u3053\u306E\u30AF\u30E9\u30B9\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
@@ -179,6 +195,7 @@
     },
     "super_class": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 24,
       "size": 2,
       "description": "\u30B9\u30FC\u30D1\u30FC\u30AF\u30E9\u30B9\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
@@ -188,6 +205,7 @@
     },
     "interfaces_count": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 26,
       "size": 2,
       "name": "interfaces_count",
@@ -196,6 +214,7 @@
     },
     "interfaces": {
       "_type": "array",
+      "type": "uint16",
       "offset": 28,
       "size": 0,
       "name": "interfaces",
@@ -204,6 +223,7 @@
     },
     "fields_count": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 28,
       "size": 2,
       "name": "fields_count",
@@ -212,6 +232,7 @@
     },
     "fields": {
       "_type": "array",
+      "type": "struct",
       "offset": 30,
       "size": 0,
       "name": "fields",
@@ -220,6 +241,7 @@
     },
     "methods_count": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 30,
       "size": 2,
       "name": "methods_count",
@@ -228,6 +250,7 @@
     },
     "methods": {
       "_type": "array",
+      "type": "struct",
       "offset": 32,
       "size": 0,
       "name": "methods",
@@ -236,6 +259,7 @@
     },
     "attributes_count": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 32,
       "size": 2,
       "name": "attributes_count",
@@ -244,6 +268,7 @@
     },
     "attributes": {
       "_type": "array",
+      "type": "struct",
       "offset": 34,
       "size": 0,
       "name": "attributes",

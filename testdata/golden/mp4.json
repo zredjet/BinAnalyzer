@@ -7,6 +7,7 @@
   "children": {
     "boxes": {
       "_type": "array",
+      "type": "struct",
       "offset": 0,
       "size": 476,
       "name": "boxes",
@@ -14,6 +15,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 0,
           "size": 24,
           "name": "boxes",
@@ -21,6 +23,7 @@
           "children": {
             "box_size": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 0,
               "size": 4,
               "name": "box_size",
@@ -29,6 +32,7 @@
             },
             "box_type": {
               "_type": "string",
+              "type": "ascii",
               "offset": 4,
               "size": 4,
               "name": "box_type",
@@ -37,6 +41,7 @@
             },
             "box_data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 8,
               "size": 16,
               "name": "box_data",
@@ -44,6 +49,7 @@
               "children": {
                 "major_brand": {
                   "_type": "string",
+                  "type": "ascii",
                   "offset": 8,
                   "size": 4,
                   "name": "major_brand",
@@ -52,6 +58,7 @@
                 },
                 "minor_version": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 12,
                   "size": 4,
                   "name": "minor_version",
@@ -60,6 +67,7 @@
                 },
                 "compatible_brands": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 16,
                   "size": 8,
                   "name": "compatible_brands",
@@ -71,6 +79,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 24,
           "size": 452,
           "name": "boxes",
@@ -78,6 +87,7 @@
           "children": {
             "box_size": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 24,
               "size": 4,
               "name": "box_size",
@@ -86,6 +96,7 @@
             },
             "box_type": {
               "_type": "string",
+              "type": "ascii",
               "offset": 28,
               "size": 4,
               "name": "box_type",
@@ -94,6 +105,7 @@
             },
             "box_data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 32,
               "size": 444,
               "name": "box_data",
@@ -101,6 +113,7 @@
               "children": {
                 "children": {
                   "_type": "array",
+                  "type": "struct",
                   "offset": 32,
                   "size": 444,
                   "name": "children",
@@ -108,6 +121,7 @@
                   "elements": [
                     {
                       "_type": "struct",
+                      "type": "struct",
                       "offset": 32,
                       "size": 108,
                       "name": "children",
@@ -115,6 +129,7 @@
                       "children": {
                         "box_size": {
                           "_type": "integer",
+                          "type": "uint32",
                           "offset": 32,
                           "size": 4,
                           "name": "box_size",
@@ -123,6 +138,7 @@
                         },
                         "box_type": {
                           "_type": "string",
+                          "type": "ascii",
                           "offset": 36,
                           "size": 4,
                           "name": "box_type",
@@ -131,6 +147,7 @@
                         },
                         "box_data": {
                           "_type": "struct",
+                          "type": "switch",
                           "offset": 40,
                           "size": 100,
                           "name": "box_data",
@@ -138,6 +155,7 @@
                           "children": {
                             "version": {
                               "_type": "integer",
+                              "type": "uint8",
                               "offset": 40,
                               "size": 1,
                               "name": "version",
@@ -146,6 +164,7 @@
                             },
                             "flags": {
                               "_type": "bytes",
+                              "type": "bytes",
                               "offset": 41,
                               "size": 3,
                               "name": "flags",
@@ -153,6 +172,7 @@
                             },
                             "creation_time": {
                               "_type": "integer",
+                              "type": "uint32",
                               "offset": 44,
                               "size": 4,
                               "name": "creation_time",
@@ -161,6 +181,7 @@
                             },
                             "modification_time": {
                               "_type": "integer",
+                              "type": "uint32",
                               "offset": 48,
                               "size": 4,
                               "name": "modification_time",
@@ -169,6 +190,7 @@
                             },
                             "timescale": {
                               "_type": "integer",
+                              "type": "uint32",
                               "offset": 52,
                               "size": 4,
                               "name": "timescale",
@@ -177,6 +199,7 @@
                             },
                             "duration": {
                               "_type": "integer",
+                              "type": "uint32",
                               "offset": 56,
                               "size": 4,
                               "name": "duration",
@@ -185,6 +208,7 @@
                             },
                             "rate": {
                               "_type": "integer",
+                              "type": "uint32",
                               "offset": 60,
                               "size": 4,
                               "description": "\u518D\u751F\u901F\u5EA6\uFF08\u56FA\u5B9A\u5C0F\u6570\u70B9 16.16\u3001\u901A\u5E38 0x00010000 = 1.0\uFF09",
@@ -194,6 +218,7 @@
                             },
                             "volume": {
                               "_type": "integer",
+                              "type": "uint16",
                               "offset": 64,
                               "size": 2,
                               "description": "\u97F3\u91CF\uFF08\u56FA\u5B9A\u5C0F\u6570\u70B9 8.8\u3001\u901A\u5E38 0x0100 = 1.0\uFF09",
@@ -203,6 +228,7 @@
                             },
                             "reserved": {
                               "_type": "bytes",
+                              "type": "bytes",
                               "offset": 66,
                               "size": 10,
                               "name": "reserved",
@@ -210,6 +236,7 @@
                             },
                             "matrix": {
                               "_type": "bytes",
+                              "type": "bytes",
                               "offset": 76,
                               "size": 36,
                               "description": "\u5909\u63DB\u30DE\u30C8\u30EA\u30AF\u30B9\uFF083x3 \u56FA\u5B9A\u5C0F\u6570\u70B9\uFF09",
@@ -218,6 +245,7 @@
                             },
                             "pre_defined": {
                               "_type": "bytes",
+                              "type": "bytes",
                               "offset": 112,
                               "size": 24,
                               "name": "pre_defined",
@@ -225,6 +253,7 @@
                             },
                             "next_track_id": {
                               "_type": "integer",
+                              "type": "uint32",
                               "offset": 136,
                               "size": 4,
                               "name": "next_track_id",
@@ -237,6 +266,7 @@
                     },
                     {
                       "_type": "struct",
+                      "type": "struct",
                       "offset": 140,
                       "size": 336,
                       "name": "children",
@@ -244,6 +274,7 @@
                       "children": {
                         "box_size": {
                           "_type": "integer",
+                          "type": "uint32",
                           "offset": 140,
                           "size": 4,
                           "name": "box_size",
@@ -252,6 +283,7 @@
                         },
                         "box_type": {
                           "_type": "string",
+                          "type": "ascii",
                           "offset": 144,
                           "size": 4,
                           "name": "box_type",
@@ -260,6 +292,7 @@
                         },
                         "box_data": {
                           "_type": "struct",
+                          "type": "switch",
                           "offset": 148,
                           "size": 328,
                           "name": "box_data",
@@ -267,6 +300,7 @@
                           "children": {
                             "children": {
                               "_type": "array",
+                              "type": "struct",
                               "offset": 148,
                               "size": 328,
                               "name": "children",
@@ -274,6 +308,7 @@
                               "elements": [
                                 {
                                   "_type": "struct",
+                                  "type": "struct",
                                   "offset": 148,
                                   "size": 92,
                                   "name": "children",
@@ -281,6 +316,7 @@
                                   "children": {
                                     "box_size": {
                                       "_type": "integer",
+                                      "type": "uint32",
                                       "offset": 148,
                                       "size": 4,
                                       "name": "box_size",
@@ -289,6 +325,7 @@
                                     },
                                     "box_type": {
                                       "_type": "string",
+                                      "type": "ascii",
                                       "offset": 152,
                                       "size": 4,
                                       "name": "box_type",
@@ -297,6 +334,7 @@
                                     },
                                     "box_data": {
                                       "_type": "struct",
+                                      "type": "switch",
                                       "offset": 156,
                                       "size": 84,
                                       "name": "box_data",
@@ -304,6 +342,7 @@
                                       "children": {
                                         "version": {
                                           "_type": "integer",
+                                          "type": "uint8",
                                           "offset": 156,
                                           "size": 1,
                                           "name": "version",
@@ -312,6 +351,7 @@
                                         },
                                         "flags": {
                                           "_type": "bytes",
+                                          "type": "bytes",
                                           "offset": 157,
                                           "size": 3,
                                           "name": "flags",
@@ -319,6 +359,7 @@
                                         },
                                         "creation_time": {
                                           "_type": "integer",
+                                          "type": "uint32",
                                           "offset": 160,
                                           "size": 4,
                                           "name": "creation_time",
@@ -327,6 +368,7 @@
                                         },
                                         "modification_time": {
                                           "_type": "integer",
+                                          "type": "uint32",
                                           "offset": 164,
                                           "size": 4,
                                           "name": "modification_time",
@@ -335,6 +377,7 @@
                                         },
                                         "track_id": {
                                           "_type": "integer",
+                                          "type": "uint32",
                                           "offset": 168,
                                           "size": 4,
                                           "name": "track_id",
@@ -343,6 +386,7 @@
                                         },
                                         "reserved1": {
                                           "_type": "bytes",
+                                          "type": "bytes",
                                           "offset": 172,
                                           "size": 4,
                                           "name": "reserved1",
@@ -350,6 +394,7 @@
                                         },
                                         "duration": {
                                           "_type": "integer",
+                                          "type": "uint32",
                                           "offset": 176,
                                           "size": 4,
                                           "name": "duration",
@@ -358,6 +403,7 @@
                                         },
                                         "reserved2": {
                                           "_type": "bytes",
+                                          "type": "bytes",
                                           "offset": 180,
                                           "size": 8,
                                           "name": "reserved2",
@@ -365,6 +411,7 @@
                                         },
                                         "layer": {
                                           "_type": "integer",
+                                          "type": "uint16",
                                           "offset": 188,
                                           "size": 2,
                                           "name": "layer",
@@ -373,6 +420,7 @@
                                         },
                                         "alternate_group": {
                                           "_type": "integer",
+                                          "type": "uint16",
                                           "offset": 190,
                                           "size": 2,
                                           "name": "alternate_group",
@@ -381,6 +429,7 @@
                                         },
                                         "volume": {
                                           "_type": "integer",
+                                          "type": "uint16",
                                           "offset": 192,
                                           "size": 2,
                                           "description": "\u97F3\u91CF\uFF08\u56FA\u5B9A\u5C0F\u6570\u70B9 8.8\uFF09",
@@ -390,6 +439,7 @@
                                         },
                                         "reserved3": {
                                           "_type": "bytes",
+                                          "type": "bytes",
                                           "offset": 194,
                                           "size": 2,
                                           "name": "reserved3",
@@ -397,6 +447,7 @@
                                         },
                                         "matrix": {
                                           "_type": "bytes",
+                                          "type": "bytes",
                                           "offset": 196,
                                           "size": 36,
                                           "description": "\u5909\u63DB\u30DE\u30C8\u30EA\u30AF\u30B9\uFF083x3 \u56FA\u5B9A\u5C0F\u6570\u70B9\uFF09",
@@ -405,6 +456,7 @@
                                         },
                                         "width": {
                                           "_type": "integer",
+                                          "type": "uint32",
                                           "offset": 232,
                                           "size": 4,
                                           "description": "\u5E45\uFF08\u56FA\u5B9A\u5C0F\u6570\u70B9 16.16\uFF09",
@@ -414,6 +466,7 @@
                                         },
                                         "height": {
                                           "_type": "integer",
+                                          "type": "uint32",
                                           "offset": 236,
                                           "size": 4,
                                           "description": "\u9AD8\u3055\uFF08\u56FA\u5B9A\u5C0F\u6570\u70B9 16.16\uFF09",
@@ -427,6 +480,7 @@
                                 },
                                 {
                                   "_type": "struct",
+                                  "type": "struct",
                                   "offset": 240,
                                   "size": 236,
                                   "name": "children",
@@ -434,6 +488,7 @@
                                   "children": {
                                     "box_size": {
                                       "_type": "integer",
+                                      "type": "uint32",
                                       "offset": 240,
                                       "size": 4,
                                       "name": "box_size",
@@ -442,6 +497,7 @@
                                     },
                                     "box_type": {
                                       "_type": "string",
+                                      "type": "ascii",
                                       "offset": 244,
                                       "size": 4,
                                       "name": "box_type",
@@ -450,6 +506,7 @@
                                     },
                                     "box_data": {
                                       "_type": "struct",
+                                      "type": "switch",
                                       "offset": 248,
                                       "size": 228,
                                       "name": "box_data",
@@ -457,6 +514,7 @@
                                       "children": {
                                         "children": {
                                           "_type": "array",
+                                          "type": "struct",
                                           "offset": 248,
                                           "size": 228,
                                           "name": "children",
@@ -464,6 +522,7 @@
                                           "elements": [
                                             {
                                               "_type": "struct",
+                                              "type": "struct",
                                               "offset": 248,
                                               "size": 32,
                                               "name": "children",
@@ -471,6 +530,7 @@
                                               "children": {
                                                 "box_size": {
                                                   "_type": "integer",
+                                                  "type": "uint32",
                                                   "offset": 248,
                                                   "size": 4,
                                                   "name": "box_size",
@@ -479,6 +539,7 @@
                                                 },
                                                 "box_type": {
                                                   "_type": "string",
+                                                  "type": "ascii",
                                                   "offset": 252,
                                                   "size": 4,
                                                   "name": "box_type",
@@ -487,6 +548,7 @@
                                                 },
                                                 "box_data": {
                                                   "_type": "struct",
+                                                  "type": "switch",
                                                   "offset": 256,
                                                   "size": 24,
                                                   "name": "box_data",
@@ -494,6 +556,7 @@
                                                   "children": {
                                                     "version": {
                                                       "_type": "integer",
+                                                      "type": "uint8",
                                                       "offset": 256,
                                                       "size": 1,
                                                       "name": "version",
@@ -502,6 +565,7 @@
                                                     },
                                                     "flags": {
                                                       "_type": "bytes",
+                                                      "type": "bytes",
                                                       "offset": 257,
                                                       "size": 3,
                                                       "name": "flags",
@@ -509,6 +573,7 @@
                                                     },
                                                     "creation_time": {
                                                       "_type": "integer",
+                                                      "type": "uint32",
                                                       "offset": 260,
                                                       "size": 4,
                                                       "name": "creation_time",
@@ -517,6 +582,7 @@
                                                     },
                                                     "modification_time": {
                                                       "_type": "integer",
+                                                      "type": "uint32",
                                                       "offset": 264,
                                                       "size": 4,
                                                       "name": "modification_time",
@@ -525,6 +591,7 @@
                                                     },
                                                     "timescale": {
                                                       "_type": "integer",
+                                                      "type": "uint32",
                                                       "offset": 268,
                                                       "size": 4,
                                                       "name": "timescale",
@@ -533,6 +600,7 @@
                                                     },
                                                     "duration": {
                                                       "_type": "integer",
+                                                      "type": "uint32",
                                                       "offset": 272,
                                                       "size": 4,
                                                       "name": "duration",
@@ -541,6 +609,7 @@
                                                     },
                                                     "language": {
                                                       "_type": "integer",
+                                                      "type": "uint16",
                                                       "offset": 276,
                                                       "size": 2,
                                                       "description": "\u8A00\u8A9E\u30B3\u30FC\u30C9\uFF08ISO-639-2/T \u30D1\u30C3\u30AF\u5F62\u5F0F\uFF09",
@@ -550,6 +619,7 @@
                                                     },
                                                     "pre_defined": {
                                                       "_type": "integer",
+                                                      "type": "uint16",
                                                       "offset": 278,
                                                       "size": 2,
                                                       "name": "pre_defined",
@@ -562,6 +632,7 @@
                                             },
                                             {
                                               "_type": "struct",
+                                              "type": "struct",
                                               "offset": 280,
                                               "size": 32,
                                               "name": "children",
@@ -569,6 +640,7 @@
                                               "children": {
                                                 "box_size": {
                                                   "_type": "integer",
+                                                  "type": "uint32",
                                                   "offset": 280,
                                                   "size": 4,
                                                   "name": "box_size",
@@ -577,6 +649,7 @@
                                                 },
                                                 "box_type": {
                                                   "_type": "string",
+                                                  "type": "ascii",
                                                   "offset": 284,
                                                   "size": 4,
                                                   "name": "box_type",
@@ -585,6 +658,7 @@
                                                 },
                                                 "box_data": {
                                                   "_type": "struct",
+                                                  "type": "switch",
                                                   "offset": 288,
                                                   "size": 24,
                                                   "name": "box_data",
@@ -592,6 +666,7 @@
                                                   "children": {
                                                     "version": {
                                                       "_type": "integer",
+                                                      "type": "uint8",
                                                       "offset": 288,
                                                       "size": 1,
                                                       "name": "version",
@@ -600,6 +675,7 @@
                                                     },
                                                     "flags": {
                                                       "_type": "bytes",
+                                                      "type": "bytes",
                                                       "offset": 289,
                                                       "size": 3,
                                                       "name": "flags",
@@ -607,6 +683,7 @@
                                                     },
                                                     "pre_defined": {
                                                       "_type": "integer",
+                                                      "type": "uint32",
                                                       "offset": 292,
                                                       "size": 4,
                                                       "name": "pre_defined",
@@ -615,6 +692,7 @@
                                                     },
                                                     "handler_type": {
                                                       "_type": "string",
+                                                      "type": "ascii",
                                                       "offset": 296,
                                                       "size": 4,
                                                       "name": "handler_type",
@@ -623,6 +701,7 @@
                                                     },
                                                     "reserved": {
                                                       "_type": "bytes",
+                                                      "type": "bytes",
                                                       "offset": 300,
                                                       "size": 12,
                                                       "name": "reserved",
@@ -634,6 +713,7 @@
                                             },
                                             {
                                               "_type": "struct",
+                                              "type": "struct",
                                               "offset": 312,
                                               "size": 164,
                                               "name": "children",
@@ -641,6 +721,7 @@
                                               "children": {
                                                 "box_size": {
                                                   "_type": "integer",
+                                                  "type": "uint32",
                                                   "offset": 312,
                                                   "size": 4,
                                                   "name": "box_size",
@@ -649,6 +730,7 @@
                                                 },
                                                 "box_type": {
                                                   "_type": "string",
+                                                  "type": "ascii",
                                                   "offset": 316,
                                                   "size": 4,
                                                   "name": "box_type",
@@ -657,6 +739,7 @@
                                                 },
                                                 "box_data": {
                                                   "_type": "struct",
+                                                  "type": "switch",
                                                   "offset": 320,
                                                   "size": 156,
                                                   "name": "box_data",
@@ -664,6 +747,7 @@
                                                   "children": {
                                                     "children": {
                                                       "_type": "array",
+                                                      "type": "struct",
                                                       "offset": 320,
                                                       "size": 156,
                                                       "name": "children",
@@ -671,6 +755,7 @@
                                                       "elements": [
                                                         {
                                                           "_type": "struct",
+                                                          "type": "struct",
                                                           "offset": 320,
                                                           "size": 16,
                                                           "name": "children",
@@ -678,6 +763,7 @@
                                                           "children": {
                                                             "box_size": {
                                                               "_type": "integer",
+                                                              "type": "uint32",
                                                               "offset": 320,
                                                               "size": 4,
                                                               "name": "box_size",
@@ -686,6 +772,7 @@
                                                             },
                                                             "box_type": {
                                                               "_type": "string",
+                                                              "type": "ascii",
                                                               "offset": 324,
                                                               "size": 4,
                                                               "name": "box_type",
@@ -694,6 +781,7 @@
                                                             },
                                                             "box_data": {
                                                               "_type": "struct",
+                                                              "type": "switch",
                                                               "offset": 328,
                                                               "size": 8,
                                                               "name": "box_data",
@@ -701,6 +789,7 @@
                                                               "children": {
                                                                 "version": {
                                                                   "_type": "integer",
+                                                                  "type": "uint8",
                                                                   "offset": 328,
                                                                   "size": 1,
                                                                   "name": "version",
@@ -709,6 +798,7 @@
                                                                 },
                                                                 "flags": {
                                                                   "_type": "bytes",
+                                                                  "type": "bytes",
                                                                   "offset": 329,
                                                                   "size": 3,
                                                                   "name": "flags",
@@ -716,6 +806,7 @@
                                                                 },
                                                                 "balance": {
                                                                   "_type": "integer",
+                                                                  "type": "uint16",
                                                                   "offset": 332,
                                                                   "size": 2,
                                                                   "description": "\u30D0\u30E9\u30F3\u30B9\uFF08\u56FA\u5B9A\u5C0F\u6570\u70B9 8.8\uFF09",
@@ -725,6 +816,7 @@
                                                                 },
                                                                 "reserved": {
                                                                   "_type": "integer",
+                                                                  "type": "uint16",
                                                                   "offset": 334,
                                                                   "size": 2,
                                                                   "name": "reserved",
@@ -737,6 +829,7 @@
                                                         },
                                                         {
                                                           "_type": "struct",
+                                                          "type": "struct",
                                                           "offset": 336,
                                                           "size": 24,
                                                           "name": "children",
@@ -744,6 +837,7 @@
                                                           "children": {
                                                             "box_size": {
                                                               "_type": "integer",
+                                                              "type": "uint32",
                                                               "offset": 336,
                                                               "size": 4,
                                                               "name": "box_size",
@@ -752,6 +846,7 @@
                                                             },
                                                             "box_type": {
                                                               "_type": "string",
+                                                              "type": "ascii",
                                                               "offset": 340,
                                                               "size": 4,
                                                               "name": "box_type",
@@ -760,6 +855,7 @@
                                                             },
                                                             "box_data": {
                                                               "_type": "struct",
+                                                              "type": "switch",
                                                               "offset": 344,
                                                               "size": 16,
                                                               "name": "box_data",
@@ -767,6 +863,7 @@
                                                               "children": {
                                                                 "children": {
                                                                   "_type": "array",
+                                                                  "type": "struct",
                                                                   "offset": 344,
                                                                   "size": 16,
                                                                   "name": "children",
@@ -774,6 +871,7 @@
                                                                   "elements": [
                                                                     {
                                                                       "_type": "struct",
+                                                                      "type": "struct",
                                                                       "offset": 344,
                                                                       "size": 16,
                                                                       "name": "children",
@@ -781,6 +879,7 @@
                                                                       "children": {
                                                                         "box_size": {
                                                                           "_type": "integer",
+                                                                          "type": "uint32",
                                                                           "offset": 344,
                                                                           "size": 4,
                                                                           "name": "box_size",
@@ -789,6 +888,7 @@
                                                                         },
                                                                         "box_type": {
                                                                           "_type": "string",
+                                                                          "type": "ascii",
                                                                           "offset": 348,
                                                                           "size": 4,
                                                                           "name": "box_type",
@@ -797,6 +897,7 @@
                                                                         },
                                                                         "box_data": {
                                                                           "_type": "struct",
+                                                                          "type": "switch",
                                                                           "offset": 352,
                                                                           "size": 8,
                                                                           "name": "box_data",
@@ -804,6 +905,7 @@
                                                                           "children": {
                                                                             "version": {
                                                                               "_type": "integer",
+                                                                              "type": "uint8",
                                                                               "offset": 352,
                                                                               "size": 1,
                                                                               "name": "version",
@@ -812,6 +914,7 @@
                                                                             },
                                                                             "flags": {
                                                                               "_type": "bytes",
+                                                                              "type": "bytes",
                                                                               "offset": 353,
                                                                               "size": 3,
                                                                               "name": "flags",
@@ -819,6 +922,7 @@
                                                                             },
                                                                             "entry_count": {
                                                                               "_type": "integer",
+                                                                              "type": "uint32",
                                                                               "offset": 356,
                                                                               "size": 4,
                                                                               "name": "entry_count",
@@ -837,6 +941,7 @@
                                                         },
                                                         {
                                                           "_type": "struct",
+                                                          "type": "struct",
                                                           "offset": 360,
                                                           "size": 116,
                                                           "name": "children",
@@ -844,6 +949,7 @@
                                                           "children": {
                                                             "box_size": {
                                                               "_type": "integer",
+                                                              "type": "uint32",
                                                               "offset": 360,
                                                               "size": 4,
                                                               "name": "box_size",
@@ -852,6 +958,7 @@
                                                             },
                                                             "box_type": {
                                                               "_type": "string",
+                                                              "type": "ascii",
                                                               "offset": 364,
                                                               "size": 4,
                                                               "name": "box_type",
@@ -860,6 +967,7 @@
                                                             },
                                                             "box_data": {
                                                               "_type": "struct",
+                                                              "type": "switch",
                                                               "offset": 368,
                                                               "size": 108,
                                                               "name": "box_data",
@@ -867,6 +975,7 @@
                                                               "children": {
                                                                 "children": {
                                                                   "_type": "array",
+                                                                  "type": "struct",
                                                                   "offset": 368,
                                                                   "size": 108,
                                                                   "name": "children",
@@ -874,6 +983,7 @@
                                                                   "elements": [
                                                                     {
                                                                       "_type": "struct",
+                                                                      "type": "struct",
                                                                       "offset": 368,
                                                                       "size": 16,
                                                                       "name": "children",
@@ -881,6 +991,7 @@
                                                                       "children": {
                                                                         "box_size": {
                                                                           "_type": "integer",
+                                                                          "type": "uint32",
                                                                           "offset": 368,
                                                                           "size": 4,
                                                                           "name": "box_size",
@@ -889,6 +1000,7 @@
                                                                         },
                                                                         "box_type": {
                                                                           "_type": "string",
+                                                                          "type": "ascii",
                                                                           "offset": 372,
                                                                           "size": 4,
                                                                           "name": "box_type",
@@ -897,6 +1009,7 @@
                                                                         },
                                                                         "box_data": {
                                                                           "_type": "struct",
+                                                                          "type": "switch",
                                                                           "offset": 376,
                                                                           "size": 8,
                                                                           "name": "box_data",
@@ -904,6 +1017,7 @@
                                                                           "children": {
                                                                             "version": {
                                                                               "_type": "integer",
+                                                                              "type": "uint8",
                                                                               "offset": 376,
                                                                               "size": 1,
                                                                               "name": "version",
@@ -912,6 +1026,7 @@
                                                                             },
                                                                             "flags": {
                                                                               "_type": "bytes",
+                                                                              "type": "bytes",
                                                                               "offset": 377,
                                                                               "size": 3,
                                                                               "name": "flags",
@@ -919,6 +1034,7 @@
                                                                             },
                                                                             "entry_count": {
                                                                               "_type": "integer",
+                                                                              "type": "uint32",
                                                                               "offset": 380,
                                                                               "size": 4,
                                                                               "name": "entry_count",
@@ -931,6 +1047,7 @@
                                                                     },
                                                                     {
                                                                       "_type": "struct",
+                                                                      "type": "struct",
                                                                       "offset": 384,
                                                                       "size": 24,
                                                                       "name": "children",
@@ -938,6 +1055,7 @@
                                                                       "children": {
                                                                         "box_size": {
                                                                           "_type": "integer",
+                                                                          "type": "uint32",
                                                                           "offset": 384,
                                                                           "size": 4,
                                                                           "name": "box_size",
@@ -946,6 +1064,7 @@
                                                                         },
                                                                         "box_type": {
                                                                           "_type": "string",
+                                                                          "type": "ascii",
                                                                           "offset": 388,
                                                                           "size": 4,
                                                                           "name": "box_type",
@@ -954,6 +1073,7 @@
                                                                         },
                                                                         "box_data": {
                                                                           "_type": "struct",
+                                                                          "type": "switch",
                                                                           "offset": 392,
                                                                           "size": 16,
                                                                           "name": "box_data",
@@ -961,6 +1081,7 @@
                                                                           "children": {
                                                                             "version": {
                                                                               "_type": "integer",
+                                                                              "type": "uint8",
                                                                               "offset": 392,
                                                                               "size": 1,
                                                                               "name": "version",
@@ -969,6 +1090,7 @@
                                                                             },
                                                                             "flags": {
                                                                               "_type": "bytes",
+                                                                              "type": "bytes",
                                                                               "offset": 393,
                                                                               "size": 3,
                                                                               "name": "flags",
@@ -976,6 +1098,7 @@
                                                                             },
                                                                             "entry_count": {
                                                                               "_type": "integer",
+                                                                              "type": "uint32",
                                                                               "offset": 396,
                                                                               "size": 4,
                                                                               "name": "entry_count",
@@ -984,6 +1107,7 @@
                                                                             },
                                                                             "entries": {
                                                                               "_type": "array",
+                                                                              "type": "struct",
                                                                               "offset": 400,
                                                                               "size": 8,
                                                                               "name": "entries",
@@ -991,6 +1115,7 @@
                                                                               "elements": [
                                                                                 {
                                                                                   "_type": "struct",
+                                                                                  "type": "struct",
                                                                                   "offset": 400,
                                                                                   "size": 8,
                                                                                   "name": "entries",
@@ -998,6 +1123,7 @@
                                                                                   "children": {
                                                                                     "sample_count": {
                                                                                       "_type": "integer",
+                                                                                      "type": "uint32",
                                                                                       "offset": 400,
                                                                                       "size": 4,
                                                                                       "name": "sample_count",
@@ -1006,6 +1132,7 @@
                                                                                     },
                                                                                     "sample_delta": {
                                                                                       "_type": "integer",
+                                                                                      "type": "uint32",
                                                                                       "offset": 404,
                                                                                       "size": 4,
                                                                                       "name": "sample_delta",
@@ -1022,6 +1149,7 @@
                                                                     },
                                                                     {
                                                                       "_type": "struct",
+                                                                      "type": "struct",
                                                                       "offset": 408,
                                                                       "size": 28,
                                                                       "name": "children",
@@ -1029,6 +1157,7 @@
                                                                       "children": {
                                                                         "box_size": {
                                                                           "_type": "integer",
+                                                                          "type": "uint32",
                                                                           "offset": 408,
                                                                           "size": 4,
                                                                           "name": "box_size",
@@ -1037,6 +1166,7 @@
                                                                         },
                                                                         "box_type": {
                                                                           "_type": "string",
+                                                                          "type": "ascii",
                                                                           "offset": 412,
                                                                           "size": 4,
                                                                           "name": "box_type",
@@ -1045,6 +1175,7 @@
                                                                         },
                                                                         "box_data": {
                                                                           "_type": "struct",
+                                                                          "type": "switch",
                                                                           "offset": 416,
                                                                           "size": 20,
                                                                           "name": "box_data",
@@ -1052,6 +1183,7 @@
                                                                           "children": {
                                                                             "version": {
                                                                               "_type": "integer",
+                                                                              "type": "uint8",
                                                                               "offset": 416,
                                                                               "size": 1,
                                                                               "name": "version",
@@ -1060,6 +1192,7 @@
                                                                             },
                                                                             "flags": {
                                                                               "_type": "bytes",
+                                                                              "type": "bytes",
                                                                               "offset": 417,
                                                                               "size": 3,
                                                                               "name": "flags",
@@ -1067,6 +1200,7 @@
                                                                             },
                                                                             "entry_count": {
                                                                               "_type": "integer",
+                                                                              "type": "uint32",
                                                                               "offset": 420,
                                                                               "size": 4,
                                                                               "name": "entry_count",
@@ -1075,6 +1209,7 @@
                                                                             },
                                                                             "entries": {
                                                                               "_type": "array",
+                                                                              "type": "struct",
                                                                               "offset": 424,
                                                                               "size": 12,
                                                                               "name": "entries",
@@ -1082,6 +1217,7 @@
                                                                               "elements": [
                                                                                 {
                                                                                   "_type": "struct",
+                                                                                  "type": "struct",
                                                                                   "offset": 424,
                                                                                   "size": 12,
                                                                                   "name": "entries",
@@ -1089,6 +1225,7 @@
                                                                                   "children": {
                                                                                     "first_chunk": {
                                                                                       "_type": "integer",
+                                                                                      "type": "uint32",
                                                                                       "offset": 424,
                                                                                       "size": 4,
                                                                                       "name": "first_chunk",
@@ -1097,6 +1234,7 @@
                                                                                     },
                                                                                     "samples_per_chunk": {
                                                                                       "_type": "integer",
+                                                                                      "type": "uint32",
                                                                                       "offset": 428,
                                                                                       "size": 4,
                                                                                       "name": "samples_per_chunk",
@@ -1105,6 +1243,7 @@
                                                                                     },
                                                                                     "sample_description_index": {
                                                                                       "_type": "integer",
+                                                                                      "type": "uint32",
                                                                                       "offset": 432,
                                                                                       "size": 4,
                                                                                       "name": "sample_description_index",
@@ -1121,6 +1260,7 @@
                                                                     },
                                                                     {
                                                                       "_type": "struct",
+                                                                      "type": "struct",
                                                                       "offset": 436,
                                                                       "size": 20,
                                                                       "name": "children",
@@ -1128,6 +1268,7 @@
                                                                       "children": {
                                                                         "box_size": {
                                                                           "_type": "integer",
+                                                                          "type": "uint32",
                                                                           "offset": 436,
                                                                           "size": 4,
                                                                           "name": "box_size",
@@ -1136,6 +1277,7 @@
                                                                         },
                                                                         "box_type": {
                                                                           "_type": "string",
+                                                                          "type": "ascii",
                                                                           "offset": 440,
                                                                           "size": 4,
                                                                           "name": "box_type",
@@ -1144,6 +1286,7 @@
                                                                         },
                                                                         "box_data": {
                                                                           "_type": "struct",
+                                                                          "type": "switch",
                                                                           "offset": 444,
                                                                           "size": 12,
                                                                           "name": "box_data",
@@ -1151,6 +1294,7 @@
                                                                           "children": {
                                                                             "version": {
                                                                               "_type": "integer",
+                                                                              "type": "uint8",
                                                                               "offset": 444,
                                                                               "size": 1,
                                                                               "name": "version",
@@ -1159,6 +1303,7 @@
                                                                             },
                                                                             "flags": {
                                                                               "_type": "bytes",
+                                                                              "type": "bytes",
                                                                               "offset": 445,
                                                                               "size": 3,
                                                                               "name": "flags",
@@ -1166,6 +1311,7 @@
                                                                             },
                                                                             "sample_size": {
                                                                               "_type": "integer",
+                                                                              "type": "uint32",
                                                                               "offset": 448,
                                                                               "size": 4,
                                                                               "description": "\u5171\u901A\u30B5\u30F3\u30D7\u30EB\u30B5\u30A4\u30BA\uFF080\u306E\u5834\u5408\u306F\u500B\u5225\u30B5\u30A4\u30BA\uFF09",
@@ -1175,6 +1321,7 @@
                                                                             },
                                                                             "sample_count": {
                                                                               "_type": "integer",
+                                                                              "type": "uint32",
                                                                               "offset": 452,
                                                                               "size": 4,
                                                                               "name": "sample_count",
@@ -1187,6 +1334,7 @@
                                                                     },
                                                                     {
                                                                       "_type": "struct",
+                                                                      "type": "struct",
                                                                       "offset": 456,
                                                                       "size": 20,
                                                                       "name": "children",
@@ -1194,6 +1342,7 @@
                                                                       "children": {
                                                                         "box_size": {
                                                                           "_type": "integer",
+                                                                          "type": "uint32",
                                                                           "offset": 456,
                                                                           "size": 4,
                                                                           "name": "box_size",
@@ -1202,6 +1351,7 @@
                                                                         },
                                                                         "box_type": {
                                                                           "_type": "string",
+                                                                          "type": "ascii",
                                                                           "offset": 460,
                                                                           "size": 4,
                                                                           "name": "box_type",
@@ -1210,6 +1360,7 @@
                                                                         },
                                                                         "box_data": {
                                                                           "_type": "struct",
+                                                                          "type": "switch",
                                                                           "offset": 464,
                                                                           "size": 12,
                                                                           "name": "box_data",
@@ -1217,6 +1368,7 @@
                                                                           "children": {
                                                                             "version": {
                                                                               "_type": "integer",
+                                                                              "type": "uint8",
                                                                               "offset": 464,
                                                                               "size": 1,
                                                                               "name": "version",
@@ -1225,6 +1377,7 @@
                                                                             },
                                                                             "flags": {
                                                                               "_type": "bytes",
+                                                                              "type": "bytes",
                                                                               "offset": 465,
                                                                               "size": 3,
                                                                               "name": "flags",
@@ -1232,6 +1385,7 @@
                                                                             },
                                                                             "entry_count": {
                                                                               "_type": "integer",
+                                                                              "type": "uint32",
                                                                               "offset": 468,
                                                                               "size": 4,
                                                                               "name": "entry_count",
@@ -1240,6 +1394,7 @@
                                                                             },
                                                                             "entries": {
                                                                               "_type": "array",
+                                                                              "type": "struct",
                                                                               "offset": 472,
                                                                               "size": 4,
                                                                               "name": "entries",
@@ -1247,6 +1402,7 @@
                                                                               "elements": [
                                                                                 {
                                                                                   "_type": "struct",
+                                                                                  "type": "struct",
                                                                                   "offset": 472,
                                                                                   "size": 4,
                                                                                   "name": "entries",
@@ -1254,6 +1410,7 @@
                                                                                   "children": {
                                                                                     "chunk_offset": {
                                                                                       "_type": "integer",
+                                                                                      "type": "uint32",
                                                                                       "offset": 472,
                                                                                       "size": 4,
                                                                                       "name": "chunk_offset",

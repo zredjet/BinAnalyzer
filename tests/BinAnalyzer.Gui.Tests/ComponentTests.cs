@@ -134,7 +134,7 @@ public sealed class ComponentTests : BunitContext
         cut.Find(".exp-head .path").TextContent.Should().Be("chunks[0].data.color_type");
         var dts = cut.FindAll("dt").Select(d => d.TextContent).ToList();
         dts.Should().Contain(["型", "位置", "生バイト", "値", "enum"]);
-        cut.FindAll("dd")[0].TextContent.Should().Be("int8 (enum)");
+        cut.FindAll("dd")[0].TextContent.Should().Be("u8 (enum)");
         cut.FindAll("dd").Select(d => d.TextContent).Should().Contain("truecolor");
 
         doc.Select(doc.Index.ByPath("chunks[0].type")!);

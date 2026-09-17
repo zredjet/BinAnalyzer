@@ -113,6 +113,8 @@ PNG [0x00000000] (45 bytes)
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o json
 ```
 
+各ノードは `_type`（ノード種別: `integer` / `string` / `struct` / `array` …）と `type`（フォーマット定義の `type:` の正規名: `uint32` / `ascii` / `switch` …。ルートには無い）を持ちます。
+
 ### hexdump
 
 フィールド注釈付きのヘックスダンプを出力します。各バイト範囲がどのフィールドに属するかを確認できます。
@@ -542,7 +544,7 @@ dotnet run --project src/BinAnalyzer.Cli -- patch image.png -f formats/png.bdef.
 `--dry-run` の出力例:
 
 ```
-[dry-run] chunks[0].data.width (int32) @0x00000010 4 B
+[dry-run] chunks[0].data.width (u32) @0x00000010 4 B
   値:     1 → 2
   バイト: 00 00 00 01 → 00 00 00 02
 [dry-run] チェックサム再計算: 1 件

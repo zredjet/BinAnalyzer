@@ -1,4 +1,5 @@
 using BinAnalyzer.Core.Decoded;
+using BinAnalyzer.Core.Models;
 using BinAnalyzer.Presentation;
 using FluentAssertions;
 using Xunit;
@@ -131,10 +132,45 @@ public sealed class NodeDisplayTextTests
     [InlineData(4, null, null, "int32")]
     [InlineData(4, "crc32", null, "int32 (crc32)")]
     [InlineData(1, null, "RGB", "int8 (enum)")]
-    public void TypeLabel_Integer(int size, string? checksum, string? enumLabel, string expected)
+    public void TypeLabel_Integer_WithoutDslType_FallsBackToSize(int size, string? checksum, string? enumLabel, string expected)
     {
         var node = new DecodedInteger { Name = "v", Offset = 0, Size = size, Value = 0, ChecksumAlgorithm = checksum, EnumLabel = enumLabel };
         NodeDisplayText.TypeLabel(node).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(FieldType.UInt32, 4, null, null, "u32")]
+    [InlineData(FieldType.Int16, 2, null, null, "i16")]
+    [InlineData(FieldType.UInt64, 8, null, null, "u64")]
+    [InlineData(FieldType.UInt32, 4, "crc32", null, "u32 (crc32)")]
+    [InlineData(FieldType.UInt8, 1, null, "RGB", "u8 (enum)")]
+    [InlineData(FieldType.ULeb128, 3, null, null, "uleb128")]
+    public void TypeLabel_Integer_WithDslType_IsExact(FieldType type, int size, string? checksum, string? enumLabel, string expected)
+    {
+        var node = new DecodedInteger { Name = "v", Offset = 0, Size = size, Value = 0, ChecksumAlgorithm = checksum, EnumLabel = enumLabel, DslType = type };
+        NodeDisplayText.TypeLabel(node).Should().Be(expected);
+        node.TypeName.Should().Be(FieldTypeNames.ToDslName(type));
+    }
+
+    [Fact]
+    public void TypeLabel_EnumRefWithoutLabel_StillMarksEnum()
+    {
+        var node = new DecodedInteger { Name = "v", Offset = 0, Size = 1, Value = 99, DslType = FieldType.UInt8, EnumRef = "color" };
+        NodeDisplayText.TypeLabel(node).Should().Be("u8 (enum)");
+    }
+
+    [Fact]
+    public void TypeLabel_Float_String_Flags_Array_UseDslType()
+    {
+        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0, IsSinglePrecision = true, DslType = FieldType.Float32 }).Should().Be("f32");
+        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 8, Value = 0, IsSinglePrecision = false }).Should().Be("float64");
+        NodeDisplayText.TypeLabel(new DecodedString { Name = "s", Offset = 0, Size = 6, Value = "ab", Encoding = "utf16le", DslType = FieldType.Utf16Le }).Should().Be("utf16le[6]");
+        NodeDisplayText.TypeLabel(new DecodedString { Name = "s", Offset = 0, Size = 5, Value = "abcd", Encoding = "asciiz", DslType = FieldType.AsciiZ }).Should().Be("asciiz[5]");
+        NodeDisplayText.TypeLabel(new DecodedFlags { Name = "fl", Offset = 0, Size = 4, RawValue = 1, FlagStates = [], DslType = FieldType.UInt32 }).Should().Be("u32 (flags)");
+        NodeDisplayText.TypeLabel(new DecodedFlags { Name = "fl", Offset = 0, Size = 4, RawValue = 1, FlagStates = [] }).Should().Be("flags32");
+        NodeDisplayText.TypeLabel(new DecodedArray { Name = "a", Offset = 0, Size = 0, Elements = [], DslType = FieldType.Struct }).Should().Be("struct[0]");
+        NodeDisplayText.TypeLabel(new DecodedArray { Name = "a", Offset = 0, Size = 0, Elements = [] }).Should().Be("array[0]");
+        NodeDisplayText.TypeLabel(new DecodedInteger { Name = "b", Offset = 0, Size = 3, BitOffset = 2, Value = 1, DslType = FieldType.UInt8 }).Should().Be("u8:3bit");
     }
 
     [Fact]

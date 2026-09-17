@@ -7,6 +7,7 @@
   "children": {
     "records": {
       "_type": "array",
+      "type": "struct",
       "offset": 0,
       "size": 121,
       "name": "records",
@@ -14,6 +15,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 0,
           "size": 44,
           "name": "records",
@@ -21,6 +23,7 @@
           "children": {
             "signature": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 0,
               "size": 4,
               "name": "signature",
@@ -29,6 +32,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 4,
               "size": 40,
               "name": "body",
@@ -36,6 +40,7 @@
               "children": {
                 "version_needed": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 4,
                   "size": 2,
                   "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u4E0B\u4F4D\u30D0\u30A4\u30C8=\u30D0\u30FC\u30B8\u30E7\u30F3\u3001\u4E0A\u4F4D\u30D0\u30A4\u30C8=OS\uFF09",
@@ -45,6 +50,7 @@
                 },
                 "version_needed_os": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 6,
                   "size": 0,
                   "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\u306EOS\u60C5\u5831\uFF08\u4E0A\u4F4D\u30D0\u30A4\u30C8\uFF09",
@@ -53,6 +59,7 @@
                 },
                 "flags": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 6,
                   "size": 2,
                   "description": "\u6C4E\u7528\u30D3\u30C3\u30C8\u30D5\u30E9\u30B0",
@@ -62,6 +69,7 @@
                 },
                 "encrypted": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 8,
                   "size": 0,
                   "description": "\u6697\u53F7\u5316\u30D5\u30E9\u30B0\uFF08bit 0: 1=\u6697\u53F7\u5316\u3055\u308C\u3066\u3044\u308B\uFF09",
@@ -70,6 +78,7 @@
                 },
                 "has_data_descriptor": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 8,
                   "size": 0,
                   "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30B9\u30AF\u30EA\u30D7\u30BF\u30D5\u30E9\u30B0\uFF08bit 3: 1=compressed_data\u306E\u5F8C\u306Bcrc32(4bytes)/compressed_size(4bytes)/uncompressed_size(4bytes)\u306EData Descriptor\u304C\u914D\u7F6E\u3055\u308C\u308B\u3002\u3053\u306E\u5834\u5408\u30D8\u30C3\u30C0\u5185\u306Ecrc32/compressed_size/uncompressed_size\u306F0\u3068\u306A\u308B\uFF09",
@@ -78,6 +87,7 @@
                 },
                 "utf8_encoding": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 8,
                   "size": 0,
                   "description": "UTF-8\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\u30D5\u30E9\u30B0\uFF08bit 11: 1=\u30D5\u30A1\u30A4\u30EB\u540D\u3068\u30B3\u30E1\u30F3\u30C8\u304CUTF-8\u3067\u30A8\u30F3\u30B3\u30FC\u30C9\u3055\u308C\u3066\u3044\u308B\uFF09",
@@ -86,6 +96,7 @@
                 },
                 "compression": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 8,
                   "size": 2,
                   "name": "compression",
@@ -95,6 +106,7 @@
                 },
                 "mod_time": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 10,
                   "size": 2,
                   "name": "mod_time",
@@ -103,6 +115,7 @@
                 },
                 "mod_date": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 12,
                   "size": 2,
                   "name": "mod_date",
@@ -111,6 +124,7 @@
                 },
                 "crc32": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 14,
                   "size": 4,
                   "name": "crc32",
@@ -119,6 +133,7 @@
                 },
                 "compressed_size": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 18,
                   "size": 4,
                   "name": "compressed_size",
@@ -127,6 +142,7 @@
                 },
                 "uncompressed_size": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 22,
                   "size": 4,
                   "name": "uncompressed_size",
@@ -135,6 +151,7 @@
                 },
                 "filename_length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 26,
                   "size": 2,
                   "name": "filename_length",
@@ -143,6 +160,7 @@
                 },
                 "extra_length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 28,
                   "size": 2,
                   "name": "extra_length",
@@ -151,6 +169,7 @@
                 },
                 "filename": {
                   "_type": "string",
+                  "type": "ascii",
                   "offset": 30,
                   "size": 9,
                   "name": "filename",
@@ -159,6 +178,7 @@
                 },
                 "extra": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 39,
                   "size": 0,
                   "name": "extra",
@@ -166,6 +186,7 @@
                 },
                 "data": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 39,
                   "size": 5,
                   "name": "data",
@@ -177,6 +198,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 44,
           "size": 55,
           "name": "records",
@@ -184,6 +206,7 @@
           "children": {
             "signature": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 44,
               "size": 4,
               "name": "signature",
@@ -192,6 +215,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 48,
               "size": 51,
               "name": "body",
@@ -199,6 +223,7 @@
               "children": {
                 "version_made_by": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 48,
                   "size": 2,
                   "description": "\u30A2\u30FC\u30AB\u30A4\u30D6\u4F5C\u6210\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u4E0B\u4F4D\u30D0\u30A4\u30C8=\u30D0\u30FC\u30B8\u30E7\u30F3\u3001\u4E0A\u4F4D\u30D0\u30A4\u30C8=OS\uFF09",
@@ -208,6 +233,7 @@
                 },
                 "version_made_by_os": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 50,
                   "size": 0,
                   "description": "\u30A2\u30FC\u30AB\u30A4\u30D6\u4F5C\u6210OS\u60C5\u5831\uFF08\u4E0A\u4F4D\u30D0\u30A4\u30C8\uFF09",
@@ -216,6 +242,7 @@
                 },
                 "version_needed": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 50,
                   "size": 2,
                   "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u4E0B\u4F4D\u30D0\u30A4\u30C8=\u30D0\u30FC\u30B8\u30E7\u30F3\u3001\u4E0A\u4F4D\u30D0\u30A4\u30C8=OS\uFF09",
@@ -225,6 +252,7 @@
                 },
                 "version_needed_os": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 52,
                   "size": 0,
                   "description": "\u5C55\u958B\u306B\u5FC5\u8981\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\u306EOS\u60C5\u5831\uFF08\u4E0A\u4F4D\u30D0\u30A4\u30C8\uFF09",
@@ -233,6 +261,7 @@
                 },
                 "flags": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 52,
                   "size": 2,
                   "description": "\u6C4E\u7528\u30D3\u30C3\u30C8\u30D5\u30E9\u30B0",
@@ -242,6 +271,7 @@
                 },
                 "encrypted": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 54,
                   "size": 0,
                   "description": "\u6697\u53F7\u5316\u30D5\u30E9\u30B0\uFF08bit 0: 1=\u6697\u53F7\u5316\u3055\u308C\u3066\u3044\u308B\uFF09",
@@ -250,6 +280,7 @@
                 },
                 "has_data_descriptor": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 54,
                   "size": 0,
                   "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30B9\u30AF\u30EA\u30D7\u30BF\u30D5\u30E9\u30B0\uFF08bit 3: 1=compressed_data\u306E\u5F8C\u306Bcrc32(4bytes)/compressed_size(4bytes)/uncompressed_size(4bytes)\u306EData Descriptor\u304C\u914D\u7F6E\u3055\u308C\u308B\u3002\u3053\u306E\u5834\u5408\u30D8\u30C3\u30C0\u5185\u306Ecrc32/compressed_size/uncompressed_size\u306F0\u3068\u306A\u308B\uFF09",
@@ -258,6 +289,7 @@
                 },
                 "utf8_encoding": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 54,
                   "size": 0,
                   "description": "UTF-8\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\u30D5\u30E9\u30B0\uFF08bit 11: 1=\u30D5\u30A1\u30A4\u30EB\u540D\u3068\u30B3\u30E1\u30F3\u30C8\u304CUTF-8\u3067\u30A8\u30F3\u30B3\u30FC\u30C9\u3055\u308C\u3066\u3044\u308B\uFF09",
@@ -266,6 +298,7 @@
                 },
                 "compression": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 54,
                   "size": 2,
                   "name": "compression",
@@ -275,6 +308,7 @@
                 },
                 "mod_time": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 56,
                   "size": 2,
                   "name": "mod_time",
@@ -283,6 +317,7 @@
                 },
                 "mod_date": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 58,
                   "size": 2,
                   "name": "mod_date",
@@ -291,6 +326,7 @@
                 },
                 "crc32": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 60,
                   "size": 4,
                   "name": "crc32",
@@ -299,6 +335,7 @@
                 },
                 "compressed_size": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 64,
                   "size": 4,
                   "name": "compressed_size",
@@ -307,6 +344,7 @@
                 },
                 "uncompressed_size": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 68,
                   "size": 4,
                   "name": "uncompressed_size",
@@ -315,6 +353,7 @@
                 },
                 "filename_length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 72,
                   "size": 2,
                   "name": "filename_length",
@@ -323,6 +362,7 @@
                 },
                 "extra_length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 74,
                   "size": 2,
                   "name": "extra_length",
@@ -331,6 +371,7 @@
                 },
                 "comment_length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 76,
                   "size": 2,
                   "name": "comment_length",
@@ -339,6 +380,7 @@
                 },
                 "disk_number_start": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 78,
                   "size": 2,
                   "name": "disk_number_start",
@@ -347,6 +389,7 @@
                 },
                 "internal_attributes": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 80,
                   "size": 2,
                   "name": "internal_attributes",
@@ -355,6 +398,7 @@
                 },
                 "external_attributes": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 82,
                   "size": 4,
                   "name": "external_attributes",
@@ -363,6 +407,7 @@
                 },
                 "local_header_offset": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 86,
                   "size": 4,
                   "name": "local_header_offset",
@@ -371,6 +416,7 @@
                 },
                 "filename": {
                   "_type": "string",
+                  "type": "ascii",
                   "offset": 90,
                   "size": 9,
                   "name": "filename",
@@ -379,6 +425,7 @@
                 },
                 "extra": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 99,
                   "size": 0,
                   "name": "extra",
@@ -386,6 +433,7 @@
                 },
                 "comment": {
                   "_type": "string",
+                  "type": "ascii",
                   "offset": 99,
                   "size": 0,
                   "name": "comment",
@@ -398,6 +446,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 99,
           "size": 22,
           "name": "records",
@@ -405,6 +454,7 @@
           "children": {
             "signature": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 99,
               "size": 4,
               "name": "signature",
@@ -413,6 +463,7 @@
             },
             "body": {
               "_type": "struct",
+              "type": "switch",
               "offset": 103,
               "size": 18,
               "name": "body",
@@ -420,6 +471,7 @@
               "children": {
                 "disk_number": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 103,
                   "size": 2,
                   "name": "disk_number",
@@ -428,6 +480,7 @@
                 },
                 "start_disk": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 105,
                   "size": 2,
                   "name": "start_disk",
@@ -436,6 +489,7 @@
                 },
                 "entries_on_disk": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 107,
                   "size": 2,
                   "name": "entries_on_disk",
@@ -444,6 +498,7 @@
                 },
                 "total_entries": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 109,
                   "size": 2,
                   "name": "total_entries",
@@ -452,6 +507,7 @@
                 },
                 "directory_size": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 111,
                   "size": 4,
                   "name": "directory_size",
@@ -460,6 +516,7 @@
                 },
                 "directory_offset": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 115,
                   "size": 4,
                   "name": "directory_offset",
@@ -468,6 +525,7 @@
                 },
                 "comment_length": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 119,
                   "size": 2,
                   "name": "comment_length",
@@ -476,6 +534,7 @@
                 },
                 "comment": {
                   "_type": "string",
+                  "type": "ascii",
                   "offset": 121,
                   "size": 0,
                   "name": "comment",

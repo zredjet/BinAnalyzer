@@ -124,7 +124,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### デコード結果ツリー — Core/Decoded/
 
-デコード出力: 型付きノードのツリー。
+デコード出力: 型付きノードのツリー。全ノードが `DslType`（DSL の `type:` に対応する `FieldType`、ルートは null）と、そこから導出した `TypeName`（`uint32` / `ascii` / `struct` 等の正規名。`FieldTypeNames` が別名との対応を持つ）を持つ（REQ-169 / REQ-171）。
 
 - **DecodedStruct** — 名前付き構造体と子要素
 - **DecodedArray** — 繰り返し要素
@@ -198,7 +198,7 @@ Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起�
 - **SearchBar** — フィールド名によるインクリメンタル検索、検索結果間のジャンプ
 - **TuiState** — 状態管理（選択ノード、検索状態）。イベント駆動でペイン間を連携
 - **DecodedNodeTreeBuilder** — ITreeBuilder\<DecodedNode\> 実装。子ノード列挙ロジック
-- **NodeDetailFormatter** — DecodedNode → 詳細表示文字列リスト変換（テスト可能な純粋ロジック）
+- **NodeDetailFormatter** — DecodedNode → 詳細表示文字列リスト変換（テスト可能な純粋ロジック）。`Type` 行は `TypeName` を優先
 
 ### GUI — Gui/ , Gui.Desktop/
 
