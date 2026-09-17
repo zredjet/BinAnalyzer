@@ -131,6 +131,26 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 全コマンド・オプションの詳細は [CLIリファレンス](docs/cli-usage.md) を参照してください。
 
+## 配布バイナリ
+
+[Releases](https://github.com/zredjet/BinAnalyzer/releases) に、.NET ランタイム不要の単一実行ファイルを OS ごとに zip で置いています。いずれも `formats/`（フォーマット定義）と `schemas/`（JSON Schema）を同梱し、`-o gui` のデスクトップ GUI を含みます。
+
+| zip | 対象 |
+|---|---|
+| `BinAnalyzer-<ver>-win-x64.zip` | Windows 10 / 11（x64）。GUI には WebView2 ランタイムが必要（Windows 11 は標準搭載） |
+| `BinAnalyzer-<ver>-osx-arm64.zip` | macOS（Apple Silicon） |
+| `BinAnalyzer-<ver>-osx-x64.zip` | macOS（Intel） |
+| `BinAnalyzer-<ver>-linux-x64.zip` | Linux（x64、glibc）。GUI には WebKitGTK 4.1 が必要（`sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0 libnotify4`） |
+
+```bash
+unzip BinAnalyzer-<ver>-osx-arm64.zip
+cd BinAnalyzer-<ver>-osx-arm64
+./binanalyzer image.png -f formats/png.bdef.yaml
+./binanalyzer image.png -f formats/png.bdef.yaml -o gui
+```
+
+コード署名・公証はしていません。macOS でダウンロード直後に「開発元を検証できない」と出る場合は `xattr -d com.apple.quarantine binanalyzer` を実行してください。Windows の SmartScreen も同様に「詳細情報 → 実行」で進めます。
+
 ## Web版（Blazor WebAssembly）
 
 ブラウザ上でバイナリファイルをドラッグ&ドロップして構造解析できます。インストール不要。

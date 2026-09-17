@@ -747,6 +747,14 @@ return rootCommand.Parse(args).Invoke();
 /// </summary>
 static int RunGui(GuiLaunchOptions launch)
 {
+    var check = DesktopRuntimeCheck.Check();
+    if (!check.IsOk)
+    {
+        Console.Error.WriteLine("エラー: " + check.Message);
+        return 1;
+    }
+
+    launch = launch with { AutoCloseAfter = GuiAutoClose.FromEnvironment() };
     var guiApp = new GuiApp();
     if (!OperatingSystem.IsWindows())
         return guiApp.Run(launch);

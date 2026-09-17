@@ -7,6 +7,11 @@ on:
         description: 'バージョン番号 (例: 1.0.0)'
         required: true
         type: string
+      dry_run:
+        description: 'true にすると成果物を作って検証するだけで GitHub Release は作成しない'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   test:
@@ -29,11 +34,46 @@ jobs:
       - name: Test
         run: dotnet test BinAnalyzer.slnx --no-build --configuration Release --verbosity normal
 
-  build-and-release:
+      # ライセンス一覧は python3 と NuGet API を使うので ubuntu で 1 回だけ生成し、各 OS のパッケージングへ渡す
+      - name: Generate third-party licenses
+        run: bash scripts/generate-third-party-licenses.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: third-party-licenses
+          path: THIRD-PARTY-LICENSES.txt
+
+  # 各 RID をネイティブ OS 上で publish する。macOS では SDK が apphost に ad-hoc 署名を付けるので、
+  # Apple Silicon で「壊れているため開けません」にならない。GUI を含むので publish 直後に起動スモークも行う。
+  build:
+    name: Build ${{ matrix.rid }}
     needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            exe: BinAnalyzer.Cli.exe
+            out: binanalyzer.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            exe: BinAnalyzer.Cli
+            out: binanalyzer
+          - os: macos-latest
+            rid: osx-arm64
+            exe: BinAnalyzer.Cli
+            out: binanalyzer
+          - os: macos-latest
+            rid: osx-x64
+            exe: BinAnalyzer.Cli
+            out: binanalyzer
+    runs-on: ${{ matrix.os }}
+    env:
+      STAGING_DIR: BinAnalyzer-${{ inputs.version }}-${{ matrix.rid }}
+      SAMPLE: testdata/real/test.png
+      FORMAT: formats/png.bdef.yaml
     steps:
       - uses: actions/checkout@v4
 
@@ -43,112 +83,78 @@ jobs:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
 
-      - name: Generate third-party licenses
-        run: bash scripts/generate-third-party-licenses.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: third-party-licenses
 
-      - name: Publish win-x64
+      - name: Publish ${{ matrix.rid }}
+        run: >
+          dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj
+          --configuration Release
+          --runtime ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none
+          -p:Version=${{ inputs.version }}
+          --output ./publish
+
+      - name: Install WebKitGTK and xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-0 libnotify4 xvfb
+
+      - name: Smoke -o tree
+        shell: bash
+        run: ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o tree
+
+      - name: Smoke -o gui (auto-close)
+        shell: bash
+        env:
+          BINANALYZER_GUI_AUTOCLOSE: '3000'
         run: |
-          dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
-            --configuration Release \
-            --runtime win-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:Version=${{ inputs.version }} \
-            --output ./publish/win-x64
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o gui
+          else
+            ./publish/${{ matrix.exe }} "$SAMPLE" -f "$FORMAT" -o gui
+          fi
 
-      # --- Mac / Linux ビルド（将来有効化） ---
-      # - name: Publish osx-x64
-      #   run: |
-      #     dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
-      #       --configuration Release \
-      #       --runtime osx-x64 \
-      #       --self-contained true \
-      #       -p:PublishSingleFile=true \
-      #       -p:IncludeNativeLibrariesForSelfExtract=true \
-      #       -p:Version=${{ inputs.version }} \
-      #       --output ./publish/osx-x64
-
-      # - name: Publish osx-arm64
-      #   run: |
-      #     dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
-      #       --configuration Release \
-      #       --runtime osx-arm64 \
-      #       --self-contained true \
-      #       -p:PublishSingleFile=true \
-      #       -p:IncludeNativeLibrariesForSelfExtract=true \
-      #       -p:Version=${{ inputs.version }} \
-      #       --output ./publish/osx-arm64
-
-      # - name: Publish linux-x64
-      #   run: |
-      #     dotnet publish src/BinAnalyzer.Cli/BinAnalyzer.Cli.csproj \
-      #       --configuration Release \
-      #       --runtime linux-x64 \
-      #       --self-contained true \
-      #       -p:PublishSingleFile=true \
-      #       -p:IncludeNativeLibrariesForSelfExtract=true \
-      #       -p:Version=${{ inputs.version }} \
-      #       --output ./publish/linux-x64
-
-      - name: Package win-x64
+      - name: Package
+        shell: bash
         run: |
-          STAGING_DIR="BinAnalyzer-${{ inputs.version }}-win-x64"
           mkdir -p "$STAGING_DIR"
-          cp ./publish/win-x64/BinAnalyzer.Cli.exe "$STAGING_DIR/binanalyzer.exe"
+          cp "./publish/${{ matrix.exe }}" "$STAGING_DIR/${{ matrix.out }}"
           cp -r formats/ "$STAGING_DIR/formats/"
           cp -r schemas/ "$STAGING_DIR/schemas/"
-          cp README.md "$STAGING_DIR/"
-          cp LICENSE "$STAGING_DIR/"
-          cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
-          zip -r "BinAnalyzer-${{ inputs.version }}-win-x64.zip" "$STAGING_DIR"
+          cp README.md LICENSE THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
+          ls -l "$STAGING_DIR/${{ matrix.out }}"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a -tzip "$STAGING_DIR.zip" "$STAGING_DIR" > /dev/null
+          else
+            zip -r "$STAGING_DIR.zip" "$STAGING_DIR"
+          fi
 
-      # --- Mac / Linux パッケージング（将来有効化） ---
-      # - name: Package osx-x64
-      #   run: |
-      #     STAGING_DIR="BinAnalyzer-${{ inputs.version }}-osx-x64"
-      #     mkdir -p "$STAGING_DIR"
-      #     cp ./publish/osx-x64/BinAnalyzer.Cli "$STAGING_DIR/binanalyzer"
-      #     cp -r formats/ "$STAGING_DIR/formats/"
-      #     cp -r schemas/ "$STAGING_DIR/schemas/"
-      #     cp README.md "$STAGING_DIR/"
-      #     cp LICENSE "$STAGING_DIR/"
-      #     cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
-      #     zip -r "BinAnalyzer-${{ inputs.version }}-osx-x64.zip" "$STAGING_DIR"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STAGING_DIR }}
+          path: ${{ env.STAGING_DIR }}.zip
+          if-no-files-found: error
 
-      # - name: Package osx-arm64
-      #   run: |
-      #     STAGING_DIR="BinAnalyzer-${{ inputs.version }}-osx-arm64"
-      #     mkdir -p "$STAGING_DIR"
-      #     cp ./publish/osx-arm64/BinAnalyzer.Cli "$STAGING_DIR/binanalyzer"
-      #     cp -r formats/ "$STAGING_DIR/formats/"
-      #     cp -r schemas/ "$STAGING_DIR/schemas/"
-      #     cp README.md "$STAGING_DIR/"
-      #     cp LICENSE "$STAGING_DIR/"
-      #     cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
-      #     zip -r "BinAnalyzer-${{ inputs.version }}-osx-arm64.zip" "$STAGING_DIR"
-
-      # - name: Package linux-x64
-      #   run: |
-      #     STAGING_DIR="BinAnalyzer-${{ inputs.version }}-linux-x64"
-      #     mkdir -p "$STAGING_DIR"
-      #     cp ./publish/linux-x64/BinAnalyzer.Cli "$STAGING_DIR/binanalyzer"
-      #     cp -r formats/ "$STAGING_DIR/formats/"
-      #     cp -r schemas/ "$STAGING_DIR/schemas/"
-      #     cp README.md "$STAGING_DIR/"
-      #     cp LICENSE "$STAGING_DIR/"
-      #     cp THIRD-PARTY-LICENSES.txt "$STAGING_DIR/"
-      #     zip -r "BinAnalyzer-${{ inputs.version }}-linux-x64.zip" "$STAGING_DIR"
+  release:
+    needs: build
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: BinAnalyzer-${{ inputs.version }}-*
+          merge-multiple: true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ inputs.version }}
           name: v${{ inputs.version }}
-          # Mac / Linux 有効化時は以下を追加:
-          #   BinAnalyzer-${{ inputs.version }}-osx-x64.zip
-          #   BinAnalyzer-${{ inputs.version }}-osx-arm64.zip
-          #   BinAnalyzer-${{ inputs.version }}-linux-x64.zip
-          files: |
-            BinAnalyzer-${{ inputs.version }}-win-x64.zip
+          files: BinAnalyzer-${{ inputs.version }}-*.zip
           generate_release_notes: true

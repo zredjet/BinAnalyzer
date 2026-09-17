@@ -178,9 +178,18 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 #### 動作環境
 
-- Windows: WebView2 ランタイム（Windows 11 は標準搭載）
+- Windows: WebView2 ランタイム（Windows 11 は標準搭載。Windows 10 は [Evergreen ランタイム](https://developer.microsoft.com/microsoft-edge/webview2/) を導入）
 - macOS: WKWebView（標準搭載）
-- Linux: `libwebkit2gtk-4.1` が必要（例: `sudo apt install libwebkit2gtk-4.1-0`）
+- Linux: WebKitGTK 4.1 系が必要（Debian / Ubuntu: `sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0 libnotify4`、Fedora: `sudo dnf install webkit2gtk4.1 gtk3 libnotify`）。X11 / Wayland のディスプレイも必要
+
+必要なランタイムが無い場合は起動せず、導入方法を標準エラーに出して終了コード 1 で戻ります。
+
+#### テスト・CI 向け環境変数
+
+| 変数 | 意味 |
+|---|---|
+| `BINANALYZER_GUI_AUTOCLOSE` | 窓が開いてから自動で閉じるまでのミリ秒。`1` / `true` は既定の 3000 ms。CI の起動スモーク用 |
+| `BINANALYZER_GUI_DEBUG` | `1` で埋め込み資産の配信ログと Photino の詳細ログを標準エラーに出す |
 
 フォーマット定義は、実行ファイルの隣またはカレントディレクトリの `formats/` と、`-f` で指定したファイルから選択できます。
 
