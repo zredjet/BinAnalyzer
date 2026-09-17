@@ -1,5 +1,6 @@
 using K4os.Compression.LZ4;
 using K4os.Compression.LZ4.Streams;
+using SharpCompress.Common;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.BZip2;
 using SharpCompress.Compressors.LZMA;
@@ -29,11 +30,19 @@ public static class Decompressor
 
     private static byte[] DecompressBzip2(ReadOnlyMemory<byte> data)
     {
-        using var input = new MemoryStream(data.ToArray());
-        using var decompressor = new BZip2Stream(input, CompressionMode.Decompress, false);
-        using var output = new MemoryStream();
-        decompressor.CopyTo(output);
-        return output.ToArray();
+        try
+        {
+            using var input = new MemoryStream(data.ToArray());
+            using var decompressor = BZip2Stream.Create(input, CompressionMode.Decompress, decompressConcatenated: false, leaveOpen: false, tolerateTruncatedStream: false);
+            using var output = new MemoryStream();
+            decompressor.CopyTo(output);
+            return output.ToArray();
+        }
+        catch (SharpCompressException ex)
+        {
+            // SharpCompress 固有の例外は BCL の例外に変換し、呼び出し側が外部ライブラリの型に依存しないようにする
+            throw new InvalidDataException(ex.Message, ex);
+        }
     }
 
     private static byte[] DecompressLzma(ReadOnlyMemory<byte> data)
@@ -49,11 +58,18 @@ public static class Decompressor
         if (uncompressedSize < 0)
             uncompressedSize = -1;
 
-        using var input = new MemoryStream(data[13..].ToArray());
-        using var decompressor = new LzmaStream(properties, input, data.Length - 13, uncompressedSize);
-        using var output = new MemoryStream();
-        decompressor.CopyTo(output);
-        return output.ToArray();
+        try
+        {
+            using var input = new MemoryStream(data[13..].ToArray());
+            using var decompressor = LzmaStream.Create(properties, input, data.Length - 13, uncompressedSize, leaveOpen: false);
+            using var output = new MemoryStream();
+            decompressor.CopyTo(output);
+            return output.ToArray();
+        }
+        catch (SharpCompressException ex)
+        {
+            throw new InvalidDataException(ex.Message, ex);
+        }
     }
 
     private static byte[] DecompressZstd(ReadOnlyMemory<byte> data)
@@ -82,7 +98,7 @@ public static class Decompressor
         public static byte[] Bzip2Compress(byte[] data)
         {
             using var output = new MemoryStream();
-            using (var compressor = new BZip2Stream(output, CompressionMode.Compress, false))
+            using (var compressor = BZip2Stream.Create(output, CompressionMode.Compress, decompressConcatenated: false, leaveOpen: false, tolerateTruncatedStream: false))
             {
                 compressor.Write(data, 0, data.Length);
             }
@@ -93,7 +109,7 @@ public static class Decompressor
         {
             using var compressedStream = new MemoryStream();
             byte[] properties;
-            using (var compressor = new LzmaStream(new LzmaEncoderProperties(), false, compressedStream))
+            using (var compressor = LzmaStream.Create(new LzmaEncoderProperties(), false, compressedStream))
             {
                 properties = compressor.Properties;
                 compressor.Write(data, 0, data.Length);
