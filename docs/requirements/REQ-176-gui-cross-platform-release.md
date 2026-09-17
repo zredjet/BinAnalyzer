@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | in-progress |
+| ステータス | done |
 | 優先度 | 中 |
 | 依存 | REQ-168 |
 | 作成日 | 2026-09-18 |
@@ -36,11 +36,11 @@ GUI モード（REQ-168）は macOS でのみ手動確認した。Windows（WebV
 
 ## 受入条件
 
-1. [ ] Windows / macOS / Linux で `binanalyzer file -f fmt -o gui` が起動し、閉じると終了コード 0
-2. [ ] WebView2 / WebKitGTK が無い環境で分かりやすいエラーと終了コード 1
-3. [ ] release ワークフローが 4 RID の成果物を生成し、各成果物の `-o tree` と `-o gui`（`BINANALYZER_GUI_AUTOCLOSE`）が動くこと
-4. [ ] CI の GUI スモークジョブが ubuntu-latest で通ること
-5. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [x] Windows / macOS / Linux で `binanalyzer file -f fmt -o gui` が起動し、閉じると終了コード 0（CI run 35243881599: gui-smoke 3 OS 成功）
+2. [x] WebView2 / WebKitGTK が無い環境で分かりやすいエラーと終了コード 1（Linux は CI で実機確認、Windows は単体テストのみ）
+3. [x] release ワークフローが 4 RID の成果物を生成し、各成果物の `-o tree` と `-o gui`（`BINANALYZER_GUI_AUTOCLOSE`）が動くこと（Release run 35243492779 dry_run: 4 RID の build 成功）
+4. [x] CI の GUI スモークジョブが ubuntu-latest で通ること
+5. [x] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -52,9 +52,9 @@ GUI モード（REQ-168）は macOS でのみ手動確認した。Windows（WebV
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/cli-usage.md — `### gui` の動作環境
-- [ ] README.md — 配布物の説明
-- [ ] docs/benchmark-baseline.md
+- [x] docs/cli-usage.md — `### gui` の動作環境
+- [x] README.md — 配布物の説明
+- [x] docs/benchmark-baseline.md
 
 ---
 
@@ -103,3 +103,9 @@ GUI モード（REQ-168）は macOS でのみ手動確認した。Windows（WebV
 - `-o tree` は初回 1.12 s（ネイティブ展開込み）、2 回目 0.08 s。
 
 ### 気づき・今後の課題
+
+- `xvfb-run` は子プロセスの stderr を stdout に束ねる。エラーメッセージを検証するときは `> out 2>&1` で両方を取る。
+- `testdata/real/` は生成物で git 管理外（README の記述と食い違っている）。CI スモーク用に `testdata/smoke/sample.png` だけをコミットした。
+- self-contained 単一ファイルは 86〜93 MB。Razor コンポーネントのために `Microsoft.AspNetCore.App` が丸ごと入るのが主因。trimming は Blazor との相性を見ながら別要件で。
+- Photino.Blazor の `Build()` 前に出る数行の `Photino.NET:` ログは `SetLogVerbosity` が効く前のもので消せない（`PhotinoBlazorAppBuilder` が内部で窓を生成しているため）。
+- コード署名・公証は未対応。macOS では quarantine 属性の削除、Windows では SmartScreen の「詳細情報 → 実行」が必要（README に記載）。

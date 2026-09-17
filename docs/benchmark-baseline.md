@@ -75,6 +75,15 @@ publish オプション: `-c Release -r osx-arm64 --self-contained true -p:Publi
 | `-o gui` 窓表示までの overhead（初回展開あり） | 約 0.9 s | `BINANALYZER_GUI_AUTOCLOSE=3000` での総時間 3.94 s から自動終了待ち 3 s を引いた値 |
 | `-o gui` 窓表示までの overhead（2 回目以降） | 約 0.45 s | 同上、総時間 3.44 s |
 
+### 各 RID の配布物サイズ（release.yml dry run, 2026-09-18）
+
+| RID | 単一ファイル | 備考 |
+|---|---:|---|
+| win-x64 | 87 MB | `binanalyzer.exe`（WebView2Loader.dll を内包） |
+| linux-x64 | 87 MB | |
+| osx-arm64 | 93 MB | |
+| osx-x64 | 86 MB | |
+
 ### 備考
 
 - 各 OS のサイズは release ワークフローの `Package` ステップのログ（`ls -l`）で確認できる。
