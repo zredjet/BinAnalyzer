@@ -528,12 +528,12 @@ schemaCommand.SetAction((parseResult) =>
         var validationResult = FormatValidator.Validate(format);
 
         foreach (var warning in validationResult.Warnings)
-            Console.Error.WriteLine($"警告 [{warning.Code}]: {warning.Message}");
+            Console.Error.WriteLine($"警告 [{warning.Code}]: {warning.MessageWithLocation}");
 
         if (!validationResult.IsValid)
         {
             foreach (var error in validationResult.Errors)
-                Console.Error.WriteLine($"エラー [{error.Code}]: {error.Message}");
+                Console.Error.WriteLine($"エラー [{error.Code}]: {error.MessageWithLocation}");
             return 1;
         }
 
@@ -719,9 +719,9 @@ validateCommand.SetAction((parseResult) =>
                 }
 
                 foreach (var error in errors)
-                    Console.WriteLine($"  エラー [{error.Code}]: {error.Message}");
+                    Console.WriteLine($"  エラー [{error.Code}]: {error.MessageWithLocation}");
                 foreach (var warning in warnings)
-                    Console.WriteLine($"  警告 [{warning.Code}]: {warning.Message}");
+                    Console.WriteLine($"  警告 [{warning.Code}]: {warning.MessageWithLocation}");
             }
         }
 

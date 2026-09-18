@@ -26,16 +26,44 @@ internal sealed class FakeFormatCatalog : IFormatCatalog
     public Task<IReadOnlyList<FormatCatalogEntry>> ListAsync()
         => Task.FromResult<IReadOnlyList<FormatCatalogEntry>>(_formats.Select(kv => new FormatCatalogEntry(kv.Value.Name, kv.Key, kv.Value.Ext)).ToList());
 
-    public Task<FormatDocument> LoadAsync(string file)
+    public async Task<FormatDocument> LoadAsync(string file)
     {
         var (name, _, yaml) = _formats[file];
-        return Task.FromResult(new FormatDocument(file, name, _loader.LoadFromString(yaml), yaml));
+        // imports を含む定義は、AddSource で登録した YAML をインポート先として解決する（REQ-172 の定義ビュー用）
+        var definition = yaml.Contains("imports:", StringComparison.Ordinal)
+            ? await _loader.LoadAsync(yaml, file, new InMemoryResolver(this))
+            : _loader.LoadFromString(yaml);
+        return new FormatDocument(file, name, definition, yaml);
+    }
+
+    private sealed class InMemoryResolver(FakeFormatCatalog catalog) : BinAnalyzer.Core.Interfaces.IImportResolver
+    {
+        public string Resolve(string basePath, string importPath) => ImportPath.Combine(basePath, importPath);
+        public Task<string?> ReadAsync(string resolvedPath)
+            => Task.FromResult(catalog._sources.TryGetValue(resolvedPath, out var yaml) ? yaml : null);
     }
 
     public Task<FormatCatalogEntry?> DetectByExtensionAsync(string extension)
     {
         var hit = _formats.FirstOrDefault(kv => kv.Value.Ext.Contains(extension, StringComparer.OrdinalIgnoreCase));
         return Task.FromResult(hit.Key is null ? null : new FormatCatalogEntry(hit.Value.Name, hit.Key, hit.Value.Ext));
+    }
+
+    /// <summary>インポート元として登録した YAML（<see cref="AddSource"/>）も返す。</summary>
+    private readonly Dictionary<string, string> _sources = new(StringComparer.Ordinal);
+    public List<string> SourceReads { get; } = [];
+
+    public FakeFormatCatalog AddSource(string sourceFile, string yaml)
+    {
+        _sources[sourceFile] = yaml;
+        return this;
+    }
+
+    public Task<string?> ReadSourceAsync(string sourceFile)
+    {
+        SourceReads.Add(sourceFile);
+        if (_sources.TryGetValue(sourceFile, out var yaml)) return Task.FromResult<string?>(yaml);
+        return Task.FromResult(_formats.TryGetValue(sourceFile, out var f) ? f.Yaml : null);
     }
 }
 

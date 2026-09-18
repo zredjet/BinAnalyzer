@@ -82,6 +82,16 @@ public sealed class YamlFormatLoader : IFormatLoader
 
 内部でYamlDotNetの `IDeserializer` を使用。`UnderscoredNamingConvention` を適用し、YAMLのスネークケースキーをC#プロパティにマッピングする。`IgnoreUnmatchedProperties()` により未知のキーは無視される（前方互換性）。
 
+### 2.2.1 定義元の位置（REQ-172）
+
+IR の `StructDefinition` / `FieldDefinition` は `SourceFile`（ローダーに渡した識別子。`Load(path)` なら絶対パス、Web なら `formats/...` の相対 URL、インポートされた定義はインポート先）と `SourceLine`（1 始まり。struct は名前のキーの行、フィールドは `- name:` のマッピングが始まる行）を持つ。
+
+- `StructsDictionaryDeserializer` が `structs:` のマッピングを自前に走査し、キーのスカラーの `Mark` から struct の行を取る（標準の `DictionaryNodeDeserializer` より前に `OnTop()` で登録）
+- `StructNodeDeserializer` が `YamlFieldModel` を組み立てる前に `IParser.Current.Start.Line` を控え、`SourceLine` に入れる
+- `YamlFormatLoader` がファイルごとに `SourceFile` を全 struct / フィールドに書く（`LoadFromString(yaml)` は null）
+- `FormatValidator` は診断に `SourceFile` / `SourceLine` を付け（フィールド行、無ければ struct 行）、`ValidationDiagnostic.Location`（`png.bdef.yaml:42`）と `MessageWithLocation` で参照できる
+- GUI の定義ビューはこの行を優先し、無い場合だけテキスト探索（`YamlFieldLocator`）にフォールバックする。インポート先の定義はカタログの `ReadSourceAsync` でそのファイルを取得して表示する
+
 ### 2.3 YamlToIrMapper — 変換ロジック
 
 `YamlToIrMapper.Map()` が変換の本体。以下の処理を順次実行する。

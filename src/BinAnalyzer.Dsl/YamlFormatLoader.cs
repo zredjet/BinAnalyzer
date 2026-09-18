@@ -10,6 +10,8 @@ public sealed class YamlFormatLoader : IFormatLoader
 {
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
         .WithNamingConvention(UnderscoredNamingConvention.Instance)
+        // structs: の辞書はキー（struct 名）の行を取るために先頭で横取りする（REQ-172）
+        .WithNodeDeserializer(new StructsDictionaryDeserializer(), s => s.OnTop())
         .WithNodeDeserializer(
             inner => new StructNodeDeserializer(inner),
             s => s.InsteadOf<YamlDotNet.Serialization.NodeDeserializers.ObjectNodeDeserializer>())
@@ -28,7 +30,7 @@ public sealed class YamlFormatLoader : IFormatLoader
     /// <summary>YAML テキストから読み込む。imports は解決できないため、含まれていれば例外。</summary>
     public FormatDefinition LoadFromString(string yaml)
     {
-        var model = Deserializer.Deserialize<YamlFormatModel>(yaml);
+        var model = Deserialize(yaml, sourceFile: null);
         if (model.Imports is { Count: > 0 })
             throw new InvalidOperationException(
                 "imports はファイルパスが必要です。Load(path) を使用してください。");
@@ -46,10 +48,26 @@ public sealed class YamlFormatLoader : IFormatLoader
     /// </summary>
     public async Task<FormatDefinition> LoadAsync(string yaml, string basePath, IImportResolver resolver)
     {
-        var model = Deserializer.Deserialize<YamlFormatModel>(yaml);
+        var model = Deserialize(yaml, basePath);
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { basePath };
         await ResolveImportsAsync(model, basePath, resolver, visited).ConfigureAwait(false);
         return YamlToIrMapper.Map(model);
+    }
+
+    /// <summary>YAML を読み、struct とフィールドに定義元の識別子（<paramref name="sourceFile"/>）を記録する（REQ-172）。</summary>
+    private static YamlFormatModel Deserialize(string yaml, string? sourceFile)
+    {
+        var model = Deserializer.Deserialize<YamlFormatModel>(yaml);
+        if (sourceFile is not null)
+        {
+            foreach (var structModel in model.Structs.Values)
+            {
+                structModel.SourceFile = sourceFile;
+                foreach (var field in structModel.Fields)
+                    field.SourceFile = sourceFile;
+            }
+        }
+        return model;
     }
 
     private static async Task ResolveImportsAsync(
@@ -70,7 +88,7 @@ public sealed class YamlFormatLoader : IFormatLoader
                 ?? throw new FileNotFoundException(
                     $"インポートファイルが見つかりません: {import.Path} (解決先: {resolved})");
 
-            var imported = Deserializer.Deserialize<YamlFormatModel>(yaml);
+            var imported = Deserialize(yaml, resolved);
             await ResolveImportsAsync(imported, resolved, resolver, visited).ConfigureAwait(false);
             MergeDefinitions(model, imported, import.Path);
         }

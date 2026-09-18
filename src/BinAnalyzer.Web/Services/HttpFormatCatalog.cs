@@ -31,6 +31,9 @@ public sealed class HttpFormatCatalog : IFormatCatalog
         var entry = await _service.DetectFormat(extension);
         return entry is null ? null : new FormatCatalogEntry(entry.Name, entry.File, entry.Extensions);
     }
+
+    /// <summary>SourceFile は <c>formats/...</c> の相対 URL（<see cref="FormatService"/> がローダーに渡すもの）。</summary>
+    public Task<string?> ReadSourceAsync(string sourceFile) => _service.ReadSourceAsync(sourceFile);
 }
 
 /// <summary>Web ホストにはネイティブダイアログが無い。開くのは UI 側の InputFile / ドロップ、保存はダウンロード（<c>downloadFile</c>）。</summary>

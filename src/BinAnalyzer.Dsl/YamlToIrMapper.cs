@@ -140,6 +140,8 @@ public static class YamlToIrMapper
                 IsBitstream = isBitstream,
                 BitOrder = parsedBitOrder,
                 ResyncMarker = structModel.ResyncMarker?.Select(b => (byte)b).ToArray(),
+                SourceFile = structModel.SourceFile,
+                SourceLine = structModel.SourceLine,
             };
         }
         return result;
@@ -168,6 +170,8 @@ public static class YamlToIrMapper
         return new FieldDefinition
         {
             Name = yaml.Name,
+            SourceFile = yaml.SourceFile,
+            SourceLine = yaml.SourceLine,
             Type = fieldType,
             Size = size,
             SizeExpression = sizeExpr,

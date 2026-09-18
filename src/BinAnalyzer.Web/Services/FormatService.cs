@@ -54,6 +54,9 @@ public sealed class FormatService
 
     private static string FormatUrl(string fileName) => $"formats/{fileName}";
 
+    /// <summary>定義元の相対 URL（<c>formats/common/riff.bdef.yaml</c> 等）の YAML テキスト。無ければ null（REQ-172）。</summary>
+    public Task<string?> ReadSourceAsync(string sourceUrl) => _resolver.ReadAsync(sourceUrl);
+
     public async Task<FormatEntry?> DetectFormat(string fileExtension)
     {
         var formats = await GetFormatListAsync();

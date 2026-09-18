@@ -57,6 +57,8 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 
 フォーマット定義のフィールドレベルで `repeat_max` が指定されている場合、そちらが優先されます。
 
+検証の診断には定義元の位置が付きます（例: `エラー [VAL002]: ... (isobmff.bdef.yaml:9)`。インポートされた struct はインポート先のファイル名と行）。JSON 形式（`--error-format json`）では `file` / `line` として出ます。
+
 このほかエンジンには壊れた入力向けの固定の防御があります（REQ-160）: struct / switch の入れ子は 64 段で打ち切り（API では `DecodeOptions.MaxDepth` で変更可）、サイズ・オフセット式が 0〜2^31-1 の範囲外ならデコードエラー、エラー継続モードで位置が進まない要素は繰り返しを打ち切ります。
 
 ```bash

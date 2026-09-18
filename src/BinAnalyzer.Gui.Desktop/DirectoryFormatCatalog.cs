@@ -93,4 +93,11 @@ public sealed class DirectoryFormatCatalog : IFormatCatalog
 
     public Task<FormatCatalogEntry?> DetectByExtensionAsync(string extension)
         => Task.FromResult(_entries.FirstOrDefault(e => e.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)));
+
+    public async Task<string?> ReadSourceAsync(string sourceFile)
+    {
+        // SourceFile はローダーに渡した絶対パス（imports は FileImportResolver が解決した絶対パス）
+        if (!File.Exists(sourceFile)) return null;
+        return await File.ReadAllTextAsync(sourceFile);
+    }
 }

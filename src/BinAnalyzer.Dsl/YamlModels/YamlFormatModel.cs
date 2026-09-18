@@ -73,6 +73,14 @@ public sealed class YamlFlagFieldModel
 
 public sealed class YamlFieldModel
 {
+    /// <summary>定義元 YAML でこのフィールドのマッピングが始まる行（1 始まり）。<see cref="StructNodeDeserializer"/> が設定する。</summary>
+    [YamlIgnore]
+    public int? SourceLine { get; set; }
+
+    /// <summary>定義元 YAML の識別子。<see cref="YamlFormatLoader"/> がファイルごとに設定する。</summary>
+    [YamlIgnore]
+    public string? SourceFile { get; set; }
+
     [YamlMember(Alias = "name")]
     public string Name { get; set; } = "";
 

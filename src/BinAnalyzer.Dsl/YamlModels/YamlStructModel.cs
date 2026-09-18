@@ -24,4 +24,12 @@ public sealed class YamlStructModel
 
     [YamlMember(Alias = "fields")]
     public List<YamlFieldModel> Fields { get; set; } = new();
+
+    /// <summary>定義元 YAML での struct 名（キー）の行（1 始まり）。<see cref="StructNodeDeserializer"/> が設定する。</summary>
+    [YamlIgnore]
+    public int? SourceLine { get; set; }
+
+    /// <summary>定義元 YAML の識別子。<see cref="YamlFormatLoader"/> がファイルごとに設定する。</summary>
+    [YamlIgnore]
+    public string? SourceFile { get; set; }
 }
