@@ -94,4 +94,10 @@ public sealed class FieldDefinition
 
     /// <summary>連続エラー回数の上限式。連続してこの回数エラーが発生した場合に繰り返しを打ち切る。</summary>
     public Expression? RepeatErrorLimit { get; init; }
+
+    /// <summary>定義元の YAML ファイル（<see cref="StructDefinition.SourceFile"/> と同じ規則）。</summary>
+    public string? SourceFile { get; init; }
+
+    /// <summary>定義元 YAML でこのフィールド（<c>- name:</c>）が始まる行（1 始まり）。パーサーを経由していなければ null。</summary>
+    public int? SourceLine { get; init; }
 }

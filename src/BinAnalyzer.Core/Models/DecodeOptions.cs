@@ -13,4 +13,10 @@ public sealed class DecodeOptions
     /// struct / フィールド単位の <c>endianness</c> 指定は本オプションより優先される。
     /// </summary>
     public Endianness? Endianness { get; init; }
+
+    /// <summary>
+    /// struct / switch の入れ子の深さの上限。超えるとそのフィールドはデコードエラーになる（スタックオーバーフローはプロセスごと落ちるため）。
+    /// null なら既定の 64。深くする場合はスタックサイズ（1 段あたり Debug で約 8 KB）に注意。
+    /// </summary>
+    public int? MaxDepth { get; init; }
 }

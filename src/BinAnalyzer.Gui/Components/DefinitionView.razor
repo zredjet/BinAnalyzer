@@ -1,9 +1,14 @@
 @inject IJSRuntime JS
+@inject GuiSession Session
 
 <div class="pane-view">
     <div class="defbar">
-        <span>@Document.Format.File</span><span class="grow"></span>
-        @if (_location is null && Document.Selected is not null)
+        <span>@_shownFile</span><span class="grow"></span>
+        @if (_shownIsImport)
+        {
+            <span class="hint">インポート定義: @Document.Format.File から参照</span>
+        }
+        else if (_location is null && Document.Selected is not null)
         {
             <span class="hint">この構造体は本ファイル内に見つかりません（インポート定義の可能性）</span>
         }
@@ -21,28 +26,78 @@
     [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
 
     private string[] _lines = [];
-    private string? _linesFor;
+    private string _shownFile = "";
+    private bool _shownIsImport;
     private YamlLocation? _location;
     private int _locatedFor = -2;
+    private FormatDocument? _locatedIn;
 
-    protected override void OnParametersSet()
+    /// <summary>インポート先ファイルの YAML テキスト（SourceFile → テキスト）。取得できなかったものは null。</summary>
+    private readonly Dictionary<string, string?> _sources = new(StringComparer.Ordinal);
+
+    protected override async Task OnParametersSetAsync()
     {
-        if (!ReferenceEquals(_linesFor, Document.Format.YamlText))
-        {
-            _linesFor = Document.Format.YamlText;
-            _lines = Document.Format.YamlText.Replace("\r\n", "\n").Split('\n');
-            _locatedFor = -2;
-        }
-        if (_locatedFor == Document.SelectedId) return;
+        if (_locatedFor == Document.SelectedId && ReferenceEquals(_locatedIn, Document.Format)) return;
         _locatedFor = Document.SelectedId;
-        _location = Locate();
+        _locatedIn = Document.Format;
+        await LocateAsync();
     }
 
-    private YamlLocation? Locate()
+    /// <summary>
+    /// 選択ノードの定義行を決める。IR の <c>SourceLine</c>（REQ-172、パーサーが記録した行）を優先し、
+    /// 無ければ <see cref="YamlFieldLocator"/> のテキスト探索にフォールバックする。
+    /// 定義がインポート先ファイルにある場合はそのファイルのテキストをカタログから取得して表示する。
+    /// </summary>
+    private async Task LocateAsync()
     {
+        var (structDef, fieldDef, structName, fieldName) = ResolveDefinition();
+
+        var sourceFile = fieldDef?.SourceFile ?? structDef?.SourceFile;
+        var mainFile = Document.Format.Definition.Structs.TryGetValue(Document.Format.Definition.RootStruct, out var rootDef)
+            ? rootDef.SourceFile
+            : null;
+        var isImport = sourceFile is not null && mainFile is not null && !string.Equals(sourceFile, mainFile, StringComparison.Ordinal);
+
+        string yaml = Document.Format.YamlText;
+        var shownFile = Document.Format.File;
+        if (isImport)
+        {
+            var text = await ReadSourceAsync(sourceFile!);
+            if (text is not null)
+            {
+                yaml = text;
+                shownFile = Path.GetFileName(sourceFile!);
+            }
+            else
+            {
+                isImport = false; // 取得できなければ本ファイルを表示（探索は失敗して null になる）
+            }
+        }
+        _lines = yaml.Replace("\r\n", "\n").Split('\n');
+        _shownFile = shownFile;
+        _shownIsImport = isImport;
+
+        // パーサーの行番号（1 始まり）→ 0 始まり
+        if (structDef?.SourceLine is { } structLine && (fieldDef is null || fieldDef.SourceLine is not null))
+        {
+            _location = new YamlLocation(structLine - 1, fieldDef?.SourceLine is { } fl ? fl - 1 : null);
+            return;
+        }
+        _location = fieldName is null
+            ? YamlFieldLocator.Locate(yaml, structName, null)
+            : YamlFieldLocator.Locate(yaml, structName, fieldName);
+    }
+
+    /// <summary>選択ノードに対応する struct 定義と（配列要素なら親配列の）フィールド定義。</summary>
+    private (StructDefinition? Struct, FieldDefinition? Field, string StructName, string? FieldName) ResolveDefinition()
+    {
+        var definition = Document.Format.Definition;
         var node = Document.Selected;
         if (node is null)
-            return YamlFieldLocator.Locate(Document.Format.YamlText, Document.Format.Definition.RootStruct, null);
+        {
+            definition.Structs.TryGetValue(definition.RootStruct, out var root);
+            return (root, null, definition.RootStruct, null);
+        }
         var id = Document.Index.IdOf(node);
         // フィールドは最寄りの祖先 struct のブロック内で定義されている。配列要素は親配列のフィールド定義を指す。
         var fieldNode = node;
@@ -52,7 +107,7 @@
             fieldId = Document.Index.ParentIdOf(id);
             fieldNode = Document.Index.ById(fieldId);
         }
-        var structName = Document.Format.Definition.RootStruct;
+        var structName = definition.RootStruct;
         for (var p = Document.Index.ParentIdOf(fieldId); p >= 0; p = Document.Index.ParentIdOf(p))
         {
             if (Document.Index.ById(p) is DecodedStruct ps)
@@ -61,9 +116,42 @@
                 break;
             }
         }
+        definition.Structs.TryGetValue(structName, out var structDef);
         if (fieldId == 0)
-            return YamlFieldLocator.Locate(Document.Format.YamlText, structName, null);
-        return YamlFieldLocator.Locate(Document.Format.YamlText, structName, fieldNode.Name);
+        {
+            definition.Structs.TryGetValue(definition.RootStruct, out var rootDef);
+            return (rootDef, null, structName, null);
+        }
+        FieldDefinition? fieldDef = null;
+        if (structDef is not null)
+        {
+            foreach (var f in structDef.Fields)
+            {
+                if (f.Name == fieldNode.Name)
+                {
+                    fieldDef = f;
+                    break;
+                }
+            }
+        }
+        return (structDef, fieldDef, structName, fieldNode.Name);
+    }
+
+    private async Task<string?> ReadSourceAsync(string sourceFile)
+    {
+        if (_sources.TryGetValue(sourceFile, out var cached))
+            return cached;
+        string? text;
+        try
+        {
+            text = await Session.Catalog.ReadSourceAsync(sourceFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
+        {
+            text = null;
+        }
+        _sources[sourceFile] = text;
+        return text;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

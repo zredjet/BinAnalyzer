@@ -29,7 +29,8 @@ BinAnalyzer/
 │   ├── BinAnalyzer.Presentation.Tests/
 │   ├── BinAnalyzer.Tui.Tests/
 │   ├── BinAnalyzer.Gui.Tests/     # bUnit コンポーネントテスト
-│   └── BinAnalyzer.Integration.Tests/
+│   ├── BinAnalyzer.Integration.Tests/
+│   └── BinAnalyzer.Fuzz.Tests/    # ファズ・プロパティベーステスト（全フォーマット定義 × ランダム / 切り詰め / 変異入力）
 ├── benchmarks/
 │   └── BinAnalyzer.Benchmarks/    # BenchmarkDotNetによるパフォーマンス計測
 └── formats/
@@ -128,7 +129,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 - **DecodedStruct** — 名前付き構造体と子要素
 - **DecodedArray** — 繰り返し要素
-- **DecodedInteger** — オプションのenumラベル付き、チェックサム検証結果（ChecksumValid, ChecksumExpected）、文字列テーブル参照値
+- **DecodedInteger** — オプションのenumラベル付き、チェックサム検証結果（ChecksumValid, ChecksumExpected）、文字列テーブル参照値。これらは使うノードだけが持つ補助オブジェクトに置き、本体は 104 B（REQ-180）
 - **DecodedFloat** — 単精度/倍精度浮動小数点数
 - **DecodedBytes** — オプションのバリデーション付き
 - **DecodedString** — オプションのフラグ付き
@@ -140,9 +141,11 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### バイナリデコーダー — Engine/
 
-- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）
+- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）。スコープと変数辞書は Pop 後に使い回し、小さな整数のボックスは `BoxCache` で共有する（REQ-180）
+- **NodeValues** — 式評価から struct / array の値を参照する変換。struct フィールドは `DecodedStruct` ノードそのものを変数に束縛し、メンバーアクセス・添字・`len` 等のときに子を名前で引く（以前はフィールドごとに辞書を再帰的に複製していた）
 - **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価。`@state_name` による状態変数の参照にも対応
 - **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決、テンプレート引数の解決・バインドのオーケストレーター
+- **壊れた入力への防御（REQ-160）** — 式の評価結果をバイト数・オフセットにするときは 0..int.MaxValue に収まることを検査する（`ToByteCount`）。スコープの境界は long で計算し負のサイズを拒否する。struct / switch の入れ子は `DecodeOptions.MaxDepth`（既定 64）で打ち切り、スタックオーバーフロー（プロセスごと落ちる）を `DecodeException` に変える。エラー継続モードでは、失敗したフィールド名を「未定義」として束縛し外側の同名変数へフォールバックさせない（再帰フォーマットの無限再帰防止）。位置が進まないエラー要素は `repeat_count` / `until` / `while` でも打ち切る。フィールド単位の `endianness:` は変数を捕捉しないオーバーレイスコープ（値は外側に残る）
 - **Crc32Calculator** — ISO 3309準拠のCRC-32計算器（PNG/ZIP互換）
 - **EncodingHelper** — Shift-JISエンコーディング登録・キャッシュヘルパー
 - **DiffEngine** — 2つのDecodedStructを再帰比較し、変更・追加・削除の差分リストを生成
@@ -205,9 +208,9 @@ Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起�
 `BinAnalyzer.Gui` は Razor Class Library で、Web（WASM）とデスクトップ（Photino.Blazor）の両方から同じコンポーネントをホストする。
 
 - **Abstractions/** — ホスト差分の抽象。`IFormatCatalog`（フォーマット定義の一覧・読込・拡張子検出）、`IFileSource`（ネイティブダイアログの有無とファイル取得）
-- **State/** — Blazor 非依存の状態。`GuiDocument`（タブ 1 枚: データ・フォーマット・エンディアン上書き・デコード結果・`NodeIndex`・選択/ホバー/展開/検索・編集履歴）、`GuiSession`（タブ集合・アクティブ・右ペイン種別・差分・保存）、`DecodeService`（エラー継続モードで所要時間計測）
+- **State/** — Blazor 非依存の状態。`GuiDocument`（タブ 1 枚: データ・フォーマット・エンディアン上書き・デコード結果・`NodeIndex`・選択/ホバー/展開/検索・編集履歴）、`GuiSession`（タブ集合・アクティブ・右ペイン種別・差分・保存・大容量ファイルの確認）、`DecodeService`（エラー継続モードで所要時間計測）、`GuiTiming`（`BINANALYZER_GUI_TIMING=1` で性能ログ）
 - **編集・書き戻し（REQ-169）** — `GuiDocument.Data` は「現在デコード・表示しているバイト列」で copy-on-write（編集のたびに新しい配列に差し替え、`Revision` が進む）。原本は `OriginalData`。`PreviewEdit` は Engine の `FieldEncoder` で入力をバイト列にし、Presentation の `ChecksumDependencies` で再計算対象を求める。`ApplyEdit` / `RevertField` は Engine の `BinaryPatcher` に委譲し、本体書き込み＋チェックサム再計算を 1 つの `EditRecord`（`ByteWrite` の束）として Undo / Redo スタックに積む。保存は `IFileSource.SaveAsync`（デスクトップ: `ShowSaveFileAsync`、Web: `downloadFile` でダウンロード）
-- **Components/** — `GuiShell`（全体レイアウト）、`HexView` / `HexRowView`（`<Virtualize>`、512 行以下は非仮想化）、`HighlightStyle`（ホバーは `<style>` 1 ルールの再描画のみ）、`StructTree` / `Inspector`、`DefinitionView`（`YamlFieldLocator` で選択フィールド行を強調）、`DiffView`（`DiffEngine` の `DiffResult` に直接バインド）、`StructureMapView`、`CommandBar`、`FilePicker` ほか
+- **Components/** — `GuiShell`（全体レイアウト）、`HexView` / `HexRowView`（`<Virtualize>`、512 行以下は非仮想化。セルにハンドラは無く、gui.js が登録するカスタムイベント `nodehover` / `nodeclick` で `data-n` のノード ID をコンテナ 1 つで受ける — REQ-177）、`HighlightStyle`（ホバーは `<style>` 1 ルールの再描画のみ）、`StructTree` / `StructTreeRow`（`TreeRowBuilder` で可視行を平坦化し、512 行超は `<Virtualize>`）/ `Inspector`、`DefinitionView`（`YamlFieldLocator` で選択フィールド行を強調）、`DiffView`（`DiffEngine` の `DiffResult` に直接バインド）、`StructureMapView`、`CommandBar`、`FilePicker` ほか
 - **wwwroot/** — `gui.css` / `gui.js`。デスクトップ配信用に `_content/BinAnalyzer.Gui/...` の論理名で埋め込みリソースにも含める
 
 `BinAnalyzer.Gui.Desktop` は Photino.Blazor ホスト。`EmbeddedWebRootFileProvider` が埋め込みリソースから `index.html` と `_content/...` を配信するため物理 `wwwroot` が不要（CLI の単一ファイル publish を壊さない）。`DirectoryFormatCatalog` は exe 隣 / カレントの `formats/` と `-f` 指定ファイルを提供し、`YamlFormatLoader.LoadAsync` + `FileImportResolver` で imports も解決する。CLI の `-o gui` は `GuiApp.Run` をインプロセスで呼ぶ（Windows では STA スレッド）。

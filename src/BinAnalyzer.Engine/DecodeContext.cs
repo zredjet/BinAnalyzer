@@ -9,6 +9,8 @@ public sealed class DecodeContext
     private readonly ReadOnlyMemory<byte> _data;
     private int _position;
     private readonly Stack<Scope> _scopeStack = new();
+    // Pop したスコープを使い回す（変数辞書の容量も残るので、要素ごとのスコープ push で辞書を作り直さない）
+    private readonly Stack<Scope> _scopePool = new();
     private readonly Endianness _defaultEndianness;
     private readonly Dictionary<string, (ReadOnlyMemory<byte> Data, StringTableEncoding Encoding)> _stringTables = new();
     private readonly Dictionary<string, object> _stateVariables = new();
@@ -18,7 +20,7 @@ public sealed class DecodeContext
         _data = data;
         _defaultEndianness = endianness;
         // データ全体をカバーするルートスコープをプッシュ
-        _scopeStack.Push(new Scope(0, data.Length));
+        _scopeStack.Push(new Scope().Reset(0, data.Length, null, isOverlay: false, capturesVariables: true));
     }
 
     public Endianness Endianness
@@ -56,19 +58,27 @@ public sealed class DecodeContext
 
     public void PushScope(int size)
     {
-        var end = _position + size;
+        // 負のサイズ（式の評価結果が壊れている）を通すと End < Start のスコープができ、Pop で位置が逆走する
+        if (size < 0)
+            throw new InvalidOperationException($"Cannot push scope of negative size {size} at position {_position}");
+        // int で足すと 0x7FFFFFFF 級のサイズで桁あふれして負になり、境界検査をすり抜ける
+        var end = (long)_position + size;
         if (end > _data.Length)
             throw new InvalidOperationException(
                 $"Cannot push scope of size {size} at position {_position}: would exceed data length {_data.Length}");
-        _scopeStack.Push(new Scope(_position, end));
+        _scopeStack.Push(Rent().Reset(_position, (int)end, null, isOverlay: false, capturesVariables: true));
     }
 
     /// <summary>
     /// 境界変更なし、エンディアンのみ切り替えるオーバーレイスコープをプッシュする。
     /// </summary>
-    public void PushEndiannessScope(Endianness endianness)
+    /// <param name="capturesVariables">
+    /// false なら、このスコープの間に束縛された変数は外側（最も近い変数を持つスコープ）に書かれる。
+    /// フィールド単位の <c>endianness:</c> はフィールドのデコード中だけ有効なので、値まで一緒に捨ててはいけない。
+    /// </param>
+    public void PushEndiannessScope(Endianness endianness, bool capturesVariables = true)
     {
-        _scopeStack.Push(new Scope(_position, CurrentScope.End, endianness, isOverlay: true));
+        _scopeStack.Push(Rent().Reset(_position, CurrentScope.End, endianness, isOverlay: true, capturesVariables: capturesVariables));
     }
 
     /// <summary>
@@ -77,8 +87,10 @@ public sealed class DecodeContext
     /// </summary>
     public void PushVariableScope()
     {
-        _scopeStack.Push(new Scope(_position, CurrentScope.End, endianness: null, isOverlay: true));
+        _scopeStack.Push(Rent().Reset(_position, CurrentScope.End, null, isOverlay: true, capturesVariables: true));
     }
+
+    private Scope Rent() => _scopePool.Count > 0 ? _scopePool.Pop() : new Scope();
 
     public void PopScope()
     {
@@ -88,6 +100,8 @@ public sealed class DecodeContext
         // オーバーレイスコープの場合はpositionを進めない
         if (!scope.IsOverlay)
             _position = scope.End;
+        scope.Variables.Clear();
+        _scopePool.Push(scope);
     }
 
     /// <summary>
@@ -163,8 +177,19 @@ public sealed class DecodeContext
         }
     }
 
+    /// <summary>整数値の束縛。小さな値はボックスを使い回す。</summary>
+    public void SetVariable(string name, long value) => SetVariable(name, BoxCache.Box(value));
+
     public void SetVariable(string name, object value)
     {
+        foreach (var scope in _scopeStack)
+        {
+            if (scope.CapturesVariables)
+            {
+                scope.Variables[name] = value;
+                return;
+            }
+        }
         CurrentScope.Variables[name] = value;
     }
 
@@ -173,10 +198,20 @@ public sealed class DecodeContext
         foreach (var scope in _scopeStack)
         {
             if (scope.Variables.TryGetValue(name, out var value))
-                return value;
+                return ReferenceEquals(value, Undefined) ? null : value;
         }
         return null;
     }
+
+    /// <summary>「未定義」を表す番人。外側のスコープに同名の変数があっても見えなくする。</summary>
+    private static readonly object Undefined = new();
+
+    /// <summary>
+    /// フィールドのデコードに失敗したとき、その名前を「未定義」として束縛する（エラー継続モード用）。
+    /// こうしないと、入れ子の struct で失敗したフィールドが外側の同名変数（例: 再帰する msgpack の <c>format_byte</c>）に
+    /// フォールバックし、壊れた入力で無限再帰になる（REQ-160 のファズで検出）。
+    /// </summary>
+    public void MarkVariableUndefined(string name) => SetVariable(name, Undefined);
 
     public byte ReadUInt8()
     {
@@ -420,18 +455,33 @@ public sealed class DecodeContext
 
     private void EnsureAvailable(int count)
     {
-        if (_position + count > CurrentScope.End)
+        if (count < 0)
+            throw new InvalidOperationException($"Cannot read a negative number of bytes ({count}) at position 0x{_position:X}");
+        if ((long)_position + count > CurrentScope.End)
             throw new InvalidOperationException(
                 $"Cannot read {count} bytes at position 0x{_position:X}: only {CurrentScope.End - _position} bytes remaining in scope");
     }
 
-    private sealed class Scope(int start, int end, Endianness? endianness = null, bool isOverlay = false)
+    /// <summary>スコープ。Pop 後に使い回すため可変（<see cref="Reset"/>）。</summary>
+    private sealed class Scope
     {
-        public int Start { get; } = start;
-        public int End { get; } = end;
-        public Endianness? ScopeEndianness { get; } = endianness;
-        public bool IsOverlay { get; } = isOverlay;
+        public int Start { get; private set; }
+        public int End { get; private set; }
+        public Endianness? ScopeEndianness { get; private set; }
+        public bool IsOverlay { get; private set; }
+        /// <summary>false のとき <see cref="SetVariable"/> はこのスコープを素通りして外側に書く。</summary>
+        public bool CapturesVariables { get; private set; }
         public Dictionary<string, object> Variables { get; } = new();
+
+        public Scope Reset(int start, int end, Endianness? endianness, bool isOverlay, bool capturesVariables)
+        {
+            Start = start;
+            End = end;
+            ScopeEndianness = endianness;
+            IsOverlay = isOverlay;
+            CapturesVariables = capturesVariables;
+            return this;
+        }
     }
 
     private sealed class BitReader

@@ -2,6 +2,16 @@
 
 <div class="picker @(_dragOver ? "drag-over" : "")"
      @ondragenter="() => _dragOver = true" @ondragover:preventDefault="true" @ondragleave="() => _dragOver = false" @ondrop="() => _dragOver = false">
+    @if (Session.PendingLarge is { } large)
+    {
+        <div class="picker-pending picker-large" role="alertdialog" aria-label="大きなファイルの確認">
+            <p><b>@large.File.Name</b>（@FormatSize(large.File.Data.LongLength)）は目安（@FormatSize(Session.LargeFileThreshold ?? 0)）より大きいファイルです。デコード結果はファイルの数十倍のメモリを使うことがあり、開くのに時間がかかる可能性があります。</p>
+            <div class="editbtns">
+                <button class="btn primary" @onclick="Session.ConfirmLargeFileAsync">開く</button>
+                <button class="btn" @onclick="Session.CancelLargeFile">キャンセル</button>
+            </div>
+        </div>
+    }
     @if (Session.PendingFile is { } pending)
     {
         <div class="picker-pending">

@@ -12,7 +12,9 @@
         <span>ASCII</span>
         <span class="ghost-head">この行で決まる値</span>
     </div>
-    <div class="hex" id="@_containerId" @onmouseleave="() => Document.Hover(-1)">
+    @* セル単位のハンドラは持たず、コンテナで data-n を受ける（gui.js の nodehover / nodeclick） *@
+    <div class="hex" id="@_containerId" @onmouseleave="() => Document.Hover(-1)"
+         @onnodehover="e => Document.Hover(e.NodeId)" @onnodeclick="e => Document.Select(e.NodeId)">
         @if (_rows is not null)
         {
             @foreach (var row in _rows)
@@ -22,7 +24,7 @@
         }
         else
         {
-            <Virtualize @ref="_virtualize" ItemsProvider="ProvideRows" ItemSize="26" OverscanCount="8" Context="row">
+            <Virtualize @ref="_virtualize" ItemsProvider="ProvideRows" ItemSize="RowHeight" OverscanCount="8" Context="row">
                 <HexRowView @key="row.Offset" Row="row" Document="Document" />
             </Virtualize>
         }
@@ -32,6 +34,7 @@
 @code {
     /// <summary>この行数以下なら仮想化せず全行を描画する（小さいファイル・テスト）。</summary>
     public const int PlainRowLimit = 512;
+    public const int RowHeight = 26;
 
     [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
 
@@ -63,13 +66,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender) GuiTiming.Log($"hex first render ({(_rows is null ? "virtualized" : _rows.Length + " rows")})");
         if (Document.SelectedId == _lastScrolledSelection) return;
         _lastScrolledSelection = Document.SelectedId;
         var (offset, _) = Document.SelectedRange;
         if (offset < 0) return;
         try
         {
-            await JS.InvokeVoidAsync("binGui.scrollHexTo", _containerId, HexRowBuilder.RowIndexOf(offset) * 26);
+            await JS.InvokeVoidAsync("binGui.scrollRowTo", _containerId, HexRowBuilder.RowIndexOf(offset) * RowHeight, RowHeight);
         }
         catch (JSException) { }
         catch (InvalidOperationException) { }

@@ -30,4 +30,10 @@ public sealed class StructDefinition
 
     /// <summary>テンプレートパラメータ定義。パラメータなしstructは空リスト。</summary>
     public IReadOnlyList<TemplateParameter> Parameters { get; init; } = Array.Empty<TemplateParameter>();
+
+    /// <summary>定義元の YAML ファイル（ローダーに渡した識別子。インポートされた struct はインポート先のパス）。文字列から読んだ場合は null。</summary>
+    public string? SourceFile { get; init; }
+
+    /// <summary>定義元 YAML での struct 名の行（1 始まり）。パーサーを経由していなければ null。</summary>
+    public int? SourceLine { get; init; }
 }

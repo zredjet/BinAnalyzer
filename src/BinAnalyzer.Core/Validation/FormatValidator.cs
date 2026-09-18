@@ -42,7 +42,29 @@ public static class FormatValidator
         ValidateUnusedFlags(format, diagnostics);
         ValidateUnreachableStructs(format, diagnostics);
 
-        return new ValidationResult(diagnostics);
+        return new ValidationResult(diagnostics.Select(d => WithLocation(d, format)).ToList());
+    }
+
+    /// <summary>診断に定義元の位置（フィールド行、無ければ struct 行）を付ける（REQ-172）。</summary>
+    private static ValidationDiagnostic WithLocation(ValidationDiagnostic d, FormatDefinition format)
+    {
+        if (d.StructName is null || !format.Structs.TryGetValue(d.StructName, out var structDef))
+            return d;
+        FieldDefinition? field = null;
+        if (d.FieldName is not null)
+        {
+            foreach (var f in structDef.Fields)
+            {
+                if (f.Name == d.FieldName)
+                {
+                    field = f;
+                    break;
+                }
+            }
+        }
+        var file = field?.SourceFile ?? structDef.SourceFile;
+        var line = field?.SourceLine ?? structDef.SourceLine;
+        return line is null ? d : d with { SourceFile = file, SourceLine = line };
     }
 
     // --- エラー VAL001-VAL007 ---

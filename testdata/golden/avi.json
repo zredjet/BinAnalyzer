@@ -281,8 +281,17 @@
               "offset": 88,
               "size": 0,
               "name": "data",
-              "error_message": "Cannot push scope of size 64 at position 88: would exceed data length 88",
+              "error_message": "Variable \u0027chunk_size\u0027 not found in current scope",
               "field_type": "Switch"
+            },
+            "padding": {
+              "_type": "error",
+              "type": "bytes",
+              "offset": 88,
+              "size": 0,
+              "name": "padding",
+              "error_message": "Variable \u0027chunk_size\u0027 not found in current scope",
+              "field_type": "Bytes"
             }
           }
         }

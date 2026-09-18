@@ -1,7 +1,7 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 128,
+  "size": 256,
   "name": "PE",
   "struct_type": "pe",
   "children": {
@@ -302,18 +302,375 @@
       }
     },
     "optional_header": {
-      "_type": "error",
-      "type": "switch",
+      "_type": "struct",
+      "type": "struct",
       "offset": 88,
-      "size": 0,
+      "size": 128,
       "name": "optional_header",
-      "error_message": "Variable \u0027magic\u0027 not found in current scope",
-      "field_type": "Switch"
+      "struct_type": "optional_header",
+      "children": {
+        "magic": {
+          "_type": "integer",
+          "type": "uint16",
+          "offset": 88,
+          "size": 2,
+          "name": "magic",
+          "value": 523,
+          "hex": "0x20B",
+          "enum_label": "PE32\u002B",
+          "enum_description": "64\u30D3\u30C3\u30C8\u5B9F\u884C\u30D5\u30A1\u30A4\u30EB"
+        },
+        "fields": {
+          "_type": "struct",
+          "type": "switch",
+          "offset": 90,
+          "size": 126,
+          "name": "fields",
+          "struct_type": "pe32plus_optional_header",
+          "children": {
+            "major_linker_version": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 90,
+              "size": 1,
+              "name": "major_linker_version",
+              "value": 14,
+              "hex": "0xE"
+            },
+            "minor_linker_version": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 91,
+              "size": 1,
+              "name": "minor_linker_version",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "size_of_code": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 92,
+              "size": 4,
+              "name": "size_of_code",
+              "value": 512,
+              "hex": "0x200"
+            },
+            "size_of_initialized_data": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 96,
+              "size": 4,
+              "name": "size_of_initialized_data",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "size_of_uninitialized_data": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 100,
+              "size": 4,
+              "name": "size_of_uninitialized_data",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "address_of_entry_point": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 104,
+              "size": 4,
+              "name": "address_of_entry_point",
+              "value": 4096,
+              "hex": "0x1000"
+            },
+            "base_of_code": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 108,
+              "size": 4,
+              "name": "base_of_code",
+              "value": 4096,
+              "hex": "0x1000"
+            },
+            "image_base": {
+              "_type": "integer",
+              "type": "uint64",
+              "offset": 112,
+              "size": 8,
+              "name": "image_base",
+              "value": 5368709120,
+              "hex": "0x140000000"
+            },
+            "section_alignment": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 120,
+              "size": 4,
+              "name": "section_alignment",
+              "value": 4096,
+              "hex": "0x1000"
+            },
+            "file_alignment": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 124,
+              "size": 4,
+              "name": "file_alignment",
+              "value": 512,
+              "hex": "0x200"
+            },
+            "major_os_version": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 128,
+              "size": 2,
+              "name": "major_os_version",
+              "value": 6,
+              "hex": "0x6"
+            },
+            "minor_os_version": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 130,
+              "size": 2,
+              "name": "minor_os_version",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "major_image_version": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 132,
+              "size": 2,
+              "name": "major_image_version",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "minor_image_version": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 134,
+              "size": 2,
+              "name": "minor_image_version",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "major_subsystem_version": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 136,
+              "size": 2,
+              "name": "major_subsystem_version",
+              "value": 6,
+              "hex": "0x6"
+            },
+            "minor_subsystem_version": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 138,
+              "size": 2,
+              "name": "minor_subsystem_version",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "win32_version_value": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 140,
+              "size": 4,
+              "name": "win32_version_value",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "size_of_image": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 144,
+              "size": 4,
+              "name": "size_of_image",
+              "value": 8192,
+              "hex": "0x2000"
+            },
+            "size_of_headers": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 148,
+              "size": 4,
+              "name": "size_of_headers",
+              "value": 512,
+              "hex": "0x200"
+            },
+            "checksum": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 152,
+              "size": 4,
+              "name": "checksum",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "subsystem": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 156,
+              "size": 2,
+              "name": "subsystem",
+              "value": 3,
+              "hex": "0x3",
+              "enum_label": "IMAGE_SUBSYSTEM_WINDOWS_CUI"
+            },
+            "dll_characteristics": {
+              "_type": "flags",
+              "type": "uint16",
+              "offset": 158,
+              "size": 2,
+              "name": "dll_characteristics",
+              "raw_value": "0x8160",
+              "flags": {
+                "DYNAMIC_BASE": {
+                  "set": true
+                },
+                "NX_COMPAT": {
+                  "set": true
+                },
+                "NO_SEH": {
+                  "set": false
+                },
+                "GUARD_CF": {
+                  "set": false
+                },
+                "TERMINAL_SERVER_AWARE": {
+                  "set": true
+                }
+              }
+            },
+            "size_of_stack_reserve": {
+              "_type": "integer",
+              "type": "uint64",
+              "offset": 160,
+              "size": 8,
+              "name": "size_of_stack_reserve",
+              "value": 1048576,
+              "hex": "0x100000"
+            },
+            "size_of_stack_commit": {
+              "_type": "integer",
+              "type": "uint64",
+              "offset": 168,
+              "size": 8,
+              "name": "size_of_stack_commit",
+              "value": 4096,
+              "hex": "0x1000"
+            },
+            "size_of_heap_reserve": {
+              "_type": "integer",
+              "type": "uint64",
+              "offset": 176,
+              "size": 8,
+              "name": "size_of_heap_reserve",
+              "value": 1048576,
+              "hex": "0x100000"
+            },
+            "size_of_heap_commit": {
+              "_type": "integer",
+              "type": "uint64",
+              "offset": 184,
+              "size": 8,
+              "name": "size_of_heap_commit",
+              "value": 4096,
+              "hex": "0x1000"
+            },
+            "loader_flags": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 192,
+              "size": 4,
+              "name": "loader_flags",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "number_of_rva_and_sizes": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 196,
+              "size": 4,
+              "name": "number_of_rva_and_sizes",
+              "value": 2,
+              "hex": "0x2"
+            },
+            "data_directories": {
+              "_type": "array",
+              "type": "struct",
+              "offset": 200,
+              "size": 16,
+              "name": "data_directories",
+              "count": 2,
+              "elements": [
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 200,
+                  "size": 8,
+                  "name": "data_directories",
+                  "struct_type": "data_directory",
+                  "children": {
+                    "virtual_address": {
+                      "_type": "integer",
+                      "type": "uint32",
+                      "offset": 200,
+                      "size": 4,
+                      "name": "virtual_address",
+                      "value": 0,
+                      "hex": "0x0"
+                    },
+                    "size": {
+                      "_type": "integer",
+                      "type": "uint32",
+                      "offset": 204,
+                      "size": 4,
+                      "name": "size",
+                      "value": 0,
+                      "hex": "0x0"
+                    }
+                  }
+                },
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 208,
+                  "size": 8,
+                  "name": "data_directories",
+                  "struct_type": "data_directory",
+                  "children": {
+                    "virtual_address": {
+                      "_type": "integer",
+                      "type": "uint32",
+                      "offset": 208,
+                      "size": 4,
+                      "name": "virtual_address",
+                      "value": 0,
+                      "hex": "0x0"
+                    },
+                    "size": {
+                      "_type": "integer",
+                      "type": "uint32",
+                      "offset": 212,
+                      "size": 4,
+                      "name": "size",
+                      "value": 0,
+                      "hex": "0x0"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
     },
     "sections": {
       "_type": "array",
       "type": "struct",
-      "offset": 88,
+      "offset": 216,
       "size": 40,
       "name": "sections",
       "count": 1,
@@ -321,7 +678,7 @@
         {
           "_type": "struct",
           "type": "struct",
-          "offset": 88,
+          "offset": 216,
           "size": 40,
           "name": "sections",
           "struct_type": "section_header",
@@ -329,79 +686,79 @@
             "name": {
               "_type": "string",
               "type": "ascii",
-              "offset": 88,
+              "offset": 216,
               "size": 8,
               "name": "name",
-              "value": "\u000B\u0002\u000E\u0000\u0000\u0002\u0000\u0000",
+              "value": ".text\u0000\u0000\u0000",
               "encoding": "ascii"
             },
             "virtual_size": {
               "_type": "integer",
               "type": "uint32",
-              "offset": 96,
+              "offset": 224,
               "size": 4,
               "name": "virtual_size",
-              "value": 0,
-              "hex": "0x0"
+              "value": 256,
+              "hex": "0x100"
             },
             "virtual_address": {
               "_type": "integer",
               "type": "uint32",
-              "offset": 100,
+              "offset": 228,
               "size": 4,
               "name": "virtual_address",
-              "value": 0,
-              "hex": "0x0"
+              "value": 4096,
+              "hex": "0x1000"
             },
             "size_of_raw_data": {
               "_type": "integer",
               "type": "uint32",
-              "offset": 104,
+              "offset": 232,
               "size": 4,
               "name": "size_of_raw_data",
-              "value": 4096,
-              "hex": "0x1000"
+              "value": 512,
+              "hex": "0x200"
             },
             "pointer_to_raw_data": {
               "_type": "integer",
               "type": "uint32",
-              "offset": 108,
+              "offset": 236,
               "size": 4,
               "name": "pointer_to_raw_data",
-              "value": 4096,
-              "hex": "0x1000"
+              "value": 512,
+              "hex": "0x200"
             },
             "pointer_to_relocations": {
               "_type": "integer",
               "type": "uint32",
-              "offset": 112,
+              "offset": 240,
               "size": 4,
               "name": "pointer_to_relocations",
-              "value": 1073741824,
-              "hex": "0x40000000"
+              "value": 0,
+              "hex": "0x0"
             },
             "pointer_to_linenumbers": {
               "_type": "integer",
               "type": "uint32",
-              "offset": 116,
+              "offset": 244,
               "size": 4,
               "name": "pointer_to_linenumbers",
-              "value": 1,
-              "hex": "0x1"
+              "value": 0,
+              "hex": "0x0"
             },
             "number_of_relocations": {
               "_type": "integer",
               "type": "uint16",
-              "offset": 120,
+              "offset": 248,
               "size": 2,
               "name": "number_of_relocations",
-              "value": 4096,
-              "hex": "0x1000"
+              "value": 0,
+              "hex": "0x0"
             },
             "number_of_linenumbers": {
               "_type": "integer",
               "type": "uint16",
-              "offset": 122,
+              "offset": 250,
               "size": 2,
               "name": "number_of_linenumbers",
               "value": 0,
@@ -410,13 +767,13 @@
             "characteristics": {
               "_type": "flags",
               "type": "uint32",
-              "offset": 124,
+              "offset": 252,
               "size": 4,
               "name": "characteristics",
-              "raw_value": "0x200",
+              "raw_value": "0x60000020",
               "flags": {
                 "CNT_CODE": {
-                  "set": false
+                  "set": true
                 },
                 "CNT_INITIALIZED_DATA": {
                   "set": false
@@ -440,10 +797,10 @@
                   "set": false
                 },
                 "MEM_EXECUTE": {
-                  "set": false
+                  "set": true
                 },
                 "MEM_READ": {
-                  "set": false
+                  "set": true
                 },
                 "MEM_WRITE": {
                   "set": false

@@ -1,4 +1,5 @@
 using System.Numerics;
+using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Expressions;
 
 namespace BinAnalyzer.Engine;
@@ -76,32 +77,51 @@ public static class ExpressionEvaluator
     private static object ResolveIndexAccess(string arrayName, ExpressionNode indexExpr, DecodeContext context)
     {
         var arrayValue = context.GetVariable(arrayName);
-        if (arrayValue is not List<object> list)
-            throw new InvalidOperationException(
-                $"Variable '{arrayName}' is not an array (actual type: {arrayValue?.GetType().Name ?? "null"})");
+        var count = arrayValue switch
+        {
+            DecodedArray arr => arr.Elements.Count,
+            List<object> list => list.Count,
+            _ => throw new InvalidOperationException(
+                $"Variable '{arrayName}' is not an array (actual type: {arrayValue?.GetType().Name ?? "null"})"),
+        };
 
         var index = (int)ConvertToLong(EvaluateNode(indexExpr, context));
-        if (index < 0 || index >= list.Count)
+        if (index < 0 || index >= count)
             throw new InvalidOperationException(
-                $"Array index {index} is out of range for '{arrayName}' (length: {list.Count})");
+                $"Array index {index} is out of range for '{arrayName}' (length: {count})");
 
-        return list[index];
+        return arrayValue is DecodedArray a ? NodeValues.Element(a, index) : ((List<object>)arrayValue)[index];
     }
 
     private static object ResolveMemberAccess(ExpressionNode.MemberAccess ma, DecodeContext context)
     {
         var obj = EvaluateNode(ma.Object, context);
-        if (obj is not Dictionary<string, object> dict)
-            throw new InvalidOperationException(
-                $"Cannot access member '{ma.MemberName}': value is not a struct " +
-                $"(actual type: {obj?.GetType().Name ?? "null"})");
+        object? value;
+        switch (obj)
+        {
+            case DecodedStruct st:
+                value = NodeValues.Member(st, ma.MemberName);
+                break;
+            case Dictionary<string, object> dict:
+                dict.TryGetValue(ma.MemberName, out value);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Cannot access member '{ma.MemberName}': value is not a struct " +
+                    $"(actual type: {obj?.GetType().Name ?? "null"})");
+        }
 
-        if (!dict.TryGetValue(ma.MemberName, out var value))
-            throw new InvalidOperationException(
-                $"Member '{ma.MemberName}' not found in struct");
-
-        return value;
+        return value ?? throw new InvalidOperationException(
+            $"Member '{ma.MemberName}' not found in struct");
     }
+
+    /// <summary>配列型の値（デコード結果の配列ノード、またはボックス化した値のリスト）を要素列として見る。</summary>
+    private static (int Count, Func<int, object> At)? AsArray(object? value) => value switch
+    {
+        DecodedArray arr => (arr.Elements.Count, i => NodeValues.Element(arr, i)),
+        List<object> list => (list.Count, i => list[i]),
+        _ => null,
+    };
 
     private static object EvaluateBinaryOp(ExpressionNode.BinaryOp binOp, DecodeContext context)
     {
@@ -226,11 +246,11 @@ public static class ExpressionEvaluator
                 "len requires exactly 1 argument");
 
         var value = EvaluateNode(args[0], context);
-        if (value is not List<object> list)
+        if (AsArray(value) is not { } array)
             throw new InvalidOperationException(
                 $"Argument to len() is not an array (actual type: {value?.GetType().Name ?? "null"})");
 
-        return (long)list.Count;
+        return (long)array.Count;
     }
 
     private static object EvaluateMinMaxSum(
@@ -241,7 +261,7 @@ public static class ExpressionEvaluator
                 $"{operation} requires exactly 1 argument");
 
         var value = EvaluateNode(args[0], context);
-        if (value is not List<object> list)
+        if (AsArray(value) is not { } list)
             throw new InvalidOperationException(
                 $"Argument to {operation}() is not an array (actual type: {value?.GetType().Name ?? "null"})");
 
@@ -253,10 +273,10 @@ public static class ExpressionEvaluator
                 $"{operation}() cannot operate on an empty array");
         }
 
-        var result = ConvertToLong(list[0]);
+        var result = ConvertToLong(list.At(0));
         for (var i = 1; i < list.Count; i++)
         {
-            var current = ConvertToLong(list[i]);
+            var current = ConvertToLong(list.At(i));
             result = operation switch
             {
                 "min" => current < result ? current : result,

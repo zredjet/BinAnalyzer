@@ -17,6 +17,12 @@ public interface IFormatCatalog
     Task<IReadOnlyList<FormatCatalogEntry>> ListAsync();
     Task<FormatDocument> LoadAsync(string file);
     Task<FormatCatalogEntry?> DetectByExtensionAsync(string extension);
+
+    /// <summary>
+    /// 定義元ファイル（<see cref="Core.Models.StructDefinition.SourceFile"/> の識別子）の YAML テキスト。
+    /// インポートされた struct の定義を定義ビューに出すために使う（REQ-172）。取得できなければ null。
+    /// </summary>
+    Task<string?> ReadSourceAsync(string sourceFile);
 }
 
 /// <summary>バイナリファイルの取得手段（デスクトップ: ネイティブダイアログ、Web: InputFile）。</summary>

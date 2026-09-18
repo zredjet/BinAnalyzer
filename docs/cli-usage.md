@@ -57,6 +57,10 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 
 フォーマット定義のフィールドレベルで `repeat_max` が指定されている場合、そちらが優先されます。
 
+検証の診断には定義元の位置が付きます（例: `エラー [VAL002]: ... (isobmff.bdef.yaml:9)`。インポートされた struct はインポート先のファイル名と行）。JSON 形式（`--error-format json`）では `file` / `line` として出ます。
+
+このほかエンジンには壊れた入力向けの固定の防御があります（REQ-160）: struct / switch の入れ子は 64 段で打ち切り（API では `DecodeOptions.MaxDepth` で変更可）、サイズ・オフセット式が 0〜2^31-1 の範囲外ならデコードエラー、エラー継続モードで位置が進まない要素は繰り返しを打ち切ります。
+
 ```bash
 # 繰り返しを最大1000要素に制限
 dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml --max-repeat 1000
@@ -199,12 +203,20 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 必要なランタイムが無い場合は起動せず、導入方法を標準エラーに出して終了コード 1 で戻ります。
 
+#### 大きなファイル
+
+ヘックスビューとツリーは見えている行だけを描画するので、数十 MB のファイルでも開いた後の操作は軽いままです（50 MB / 120 万ノードの PCAP で、開いてから最初の描画まで約 2.7 秒、選択の反映は約 40 ms。`docs/benchmark-baseline.md` を参照）。
+ただしデコード結果はノードごとにオブジェクトを持つため、メモリはファイルの十数倍（小さなパケットが並ぶ PCAP では数百倍）になります。デスクトップ版は 256 MB を超えるファイルを開く前に確認を出します。閾値は `BINANALYZER_GUI_LARGE_FILE_MB` で変更できます（`0` で確認しない）。Web 版は 100 MB が上限です。
+
 #### テスト・CI 向け環境変数
 
 | 変数 | 意味 |
 |---|---|
 | `BINANALYZER_GUI_AUTOCLOSE` | 窓が開いてから自動で閉じるまでのミリ秒。`1` / `true` は既定の 3000 ms。CI の起動スモーク用 |
 | `BINANALYZER_GUI_DEBUG` | `1` で埋め込み資産の配信ログと Photino の詳細ログを標準エラーに出す |
+| `BINANALYZER_GUI_LARGE_FILE_MB` | 開く前に確認するファイルサイズの閾値（MB）。既定 256、`0` で確認しない |
+| `BINANALYZER_GUI_TIMING` | `1` で「開く」の各段階（デコード / 索引 / 構造マップ / 集計）、最初の描画、選択の反映までの時間を標準エラーに出す |
+| `BINANALYZER_GUI_TIMING_SELECT` | ノード ID。最初の描画から 3 秒後にそのノードを選択し、反映までの時間を計測する（`BINANALYZER_GUI_TIMING=1` と併用） |
 
 フォーマット定義は、実行ファイルの隣またはカレントディレクトリの `formats/` と、`-f` で指定したファイルから選択できます。
 

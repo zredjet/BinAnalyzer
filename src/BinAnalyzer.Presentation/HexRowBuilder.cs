@@ -40,6 +40,11 @@ public sealed class HexRowBuilder
         var ascii = new char[BytesPerRow];
         var span = _data.Span;
 
+        // 同じ葉が続く間は逆引きと祖先パス文字列を使い回す（1 行 16 回の二分探索と文字列生成を葉の数だけに減らす）。
+        // 逆引き結果が変わり得るのは「今の葉が終わる」か「別の葉が始まる」オフセットだけなので、そこでだけ引き直す
+        LeafSpan? current = null;
+        var currentPath = "/";
+        var nextStart = long.MinValue;
         for (var i = 0; i < BytesPerRow; i++)
         {
             var off = rowStart + i;
@@ -50,9 +55,15 @@ public sealed class HexRowBuilder
             }
             var b = span[(int)off];
             ascii[i] = b is >= 0x20 and < 0x7F ? (char)b : '\u00B7';
-            var leaf = _index.LeafAt(off);
-            if (leaf is { } l)
-                cells[i] = new HexCell(b, l.Id, l.Kind, off == l.Offset, off == l.End - 1, _index.AncestorIdPath(l.Id));
+            if (off >= nextStart || current is not { } l || !l.Contains(off))
+            {
+                current = _index.LeafAt(off);
+                currentPath = current is { } found ? _index.AncestorIdPath(found.Id) : "/";
+                var k = _index.FirstLeafIndexAtOrAfter(off + 1);
+                nextStart = k < _index.Leaves.Count ? _index.Leaves[k].Offset : long.MaxValue;
+            }
+            if (current is { } leaf)
+                cells[i] = new HexCell(b, leaf.Id, leaf.Kind, off == leaf.Offset, off == leaf.End - 1, currentPath);
             else
                 cells[i] = new HexCell(b, -1, FieldKind.Bytes, false, false, "/");
         }

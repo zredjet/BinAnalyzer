@@ -31,7 +31,10 @@ public sealed class GuiApp
         var catalog = DirectoryFormatCatalog.Default(options.FormatPath);
         builder.Services.AddSingleton<IFormatCatalog>(catalog);
         builder.Services.AddSingleton<IFileSource>(new PhotinoFileSource(() => app?.MainWindow));
-        var session = new GuiSession(catalog, new PhotinoFileSource(() => app?.MainWindow));
+        var session = new GuiSession(catalog, new PhotinoFileSource(() => app?.MainWindow))
+        {
+            LargeFileThreshold = LargeFileThresholdFromEnvironment(),
+        };
         builder.Services.AddSingleton(session);
         builder.RootComponents.Add<DesktopRoot>("app");
 
@@ -66,5 +69,18 @@ public sealed class GuiApp
 
         app.Run();
         return 0;
+    }
+
+    /// <summary>
+    /// 大きなファイルを開く前に確認する閾値。既定 256 MB。環境変数 <c>BINANALYZER_GUI_LARGE_FILE_MB</c> で変更でき、0 で確認しない。
+    /// </summary>
+    public static long? LargeFileThresholdFromEnvironment()
+    {
+        var raw = Environment.GetEnvironmentVariable("BINANALYZER_GUI_LARGE_FILE_MB");
+        if (string.IsNullOrWhiteSpace(raw))
+            return GuiSession.DefaultLargeFileThreshold;
+        if (!long.TryParse(raw, out var mb) || mb < 0)
+            return GuiSession.DefaultLargeFileThreshold;
+        return mb == 0 ? null : mb * 1024 * 1024;
     }
 }

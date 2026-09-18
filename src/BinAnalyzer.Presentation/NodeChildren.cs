@@ -19,6 +19,26 @@ public static class NodeChildren
         };
     }
 
+    /// <summary><see cref="Of"/> が返す子の数。配列は要素数、struct は padding を除いた数。</summary>
+    public static int Count(DecodedNode node)
+    {
+        return node switch
+        {
+            DecodedStruct s => CountNonPadding(s.Children),
+            DecodedArray a => a.Elements.Count,
+            DecodedCompressed c when c.DecodedContent is not null => CountNonPadding(c.DecodedContent.Children),
+            _ => 0,
+        };
+    }
+
+    private static int CountNonPadding(IReadOnlyList<DecodedNode> children)
+    {
+        var n = 0;
+        for (var i = 0; i < children.Count; i++)
+            if (!children[i].IsPadding) n++;
+        return n;
+    }
+
     public static bool HasChildren(DecodedNode node)
     {
         return node switch

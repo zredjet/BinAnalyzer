@@ -1,7 +1,8 @@
 @{
     var (selStart, selEnd) = Document.SelectedRange;
 }
-<div class="row" @onmouseover="() => Document.Hover(-1)">
+@* ホバー・クリックは HexView のコンテナが data-n で受ける（REQ-177: セルごとのハンドラを持たない） *@
+<div class="row">
     <span class="off">@Row.Offset.ToString("X8")</span>
     <span class="bytes">
         @for (var i = 0; i < Row.Cells.Length; i++)
@@ -15,11 +16,8 @@
             var c = cell.Value;
             var off = Row.Offset + i;
             var sel = off >= selStart && off < selEnd;
-            var id = c.NodeId;
             <span class="b @FieldKindMapper.CssClass(c.Kind) @(c.FieldStart ? "fs" : "") @(c.FieldEnd ? "fe" : "") @(sel ? "sel" : "")"
-                  data-n="@id" data-p="@c.AncestorPath"
-                  @onmouseover="() => Document.Hover(id)" @onmouseover:stopPropagation="true"
-                  @onclick="() => Document.Select(id)">@c.Value.ToString("X2")</span>
+                  data-n="@c.NodeId" data-p="@c.AncestorPath">@c.Value.ToString("X2")</span>
         }
     </span>
     <span class="ascii">
@@ -34,17 +32,13 @@
             var c = cell.Value;
             var off = Row.Offset + i;
             var sel = off >= selStart && off < selEnd;
-            var id = c.NodeId;
-            <span class="a @FieldKindMapper.CssClass(c.Kind) @(sel ? "sel" : "")" data-n="@id" data-p="@c.AncestorPath"
-                  @onmouseover="() => Document.Hover(id)" @onmouseover:stopPropagation="true"
-                  @onclick="() => Document.Select(id)">@Row.Ascii[i]</span>
+            <span class="a @FieldKindMapper.CssClass(c.Kind) @(sel ? "sel" : "")" data-n="@c.NodeId" data-p="@c.AncestorPath">@Row.Ascii[i]</span>
         }
     </span>
     <span class="ghost">
         @foreach (var g in Row.Ghosts)
         {
-            var id = g.NodeId;
-            <span class="g" data-n="@id" @onclick="() => Document.Select(id)">
+            <span class="g" data-n="@g.NodeId">
                 <b>@g.Name</b>
                 @if (g.Style == GhostStyle.Ok)
                 {

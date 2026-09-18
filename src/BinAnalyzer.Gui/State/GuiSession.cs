@@ -9,6 +9,9 @@ public enum PaneKind { Structure, Definition, Diff }
 
 public sealed record DiffState(GuiDocument Left, GuiDocument Right, DiffResult Result);
 
+/// <summary>大きさの確認待ちのファイル（REQ-177）。「開く」で <see cref="GuiSession.ConfirmLargeFileAsync"/>。</summary>
+public sealed record PendingLargeFile(OpenedFile File, string? FormatFile, Endianness? Endian);
+
 /// <summary>開いているタブ集合と、アクティブタブ・右ペイン・差分などセッション全体の状態。</summary>
 public sealed class GuiSession
 {
@@ -27,6 +30,16 @@ public sealed class GuiSession
 
     /// <summary>フォーマットを検出できず、ユーザーの選択待ちのファイル。</summary>
     public OpenedFile? PendingFile { get; private set; }
+
+    /// <summary>
+    /// このバイト数を超えるファイルは開く前に確認する（null なら確認しない）。デコード結果はノードごとにオブジェクトを持つため
+    /// ファイルの数十倍のメモリを使うことがあり、デスクトップにはファイルサイズの上限が無い。
+    /// </summary>
+    public long? LargeFileThreshold { get; set; }
+    public const long DefaultLargeFileThreshold = 256L * 1024 * 1024;
+
+    /// <summary>大きさの確認待ちのファイル。</summary>
+    public PendingLargeFile? PendingLarge { get; private set; }
     public string? Message { get; private set; }
 
     public IReadOnlyList<FormatCatalogEntry> Formats { get; private set; } = [];
@@ -48,11 +61,22 @@ public sealed class GuiSession
 
     private void Raise() => Changed?.Invoke();
 
-    /// <summary>ファイルを開いてタブにする。フォーマット未指定なら拡張子で検出し、できなければ選択待ちにする。</summary>
-    public async Task<GuiDocument?> OpenAsync(OpenedFile file, string? formatFile = null, Endianness? endian = null)
+    /// <summary>
+    /// ファイルを開いてタブにする。フォーマット未指定なら拡張子で検出し、できなければ選択待ちにする。
+    /// <see cref="LargeFileThreshold"/> を超えるファイルは <paramref name="confirmedLarge"/> でない限り確認待ちにして null を返す。
+    /// </summary>
+    public async Task<GuiDocument?> OpenAsync(OpenedFile file, string? formatFile = null, Endianness? endian = null, bool confirmedLarge = false)
     {
         await InitializeAsync();
         Message = null;
+        if (!confirmedLarge && LargeFileThreshold is { } threshold && file.Data.LongLength > threshold)
+        {
+            PendingLarge = new PendingLargeFile(file, formatFile, endian);
+            ShowPicker = true;
+            Raise();
+            return null;
+        }
+        PendingLarge = null;
         if (formatFile is null)
         {
             var ext = Path.GetExtension(file.Name);
@@ -93,12 +117,28 @@ public sealed class GuiSession
         return doc;
     }
 
-    /// <summary>選択待ちファイルに対してフォーマットを指定して開く。</summary>
+    /// <summary>選択待ちファイルに対してフォーマットを指定して開く（大きさの確認は済んでいる）。</summary>
     public async Task<GuiDocument?> OpenPendingAsync(string formatFile)
     {
         if (PendingFile is null) return null;
         var file = PendingFile;
-        return await OpenAsync(file, formatFile);
+        return await OpenAsync(file, formatFile, confirmedLarge: true);
+    }
+
+    /// <summary>大きさの確認待ちのファイルを開く。</summary>
+    public async Task<GuiDocument?> ConfirmLargeFileAsync()
+    {
+        if (PendingLarge is not { } pending) return null;
+        PendingLarge = null;
+        return await OpenAsync(pending.File, pending.FormatFile, pending.Endian, confirmedLarge: true);
+    }
+
+    /// <summary>大きさの確認待ちのファイルを開かずに捨てる。</summary>
+    public void CancelLargeFile()
+    {
+        PendingLarge = null;
+        if (Active is not null) ShowPicker = false;
+        Raise();
     }
 
     private void Attach(GuiDocument doc)

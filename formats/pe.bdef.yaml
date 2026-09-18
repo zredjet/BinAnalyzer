@@ -132,12 +132,9 @@ structs:
       type: struct
       struct: coff_header
     - name: optional_header
-      type: switch
-      switch_on: "{magic}"
-      cases:
-        "267": pe32_optional_header
-        "523": pe32plus_optional_header
-      default: raw_data
+      type: struct
+      struct: optional_header
+      size: "{size_of_optional_header}"
     - name: sections
       type: struct
       struct: section_header
@@ -209,10 +206,21 @@ structs:
       type: uint16
       flags: pe_characteristics
 
-  pe32_optional_header:
+  # magic を読んでから PE32 / PE32+ を選ぶ（switch_on は先に読んだ値しか参照できない）
+  optional_header:
     - name: magic
       type: uint16
       enum: pe_magic
+    - name: fields
+      type: switch
+      switch_on: "{magic}"
+      size: remaining
+      cases:
+        "267": pe32_optional_header
+        "523": pe32plus_optional_header
+      default: raw_data
+
+  pe32_optional_header:
     - name: major_linker_version
       type: uint8
     - name: minor_linker_version
@@ -279,9 +287,6 @@ structs:
       repeat_count: "{number_of_rva_and_sizes}"
 
   pe32plus_optional_header:
-    - name: magic
-      type: uint16
-      enum: pe_magic
     - name: major_linker_version
       type: uint8
     - name: minor_linker_version

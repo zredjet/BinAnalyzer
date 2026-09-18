@@ -19,6 +19,14 @@ public sealed class BinaryDecoder : IBinaryDecoder
     private List<DecodeError>? _errors;
     private int? _globalMaxRepeat;
 
+    /// <summary>
+    /// struct / switch の入れ子の深さ上限の既定値。1 段あたりのスタック消費は Debug ビルドで約 8 KB（Release でもその数分の一）あり、
+    /// Windows のメインスレッドや スレッドプールのスタックは 1 MB なので、余裕を見て 64 にしている。実在のフォーマットで 20 段を超えることはまず無い。
+    /// </summary>
+    public const int DefaultMaxDepth = 64;
+    private int _maxDepth = DefaultMaxDepth;
+    private int _depth;
+
     private string CurrentPath => _pathStack.Count == 0 ? "(root)" : string.Join(".", _pathStack.Reverse());
 
     public DecodedStruct Decode(ReadOnlyMemory<byte> data, FormatDefinition format, DecodeOptions? options = null)
@@ -27,6 +35,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errorMode = ErrorMode.Stop;
         _errors = null;
         _globalMaxRepeat = options?.MaxRepeat;
+        _maxDepth = options?.MaxDepth ?? DefaultMaxDepth;
+        _depth = 0;
         var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
         return DecodeStruct(rootStruct, format, context, format.Name);
@@ -38,6 +48,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errorMode = errorMode;
         _errors = errorMode == ErrorMode.Continue ? new List<DecodeError>() : null;
         _globalMaxRepeat = options?.MaxRepeat;
+        _maxDepth = options?.MaxDepth ?? DefaultMaxDepth;
+        _depth = 0;
         var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
         var root = DecodeStruct(rootStruct, format, context, format.Name);
@@ -61,6 +73,31 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var value = context.GetVariable(field.Name);
         if (value is not null)
             context.SetStateVariable(stateName, value);
+    }
+
+    /// <summary>
+    /// 入れ子（struct / switch フィールド）としての struct デコード。深さが <see cref="_maxDepth"/> を超えたらエラーにする。
+    /// 再帰的なフォーマット（msgpack / CBOR / ISO BMFF 等）が壊れた入力で無限再帰しても、スタックオーバーフローで落ちる前に止める。
+    /// </summary>
+    private DecodedStruct DecodeNestedStruct(
+        StructDefinition structDef,
+        FormatDefinition format,
+        DecodeContext context,
+        string name,
+        FieldType dslType)
+    {
+        if (_depth >= _maxDepth)
+            throw new InvalidOperationException(
+                $"Struct nesting deeper than {_maxDepth} levels at '{name}' (struct '{structDef.Name}'); the input is probably corrupt or the format recurses without consuming bytes");
+        _depth++;
+        try
+        {
+            return DecodeStruct(structDef, format, context, name, dslType);
+        }
+        finally
+        {
+            _depth--;
+        }
     }
 
     private DecodedStruct DecodeStruct(
@@ -92,15 +129,16 @@ public sealed class BinaryDecoder : IBinaryDecoder
         }
 
         var startOffset = context.Position;
-        var children = new List<DecodedNode>();
+        var fields = structDef.Fields;
+        var children = new List<DecodedNode>(fields.Count);
 
         var isBitstream = structDef.IsBitstream;
         if (isBitstream)
             context.EnterBitstreamMode(structDef.BitOrder ?? BitOrder.Msb);
 
-        foreach (var field in structDef.Fields)
+        for (var i = 0; i < fields.Count; i++)
         {
-            var node = DecodeField(field, format, context, children, structDef);
+            var node = DecodeField(fields[i], format, context, children, structDef);
             if (node is not null)
                 children.Add(node);
         }
@@ -125,7 +163,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Name = name,
             StructType = structDef.Name,
             Offset = startOffset,
-            Size = context.Position - startOffset,
+            // seek（restore 無し）で先頭より前へ戻った場合は負になるので 0 に丸める
+            Size = Math.Max(0, context.Position - startOffset),
             Children = children,
             DslType = dslType,
         };
@@ -206,6 +245,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             if (_errorMode == ErrorMode.Continue)
             {
                 _errors!.Add(new DecodeError(dex.Message, dex.Offset, dex.FieldPath, dex.FieldType));
+                context.MarkVariableUndefined(field.Name);
                 var posBeforeSkip = context.Position;
                 TrySkipField(field, context, parentStruct?.ResyncMarker, parentStruct?.Align);
                 var skipped = context.Position - posBeforeSkip;
@@ -228,6 +268,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             {
                 var errorOffset = context.Position;
                 _errors!.Add(new DecodeError(ex.Message, errorOffset, CurrentPath, field.Type.ToString()));
+                context.MarkVariableUndefined(field.Name);
                 var posBeforeSkip = context.Position;
                 TrySkipField(field, context, parentStruct?.ResyncMarker, parentStruct?.Align);
                 var skipped = context.Position - posBeforeSkip;
@@ -260,7 +301,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
     {
         var hasEndiannessOverride = field.Endianness.HasValue;
         if (hasEndiannessOverride)
-            context.PushEndiannessScope(field.Endianness!.Value);
+            context.PushEndiannessScope(field.Endianness!.Value, capturesVariables: false);
 
         var result = field.Type switch
         {
@@ -727,23 +768,23 @@ public sealed class BinaryDecoder : IBinaryDecoder
             context.PushScope(size);
             if (resolvedArgs is not null)
                 BindTemplateArgs(resolvedArgs, context);
-            result = DecodeStruct(structDef, format, context, field.Name, FieldType.Struct);
+            result = DecodeNestedStruct(structDef, format, context, field.Name, FieldType.Struct);
             context.PopScope();
         }
         else if (resolvedArgs is not null)
         {
             context.PushVariableScope();
             BindTemplateArgs(resolvedArgs, context);
-            result = DecodeStruct(structDef, format, context, field.Name, FieldType.Struct);
+            result = DecodeNestedStruct(structDef, format, context, field.Name, FieldType.Struct);
             context.PopScope();
         }
         else
         {
-            result = DecodeStruct(structDef, format, context, field.Name, FieldType.Struct);
+            result = DecodeNestedStruct(structDef, format, context, field.Name, FieldType.Struct);
         }
 
-        // メンバーアクセス用に構造体を辞書として登録
-        context.SetVariable(field.Name, BuildStructDictionary(result));
+        // メンバーアクセス用に構造体ノードそのものを登録（式評価が子を名前で引く）
+        context.SetVariable(field.Name, result);
         return result;
     }
 
@@ -761,8 +802,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
         string? matchedStructRef = null;
         if (field.SwitchCases is not null)
         {
-            foreach (var switchCase in field.SwitchCases)
+            var cases = field.SwitchCases;
+            for (var ci = 0; ci < cases.Count; ci++)
             {
+                var switchCase = cases[ci];
                 var caseValue = ExpressionEvaluator.Evaluate(switchCase.Condition, context);
                 if (ValuesEqual(switchValue, caseValue))
                 {
@@ -790,16 +833,16 @@ public sealed class BinaryDecoder : IBinaryDecoder
         {
             var size = ResolveSize(field, context);
             context.PushScope(size);
-            switchResult = DecodeStruct(structDef, format, context, field.Name, FieldType.Switch);
+            switchResult = DecodeNestedStruct(structDef, format, context, field.Name, FieldType.Switch);
             context.PopScope();
         }
         else
         {
-            switchResult = DecodeStruct(structDef, format, context, field.Name, FieldType.Switch);
+            switchResult = DecodeNestedStruct(structDef, format, context, field.Name, FieldType.Switch);
         }
 
         // メンバーアクセス用に構造体を辞書として登録
-        context.SetVariable(field.Name, BuildStructDictionary(switchResult));
+        context.SetVariable(field.Name, switchResult);
         return switchResult;
     }
 
@@ -940,6 +983,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     }
                     else
                     {
+                        var posBeforeElement = context.Position;
                         var element = DecodeElementWithScope(singleField, format, context, elementSize);
                         elements.Add(element);
                         consecutiveErrors = 0;
@@ -947,6 +991,15 @@ public sealed class BinaryDecoder : IBinaryDecoder
                         if (element is DecodedStruct)
                             PromoteDecodedValues(element, context);
                         SetPrevVariable(element, context);
+
+                        // エラー継続モードで要素が 1 バイトも消費できなかった場合、count が壊れた値（数十億）だと
+                        // 同じエラー要素を count 回積むだけで終わらない。位置が進まないエラー要素で打ち切る
+                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                        {
+                            truncated = true;
+                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                            break;
+                        }
                     }
 
                     if (elementSavedPos is { } epos)
@@ -1082,6 +1135,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     }
                     else
                     {
+                        var posBeforeElement = context.Position;
                         var (element, conditionMet) = DecodeElementWithScopeAndCondition(
                             singleField, format, context, elementSize, untilMode.Condition);
                         elements.Add(element);
@@ -1096,6 +1150,14 @@ public sealed class BinaryDecoder : IBinaryDecoder
 
                         if (conditionMet)
                             break;
+
+                        // エラー継続モードで位置が進まないエラー要素は打ち切る（条件も評価できないので無限ループになる）
+                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                        {
+                            truncated = true;
+                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                            break;
+                        }
                     }
 
                     if (context.IsEof)
@@ -1153,6 +1215,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     }
                     else
                     {
+                        var posBeforeElement = context.Position;
                         var element = DecodeElementWithScope(singleField, format, context, elementSize);
                         elements.Add(element);
                         consecutiveErrors = 0;
@@ -1160,6 +1223,14 @@ public sealed class BinaryDecoder : IBinaryDecoder
                         if (element is DecodedStruct)
                             PromoteDecodedValues(element, context);
                         SetPrevVariable(element, context);
+
+                        // エラー継続モードで位置が進まないエラー要素は打ち切る（while 条件が真のままだと無限ループになる）
+                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                        {
+                            truncated = true;
+                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                            break;
+                        }
                     }
 
                     if (elementSavedPos is { } epos)
@@ -1213,91 +1284,24 @@ public sealed class BinaryDecoder : IBinaryDecoder
         if (hasBoundarySize && !context.IsBitstreamMode)
             context.PopScope();
 
-        // 配列要素値を変数として登録（後続フィールドの式から参照可能にする）
-        var elementValues = new List<object>();
-        foreach (var element in elements)
-        {
-            object? val = element switch
-            {
-                DecodedInteger di => (object)di.Value,
-                DecodedString ds => ds.Value,
-                DecodedFloat df => df.Value,
-                DecodedStruct st => BuildStructDictionary(st),
-                _ => null,
-            };
-            if (val is not null)
-                elementValues.Add(val);
-        }
-        if (elementValues.Count == elements.Count && elements.Count > 0)
-            context.SetVariable(field.Name, elementValues);
-
-        return new DecodedArray
+        var array = new DecodedArray
         {
             Name = field.Name,
             Offset = startOffset,
-            Size = context.Position - startOffset,
+            Size = Math.Max(0, context.Position - startOffset),
             Elements = elements,
             DiffKey = field.DiffKey,
             Truncated = truncated,
             TruncationReason = truncationReason,
             DslType = field.Type,
         };
-    }
 
-    private static Dictionary<string, object> BuildStructDictionary(DecodedStruct st)
-    {
-        var dict = new Dictionary<string, object>();
-        foreach (var child in st.Children)
-        {
-            switch (child)
-            {
-                case DecodedInteger di:
-                    dict[di.Name] = di.Value;
-                    break;
-                case DecodedString ds:
-                    dict[ds.Name] = ds.Value;
-                    break;
-                case DecodedFloat df:
-                    dict[df.Name] = df.Value;
-                    break;
-                case DecodedVirtual dv:
-                    dict[dv.Name] = dv.Value;
-                    break;
-                case DecodedBitfield bf:
-                    dict[bf.Name] = bf.RawValue;
-                    foreach (var f in bf.Fields)
-                        dict[f.Name] = f.Value;
-                    break;
-                case DecodedStruct nested:
-                    dict[nested.Name] = BuildStructDictionary(nested);
-                    break;
-                case DecodedArray arr:
-                    var arrayValues = BuildArrayValues(arr);
-                    if (arrayValues is not null)
-                        dict[arr.Name] = arrayValues;
-                    break;
-            }
-        }
-        return dict;
-    }
+        // 配列を変数として登録（後続フィールドの式から要素・len/min/max/sum を参照可能にする）。
+        // 要素の値の変換は式評価時に行う（NodeValues）
+        if (NodeValues.IsValueArray(array))
+            context.SetVariable(field.Name, array);
 
-    private static List<object>? BuildArrayValues(DecodedArray arr)
-    {
-        var values = new List<object>();
-        foreach (var elem in arr.Elements)
-        {
-            object? val = elem switch
-            {
-                DecodedInteger di => (object)di.Value,
-                DecodedString ds => ds.Value,
-                DecodedFloat df => df.Value,
-                DecodedStruct s => BuildStructDictionary(s),
-                _ => null,
-            };
-            if (val is null) return null;
-            values.Add(val);
-        }
-        return values.Count > 0 ? values : null;
+        return array;
     }
 
     private static void PromoteDecodedValues(DecodedNode node, DecodeContext context)
@@ -1318,12 +1322,14 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 break;
             case DecodedBitfield bf:
                 context.SetVariable(bf.Name, bf.RawValue);
-                foreach (var field in bf.Fields)
-                    context.SetVariable(field.Name, field.Value);
+                var fields = bf.Fields;
+                for (var i = 0; i < fields.Count; i++)
+                    context.SetVariable(fields[i].Name, fields[i].Value);
                 break;
             case DecodedStruct st:
-                foreach (var child in st.Children)
-                    PromoteDecodedValues(child, context);
+                var children = st.Children;
+                for (var i = 0; i < children.Count; i++)
+                    PromoteDecodedValues(children[i], context);
                 break;
             case DecodedArray arr:
                 // スカラー配列は REQ-098 で既に処理済み。struct 配列の内部は走査しない
@@ -1335,10 +1341,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
     {
         object? prevValue = element switch
         {
-            DecodedInteger di => (object)di.Value,
+            DecodedInteger di => BoxCache.Box(di.Value),
             DecodedString ds => ds.Value,
             DecodedFloat df => df.Value,
-            DecodedStruct st => BuildStructDictionary(st),
+            DecodedStruct st => st,
             _ => null,
         };
         if (prevValue is not null)
@@ -1433,12 +1439,31 @@ public sealed class BinaryDecoder : IBinaryDecoder
     }
 
     /// <summary>要素自身または直下の子にデコードエラーが含まれるか。</summary>
-    private static bool ContainsError(DecodedNode element) => element switch
+    /// <summary>
+    /// 要素（の子孫）にデコードエラーが含まれるか。直下だけ見ると、入れ子の struct の奥で失敗した要素
+    /// （msgpack の map_entry → key → format_byte など）を「正常だが 0 バイト」と誤認し、壊れた count のぶんだけ
+    /// 同じ要素を積み続けてしまう（REQ-160 のファズで検出）。位置が進まなかった要素に対してだけ呼ばれるので再帰でよい。
+    /// </summary>
+    private static bool ContainsError(DecodedNode element)
     {
-        DecodedError => true,
-        DecodedStruct s => s.Children.Any(c => c is DecodedError),
-        _ => false,
-    };
+        switch (element)
+        {
+            case DecodedError:
+                return true;
+            case DecodedStruct s:
+                for (var i = 0; i < s.Children.Count; i++)
+                    if (ContainsError(s.Children[i])) return true;
+                return false;
+            case DecodedArray a:
+                for (var i = 0; i < a.Elements.Count; i++)
+                    if (ContainsError(a.Elements[i])) return true;
+                return false;
+            case DecodedCompressed { DecodedContent: { } content }:
+                return ContainsError(content);
+            default:
+                return false;
+        }
+    }
 
     private static bool UsesIterationContext(ExpressionNode node) => node switch
     {
@@ -1633,15 +1658,27 @@ public sealed class BinaryDecoder : IBinaryDecoder
         return toEnd;
     }
 
+    /// <summary>
+    /// 式の評価結果（long）をバイト数・オフセットとして使える int にする。
+    /// 単純なキャストだと 0xFFFF_FFFF のような値が負の int に化け、負のサイズのスコープや逆走する位置を生む（REQ-160 のファズで検出）。
+    /// </summary>
+    private static int ToByteCount(long value, string what, string fieldName)
+    {
+        if (value < 0 || value > int.MaxValue)
+            throw new InvalidOperationException(
+                $"{what} of field '{fieldName}' evaluated to {value}, which is outside the supported range 0..{int.MaxValue}");
+        return (int)value;
+    }
+
     private static int ResolveSeekOffset(FieldDefinition field, DecodeContext context)
     {
-        var seekOffset = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekExpression!, context);
+        var seekOffset = ExpressionEvaluator.EvaluateAsLong(field.SeekExpression!, context);
         if (field.SeekBaseExpression is not null)
         {
-            var seekBase = (int)ExpressionEvaluator.EvaluateAsLong(field.SeekBaseExpression, context);
+            var seekBase = ExpressionEvaluator.EvaluateAsLong(field.SeekBaseExpression, context);
             seekOffset = seekBase + seekOffset;
         }
-        return seekOffset;
+        return ToByteCount(seekOffset, "seek offset", field.Name);
     }
 
     private int ResolveSize(FieldDefinition field, DecodeContext context)
@@ -1653,7 +1690,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             return context.Remaining;
 
         if (field.SizeExpression is not null)
-            return (int)ExpressionEvaluator.EvaluateAsLong(field.SizeExpression, context);
+            return ToByteCount(ExpressionEvaluator.EvaluateAsLong(field.SizeExpression, context), "size", field.Name);
 
         throw new InvalidOperationException($"Field '{field.Name}' has no size specification");
     }
@@ -1664,7 +1701,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             return field.ElementSize.Value;
 
         if (field.ElementSizeExpression is not null)
-            return (int)ExpressionEvaluator.EvaluateAsLong(field.ElementSizeExpression, context);
+            return ToByteCount(ExpressionEvaluator.EvaluateAsLong(field.ElementSizeExpression, context), "element_size", field.Name);
 
         return null;
     }
@@ -1866,13 +1903,15 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var result = new List<ByteRange>(ranges.Count);
         foreach (var range in ranges)
         {
-            var offset = (int)ExpressionEvaluator.EvaluateAsLong(range.OffsetExpression, context);
-            var size = (int)ExpressionEvaluator.EvaluateAsLong(range.SizeExpression, context);
-
-            if (offset < 0 || offset + size > context.DataLength)
+            var offsetValue = ExpressionEvaluator.EvaluateAsLong(range.OffsetExpression, context);
+            var sizeValue = ExpressionEvaluator.EvaluateAsLong(range.SizeExpression, context);
+            // long のまま検査する（int にキャストすると巨大な値が負に化けて検査をすり抜ける）
+            if (offsetValue < 0 || sizeValue < 0 || offsetValue + sizeValue > context.DataLength)
                 throw new DecodeException(
-                    $"Checksum range [{offset}..{offset + size}) exceeds data boundary (data length: {context.DataLength})",
-                    offset, "(checksum)", "checksum");
+                    $"Checksum range [{offsetValue}..{offsetValue + sizeValue}) exceeds data boundary (data length: {context.DataLength})",
+                    Math.Clamp(offsetValue, 0, context.DataLength), "(checksum)", "checksum");
+            var offset = (int)offsetValue;
+            var size = (int)sizeValue;
 
             result.Add(new ByteRange(offset, size));
         }

@@ -8,5 +8,6 @@
     <ProjectReference Include="../../src/BinAnalyzer.Dsl/BinAnalyzer.Dsl.csproj" />
     <ProjectReference Include="../../src/BinAnalyzer.Engine/BinAnalyzer.Engine.csproj" />
     <ProjectReference Include="../../src/BinAnalyzer.Output/BinAnalyzer.Output.csproj" />
+    <ProjectReference Include="../../src/BinAnalyzer.Presentation/BinAnalyzer.Presentation.csproj" />
   </ItemGroup>
 </Project>
