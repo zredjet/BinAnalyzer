@@ -7,14 +7,18 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# runner: ubuntu-latest は 2026-10-19 以降 Ubuntu 26.04 へ移行するため、先回りして明示指定する。
+#   Linux GUI スモークが依存する libwebkit2gtk-4.1-0 / libnotify4 / xvfb は 26.04 (resolute) にも存在する。
+# actions: Node.js 20 ランタイム廃止に伴い、Node.js 24 で動く各アクションのメジャー版へ更新済み
+#   (checkout v7 / setup-dotnet v6 / upload-artifact v7 / download-artifact v8 / action-gh-release v3)。
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
@@ -53,7 +57,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             rid: linux-x64
             exe: BinAnalyzer.Cli
           - os: windows-latest
@@ -67,10 +71,10 @@ jobs:
       SAMPLE: testdata/smoke/sample.png
       FORMAT: formats/png.bdef.yaml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'

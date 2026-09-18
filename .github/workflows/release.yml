@@ -13,14 +13,18 @@ on:
         default: false
         type: boolean
 
+# runner: ubuntu-latest は 2026-10-19 以降 Ubuntu 26.04 へ移行するため、先回りして明示指定する。
+#   Linux GUI スモークが依存する libwebkit2gtk-4.1-0 / libnotify4 / xvfb は 26.04 (resolute) にも存在する。
+# actions: Node.js 20 ランタイム廃止に伴い、Node.js 24 で動く各アクションのメジャー版へ更新済み
+#   (checkout v7 / setup-dotnet v6 / upload-artifact v7 / download-artifact v8 / action-gh-release v3)。
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
@@ -38,7 +42,7 @@ jobs:
       - name: Generate third-party licenses
         run: bash scripts/generate-third-party-licenses.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: third-party-licenses
           path: THIRD-PARTY-LICENSES.txt
@@ -57,7 +61,7 @@ jobs:
             rid: win-x64
             exe: BinAnalyzer.Cli.exe
             out: binanalyzer.exe
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             rid: linux-x64
             exe: BinAnalyzer.Cli
             out: binanalyzer
@@ -75,15 +79,15 @@ jobs:
       SAMPLE: testdata/smoke/sample.png
       FORMAT: formats/png.bdef.yaml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: third-party-licenses
 
@@ -133,7 +137,7 @@ jobs:
             zip -r "$STAGING_DIR.zip" "$STAGING_DIR"
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.STAGING_DIR }}
           path: ${{ env.STAGING_DIR }}.zip
@@ -142,17 +146,17 @@ jobs:
   release:
     needs: build
     if: ${{ !inputs.dry_run }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: BinAnalyzer-${{ inputs.version }}-*
           merge-multiple: true
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ inputs.version }}
           name: v${{ inputs.version }}

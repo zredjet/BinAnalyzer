@@ -4,6 +4,20 @@
 
 汎用バイナリ構造解析ツール。YAML-DSL（`.bdef.yaml`）でバイナリフォーマットを定義し、任意のバイナリファイルを構造的に解析・ツリー表示します。
 
+## 画面イメージ
+
+### コンソール（ツリー表示）
+
+`binanalyzer sample.png -f formats/png.bdef.yaml` の既定出力。構造をツリーで表示し、チェックサム検証の結果（✓）やenumラベルを色分けして示します。
+
+![コンソールでのツリー表示](docs/images/console-tree.png)
+
+### デスクトップGUI（`-o gui`）
+
+意味色分けヘックス・構造ツリー・インスペクター・構造マップが連動するGUI。フィールド値の編集と書き戻しにも対応しています。
+
+![デスクトップGUI](docs/images/gui-desktop.png)
+
 ## 機能一覧
 
 - **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
