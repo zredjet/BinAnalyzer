@@ -10,6 +10,10 @@ namespace BinAnalyzer.Gui.Tests;
 
 public sealed class ComponentTests : BunitContext
 {
+    /// <summary>gui.js が付ける引数と同じもの: 要素の data-n をノード ID にする。</summary>
+    private static NodeEventArgs NodeArgs(AngleSharp.Dom.IElement element)
+        => new() { NodeId = int.Parse(element.GetAttribute("data-n")!) };
+
     private async Task<(GuiSession Session, GuiDocument Doc)> SetupAsync(byte width = 1)
     {
         var (session, doc) = await SessionFactory.WithPngAsync(width);
@@ -57,7 +61,9 @@ public sealed class ComponentTests : BunitContext
     {
         var (_, doc) = await SetupAsync();
         var cut = Render<HexView>(p => p.Add(x => x.Document, doc));
-        cut.FindAll(".row").First().QuerySelectorAll(".b")[12].Click();
+        // セルにハンドラは無く、コンテナが gui.js の nodeclick（data-n を載せたカスタムイベント）で受ける
+        var cell = cut.FindAll(".row").First().QuerySelectorAll(".b")[12];
+        await cell.TriggerEventAsync("onnodeclick", NodeArgs(cell));
         doc.Selected!.Name.Should().Be("type");
         doc.Index.PathOf(doc.Selected!).Should().Be("chunks[0].type");
     }
@@ -214,7 +220,7 @@ public sealed class ComponentTests : BunitContext
         segs[0].GetAttribute("style").Should().Contain("--w:8");
         segs[1].GetAttribute("style").Should().Contain("--w:25");
 
-        segs[1].Click();
+        await segs[1].TriggerEventAsync("onnodeclick", NodeArgs(segs[1]));
         doc.Index.PathOf(doc.Selected!).Should().Be("chunks[0]");
         cut.Render();
         cut.Find(".seg.sel .lab").TextContent.Should().Be("IHDR");

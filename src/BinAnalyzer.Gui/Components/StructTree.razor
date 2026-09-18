@@ -1,9 +1,74 @@
-<div class="tree" role="tree">
-    <ul>
-        <StructTreeNode Document="Document" NodeId="0" Depth="0" />
-    </ul>
+@inject IJSRuntime JS
+
+@{
+    // 展開状態は Document 側にあり、どの再描画でも変わり得るので毎回平坦化する（可視行数に比例、配列は PageSize でページング）
+    _rows = TreeRowBuilder.Build(Document.Index, Document.IsExpanded, LimitOf);
+}
+<div class="tree" role="tree" id="@_containerId">
+    @if (_rows.Count <= PlainRowLimit)
+    {
+        @foreach (var row in _rows)
+        {
+            <StructTreeRow @key="KeyOf(row)" Document="Document" Row="row" OnSelect="Select" OnHover="Hover" OnToggle="Toggle" OnShowMore="ShowMore" />
+        }
+    }
+    else
+    {
+        <Virtualize Items="_rows" ItemSize="RowHeight" OverscanCount="8" Context="row">
+            <StructTreeRow @key="KeyOf(row)" Document="Document" Row="row" OnSelect="Select" OnHover="Hover" OnToggle="Toggle" OnShowMore="ShowMore" />
+        </Virtualize>
+    }
 </div>
 
 @code {
+    /// <summary>この行数以下なら仮想化せず全行を描画する（小さいツリー・テスト）。</summary>
+    public const int PlainRowLimit = 512;
+    public const int RowHeight = 28;
+    /// <summary>1 ノードの子をいちどに並べる上限。超えた分は「さらに表示」で <see cref="PageSize"/> ずつ増やす。</summary>
+    public const int PageSize = 500;
+
     [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+
+    private readonly string _containerId = "tree-" + Guid.NewGuid().ToString("N")[..8];
+    private readonly Dictionary<int, int> _limits = new();
+    private NodeIndex? _limitsFor;
+    private List<TreeRow> _rows = [];
+    private int _lastScrolledSelection = -2;
+
+    protected override void OnParametersSet()
+    {
+        // 再デコードで索引が変わったら ID が変わるのでページング状態を捨てる
+        if (!ReferenceEquals(_limitsFor, Document.Index))
+        {
+            _limits.Clear();
+            _limitsFor = Document.Index;
+            _lastScrolledSelection = -2;
+        }
+    }
+
+    private int LimitOf(int id) => _limits.GetValueOrDefault(id, PageSize);
+    private static int KeyOf(TreeRow row) => row.IsMore ? -row.Id - 1 : row.Id;
+
+    private void Select(int id) => Document.Select(id);
+    private void Hover(int id) => Document.Hover(id);
+    private void Toggle(int id) => Document.ToggleExpanded(id);
+
+    private void ShowMore(int id)
+    {
+        _limits[id] = LimitOf(id) + PageSize;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Document.SelectedId == _lastScrolledSelection) return;
+        _lastScrolledSelection = Document.SelectedId;
+        var rowIndex = TreeRowBuilder.IndexOf(_rows, Document.SelectedId);
+        if (rowIndex < 0) return;
+        try
+        {
+            await JS.InvokeVoidAsync("binGui.scrollRowTo", _containerId, rowIndex * RowHeight, RowHeight);
+        }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+    }
 }

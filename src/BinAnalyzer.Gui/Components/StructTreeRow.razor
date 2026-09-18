@@ -1,0 +1,72 @@
+@if (Row.IsMore)
+{
+    <div class="trow" role="none">
+        <button class="node more" style="padding-left:@(Indent)px" @onclick="() => OnShowMore.InvokeAsync(Row.Id)">さらに表示（残り @Row.MoreRemaining）</button>
+    </div>
+}
+else
+{
+    var node = Document.Index.ById(Row.Id);
+    var kind = Document.Index.KindOf(Row.Id);
+    var selected = Document.SelectedId == Row.Id;
+    var (validOk, validNg) = ValidationMarks(node);
+    var value = NodeDisplayText.ValueOnly(node);
+    var label = node is DecodedInteger { EnumLabel: { } l } ? l : null;
+    if (label is not null) value = ((DecodedInteger)node).Value.ToString();
+    var name = node is DecodedStruct s && s.StructType != s.Name ? $"{s.Name} → {s.StructType}" : node.Name;
+    var meta = $"{node.Offset:X8}"[4..] + "  " + node.Size + " B";
+    var id = Row.Id;
+    <div class="trow @(Row.Expanded ? "" : "collapsed")" role="none">
+        <button class="node @(selected ? "sel" : "")" role="treeitem" aria-level="@(Row.Depth + 1)"
+                aria-expanded="@(Row.HasChildren ? (Row.Expanded ? "true" : "false") : null)" aria-selected="@(selected ? "true" : "false")"
+                data-n="@id" style="padding-left:@(Indent)px"
+                @onclick="() => OnSelect.InvokeAsync(id)" @onmouseover="() => OnHover.InvokeAsync(id)" @onmouseover:stopPropagation="true">
+            <svg class="chev @(Row.HasChildren ? "" : "leaf")" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+                 @onclick="() => OnToggle.InvokeAsync(id)" @onclick:stopPropagation="true"><path d="M4 6l4 4 4-4" /></svg>
+            <i class="dot @FieldKindMapper.CssClass(kind)"></i>
+            <span class="nm">@name</span>
+            @if (value.Length > 0)
+            {
+                <span class="val">@value</span>
+            }
+            @if (label is not null)
+            {
+                <span class="lbl">@label</span>
+            }
+            @if (validOk)
+            {
+                <span class="ok">✓</span>
+            }
+            @if (validNg)
+            {
+                <span class="ng">✗</span>
+            }
+            <span class="meta">@meta</span>
+        </button>
+    </div>
+}
+
+@code {
+    /// <summary>1 段あたりのインデント（px）。</summary>
+    public const int IndentPerLevel = 18;
+
+    [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+    [Parameter, EditorRequired] public TreeRow Row { get; set; }
+    [Parameter] public EventCallback<int> OnSelect { get; set; }
+    [Parameter] public EventCallback<int> OnHover { get; set; }
+    [Parameter] public EventCallback<int> OnToggle { get; set; }
+    [Parameter] public EventCallback<int> OnShowMore { get; set; }
+
+    private int Indent => 4 + Row.Depth * IndentPerLevel;
+
+    private static (bool Ok, bool Ng) ValidationMarks(DecodedNode node)
+    {
+        bool? v = node switch
+        {
+            DecodedInteger { ChecksumValid: { } c } => c,
+            DecodedBytes { ChecksumValid: { } c } => c,
+            _ => node.ValidationPassed ?? node.Validation?.Passed,
+        };
+        return v switch { true => (true, false), false => (false, true), _ => (false, false) };
+    }
+}

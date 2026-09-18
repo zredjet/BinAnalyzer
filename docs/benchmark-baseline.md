@@ -87,5 +87,51 @@ publish オプション: `-c Release -r osx-arm64 --self-contained true -p:Publi
 ### 備考
 
 - 各 OS のサイズは release ワークフローの `Package` ステップのログ（`ls -l`）で確認できる。
-- サイズ削減（trimming、`InvariantGlobalization`、ASP.NET Core 共有フレームワークの部分参照）は REQ-177 以降の課題。
+- サイズ削減（trimming、`InvariantGlobalization`、ASP.NET Core 共有フレームワークの部分参照）は REQ-181 で扱う。
+
+## Presentation 層・GUI の大容量ファイル性能（REQ-177）
+
+計測日: 2026-09-18 / macOS 26.5.1 / Apple M4 Max / .NET SDK 10.0.302 / BenchmarkDotNet v0.14.0（`--job short`）
+
+`PresentationBenchmarks` は `SyntheticTree`（PCAP 風、1 パケット 38 ノード）で 1 万 / 10 万 / 100 万ノードのツリーを作り、GUI が「開く」ときに走る処理を測る。
+
+```bash
+dotnet run -c Release --project benchmarks/BinAnalyzer.Benchmarks -- --filter '*PresentationBenchmarks*' --job short
+```
+
+### NodeIndex.Build（索引構築）
+
+| ノード数 | 改善前 Mean | 改善前 Allocated | 改善後 Mean | 改善後 Allocated |
+|---:|---:|---:|---:|---:|
+| 10,000 | 2.95 ms | 5.56 MB | 0.39 ms | 1.30 MB |
+| 100,000 | 34.3 ms | 55.2 MB | 5.1 ms | 15.8 MB |
+| 1,000,000 | 380 ms | 513 MB | 86 ms | 143 MB |
+
+改善内容: 全ノードのパス文字列（`chunks[0].data.width`）と祖先 ID 列（`/0/2/3/`）、パス→ID 辞書を保持するのをやめ、親リンクから必要時に組み立てる。名前の正規表現判定（`FieldKindMapper`）を名前ごとにキャッシュ。ノード数を先に数えてリストと辞書を事前確保。残る 143 MB の大半はノード→ID の辞書と 6 本の並列リスト。
+
+### その他（100 万ノード）
+
+| メソッド | 改善前 | 改善後 | 備考 |
+|---|---:|---:|---|
+| HexRowBuilder.Build（1 行あたり） | 0.48 µs | 0.87 µs | 祖先 ID 列を行生成時に組み立てるぶん増えたが、受入条件（50 µs）の 1/50 |
+| StructureMapBuilder.Build | 70 µs | 77 µs | セグメント上限 256 で頭打ち |
+| ChecksumSummary.Compute | 3.0 ms | 11.0 ms | チェックサムごとにパスを組み立てる |
+| NodeSearch.ByName | 5.2 ms | 5.6 ms | |
+| NodeIndex.FindByPathPattern | 43 ms / 251 MB | 171 ms / 336 MB | 全ノードのパスを検索時に生成する（索引時に持たない代償）。検索は明示操作なので許容 |
+| BreadcrumbBuilder.Build | 8.7 µs | 76 ns | 配列内インデックスを線形探索から保持値に |
+| NodeIndex.PathOf | 0（保持値） | 54 ns | |
+
+### 実ファイル（デスクトップ GUI、`BINANALYZER_GUI_TIMING=1`）
+
+生成した PCAP（`benchmarks` の `CreateScaledPcap` と同じ Ethernet / IPv4 / TCP 構造）を `-o gui` で開き、プロセス起動からの経過時間を記録。Release ビルド、2 回計測の代表値。
+
+| ファイル | ノード数 | デコード | 索引 | 最初の描画（起動から） | 選択→描画 | 最大 RSS |
+|---|---:|---:|---:|---:|---:|---:|
+| 50 MB（1400 B ペイロード、35,666 パケット） | 1,212,654 | 1.08 s | 0.35 s | 2.53 s | 42 ms | 780 MB |
+| 5 MB（ペイロード無し、74,898 パケット） | 2,546,542 | 2.0 s | 1.03 s | 3.9 s | 45 ms | 1.29 GB |
+
+- 受入条件 2（50 MB を 3 秒以内、選択 100 ms 以内）を満たす。起動から「開く」開始までの約 0.5 秒（ランタイム起動 + Photino）を含む
+- 索引構築は同じノード数のベンチマーク（86 ms / 100 万）より遅い。デコード直後の冷えた状態（JIT・GC 昇格・キャッシュ局所性）で 1 回だけ走るため。`AggressiveOptimization` で 390 → 350 ms
+- メモリと時間はファイルサイズではなくノード数で決まる。5 MB でも小さなパケットが 7.5 万個並ぶと 1.3 GB 使う。デコード結果のノードあたり約 500 B と、デコード自体の時間（約 0.8 µs / ノード）はエンジン側の課題として REQ-180 に切り出した
+- 選択の反映（42 ms）は、ヘックス（見えている行のみ再描画）・ツリー（可視行の平坦化と再描画）・インスペクター・構造マップ・ステータスの合計
 

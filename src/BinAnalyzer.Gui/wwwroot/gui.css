@@ -177,19 +177,17 @@
 .gui-root .ptab .n{font-size:11px;color:var(--text-3)}
 .gui-root .pane-view{flex:1;min-height:0;display:flex;flex-direction:column}
 
-/* Tree */
+/* Tree: 平坦な行のリスト（行仮想化のため入れ子にしない、REQ-177）。インデントは padding-left で付ける */
 .gui-root .tree{flex:1;min-height:0;overflow:auto;padding:6px}
-.gui-root .tree ul{list-style:none;margin:0;padding:0}
-.gui-root .tree li{position:relative}
-.gui-root .tree ul ul{margin-left:14px;border-left:1px solid var(--stroke);padding-left:4px}
+.gui-root .trow{position:relative;height:28px}
 .gui-root .node{display:flex;align-items:center;gap:6px;width:100%;height:28px;padding:0 6px 0 4px;border-radius:var(--r-ctl);text-align:left;font-size:13px;white-space:nowrap;overflow:hidden}
 .gui-root .node:hover{background:var(--layer-2)}
 .gui-root .node.sel{background:var(--layer-3)}
 .gui-root .node.sel::before{content:"";position:absolute;left:-2px;top:7px;bottom:7px;width:3px;border-radius:2px;background:var(--accent)}
-.gui-root .node.more{color:var(--accent);justify-content:center}
+.gui-root .node.more{color:var(--accent);justify-content:flex-start}
 .gui-root .node .chev{width:16px;height:16px;flex:none;color:var(--text-3);transition:transform .15s}
 .gui-root .node .chev.leaf{visibility:hidden}
-.gui-root li.collapsed>.node .chev{transform:rotate(-90deg)}
+.gui-root .trow.collapsed>.node .chev{transform:rotate(-90deg)}
 .gui-root .node .dot{width:8px;height:8px;border-radius:2px;flex:none;background:var(--c,var(--pad))}
 .gui-root .node .nm{color:var(--text);flex:none}
 .gui-root .node .val{color:var(--text-2);font-family:var(--mono);font-size:12px;overflow:hidden;text-overflow:ellipsis}

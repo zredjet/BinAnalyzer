@@ -85,10 +85,15 @@ public sealed class GuiDocument
         Errors = outcome.Errors;
         DecodeTime = outcome.Elapsed;
         DecodeFailure = outcome.Failure;
+        var t0 = GuiTiming.Now;
         Index = NodeIndex.Build(Root);
+        var t1 = GuiTiming.Now;
         Hex = new HexRowBuilder(Data, Index);
         Map = StructureMapBuilder.Build(Index, Data.Length);
+        var t2 = GuiTiming.Now;
         Summary = ChecksumSummary.Compute(Index);
+        var t3 = GuiTiming.Now;
+        GuiTiming.Log($"{DisplayName}: decode {DecodeTime.TotalMilliseconds:F1} ms, index {t1 - t0:F1} ms ({Index.Count} nodes), map {t2 - t1:F1} ms, summary {t3 - t2:F1} ms, {Data.Length} bytes");
     }
 
     /// <summary>フォーマット / エンディアンを変えて再デコードする。選択はパスで復元する。</summary>
@@ -119,6 +124,7 @@ public sealed class GuiDocument
 
     public void Select(int id)
     {
+        GuiTiming.MarkSelect();
         if (id >= Index.Count) id = -1;
         if (id >= 0) ExpandTo(id, raise: false);
         if (SelectedId == id) { Changed?.Invoke(); return; }

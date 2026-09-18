@@ -199,12 +199,20 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 必要なランタイムが無い場合は起動せず、導入方法を標準エラーに出して終了コード 1 で戻ります。
 
+#### 大きなファイル
+
+ヘックスビューとツリーは見えている行だけを描画するので、数十 MB のファイルでも開いた後の操作は軽いままです（50 MB / 120 万ノードの PCAP で、開いてから最初の描画まで約 2.7 秒、選択の反映は約 40 ms。`docs/benchmark-baseline.md` を参照）。
+ただしデコード結果はノードごとにオブジェクトを持つため、メモリはファイルの十数倍（小さなパケットが並ぶ PCAP では数百倍）になります。デスクトップ版は 256 MB を超えるファイルを開く前に確認を出します。閾値は `BINANALYZER_GUI_LARGE_FILE_MB` で変更できます（`0` で確認しない）。Web 版は 100 MB が上限です。
+
 #### テスト・CI 向け環境変数
 
 | 変数 | 意味 |
 |---|---|
 | `BINANALYZER_GUI_AUTOCLOSE` | 窓が開いてから自動で閉じるまでのミリ秒。`1` / `true` は既定の 3000 ms。CI の起動スモーク用 |
 | `BINANALYZER_GUI_DEBUG` | `1` で埋め込み資産の配信ログと Photino の詳細ログを標準エラーに出す |
+| `BINANALYZER_GUI_LARGE_FILE_MB` | 開く前に確認するファイルサイズの閾値（MB）。既定 256、`0` で確認しない |
+| `BINANALYZER_GUI_TIMING` | `1` で「開く」の各段階（デコード / 索引 / 構造マップ / 集計）、最初の描画、選択の反映までの時間を標準エラーに出す |
+| `BINANALYZER_GUI_TIMING_SELECT` | ノード ID。最初の描画から 3 秒後にそのノードを選択し、反映までの時間を計測する（`BINANALYZER_GUI_TIMING=1` と併用） |
 
 フォーマット定義は、実行ファイルの隣またはカレントディレクトリの `formats/` と、`-f` で指定したファイルから選択できます。
 

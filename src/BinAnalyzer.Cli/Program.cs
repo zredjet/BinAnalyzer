@@ -164,6 +164,21 @@ rootCommand.SetAction((parseResult) =>
         }
 
         var data = ReadInputData(filePath, readFromStdin);
+
+        if (!quiet && outputFormat == "gui")
+        {
+            // GUI はセッション側でデコードする（フォーマット切替・エンディアン上書き・エラー継続のため）。
+            // ここでデコードすると大きなファイルで二重に時間とメモリを使うので、読み込んだらすぐ渡す（REQ-177）
+            var launch = new GuiLaunchOptions
+            {
+                FilePath = readFromStdin ? null : Path.GetFullPath(filePath!),
+                Data = data,
+                DisplayName = readFromStdin ? "<stdin>" : Path.GetFileName(filePath!),
+                FormatPath = formatFile.FullName,
+            };
+            return RunGui(launch);
+        }
+
         var errorMode = onError == "continue" ? ErrorMode.Continue : ErrorMode.Stop;
         var decodeOptions = maxRepeat.HasValue ? new DecodeOptions { MaxRepeat = maxRepeat.Value } : null;
 
@@ -201,19 +216,6 @@ rootCommand.SetAction((parseResult) =>
                 var tuiApp = new TuiApp();
                 tuiApp.Run(decoded, data, displayName, formatFile.Name);
                 return 0;
-            }
-
-            if (outputFormat == "gui")
-            {
-                // GUI はセッション側で再デコードする（フォーマット切替・エンディアン上書きのため）
-                var launch = new GuiLaunchOptions
-                {
-                    FilePath = readFromStdin ? null : Path.GetFullPath(filePath!),
-                    Data = data,
-                    DisplayName = readFromStdin ? "<stdin>" : Path.GetFileName(filePath!),
-                    FormatPath = formatFile.FullName,
-                };
-                return RunGui(launch);
             }
 
             var colorMode = colorSetting switch
