@@ -129,15 +129,16 @@ public sealed class BinaryDecoder : IBinaryDecoder
         }
 
         var startOffset = context.Position;
-        var children = new List<DecodedNode>();
+        var fields = structDef.Fields;
+        var children = new List<DecodedNode>(fields.Count);
 
         var isBitstream = structDef.IsBitstream;
         if (isBitstream)
             context.EnterBitstreamMode(structDef.BitOrder ?? BitOrder.Msb);
 
-        foreach (var field in structDef.Fields)
+        for (var i = 0; i < fields.Count; i++)
         {
-            var node = DecodeField(field, format, context, children, structDef);
+            var node = DecodeField(fields[i], format, context, children, structDef);
             if (node is not null)
                 children.Add(node);
         }
@@ -782,8 +783,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
             result = DecodeNestedStruct(structDef, format, context, field.Name, FieldType.Struct);
         }
 
-        // メンバーアクセス用に構造体を辞書として登録
-        context.SetVariable(field.Name, BuildStructDictionary(result));
+        // メンバーアクセス用に構造体ノードそのものを登録（式評価が子を名前で引く）
+        context.SetVariable(field.Name, result);
         return result;
     }
 
@@ -801,8 +802,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
         string? matchedStructRef = null;
         if (field.SwitchCases is not null)
         {
-            foreach (var switchCase in field.SwitchCases)
+            var cases = field.SwitchCases;
+            for (var ci = 0; ci < cases.Count; ci++)
             {
+                var switchCase = cases[ci];
                 var caseValue = ExpressionEvaluator.Evaluate(switchCase.Condition, context);
                 if (ValuesEqual(switchValue, caseValue))
                 {
@@ -839,7 +842,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         }
 
         // メンバーアクセス用に構造体を辞書として登録
-        context.SetVariable(field.Name, BuildStructDictionary(switchResult));
+        context.SetVariable(field.Name, switchResult);
         return switchResult;
     }
 
@@ -1281,25 +1284,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         if (hasBoundarySize && !context.IsBitstreamMode)
             context.PopScope();
 
-        // 配列要素値を変数として登録（後続フィールドの式から参照可能にする）
-        var elementValues = new List<object>();
-        foreach (var element in elements)
-        {
-            object? val = element switch
-            {
-                DecodedInteger di => (object)di.Value,
-                DecodedString ds => ds.Value,
-                DecodedFloat df => df.Value,
-                DecodedStruct st => BuildStructDictionary(st),
-                _ => null,
-            };
-            if (val is not null)
-                elementValues.Add(val);
-        }
-        if (elementValues.Count == elements.Count && elements.Count > 0)
-            context.SetVariable(field.Name, elementValues);
-
-        return new DecodedArray
+        var array = new DecodedArray
         {
             Name = field.Name,
             Offset = startOffset,
@@ -1310,62 +1295,13 @@ public sealed class BinaryDecoder : IBinaryDecoder
             TruncationReason = truncationReason,
             DslType = field.Type,
         };
-    }
 
-    private static Dictionary<string, object> BuildStructDictionary(DecodedStruct st)
-    {
-        var dict = new Dictionary<string, object>();
-        foreach (var child in st.Children)
-        {
-            switch (child)
-            {
-                case DecodedInteger di:
-                    dict[di.Name] = di.Value;
-                    break;
-                case DecodedString ds:
-                    dict[ds.Name] = ds.Value;
-                    break;
-                case DecodedFloat df:
-                    dict[df.Name] = df.Value;
-                    break;
-                case DecodedVirtual dv:
-                    dict[dv.Name] = dv.Value;
-                    break;
-                case DecodedBitfield bf:
-                    dict[bf.Name] = bf.RawValue;
-                    foreach (var f in bf.Fields)
-                        dict[f.Name] = f.Value;
-                    break;
-                case DecodedStruct nested:
-                    dict[nested.Name] = BuildStructDictionary(nested);
-                    break;
-                case DecodedArray arr:
-                    var arrayValues = BuildArrayValues(arr);
-                    if (arrayValues is not null)
-                        dict[arr.Name] = arrayValues;
-                    break;
-            }
-        }
-        return dict;
-    }
+        // 配列を変数として登録（後続フィールドの式から要素・len/min/max/sum を参照可能にする）。
+        // 要素の値の変換は式評価時に行う（NodeValues）
+        if (NodeValues.IsValueArray(array))
+            context.SetVariable(field.Name, array);
 
-    private static List<object>? BuildArrayValues(DecodedArray arr)
-    {
-        var values = new List<object>();
-        foreach (var elem in arr.Elements)
-        {
-            object? val = elem switch
-            {
-                DecodedInteger di => (object)di.Value,
-                DecodedString ds => ds.Value,
-                DecodedFloat df => df.Value,
-                DecodedStruct s => BuildStructDictionary(s),
-                _ => null,
-            };
-            if (val is null) return null;
-            values.Add(val);
-        }
-        return values.Count > 0 ? values : null;
+        return array;
     }
 
     private static void PromoteDecodedValues(DecodedNode node, DecodeContext context)
@@ -1386,12 +1322,14 @@ public sealed class BinaryDecoder : IBinaryDecoder
                 break;
             case DecodedBitfield bf:
                 context.SetVariable(bf.Name, bf.RawValue);
-                foreach (var field in bf.Fields)
-                    context.SetVariable(field.Name, field.Value);
+                var fields = bf.Fields;
+                for (var i = 0; i < fields.Count; i++)
+                    context.SetVariable(fields[i].Name, fields[i].Value);
                 break;
             case DecodedStruct st:
-                foreach (var child in st.Children)
-                    PromoteDecodedValues(child, context);
+                var children = st.Children;
+                for (var i = 0; i < children.Count; i++)
+                    PromoteDecodedValues(children[i], context);
                 break;
             case DecodedArray arr:
                 // スカラー配列は REQ-098 で既に処理済み。struct 配列の内部は走査しない
@@ -1403,10 +1341,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
     {
         object? prevValue = element switch
         {
-            DecodedInteger di => (object)di.Value,
+            DecodedInteger di => BoxCache.Box(di.Value),
             DecodedString ds => ds.Value,
             DecodedFloat df => df.Value,
-            DecodedStruct st => BuildStructDictionary(st),
+            DecodedStruct st => st,
             _ => null,
         };
         if (prevValue is not null)
@@ -1506,14 +1444,26 @@ public sealed class BinaryDecoder : IBinaryDecoder
     /// （msgpack の map_entry → key → format_byte など）を「正常だが 0 バイト」と誤認し、壊れた count のぶんだけ
     /// 同じ要素を積み続けてしまう（REQ-160 のファズで検出）。位置が進まなかった要素に対してだけ呼ばれるので再帰でよい。
     /// </summary>
-    private static bool ContainsError(DecodedNode element) => element switch
+    private static bool ContainsError(DecodedNode element)
     {
-        DecodedError => true,
-        DecodedStruct s => s.Children.Any(ContainsError),
-        DecodedArray a => a.Elements.Any(ContainsError),
-        DecodedCompressed { DecodedContent: { } content } => ContainsError(content),
-        _ => false,
-    };
+        switch (element)
+        {
+            case DecodedError:
+                return true;
+            case DecodedStruct s:
+                for (var i = 0; i < s.Children.Count; i++)
+                    if (ContainsError(s.Children[i])) return true;
+                return false;
+            case DecodedArray a:
+                for (var i = 0; i < a.Elements.Count; i++)
+                    if (ContainsError(a.Elements[i])) return true;
+                return false;
+            case DecodedCompressed { DecodedContent: { } content }:
+                return ContainsError(content);
+            default:
+                return false;
+        }
+    }
 
     private static bool UsesIterationContext(ExpressionNode node) => node switch
     {

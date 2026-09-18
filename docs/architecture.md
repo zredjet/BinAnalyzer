@@ -129,7 +129,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 - **DecodedStruct** — 名前付き構造体と子要素
 - **DecodedArray** — 繰り返し要素
-- **DecodedInteger** — オプションのenumラベル付き、チェックサム検証結果（ChecksumValid, ChecksumExpected）、文字列テーブル参照値
+- **DecodedInteger** — オプションのenumラベル付き、チェックサム検証結果（ChecksumValid, ChecksumExpected）、文字列テーブル参照値。これらは使うノードだけが持つ補助オブジェクトに置き、本体は 104 B（REQ-180）
 - **DecodedFloat** — 単精度/倍精度浮動小数点数
 - **DecodedBytes** — オプションのバリデーション付き
 - **DecodedString** — オプションのフラグ付き
@@ -141,7 +141,8 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### バイナリデコーダー — Engine/
 
-- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）
+- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）。スコープと変数辞書は Pop 後に使い回し、小さな整数のボックスは `BoxCache` で共有する（REQ-180）
+- **NodeValues** — 式評価から struct / array の値を参照する変換。struct フィールドは `DecodedStruct` ノードそのものを変数に束縛し、メンバーアクセス・添字・`len` 等のときに子を名前で引く（以前はフィールドごとに辞書を再帰的に複製していた）
 - **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価。`@state_name` による状態変数の参照にも対応
 - **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決、テンプレート引数の解決・バインドのオーケストレーター
 - **壊れた入力への防御（REQ-160）** — 式の評価結果をバイト数・オフセットにするときは 0..int.MaxValue に収まることを検査する（`ToByteCount`）。スコープの境界は long で計算し負のサイズを拒否する。struct / switch の入れ子は `DecodeOptions.MaxDepth`（既定 64）で打ち切り、スタックオーバーフロー（プロセスごと落ちる）を `DecodeException` に変える。エラー継続モードでは、失敗したフィールド名を「未定義」として束縛し外側の同名変数へフォールバックさせない（再帰フォーマットの無限再帰防止）。位置が進まないエラー要素は `repeat_count` / `until` / `while` でも打ち切る。フィールド単位の `endianness:` は変数を捕捉しないオーバーレイスコープ（値は外側に残る）

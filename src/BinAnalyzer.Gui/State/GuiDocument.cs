@@ -77,6 +77,9 @@ public sealed class GuiDocument
         Expanded.Add(0);
         foreach (var child in NodeChildren.Of(Root))
             Expanded.Add(Index.IdOf(child));
+        // デコードと索引構築はノード数に比例したゴミ（ファイルの数倍）を出す。開いた直後に一度だけ回収して
+        // 常駐メモリを木と索引のぶんに近づける（REQ-180）。編集のたびの再デコードでは行わない
+        GC.Collect();
     }
 
     private void Apply(DecodeOutcome outcome)

@@ -135,3 +135,60 @@ dotnet run -c Release --project benchmarks/BinAnalyzer.Benchmarks -- --filter '*
 - メモリと時間はファイルサイズではなくノード数で決まる。5 MB でも小さなパケットが 7.5 万個並ぶと 1.3 GB 使う。デコード結果のノードあたり約 500 B と、デコード自体の時間（約 0.8 µs / ノード）はエンジン側の課題として REQ-180 に切り出した
 - 選択の反映（42 ms）は、ヘックス（見えている行のみ再描画）・ツリー（可視行の平坦化と再描画）・インスペクター・構造マップ・ステータスの合計
 
+
+## デコード結果のメモリと時間（REQ-180）
+
+計測日: 2026-09-18 / macOS 26.5.1 / Apple M4 Max / .NET 10.0.10 Release
+
+REQ-177 と同じ生成 PCAP を `benchmarks` の `probe` モードで 1 回デコードし、割り当て（`GC.GetTotalAllocatedBytes`）と時間をノード数で割った。
+
+```bash
+dotnet run -c Release --project benchmarks/BinAnalyzer.Benchmarks -- probe file.pcap formats/pcap.bdef.yaml
+```
+
+### デコード 1 回の割り当てと時間
+
+| ファイル | ノード数 | 改善前 割り当て | 改善後 割り当て | 改善前 時間 | 改善後 時間 |
+|---|---:|---:|---:|---:|---:|
+| 50 MB PCAP（1400 B ペイロード） | 1,212,654 | 1,277 MB（1,104 B/ノード） | 196 MB（169 B/ノード） | 945 ms | 555 ms |
+| 5 MB PCAP（ペイロード無し） | 2,546,542 | 2,676 MB（1,102 B/ノード） | 412 MB（170 B/ノード） | 1,827 ms | 874 ms |
+
+改善前の割り当ての内訳（`GCAllocationTick` の型別サンプル）: 辞書のエントリ配列 46%、ボックス化した `Int64` 15%、辞書のバケット配列 11%、`Dictionary` 本体 5% — 合わせて 77% が「struct フィールドごとに作っていた `Dictionary<string, object>`（入れ子を再帰的に複製）」と「変数束縛のためのボックス化」だった。ノードオブジェクト自体は 15% 程度。
+
+改善内容:
+
+1. struct / array の変数はデコード結果ノードそのものを束縛し、式評価（メンバーアクセス・添字・`len` / `min` / `max` / `sum`）が必要なときに子を名前で引く（`NodeValues`）。辞書の複製が無くなった
+2. スコープオブジェクトと変数辞書を Pop 後に使い回す（要素ごとの push で辞書を作り直さない）
+3. −1024〜16383 の整数のボックスをキャッシュ（`BoxCache`）。長さ・個数・ポート番号・フラグの大半が収まる
+4. `DecodedInteger` の enum / チェックサム / 文字列テーブル関連 8 プロパティを、使うノードだけが持つ補助オブジェクトに移動（168 → 104 B / ノード）。`DecodedBytes` のチェックサム関連も同様（128 → 104 B）
+5. struct の子リストをフィールド数で事前確保、`IReadOnlyList` の `foreach`（列挙子のボックス化）を添字ループに、enum の値検索を辞書に
+
+### ノード 1 個の実サイズ（`GC.GetAllocatedBytesForCurrentThread` で計測）
+
+| 型 | 改善前 | 改善後 |
+|---|---:|---:|
+| DecodedInteger | 168 B | 104 B（enum / チェックサム付きは +80 B） |
+| DecodedBytes | 128 B | 104 B |
+| DecodedStruct（子リスト除く） | 96 B | 96 B |
+| DecodedVirtual | 88 B | 88 B |
+| DecodedString | 104 B | 104 B |
+
+### BenchmarkDotNet（`DecodeBenchmarks`、`--job short`）
+
+| メソッド | 改善前 Mean | 改善前 Allocated | 改善後 Mean | 改善後 Allocated |
+|---|---:|---:|---:|---:|
+| DecodeMediumPcap（100 パケット） | 198 µs | 998 KB | 206 µs | 560 KB |
+| DecodeLargePcap（10,000 パケット、約 38 万ノード） | 69.7 ms | 99,482 KB（262 B/ノード） | 56.3 ms | 55,419 KB（146 B/ノード） |
+| DecodeLargePng（10,000 チャンク） | 12.5 ms | 18,701 KB | 17.3 ms | 20,734 KB |
+
+PNG はチャンクごとに CRC（チェックサム）と文字列を持ち struct のメンバー参照が無いので、辞書削減の恩恵が無く、補助オブジェクトのぶん割り当てが 1 割増えている（時間の差は short ジョブのばらつき）。
+
+### GUI の常駐メモリ（`/usr/bin/time -l`、`-o gui` を 6 秒で自動終了）
+
+| ファイル | 改善前 最大 RSS | 改善後 最大 RSS | 備考 |
+|---|---:|---:|---|
+| 50 MB PCAP | 780 MB | 617 MB | 開いた直後に一度だけ `GC.Collect()`（`GuiDocument` コンストラクタ） |
+| 5 MB 小パケット PCAP | 1,290 MB | 903 MB | |
+| 参考: 1 KB の PNG（プロセスの下限） | — | 177 MB | ランタイム + ASP.NET Core + Photino |
+
+下限を引いた「木 + 索引 + データ」の分は 50 MB で 600 → 440 MB、5 MB 小パケットで 1,110 → 726 MB。残りの主な内訳は、ノードオブジェクト（約 140 B / ノード）、`NodeIndex`（約 120 B / ノード、うちノード→ID 辞書が 3 割）、bitfield のサブフィールド（`BitfieldValue` 11 個で約 700 B / bitfield）。
