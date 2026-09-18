@@ -57,6 +57,8 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 
 フォーマット定義のフィールドレベルで `repeat_max` が指定されている場合、そちらが優先されます。
 
+このほかエンジンには壊れた入力向けの固定の防御があります（REQ-160）: struct / switch の入れ子は 64 段で打ち切り（API では `DecodeOptions.MaxDepth` で変更可）、サイズ・オフセット式が 0〜2^31-1 の範囲外ならデコードエラー、エラー継続モードで位置が進まない要素は繰り返しを打ち切ります。
+
 ```bash
 # 繰り返しを最大1000要素に制限
 dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml --max-repeat 1000

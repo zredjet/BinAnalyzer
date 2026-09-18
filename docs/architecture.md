@@ -29,7 +29,8 @@ BinAnalyzer/
 │   ├── BinAnalyzer.Presentation.Tests/
 │   ├── BinAnalyzer.Tui.Tests/
 │   ├── BinAnalyzer.Gui.Tests/     # bUnit コンポーネントテスト
-│   └── BinAnalyzer.Integration.Tests/
+│   ├── BinAnalyzer.Integration.Tests/
+│   └── BinAnalyzer.Fuzz.Tests/    # ファズ・プロパティベーステスト（全フォーマット定義 × ランダム / 切り詰め / 変異入力）
 ├── benchmarks/
 │   └── BinAnalyzer.Benchmarks/    # BenchmarkDotNetによるパフォーマンス計測
 └── formats/
@@ -143,6 +144,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）
 - **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価。`@state_name` による状態変数の参照にも対応
 - **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決、テンプレート引数の解決・バインドのオーケストレーター
+- **壊れた入力への防御（REQ-160）** — 式の評価結果をバイト数・オフセットにするときは 0..int.MaxValue に収まることを検査する（`ToByteCount`）。スコープの境界は long で計算し負のサイズを拒否する。struct / switch の入れ子は `DecodeOptions.MaxDepth`（既定 64）で打ち切り、スタックオーバーフロー（プロセスごと落ちる）を `DecodeException` に変える。エラー継続モードでは、失敗したフィールド名を「未定義」として束縛し外側の同名変数へフォールバックさせない（再帰フォーマットの無限再帰防止）。位置が進まないエラー要素は `repeat_count` / `until` / `while` でも打ち切る。フィールド単位の `endianness:` は変数を捕捉しないオーバーレイスコープ（値は外側に残る）
 - **Crc32Calculator** — ISO 3309準拠のCRC-32計算器（PNG/ZIP互換）
 - **EncodingHelper** — Shift-JISエンコーディング登録・キャッシュヘルパー
 - **DiffEngine** — 2つのDecodedStructを再帰比較し、変更・追加・削除の差分リストを生成

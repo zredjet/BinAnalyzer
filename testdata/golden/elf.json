@@ -86,7 +86,7 @@
       "_type": "struct",
       "type": "switch",
       "offset": 16,
-      "size": -16,
+      "size": 0,
       "name": "body",
       "struct_type": "elf64_body",
       "children": {

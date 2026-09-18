@@ -142,13 +142,23 @@
               "hex": "0x28000000"
             },
             "image_data": {
-              "_type": "error",
+              "_type": "struct",
               "type": "switch",
               "offset": 22,
-              "size": 0,
+              "size": 40,
               "name": "image_data",
-              "error_message": "Variable \u0027image_magic\u0027 not found in current scope",
-              "field_type": "Switch"
+              "struct_type": "bmp_dib_image_data",
+              "children": {
+                "data": {
+                  "_type": "bytes",
+                  "type": "bytes",
+                  "offset": 22,
+                  "size": 40,
+                  "description": "BMP DIB\u5F62\u5F0F\u753B\u50CF\u30C7\u30FC\u30BF\uFF08BMP\u30D5\u30A1\u30A4\u30EB\u30D8\u30C3\u30C0\u306A\u3057\u306EBITMAPINFOHEADER\uFF09",
+                  "name": "data",
+                  "hex": "28 00 00 00 01 00 00 00 02 00 00 00 01 00 20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+                }
+              }
             }
           }
         }

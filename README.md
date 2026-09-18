@@ -213,6 +213,14 @@ dotnet build
 dotnet test
 ```
 
+`tests/BinAnalyzer.Fuzz.Tests` は全フォーマット定義をランダム入力・切り詰め・変異入力でデコードし、クラッシュ・ハング・不変条件の破れが無いことを確認します。既定は固定シードの小さなセット（数秒）で `dotnet test` に含まれます。長く回すときは環境変数で規模を変えます。
+
+```bash
+BINANALYZER_FUZZ_ITERATIONS=50 BINANALYZER_FUZZ_SEED=random dotnet test tests/BinAnalyzer.Fuzz.Tests
+```
+
+失敗メッセージにはフォーマット・シード・入力（Base64）が含まれるので、同じシードで再実行すれば再現できます。
+
 ## 必要環境
 
 - .NET 10 SDK

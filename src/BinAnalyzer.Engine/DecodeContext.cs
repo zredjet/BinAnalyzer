@@ -56,19 +56,27 @@ public sealed class DecodeContext
 
     public void PushScope(int size)
     {
-        var end = _position + size;
+        // 負のサイズ（式の評価結果が壊れている）を通すと End < Start のスコープができ、Pop で位置が逆走する
+        if (size < 0)
+            throw new InvalidOperationException($"Cannot push scope of negative size {size} at position {_position}");
+        // int で足すと 0x7FFFFFFF 級のサイズで桁あふれして負になり、境界検査をすり抜ける
+        var end = (long)_position + size;
         if (end > _data.Length)
             throw new InvalidOperationException(
                 $"Cannot push scope of size {size} at position {_position}: would exceed data length {_data.Length}");
-        _scopeStack.Push(new Scope(_position, end));
+        _scopeStack.Push(new Scope(_position, (int)end));
     }
 
     /// <summary>
     /// 境界変更なし、エンディアンのみ切り替えるオーバーレイスコープをプッシュする。
     /// </summary>
-    public void PushEndiannessScope(Endianness endianness)
+    /// <param name="capturesVariables">
+    /// false なら、このスコープの間に束縛された変数は外側（最も近い変数を持つスコープ）に書かれる。
+    /// フィールド単位の <c>endianness:</c> はフィールドのデコード中だけ有効なので、値まで一緒に捨ててはいけない。
+    /// </param>
+    public void PushEndiannessScope(Endianness endianness, bool capturesVariables = true)
     {
-        _scopeStack.Push(new Scope(_position, CurrentScope.End, endianness, isOverlay: true));
+        _scopeStack.Push(new Scope(_position, CurrentScope.End, endianness, isOverlay: true, capturesVariables: capturesVariables));
     }
 
     /// <summary>
@@ -165,6 +173,14 @@ public sealed class DecodeContext
 
     public void SetVariable(string name, object value)
     {
+        foreach (var scope in _scopeStack)
+        {
+            if (scope.CapturesVariables)
+            {
+                scope.Variables[name] = value;
+                return;
+            }
+        }
         CurrentScope.Variables[name] = value;
     }
 
@@ -173,10 +189,20 @@ public sealed class DecodeContext
         foreach (var scope in _scopeStack)
         {
             if (scope.Variables.TryGetValue(name, out var value))
-                return value;
+                return ReferenceEquals(value, Undefined) ? null : value;
         }
         return null;
     }
+
+    /// <summary>「未定義」を表す番人。外側のスコープに同名の変数があっても見えなくする。</summary>
+    private static readonly object Undefined = new();
+
+    /// <summary>
+    /// フィールドのデコードに失敗したとき、その名前を「未定義」として束縛する（エラー継続モード用）。
+    /// こうしないと、入れ子の struct で失敗したフィールドが外側の同名変数（例: 再帰する msgpack の <c>format_byte</c>）に
+    /// フォールバックし、壊れた入力で無限再帰になる（REQ-160 のファズで検出）。
+    /// </summary>
+    public void MarkVariableUndefined(string name) => SetVariable(name, Undefined);
 
     public byte ReadUInt8()
     {
@@ -420,17 +446,21 @@ public sealed class DecodeContext
 
     private void EnsureAvailable(int count)
     {
-        if (_position + count > CurrentScope.End)
+        if (count < 0)
+            throw new InvalidOperationException($"Cannot read a negative number of bytes ({count}) at position 0x{_position:X}");
+        if ((long)_position + count > CurrentScope.End)
             throw new InvalidOperationException(
                 $"Cannot read {count} bytes at position 0x{_position:X}: only {CurrentScope.End - _position} bytes remaining in scope");
     }
 
-    private sealed class Scope(int start, int end, Endianness? endianness = null, bool isOverlay = false)
+    private sealed class Scope(int start, int end, Endianness? endianness = null, bool isOverlay = false, bool capturesVariables = true)
     {
         public int Start { get; } = start;
         public int End { get; } = end;
         public Endianness? ScopeEndianness { get; } = endianness;
         public bool IsOverlay { get; } = isOverlay;
+        /// <summary>false のとき <see cref="SetVariable"/> はこのスコープを素通りして外側に書く。</summary>
+        public bool CapturesVariables { get; } = capturesVariables;
         public Dictionary<string, object> Variables { get; } = new();
     }
 
