@@ -7,6 +7,7 @@
   "children": {
     "magic": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 0,
       "size": 4,
       "description": "Mach-O\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC",
@@ -16,6 +17,7 @@
     },
     "body": {
       "_type": "struct",
+      "type": "switch",
       "offset": 4,
       "size": 52,
       "name": "body",
@@ -23,6 +25,7 @@
       "children": {
         "cputype": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 4,
           "size": 4,
           "name": "cputype",
@@ -33,6 +36,7 @@
         },
         "cpusubtype": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 8,
           "size": 4,
           "name": "cpusubtype",
@@ -41,6 +45,7 @@
         },
         "filetype": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 12,
           "size": 4,
           "name": "filetype",
@@ -51,6 +56,7 @@
         },
         "ncmds": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 16,
           "size": 4,
           "description": "\u30ED\u30FC\u30C9\u30B3\u30DE\u30F3\u30C9\u6570",
@@ -60,6 +66,7 @@
         },
         "sizeofcmds": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 20,
           "size": 4,
           "description": "\u30ED\u30FC\u30C9\u30B3\u30DE\u30F3\u30C9\u306E\u5408\u8A08\u30B5\u30A4\u30BA",
@@ -69,6 +76,7 @@
         },
         "flags": {
           "_type": "flags",
+          "type": "uint32",
           "offset": 24,
           "size": 4,
           "name": "flags",
@@ -90,6 +98,7 @@
         },
         "reserved": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 28,
           "size": 4,
           "name": "reserved",
@@ -98,6 +107,7 @@
         },
         "load_commands": {
           "_type": "array",
+          "type": "struct",
           "offset": 32,
           "size": 24,
           "name": "load_commands",
@@ -105,6 +115,7 @@
           "elements": [
             {
               "_type": "struct",
+              "type": "struct",
               "offset": 32,
               "size": 24,
               "name": "load_commands",
@@ -112,6 +123,7 @@
               "children": {
                 "cmd": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 32,
                   "size": 4,
                   "name": "cmd",
@@ -121,6 +133,7 @@
                 },
                 "cmdsize": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 36,
                   "size": 4,
                   "description": "\u3053\u306E\u30ED\u30FC\u30C9\u30B3\u30DE\u30F3\u30C9\u306E\u5408\u8A08\u30B5\u30A4\u30BA",
@@ -130,6 +143,7 @@
                 },
                 "body": {
                   "_type": "struct",
+                  "type": "switch",
                   "offset": 40,
                   "size": 16,
                   "name": "body",
@@ -137,6 +151,7 @@
                   "children": {
                     "uuid": {
                       "_type": "bytes",
+                      "type": "bytes",
                       "offset": 40,
                       "size": 16,
                       "name": "uuid",

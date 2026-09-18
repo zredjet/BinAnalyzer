@@ -113,6 +113,8 @@ PNG [0x00000000] (45 bytes)
 dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -o json
 ```
 
+各ノードは `_type`（ノード種別: `integer` / `string` / `struct` / `array` …）と `type`（フォーマット定義の `type:` の正規名: `uint32` / `ascii` / `switch` …。ルートには無い）を持ちます。
+
 ### hexdump
 
 フィールド注釈付きのヘックスダンプを出力します。各バイト範囲がどのフィールドに属するかを確認できます。
@@ -168,13 +170,26 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 
 #### レイアウト
 
-- **タイトルバー** — 開いているファイルのタブ。`+` で別のファイルを開く
+- **タイトルバー** — 開いているファイルのタブ（未保存なら `●`）。`+` で別のファイルを開く。右側に Undo / Redo / 保存 / 名前を付けて保存
 - **コマンドバー** — フォーマット定義の切り替え（拡張子で自動検出）、エンディアンの上書き（既定 / BE / LE）、ライブデコード、差分、フィールド検索（`Ctrl+K`、`**.width` のようなパスパターンも可）
 - **ヘックスビュー** — フィールド種別ごとに色分け（マジック / 長さ / タグ / 数値 / 文字列 / CRC / 圧縮 / パディング）。行末に「この行で決まる値」を注釈表示
-- **右ペイン: 構造** — ツリー＋インスペクター（型・位置・生バイト・値・enum・フラグ・検証）
+- **右ペイン: 構造** — ツリー＋インスペクター（型・位置・生バイト・値・enum・フラグ・検証）。値は編集できる（下記）
 - **右ペイン: 定義** — フォーマット定義 YAML。選択フィールドの定義行をハイライト
 - **右ペイン: 差分** — 別タブ（または別ファイル）との構造差分。行クリックで該当フィールドを選択
 - **フッター** — 構造マップ（バイト数に比例した幅）とステータスバー
+
+#### 値の編集・書き戻し
+
+インスペクターの「値」欄でフィールドを書き換えられます（構造を見ながら編集するバイナリエディタ）。
+
+- 対象: 整数（10 進または `0x` 16 進）、浮動小数点、固定長文字列、固定長バイト列（`89 50 4E 47` 形式の 16 進）。enum 参照付き整数は選択肢から選ぶ
+- 入力中に「書き込み」欄へ実際に書かれるバイト列（エンディアン・サイズ反映）を表示。範囲外（`uint8` に 300 等）や桁数不足はエラーになり適用できない
+- 「再計算」欄に、変更範囲を算出対象に含むチェックサム（`checksum:` 定義）を事前表示。**適用**すると本体と一緒に再計算して書き戻す（例: PNG の IHDR `width` を変えると同じチャンクの `crc` が更新され、検証は ✓ のまま）
+- **適用**（Enter）でメモリ上のデータを書き換えて再デコードし、ヘックス・ツリー・構造マップ・ステータスが更新される。**元に戻す**は読み込み時のバイト列に戻す。Esc で入力を破棄
+- Undo / Redo: タイトルバー右側のボタンまたは `Ctrl+Z` / `Ctrl+Y`（`Ctrl+Shift+Z`）
+- 保存: タイトルバー右側の **保存**（`Ctrl+S`）は元のファイルに上書き、**名前を付けて保存**はネイティブダイアログ。Web 版はダウンロードになる。未保存の変更があるタブには `●` が付く
+- 編集できないもの: 可変長整数（LEB128 / VLQ）、NUL 終端文字列、ビットストリームのフィールド、圧縮ストリーム内のフィールド、struct / array 自体（子を個別に編集する）。サイズが変わる編集（配列要素の追加削除など）は未対応
+- 長さ・個数を決めるフィールドを変えると後続のオフセットが再デコードで動く旨を警告表示する
 
 #### 動作環境
 
@@ -462,6 +477,79 @@ dotnet run --project src/BinAnalyzer.Cli -- validate formats/png.bdef.yaml --for
 
 # エラーのみ表示（警告抑制）
 dotnet run --project src/BinAnalyzer.Cli -- validate formats/png.bdef.yaml --warnings-as-errors
+```
+
+## patch サブコマンド
+
+フォーマット定義に基づいてフィールドの値を書き換え、別ファイルに出力します（構造認識型のバイナリ編集）。GUI の値編集（`-o gui`）と同じエンコーダとチェックサム再計算を使います。
+
+```
+binanalyzer patch <file> -f <format> --set <path>=<value> [--set ...] -o <output> [--dry-run] [--no-checksum]
+```
+
+### 引数
+
+| 引数 | 説明 |
+|------|------|
+| `file` | 書き換え対象のバイナリファイル（`-` で stdin）。このファイル自体は変更しない |
+
+### オプション
+
+| オプション | 説明 | デフォルト |
+|---|---|---|
+| `-f, --format <format>` | フォーマット定義ファイル（必須） | — |
+| `-s, --set <path>=<value>` | 書き換えるフィールドと値。複数指定可 | — |
+| `-o, --output <output>` | 出力ファイル。入力と同じパスはエラー。`--dry-run` 時は省略可 | — |
+| `--dry-run` | 変更内容（値・バイト列・再計算されるチェックサム）を表示するだけでファイルを作成しない | — |
+| `--no-checksum` | 変更範囲を含むチェックサム（`checksum:` 定義）を再計算しない | — |
+| `--no-validate` | フォーマット定義のバリデーションをスキップ | — |
+| `--error-format <text\|json>` | エラー出力形式 | `text` |
+
+### フィールドパスと値
+
+- パスは出力フィルタや GUI の検索と同じ記法: struct は `.`、配列要素は `[i]`（例: `chunks[0].data.width`）。見つからない場合は末尾の名前が一致する候補を示す
+- 整数: 10 進または `0x` 16 進（`--set 'chunks[0].data.width=0x10'`）。型の範囲外（`uint8` に 300 等）はエラー
+- enum 参照付き整数: 数値のほかラベルも可（`--set 'chunks[0].data.color_type=truecolor_alpha'`）
+- 浮動小数点: `1.5` など
+- 固定長文字列: エンコード後のバイト数がフィールドサイズ以下であること。不足分は `0x00` で埋める
+- バイト列: 16 進（`--set 'signature=89 50 4E 47 0D 0A 1A 0A'`）。サイズはフィールドと同じであること
+- 書き換えできないもの: 可変長整数（LEB128 / VLQ）、NUL 終端文字列、ビットストリームのフィールド、圧縮ストリーム内のフィールド、struct / array 自体
+- 複数の `--set` は全て元ファイルのレイアウトで解決する。長さ・個数を決めるフィールドを変える場合は注意が表示される
+- シェルでは `[` `]` がグロブ展開されるので、パスはクォートする
+
+### 終了コード
+
+| コード | 意味 |
+|---|---|
+| `0` | 成功（`--dry-run` 含む）。書き換え後のデコードにエラーやチェックサム不一致が残る場合は標準エラーに警告 |
+| `1` | 引数エラー、フィールドが見つからない、値が不正、書き換え不可のフィールド、入出力エラー |
+
+### 使用例
+
+```bash
+# IHDR の width を 2 に。同じチャンクの crc は自動で再計算される
+dotnet run --project src/BinAnalyzer.Cli -- patch image.png -f formats/png.bdef.yaml --set 'chunks[0].data.width=2' -o patched.png
+
+# 変更内容の確認だけ（ファイルは作らない）
+dotnet run --project src/BinAnalyzer.Cli -- patch image.png -f formats/png.bdef.yaml --set 'chunks[0].data.width=2' --dry-run
+
+# 複数フィールド、enum はラベル指定
+dotnet run --project src/BinAnalyzer.Cli -- patch image.png -f formats/png.bdef.yaml \
+  --set 'chunks[0].data.width=2' --set 'chunks[0].data.color_type=truecolor_alpha' -o patched.png
+
+# チェックサムを意図的に壊したまま出力する（検証テスト用）
+dotnet run --project src/BinAnalyzer.Cli -- patch image.png -f formats/png.bdef.yaml --set 'chunks[0].data.width=2' -o broken.png --no-checksum
+```
+
+`--dry-run` の出力例:
+
+```
+[dry-run] chunks[0].data.width (u32) @0x00000010 4 B
+  値:     1 → 2
+  バイト: 00 00 00 01 → 00 00 00 02
+[dry-run] チェックサム再計算: 1 件
+  chunks[0].crc (CRC-32) @0x0000001D: 90 77 53 DE → 7B 40 E8 DD
+[dry-run] ファイルは作成しません
 ```
 
 ## パイプライン統合

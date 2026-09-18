@@ -25,4 +25,19 @@ public sealed class PhotinoFileSource : IFileSource
         var data = await File.ReadAllBytesAsync(path);
         return new OpenedFile(Path.GetFileName(path), data, path);
     }
+
+    public async Task<OpenedFile?> SaveAsync(OpenedFile file, byte[] data, bool chooseLocation)
+    {
+        var path = file.FullPath;
+        if (chooseLocation || string.IsNullOrEmpty(path))
+        {
+            var window = _window();
+            if (window is null) return null;
+            var defaultPath = file.FullPath ?? Path.Combine(Environment.CurrentDirectory, file.Name);
+            path = await window.ShowSaveFileAsync("名前を付けて保存", defaultPath);
+            if (string.IsNullOrEmpty(path)) return null;
+        }
+        await File.WriteAllBytesAsync(path, data);
+        return new OpenedFile(Path.GetFileName(path), data, path);
+    }
 }

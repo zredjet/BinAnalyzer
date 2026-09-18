@@ -7,6 +7,7 @@
   "children": {
     "magic": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 0,
       "size": 4,
       "description": "fLaC\u30DE\u30B8\u30C3\u30AF",
@@ -16,6 +17,7 @@
     },
     "metadata_blocks": {
       "_type": "array",
+      "type": "struct",
       "offset": 4,
       "size": 38,
       "name": "metadata_blocks",
@@ -23,6 +25,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 4,
           "size": 38,
           "name": "metadata_blocks",
@@ -30,6 +33,7 @@
           "children": {
             "header_byte": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 4,
               "size": 1,
               "name": "header_byte",
@@ -38,6 +42,7 @@
             },
             "is_last": {
               "_type": "virtual",
+              "type": "virtual",
               "offset": 5,
               "size": 0,
               "description": "\u6700\u7D42\u30D6\u30ED\u30C3\u30AF\u30D5\u30E9\u30B0\uFF081=\u6700\u7D42\uFF09",
@@ -46,6 +51,7 @@
             },
             "block_type": {
               "_type": "virtual",
+              "type": "virtual",
               "offset": 5,
               "size": 0,
               "description": "\u30D6\u30ED\u30C3\u30AF\u30BF\u30A4\u30D7\uFF080=STREAMINFO, 1=PADDING, 2=APPLICATION, 3=SEEKTABLE, 4=VORBIS_COMMENT, 5=CUESHEET, 6=PICTURE\uFF09",
@@ -54,6 +60,7 @@
             },
             "length_b0": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 5,
               "size": 1,
               "name": "length_b0",
@@ -62,6 +69,7 @@
             },
             "length_b1": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 6,
               "size": 1,
               "name": "length_b1",
@@ -70,6 +78,7 @@
             },
             "length_b2": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 7,
               "size": 1,
               "name": "length_b2",
@@ -78,6 +87,7 @@
             },
             "length": {
               "_type": "virtual",
+              "type": "virtual",
               "offset": 8,
               "size": 0,
               "description": "\u30D6\u30ED\u30C3\u30AF\u30C7\u30FC\u30BF\u9577\uFF0824\u30D3\u30C3\u30C8\uFF09",
@@ -86,6 +96,7 @@
             },
             "data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 8,
               "size": 34,
               "name": "data",
@@ -93,6 +104,7 @@
               "children": {
                 "min_block_size": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 8,
                   "size": 2,
                   "description": "\u6700\u5C0F\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u30B5\u30F3\u30D7\u30EB\u6570\uFF09",
@@ -102,6 +114,7 @@
                 },
                 "max_block_size": {
                   "_type": "integer",
+                  "type": "uint16",
                   "offset": 10,
                   "size": 2,
                   "description": "\u6700\u5927\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u30B5\u30F3\u30D7\u30EB\u6570\uFF09",
@@ -111,6 +124,7 @@
                 },
                 "min_frame_size_b0": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 12,
                   "size": 1,
                   "name": "min_frame_size_b0",
@@ -119,6 +133,7 @@
                 },
                 "min_frame_size_b1": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 13,
                   "size": 1,
                   "name": "min_frame_size_b1",
@@ -127,6 +142,7 @@
                 },
                 "min_frame_size_b2": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 14,
                   "size": 1,
                   "name": "min_frame_size_b2",
@@ -135,6 +151,7 @@
                 },
                 "min_frame_size": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 15,
                   "size": 0,
                   "description": "\u6700\u5C0F\u30D5\u30EC\u30FC\u30E0\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30010=\u4E0D\u660E\uFF09",
@@ -143,6 +160,7 @@
                 },
                 "max_frame_size_b0": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 15,
                   "size": 1,
                   "name": "max_frame_size_b0",
@@ -151,6 +169,7 @@
                 },
                 "max_frame_size_b1": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 16,
                   "size": 1,
                   "name": "max_frame_size_b1",
@@ -159,6 +178,7 @@
                 },
                 "max_frame_size_b2": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 17,
                   "size": 1,
                   "name": "max_frame_size_b2",
@@ -167,6 +187,7 @@
                 },
                 "max_frame_size": {
                   "_type": "virtual",
+                  "type": "virtual",
                   "offset": 18,
                   "size": 0,
                   "description": "\u6700\u5927\u30D5\u30EC\u30FC\u30E0\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30010=\u4E0D\u660E\uFF09",
@@ -175,6 +196,7 @@
                 },
                 "sample_rate_channels_bps_samples": {
                   "_type": "bitfield",
+                  "type": "bitfield",
                   "offset": 18,
                   "size": 8,
                   "name": "sample_rate_channels_bps_samples",
@@ -208,6 +230,7 @@
                 },
                 "md5": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 26,
                   "size": 16,
                   "description": "\u975E\u5727\u7E2E\u30AA\u30FC\u30C7\u30A3\u30AA\u30C7\u30FC\u30BF\u306EMD5\u30B7\u30B0\u30CD\u30C1\u30E3",

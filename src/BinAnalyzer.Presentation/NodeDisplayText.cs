@@ -1,4 +1,5 @@
 using BinAnalyzer.Core.Decoded;
+using BinAnalyzer.Core.Models;
 
 namespace BinAnalyzer.Presentation;
 
@@ -45,31 +46,35 @@ public static class NodeDisplayText
     }
 
     /// <summary>
-    /// 型ラベル（インスペクターの「型」行）。デコード結果は符号や DSL 型名を保持しないため、
-    /// サイズと種別から推定した簡潔なラベルを返す。
+    /// 型ラベル（インスペクターの「型」行）。<see cref="DecodedNode.DslType"/> があれば DSL の型に基づく正確なラベル
+    /// （<c>u32</c> / <c>i16</c> / <c>f32</c> / <c>ascii[4]</c> / <c>uleb128</c>）、無ければサイズと種別からの推定（<c>int32</c> 等）。
     /// </summary>
     public static string TypeLabel(DecodedNode node)
     {
+        var dsl = node.DslType;
         return node switch
         {
-            DecodedInteger i when i.ChecksumAlgorithm is not null => $"int{i.Size * 8} ({i.ChecksumAlgorithm})",
-            DecodedInteger i when i.EnumLabel is not null => $"int{i.Size * 8} (enum)",
-            DecodedInteger i when i.BitOffset.HasValue => "bits",
-            DecodedInteger i => $"int{i.Size * 8}",
-            DecodedFloat f => f.IsSinglePrecision ? "float32" : "float64",
-            DecodedString s => $"{s.Encoding.ToLowerInvariant()}[{s.Size}]",
+            DecodedInteger i when i.BitOffset.HasValue => dsl is { } t ? $"{FieldTypeNames.ShortLabel(t)}:{i.Size}bit" : "bits",
+            DecodedInteger i when i.ChecksumAlgorithm is not null => $"{IntegerBase(i)} ({i.ChecksumAlgorithm})",
+            DecodedInteger i when i.EnumLabel is not null || i.EnumRef is not null => $"{IntegerBase(i)} (enum)",
+            DecodedInteger i => IntegerBase(i),
+            DecodedFloat f => dsl is { } t ? FieldTypeNames.ShortLabel(t) : f.IsSinglePrecision ? "float32" : "float64",
+            DecodedString s => $"{(dsl is { } t ? FieldTypeNames.ToDslName(t) : s.Encoding.ToLowerInvariant())}[{s.Size}]",
             DecodedBytes b when b.ChecksumAlgorithm is not null => $"bytes[{b.Size}] ({b.ChecksumAlgorithm})",
             DecodedBytes b => $"bytes[{b.Size}]",
-            DecodedFlags f => $"flags{f.Size * 8}",
+            DecodedFlags f => dsl is { } t ? $"{FieldTypeNames.ShortLabel(t)} (flags)" : $"flags{f.Size * 8}",
             DecodedBitfield b => $"bitfield{b.Size * 8}",
             DecodedCompressed c => $"bytes ({c.Algorithm})",
             DecodedStruct s => $"struct {s.StructType}",
-            DecodedArray a => $"array[{a.Elements.Count}]",
+            DecodedArray a => dsl is { } t ? $"{FieldTypeNames.ShortLabel(t)}[{a.Elements.Count}]" : $"array[{a.Elements.Count}]",
             DecodedVirtual => "virtual",
             DecodedError => "error",
             _ => "unknown",
         };
     }
+
+    private static string IntegerBase(DecodedInteger i)
+        => i.DslType is { } t ? FieldTypeNames.ShortLabel(t) : $"int{i.Size * 8}";
 
     private static string FormatIntegerDisplay(DecodedInteger node)
         => $"{node.Name}: {FormatIntegerValue(node)}";

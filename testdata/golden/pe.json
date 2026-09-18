@@ -7,6 +7,7 @@
   "children": {
     "dos_header": {
       "_type": "struct",
+      "type": "struct",
       "offset": 0,
       "size": 64,
       "name": "dos_header",
@@ -14,6 +15,7 @@
       "children": {
         "e_magic": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 0,
           "size": 2,
           "description": "DOS\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC\uFF08\u0027MZ\u0027\uFF09",
@@ -23,6 +25,7 @@
         },
         "e_cblp": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 2,
           "size": 2,
           "name": "e_cblp",
@@ -31,6 +34,7 @@
         },
         "e_cp": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 4,
           "size": 2,
           "name": "e_cp",
@@ -39,6 +43,7 @@
         },
         "e_crlc": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 6,
           "size": 2,
           "name": "e_crlc",
@@ -47,6 +52,7 @@
         },
         "e_cparhdr": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 8,
           "size": 2,
           "name": "e_cparhdr",
@@ -55,6 +61,7 @@
         },
         "e_minalloc": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 10,
           "size": 2,
           "name": "e_minalloc",
@@ -63,6 +70,7 @@
         },
         "e_maxalloc": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 12,
           "size": 2,
           "name": "e_maxalloc",
@@ -71,6 +79,7 @@
         },
         "e_ss": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 14,
           "size": 2,
           "name": "e_ss",
@@ -79,6 +88,7 @@
         },
         "e_sp": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 16,
           "size": 2,
           "name": "e_sp",
@@ -87,6 +97,7 @@
         },
         "e_csum": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 18,
           "size": 2,
           "name": "e_csum",
@@ -95,6 +106,7 @@
         },
         "e_ip": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 20,
           "size": 2,
           "name": "e_ip",
@@ -103,6 +115,7 @@
         },
         "e_cs": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 22,
           "size": 2,
           "name": "e_cs",
@@ -111,6 +124,7 @@
         },
         "e_lfarlc": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 24,
           "size": 2,
           "name": "e_lfarlc",
@@ -119,6 +133,7 @@
         },
         "e_ovno": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 26,
           "size": 2,
           "name": "e_ovno",
@@ -127,6 +142,7 @@
         },
         "e_res": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 28,
           "size": 8,
           "description": "\u4E88\u7D04\u9818\u57DF",
@@ -135,6 +151,7 @@
         },
         "e_oemid": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 36,
           "size": 2,
           "name": "e_oemid",
@@ -143,6 +160,7 @@
         },
         "e_oeminfo": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 38,
           "size": 2,
           "name": "e_oeminfo",
@@ -151,6 +169,7 @@
         },
         "e_res2": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 40,
           "size": 20,
           "description": "\u4E88\u7D04\u9818\u57DF",
@@ -159,6 +178,7 @@
         },
         "e_lfanew": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 60,
           "size": 4,
           "description": "PE\u30D8\u30C3\u30C0\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
@@ -170,6 +190,7 @@
     },
     "pe_signature": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 64,
       "size": 4,
       "description": "PE\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027PE\\0\\0\u0027\uFF09",
@@ -179,6 +200,7 @@
     },
     "coff_header": {
       "_type": "struct",
+      "type": "struct",
       "offset": 68,
       "size": 20,
       "name": "coff_header",
@@ -186,6 +208,7 @@
       "children": {
         "machine": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 68,
           "size": 2,
           "name": "machine",
@@ -196,6 +219,7 @@
         },
         "number_of_sections": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 70,
           "size": 2,
           "name": "number_of_sections",
@@ -204,6 +228,7 @@
         },
         "time_date_stamp": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 72,
           "size": 4,
           "name": "time_date_stamp",
@@ -212,6 +237,7 @@
         },
         "pointer_to_symbol_table": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 76,
           "size": 4,
           "name": "pointer_to_symbol_table",
@@ -220,6 +246,7 @@
         },
         "number_of_symbols": {
           "_type": "integer",
+          "type": "uint32",
           "offset": 80,
           "size": 4,
           "name": "number_of_symbols",
@@ -228,6 +255,7 @@
         },
         "size_of_optional_header": {
           "_type": "integer",
+          "type": "uint16",
           "offset": 84,
           "size": 2,
           "name": "size_of_optional_header",
@@ -236,6 +264,7 @@
         },
         "characteristics": {
           "_type": "flags",
+          "type": "uint16",
           "offset": 86,
           "size": 2,
           "name": "characteristics",
@@ -274,6 +303,7 @@
     },
     "optional_header": {
       "_type": "error",
+      "type": "switch",
       "offset": 88,
       "size": 0,
       "name": "optional_header",
@@ -282,6 +312,7 @@
     },
     "sections": {
       "_type": "array",
+      "type": "struct",
       "offset": 88,
       "size": 40,
       "name": "sections",
@@ -289,6 +320,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 88,
           "size": 40,
           "name": "sections",
@@ -296,6 +328,7 @@
           "children": {
             "name": {
               "_type": "string",
+              "type": "ascii",
               "offset": 88,
               "size": 8,
               "name": "name",
@@ -304,6 +337,7 @@
             },
             "virtual_size": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 96,
               "size": 4,
               "name": "virtual_size",
@@ -312,6 +346,7 @@
             },
             "virtual_address": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 100,
               "size": 4,
               "name": "virtual_address",
@@ -320,6 +355,7 @@
             },
             "size_of_raw_data": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 104,
               "size": 4,
               "name": "size_of_raw_data",
@@ -328,6 +364,7 @@
             },
             "pointer_to_raw_data": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 108,
               "size": 4,
               "name": "pointer_to_raw_data",
@@ -336,6 +373,7 @@
             },
             "pointer_to_relocations": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 112,
               "size": 4,
               "name": "pointer_to_relocations",
@@ -344,6 +382,7 @@
             },
             "pointer_to_linenumbers": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 116,
               "size": 4,
               "name": "pointer_to_linenumbers",
@@ -352,6 +391,7 @@
             },
             "number_of_relocations": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 120,
               "size": 2,
               "name": "number_of_relocations",
@@ -360,6 +400,7 @@
             },
             "number_of_linenumbers": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 122,
               "size": 2,
               "name": "number_of_linenumbers",
@@ -368,6 +409,7 @@
             },
             "characteristics": {
               "_type": "flags",
+              "type": "uint32",
               "offset": 124,
               "size": 4,
               "name": "characteristics",

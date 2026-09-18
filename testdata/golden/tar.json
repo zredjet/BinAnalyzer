@@ -7,6 +7,7 @@
   "children": {
     "entries": {
       "_type": "array",
+      "type": "struct",
       "offset": 0,
       "size": 512,
       "name": "entries",
@@ -14,6 +15,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 0,
           "size": 512,
           "name": "entries",
@@ -21,6 +23,7 @@
           "children": {
             "name": {
               "_type": "string",
+              "type": "ascii",
               "offset": 0,
               "size": 100,
               "description": "\u30D5\u30A1\u30A4\u30EB\u540D",
@@ -30,6 +33,7 @@
             },
             "mode": {
               "_type": "string",
+              "type": "ascii",
               "offset": 100,
               "size": 8,
               "description": "\u30D5\u30A1\u30A4\u30EB\u30E2\u30FC\u30C9\uFF088\u9032ASCII\uFF09",
@@ -39,6 +43,7 @@
             },
             "uid": {
               "_type": "string",
+              "type": "ascii",
               "offset": 108,
               "size": 8,
               "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6ID\uFF088\u9032ASCII\uFF09",
@@ -48,6 +53,7 @@
             },
             "gid": {
               "_type": "string",
+              "type": "ascii",
               "offset": 116,
               "size": 8,
               "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7ID\uFF088\u9032ASCII\uFF09",
@@ -57,6 +63,7 @@
             },
             "size": {
               "_type": "string",
+              "type": "ascii",
               "offset": 124,
               "size": 12,
               "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u30018\u9032ASCII\uFF09",
@@ -66,6 +73,7 @@
             },
             "mtime": {
               "_type": "string",
+              "type": "ascii",
               "offset": 136,
               "size": 12,
               "description": "\u66F4\u65B0\u65E5\u6642\uFF088\u9032ASCII\u3001Unix\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF09",
@@ -75,6 +83,7 @@
             },
             "checksum": {
               "_type": "string",
+              "type": "ascii",
               "offset": 148,
               "size": 8,
               "description": "\u30D8\u30C3\u30C0\u5168\u30D0\u30A4\u30C8\u306E\u5408\u8A08\u5024\uFF08\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u30D5\u30A3\u30FC\u30EB\u30C9\u306F\u30B9\u30DA\u30FC\u30B9\u3068\u3057\u3066\u8A08\u7B97\uFF09",
@@ -84,6 +93,7 @@
             },
             "typeflag": {
               "_type": "integer",
+              "type": "uint8",
               "offset": 156,
               "size": 1,
               "description": "\u30D5\u30A1\u30A4\u30EB\u30BF\u30A4\u30D7\u30D5\u30E9\u30B0",
@@ -95,6 +105,7 @@
             },
             "linkname": {
               "_type": "string",
+              "type": "ascii",
               "offset": 157,
               "size": 100,
               "description": "\u30EA\u30F3\u30AF\u5148\u30D5\u30A1\u30A4\u30EB\u540D",
@@ -104,6 +115,7 @@
             },
             "magic": {
               "_type": "string",
+              "type": "ascii",
               "offset": 257,
               "size": 6,
               "description": "UStar\u30DE\u30B8\u30C3\u30AF\uFF08\u0027ustar\u0027 \u002B null\uFF09",
@@ -117,6 +129,7 @@
             },
             "version": {
               "_type": "string",
+              "type": "ascii",
               "offset": 263,
               "size": 2,
               "description": "UStar\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002700\u0027\uFF09",
@@ -126,6 +139,7 @@
             },
             "uname": {
               "_type": "string",
+              "type": "ascii",
               "offset": 265,
               "size": 32,
               "description": "\u6240\u6709\u8005\u30E6\u30FC\u30B6\u540D",
@@ -135,6 +149,7 @@
             },
             "gname": {
               "_type": "string",
+              "type": "ascii",
               "offset": 297,
               "size": 32,
               "description": "\u6240\u6709\u8005\u30B0\u30EB\u30FC\u30D7\u540D",
@@ -144,6 +159,7 @@
             },
             "devmajor": {
               "_type": "string",
+              "type": "ascii",
               "offset": 329,
               "size": 8,
               "description": "\u30C7\u30D0\u30A4\u30B9\u30E1\u30B8\u30E3\u30FC\u756A\u53F7",
@@ -153,6 +169,7 @@
             },
             "devminor": {
               "_type": "string",
+              "type": "ascii",
               "offset": 337,
               "size": 8,
               "description": "\u30C7\u30D0\u30A4\u30B9\u30DE\u30A4\u30CA\u30FC\u756A\u53F7",
@@ -162,6 +179,7 @@
             },
             "prefix": {
               "_type": "string",
+              "type": "ascii",
               "offset": 345,
               "size": 155,
               "description": "\u9577\u3044\u30D5\u30A1\u30A4\u30EB\u540D\u7528\u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9",
@@ -171,6 +189,7 @@
             },
             "header_padding": {
               "_type": "bytes",
+              "type": "bytes",
               "offset": 500,
               "size": 12,
               "description": "512\u30D0\u30A4\u30C8\u30D6\u30ED\u30C3\u30AF\u3078\u306E\u30D1\u30C7\u30A3\u30F3\u30B0",
@@ -179,6 +198,7 @@
             },
             "file_size_bytes": {
               "_type": "virtual",
+              "type": "virtual",
               "offset": 512,
               "size": 0,
               "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA\uFF088\u9032ASCII \u2192 \u6574\u6570\u5909\u63DB\uFF09",
@@ -187,6 +207,7 @@
             },
             "data_blocks_size": {
               "_type": "virtual",
+              "type": "virtual",
               "offset": 512,
               "size": 0,
               "description": "\u30C7\u30FC\u30BF\u30D6\u30ED\u30C3\u30AF\u306E\u5408\u8A08\u30B5\u30A4\u30BA\uFF08512\u30D0\u30A4\u30C8\u5883\u754C\u306B\u5207\u308A\u4E0A\u3052\uFF09",

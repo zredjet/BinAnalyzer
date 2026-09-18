@@ -25,4 +25,10 @@ public interface IFileSource
     /// <summary>true ならホストがファイルダイアログを提供する。false なら UI 側で InputFile / ドロップを使う。</summary>
     bool SupportsNativePicker { get; }
     Task<OpenedFile?> PickAsync();
+
+    /// <summary>
+    /// 編集後のバイト列を保存する。<paramref name="chooseLocation"/> が true か <c>file.FullPath</c> が無ければ保存先を選ばせる
+    /// （デスクトップ: ネイティブダイアログ、Web: ダウンロード）。保存したファイルの名前・パスを返し、キャンセルなら null。
+    /// </summary>
+    Task<OpenedFile?> SaveAsync(OpenedFile file, byte[] data, bool chooseLocation);
 }

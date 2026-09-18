@@ -15,4 +15,10 @@
     <PackageReference Include="FluentAssertions" Version="8.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- REQ-169: パッチ済みファイルを CLI でデコードする検証に BinaryPatcher と YAML ローダーを使う -->
+    <ProjectReference Include="..\..\src\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
+    <ProjectReference Include="..\..\src\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
+  </ItemGroup>
+
 </Project>

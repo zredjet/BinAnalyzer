@@ -7,6 +7,7 @@
   "children": {
     "header_magic": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 0,
       "size": 4,
       "description": "MThd",
@@ -16,6 +17,7 @@
     },
     "header_length": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 4,
       "size": 4,
       "description": "\u30D8\u30C3\u30C0\u30C7\u30FC\u30BF\u9577\uFF08\u5E38\u306B6\uFF09",
@@ -29,6 +31,7 @@
     },
     "format": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 8,
       "size": 2,
       "name": "format",
@@ -39,6 +42,7 @@
     },
     "ntrks": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 10,
       "size": 2,
       "description": "\u30C8\u30E9\u30C3\u30AF\u6570",
@@ -48,6 +52,7 @@
     },
     "division": {
       "_type": "integer",
+      "type": "uint16",
       "offset": 12,
       "size": 2,
       "description": "4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\uFF08PPQN\uFF09\u307E\u305F\u306FSMPTE\u30BF\u30A4\u30DF\u30F3\u30B0\u3002\u30D3\u30C3\u30C815\u304C\u30BF\u30A4\u30DF\u30F3\u30B0\u30E2\u30FC\u30C9\u3092\u9078\u629E: 0=PPQN\uFF084\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\uFF09\u30011=SMPTE\u3002PPQN\u30E2\u30FC\u30C9\u3067\u306F\u30D3\u30C3\u30C814:0\u304C4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u3092\u8868\u3059",
@@ -57,6 +62,7 @@
     },
     "timing_mode": {
       "_type": "virtual",
+      "type": "virtual",
       "offset": 14,
       "size": 0,
       "description": "\u30BF\u30A4\u30DF\u30F3\u30B0\u30E2\u30FC\u30C9\uFF080=PPQN 4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u30011=SMPTE\uFF09",
@@ -65,6 +71,7 @@
     },
     "ticks_per_quarter_note": {
       "_type": "virtual",
+      "type": "virtual",
       "offset": 14,
       "size": 0,
       "description": "PPQN\u30E2\u30FC\u30C9: 4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u3002SMPTE\u30E2\u30FC\u30C9: \u30D3\u30C3\u30C814:0\u306B\u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8\u3068\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u304C\u30A8\u30F3\u30B3\u30FC\u30C9\u3055\u308C\u308B",
@@ -73,6 +80,7 @@
     },
     "tracks": {
       "_type": "array",
+      "type": "struct",
       "offset": 14,
       "size": 12,
       "name": "tracks",
@@ -80,6 +88,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 14,
           "size": 12,
           "name": "tracks",
@@ -87,6 +96,7 @@
           "children": {
             "magic": {
               "_type": "bytes",
+              "type": "bytes",
               "offset": 14,
               "size": 4,
               "description": "MTrk",
@@ -96,6 +106,7 @@
             },
             "length": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 18,
               "size": 4,
               "name": "length",
@@ -104,6 +115,7 @@
             },
             "events": {
               "_type": "array",
+              "type": "struct",
               "offset": 22,
               "size": 4,
               "name": "events",
@@ -111,6 +123,7 @@
               "elements": [
                 {
                   "_type": "struct",
+                  "type": "struct",
                   "offset": 22,
                   "size": 4,
                   "name": "events",
@@ -118,6 +131,7 @@
                   "children": {
                     "delta_time": {
                       "_type": "integer",
+                      "type": "vlq",
                       "offset": 22,
                       "size": 1,
                       "description": "\u30C7\u30EB\u30BF\u30BF\u30A4\u30E0\uFF08VLQ\u30A8\u30F3\u30B3\u30FC\u30C9\uFF09",
@@ -127,6 +141,7 @@
                     },
                     "status": {
                       "_type": "integer",
+                      "type": "uint8",
                       "offset": 23,
                       "size": 1,
                       "description": "\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30A4\u30C8",
@@ -136,6 +151,7 @@
                     },
                     "event_data": {
                       "_type": "struct",
+                      "type": "switch",
                       "offset": 24,
                       "size": 2,
                       "name": "event_data",
@@ -143,6 +159,7 @@
                       "children": {
                         "system_body": {
                           "_type": "struct",
+                          "type": "switch",
                           "offset": 24,
                           "size": 2,
                           "name": "system_body",
@@ -150,6 +167,7 @@
                           "children": {
                             "meta_type": {
                               "_type": "integer",
+                              "type": "uint8",
                               "offset": 24,
                               "size": 1,
                               "description": "\u30E1\u30BF\u30A4\u30D9\u30F3\u30C8\u30BF\u30A4\u30D7\uFF080x2F=End of Track, 0x51=\u30C6\u30F3\u30DD, 0x58=\u62CD\u5B50\u8A18\u53F7\uFF09",
@@ -159,6 +177,7 @@
                             },
                             "meta_length": {
                               "_type": "integer",
+                              "type": "vlq",
                               "offset": 25,
                               "size": 1,
                               "name": "meta_length",
@@ -167,6 +186,7 @@
                             },
                             "meta_data": {
                               "_type": "bytes",
+                              "type": "bytes",
                               "offset": 26,
                               "size": 0,
                               "name": "meta_data",

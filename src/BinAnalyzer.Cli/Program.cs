@@ -737,6 +737,77 @@ validateCommand.SetAction((parseResult) =>
 
 rootCommand.Subcommands.Add(validateCommand);
 
+// patch サブコマンド（REQ-164）
+var patchFileArg = new Argument<string>("file")
+{
+    Description = "書き換え対象のバイナリファイル（'-' でstdin）",
+};
+
+var patchFormatOption = new Option<FileInfo>("-f", "--format")
+{
+    Description = "フォーマット定義ファイル (.bdef.yaml)",
+    Required = true,
+    HelpName = "format",
+};
+
+var patchSetOption = new Option<string[]>("-s", "--set")
+{
+    Description = "書き換えるフィールドと値 <フィールドパス>=<値>（複数指定可。例: chunks[0].data.width=2, signature=\"89 50 4E 47\", color_type=truecolor）",
+    AllowMultipleArgumentsPerToken = false,
+    HelpName = "path=value",
+};
+
+var patchOutputOption = new Option<string?>("-o", "--output")
+{
+    Description = "出力ファイル（入力とは別のパス。--dry-run 時は省略可）",
+    HelpName = "output",
+};
+
+var patchDryRunOption = new Option<bool>("--dry-run")
+{
+    Description = "変更内容を表示するだけでファイルを作成しない",
+};
+
+var patchNoChecksumOption = new Option<bool>("--no-checksum")
+{
+    Description = "変更範囲を含むチェックサム（checksum: 定義）を再計算しない",
+};
+
+var patchNoValidateOption = new Option<bool>("--no-validate")
+{
+    Description = "フォーマット定義のバリデーションをスキップする",
+};
+
+var patchErrorFormatOption = new Option<string>("--error-format")
+{
+    Description = "エラー出力形式 (text, json)",
+    DefaultValueFactory = _ => "text",
+};
+
+var patchCommand = new Command("patch", "フィールドの値を書き換えて別ファイルに出力（依存チェックサムは再計算）")
+{
+    patchFileArg,
+    patchFormatOption,
+    patchSetOption,
+    patchOutputOption,
+    patchDryRunOption,
+    patchNoChecksumOption,
+    patchNoValidateOption,
+    patchErrorFormatOption,
+};
+
+patchCommand.SetAction((parseResult) => PatchCommand.Run(new PatchCommand.Options(
+    parseResult.GetValue(patchFileArg)!,
+    parseResult.GetValue(patchFormatOption)!,
+    parseResult.GetValue(patchSetOption) ?? [],
+    parseResult.GetValue(patchOutputOption),
+    parseResult.GetValue(patchDryRunOption),
+    parseResult.GetValue(patchNoChecksumOption),
+    parseResult.GetValue(patchNoValidateOption),
+    parseResult.GetValue(patchErrorFormatOption)!)));
+
+rootCommand.Subcommands.Add(patchCommand);
+
 return rootCommand.Parse(args).Invoke();
 
 // --- ヘルパー関数 ---

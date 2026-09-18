@@ -207,43 +207,9 @@ public static class YamlToIrMapper
 
     private static FieldType ParseFieldType(string type)
     {
-        return type.ToLowerInvariant() switch
-        {
-            "uint8" or "u8" => FieldType.UInt8,
-            "uint16" or "u16" => FieldType.UInt16,
-            "uint32" or "u32" => FieldType.UInt32,
-            "uint64" or "u64" => FieldType.UInt64,
-            "int8" or "i8" => FieldType.Int8,
-            "int16" or "i16" => FieldType.Int16,
-            "int32" or "i32" => FieldType.Int32,
-            "int64" or "i64" => FieldType.Int64,
-            "bytes" => FieldType.Bytes,
-            "ascii" => FieldType.Ascii,
-            "utf8" => FieldType.Utf8,
-            "utf16le" or "utf16-le" => FieldType.Utf16Le,
-            "utf16be" or "utf16-be" => FieldType.Utf16Be,
-            "sjis" or "shift_jis" or "shift-jis" => FieldType.ShiftJis,
-            "latin1" or "iso-8859-1" => FieldType.Latin1,
-            "asciiz" => FieldType.AsciiZ,
-            "utf8z" => FieldType.Utf8Z,
-            "float32" or "f32" => FieldType.Float32,
-            "float64" or "f64" => FieldType.Float64,
-            "struct" => FieldType.Struct,
-            "switch" => FieldType.Switch,
-            "bitfield" => FieldType.Bitfield,
-            "zlib" => FieldType.Zlib,
-            "deflate" => FieldType.Deflate,
-            "gzip" => FieldType.Gzip,
-            "bzip2" => FieldType.Bzip2,
-            "lzma" => FieldType.Lzma,
-            "zstd" or "zstandard" => FieldType.Zstd,
-            "lz4" => FieldType.Lz4,
-            "virtual" => FieldType.Virtual,
-            "uleb128" or "leb128u" => FieldType.ULeb128,
-            "sleb128" or "leb128s" => FieldType.SLeb128,
-            "vlq" => FieldType.Vlq,
-            _ => throw new InvalidOperationException($"Unknown field type: {type}"),
-        };
+        if (FieldTypeNames.TryParse(type, out var parsed))
+            return parsed;
+        throw new InvalidOperationException($"Unknown field type: {type}");
     }
 
     private static (int? size, Expression? sizeExpr, bool sizeRemaining) ParseSize(string? sizeStr)

@@ -35,7 +35,7 @@ public sealed class GuiImportTests : BunitContext
         handler.Register("formats/common/isobmff.bdef.yaml", RealFormat("common/isobmff.bdef.yaml"));
 
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
-        var session = new GuiSession(new HttpFormatCatalog(new FormatService(http)), new BrowserFileSource());
+        var session = new GuiSession(new HttpFormatCatalog(new FormatService(http)), new BrowserFileSource(JSInterop.JSRuntime));
         Services.AddSingleton(session);
         JSInterop.Mode = JSRuntimeMode.Loose;
         return (session, handler);
@@ -115,7 +115,7 @@ public sealed class GuiImportTests : BunitContext
         handler.Register("formats/format-list.json", FormatListJson);
         handler.Register("formats/wav.bdef.yaml", RealFormat("wav.bdef.yaml"));
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
-        var session = new GuiSession(new HttpFormatCatalog(new FormatService(http)), new BrowserFileSource());
+        var session = new GuiSession(new HttpFormatCatalog(new FormatService(http)), new BrowserFileSource(JSInterop.JSRuntime));
 
         var doc = await session.OpenAsync(new OpenedFile("test.wav", TestWav()));
 

@@ -7,6 +7,7 @@
   "children": {
     "signature": {
       "_type": "bytes",
+      "type": "bytes",
       "offset": 0,
       "size": 8,
       "name": "signature",
@@ -15,6 +16,7 @@
     },
     "chunks": {
       "_type": "array",
+      "type": "struct",
       "offset": 8,
       "size": 37,
       "name": "chunks",
@@ -22,6 +24,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 8,
           "size": 25,
           "name": "chunks",
@@ -29,6 +32,7 @@
           "children": {
             "length": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 8,
               "size": 4,
               "name": "length",
@@ -37,6 +41,7 @@
             },
             "type": {
               "_type": "string",
+              "type": "ascii",
               "offset": 12,
               "size": 4,
               "name": "type",
@@ -63,6 +68,7 @@
             },
             "data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 16,
               "size": 13,
               "name": "data",
@@ -70,6 +76,7 @@
               "children": {
                 "width": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 16,
                   "size": 4,
                   "name": "width",
@@ -78,6 +85,7 @@
                 },
                 "height": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 20,
                   "size": 4,
                   "name": "height",
@@ -86,6 +94,7 @@
                 },
                 "bit_depth": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 24,
                   "size": 1,
                   "name": "bit_depth",
@@ -94,6 +103,7 @@
                 },
                 "color_type": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 25,
                   "size": 1,
                   "name": "color_type",
@@ -103,6 +113,7 @@
                 },
                 "compression": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 26,
                   "size": 1,
                   "name": "compression",
@@ -112,6 +123,7 @@
                 },
                 "filter": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 27,
                   "size": 1,
                   "name": "filter",
@@ -121,6 +133,7 @@
                 },
                 "interlace": {
                   "_type": "integer",
+                  "type": "uint8",
                   "offset": 28,
                   "size": 1,
                   "name": "interlace",
@@ -132,6 +145,7 @@
             },
             "crc": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 29,
               "size": 4,
               "name": "crc",
@@ -144,6 +158,7 @@
         },
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 33,
           "size": 12,
           "name": "chunks",
@@ -151,6 +166,7 @@
           "children": {
             "length": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 33,
               "size": 4,
               "name": "length",
@@ -159,6 +175,7 @@
             },
             "type": {
               "_type": "string",
+              "type": "ascii",
               "offset": 37,
               "size": 4,
               "name": "type",
@@ -185,6 +202,7 @@
             },
             "data": {
               "_type": "struct",
+              "type": "switch",
               "offset": 41,
               "size": 0,
               "name": "data",
@@ -192,6 +210,7 @@
               "children": {
                 "data": {
                   "_type": "bytes",
+                  "type": "bytes",
                   "offset": 41,
                   "size": 0,
                   "name": "data",
@@ -201,6 +220,7 @@
             },
             "crc": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 41,
               "size": 4,
               "name": "crc",

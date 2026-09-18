@@ -7,6 +7,7 @@
   "children": {
     "magic": {
       "_type": "integer",
+      "type": "uint32",
       "offset": 0,
       "size": 4,
       "description": "LZ4\u30D5\u30EC\u30FC\u30E0\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC\uFF080x184D2204\uFF09",
@@ -20,6 +21,7 @@
     },
     "flg": {
       "_type": "bitfield",
+      "type": "bitfield",
       "offset": 4,
       "size": 1,
       "name": "flg",
@@ -71,6 +73,7 @@
     },
     "bd": {
       "_type": "bitfield",
+      "type": "bitfield",
       "offset": 5,
       "size": 1,
       "name": "bd",
@@ -99,6 +102,7 @@
     },
     "header_checksum": {
       "_type": "integer",
+      "type": "uint8",
       "offset": 6,
       "size": 1,
       "description": "\u30D8\u30C3\u30C0\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08xxHash-32\u306E\u7B2C2\u30D0\u30A4\u30C8\uFF09",
@@ -108,6 +112,7 @@
     },
     "blocks": {
       "_type": "array",
+      "type": "struct",
       "offset": 7,
       "size": 4,
       "name": "blocks",
@@ -115,6 +120,7 @@
       "elements": [
         {
           "_type": "struct",
+          "type": "struct",
           "offset": 7,
           "size": 4,
           "name": "blocks",
@@ -122,6 +128,7 @@
           "children": {
             "block_size_raw": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 7,
               "size": 4,
               "description": "\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u6700\u4E0A\u4F4D\u30D3\u30C3\u30C8\u306F\u975E\u5727\u7E2E\u30D5\u30E9\u30B0\u30010=EndMark\uFF09",

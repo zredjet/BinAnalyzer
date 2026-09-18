@@ -59,6 +59,8 @@ public sealed class JsonOutputFormatter : IOutputFormatter
     private static void WriteCommonProperties(Utf8JsonWriter writer, DecodedNode node, string type)
     {
         writer.WriteString("_type", type);
+        if (node.TypeName is { } typeName)
+            writer.WriteString("type", typeName);
         writer.WriteNumber("offset", node.Offset);
         writer.WriteNumber("size", node.Size);
         if (node.Description is not null)

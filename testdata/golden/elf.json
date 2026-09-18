@@ -7,6 +7,7 @@
   "children": {
     "e_ident": {
       "_type": "struct",
+      "type": "struct",
       "offset": 0,
       "size": 16,
       "name": "e_ident",
@@ -14,6 +15,7 @@
       "children": {
         "magic": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 0,
           "size": 4,
           "name": "magic",
@@ -22,6 +24,7 @@
         },
         "ei_class": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 4,
           "size": 1,
           "name": "ei_class",
@@ -31,6 +34,7 @@
         },
         "ei_data": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 5,
           "size": 1,
           "name": "ei_data",
@@ -41,6 +45,7 @@
         },
         "ei_version": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 6,
           "size": 1,
           "name": "ei_version",
@@ -49,6 +54,7 @@
         },
         "ei_osabi": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 7,
           "size": 1,
           "name": "ei_osabi",
@@ -59,6 +65,7 @@
         },
         "ei_abiversion": {
           "_type": "integer",
+          "type": "uint8",
           "offset": 8,
           "size": 1,
           "name": "ei_abiversion",
@@ -67,6 +74,7 @@
         },
         "ei_pad": {
           "_type": "bytes",
+          "type": "bytes",
           "offset": 9,
           "size": 7,
           "name": "ei_pad",
@@ -76,6 +84,7 @@
     },
     "body": {
       "_type": "struct",
+      "type": "switch",
       "offset": 16,
       "size": -16,
       "name": "body",
@@ -83,6 +92,7 @@
       "children": {
         "header": {
           "_type": "struct",
+          "type": "struct",
           "offset": 16,
           "size": 48,
           "name": "header",
@@ -90,6 +100,7 @@
           "children": {
             "e_type": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 16,
               "size": 2,
               "name": "e_type",
@@ -99,6 +110,7 @@
             },
             "e_machine": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 18,
               "size": 2,
               "name": "e_machine",
@@ -108,6 +120,7 @@
             },
             "e_version": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 20,
               "size": 4,
               "name": "e_version",
@@ -116,6 +129,7 @@
             },
             "e_entry": {
               "_type": "integer",
+              "type": "uint64",
               "offset": 24,
               "size": 8,
               "name": "e_entry",
@@ -124,6 +138,7 @@
             },
             "e_phoff": {
               "_type": "integer",
+              "type": "uint64",
               "offset": 32,
               "size": 8,
               "name": "e_phoff",
@@ -132,6 +147,7 @@
             },
             "e_shoff": {
               "_type": "integer",
+              "type": "uint64",
               "offset": 40,
               "size": 8,
               "name": "e_shoff",
@@ -140,6 +156,7 @@
             },
             "e_flags": {
               "_type": "integer",
+              "type": "uint32",
               "offset": 48,
               "size": 4,
               "name": "e_flags",
@@ -148,6 +165,7 @@
             },
             "e_ehsize": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 52,
               "size": 2,
               "name": "e_ehsize",
@@ -156,6 +174,7 @@
             },
             "e_phentsize": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 54,
               "size": 2,
               "name": "e_phentsize",
@@ -164,6 +183,7 @@
             },
             "e_phnum": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 56,
               "size": 2,
               "name": "e_phnum",
@@ -172,6 +192,7 @@
             },
             "e_shentsize": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 58,
               "size": 2,
               "name": "e_shentsize",
@@ -180,6 +201,7 @@
             },
             "e_shnum": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 60,
               "size": 2,
               "name": "e_shnum",
@@ -188,6 +210,7 @@
             },
             "e_shstrndx": {
               "_type": "integer",
+              "type": "uint16",
               "offset": 62,
               "size": 2,
               "name": "e_shstrndx",
@@ -198,6 +221,7 @@
         },
         "program_headers": {
           "_type": "array",
+          "type": "struct",
           "offset": 64,
           "size": 56,
           "name": "program_headers",
@@ -205,6 +229,7 @@
           "elements": [
             {
               "_type": "struct",
+              "type": "struct",
               "offset": 64,
               "size": 56,
               "name": "program_headers",
@@ -212,6 +237,7 @@
               "children": {
                 "p_type": {
                   "_type": "integer",
+                  "type": "uint32",
                   "offset": 64,
                   "size": 4,
                   "name": "p_type",
@@ -221,6 +247,7 @@
                 },
                 "p_flags": {
                   "_type": "flags",
+                  "type": "uint32",
                   "offset": 68,
                   "size": 4,
                   "name": "p_flags",
@@ -239,6 +266,7 @@
                 },
                 "p_offset": {
                   "_type": "integer",
+                  "type": "uint64",
                   "offset": 72,
                   "size": 8,
                   "name": "p_offset",
@@ -247,6 +275,7 @@
                 },
                 "p_vaddr": {
                   "_type": "integer",
+                  "type": "uint64",
                   "offset": 80,
                   "size": 8,
                   "name": "p_vaddr",
@@ -255,6 +284,7 @@
                 },
                 "p_paddr": {
                   "_type": "integer",
+                  "type": "uint64",
                   "offset": 88,
                   "size": 8,
                   "name": "p_paddr",
@@ -263,6 +293,7 @@
                 },
                 "p_filesz": {
                   "_type": "integer",
+                  "type": "uint64",
                   "offset": 96,
                   "size": 8,
                   "name": "p_filesz",
@@ -271,6 +302,7 @@
                 },
                 "p_memsz": {
                   "_type": "integer",
+                  "type": "uint64",
                   "offset": 104,
                   "size": 8,
                   "name": "p_memsz",
@@ -279,6 +311,7 @@
                 },
                 "p_align": {
                   "_type": "integer",
+                  "type": "uint64",
                   "offset": 112,
                   "size": 8,
                   "name": "p_align",
@@ -291,6 +324,7 @@
         },
         "section_headers": {
           "_type": "array",
+          "type": "struct",
           "offset": 0,
           "size": 0,
           "name": "section_headers",

@@ -1,3 +1,4 @@
+@inject GuiSession Session
 @{
     var node = Document.Selected ?? Document.Root;
     var id = Document.Index.IdOf(node);
@@ -5,11 +6,19 @@
     var path = Document.Index.PathOf(id);
     var rows = NodeDetailFormatter.Format(node);
     var raw = RawBytes(node, id);
+    SyncEditor(id);
+    var edit = _preview?.Editability ?? FieldEditability.Of(Document.Index, id);
+    var editing = edit.CanEdit && _preview is not null;
+    var lastEdit = Document.LastEdit;
 }
 <div class="inspector">
     <div class="exp-head">
         <span>インスペクター</span>
         <span class="path">@(path.Length == 0 ? Document.Root.Name : path)</span>
+        @if (Document.IsFieldModified(id))
+        {
+            <span class="chip" title="原本から変更されています">変更</span>
+        }
     </div>
     <div class="exp-body">
         <dl class="kv">
@@ -19,9 +28,71 @@
             {
                 <dt>生バイト</dt><dd class="raw"><span class="@FieldKindMapper.CssClass(kind)">@raw</span>@(node.Size > 16 ? $" … ({node.Size} B)" : "")</dd>
             }
-            @foreach (var r in rows.Where(r => r.Key is not ("Name" or "Offset" or "Size" or "Type") && r.Kind != DetailRowKind.Child && r.Kind != DetailRowKind.Validation))
+            @foreach (var r in rows.Where(r => r.Key is not ("Name" or "Offset" or "Size" or "Type") && r.Kind != DetailRowKind.Child && r.Kind != DetailRowKind.Validation && !(editing && IsEditedRow(r.Key, edit.Kind))))
             {
                 <dt>@KeyLabel(r.Key)</dt><dd class="@(r.Kind == DetailRowKind.Mono ? "mono" : "")">@r.Value</dd>
+            }
+            @if (editing)
+            {
+                <dt><label for="gui-edit">値</label></dt>
+                <dd class="editval">
+                    @if (edit.Kind == EditKind.Enum && EnumEntries(node) is { Count: > 0 } entries)
+                    {
+                        <select id="gui-edit" class="edit mono" aria-label="値を選択" value="@_input" @onchange="OnInput">
+                            @if (entries.All(e => e.Value.ToString() != _input))
+                            {
+                                <option value="@_input">@_input（未定義）</option>
+                            }
+                            @foreach (var e in entries)
+                            {
+                                <option value="@e.Value">@e.Label (@e.Value)</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <input id="gui-edit" class="edit mono" type="text" aria-label="値を編集" spellcheck="false" autocomplete="off"
+                               placeholder="@Placeholder(edit.Kind)" value="@_input" @oninput="OnInput" @onkeydown="OnKey" />
+                    }
+                </dd>
+                <dt>書き込み</dt>
+                <dd class="preview @(_preview!.Error is null ? "" : "err")">
+                    @if (_preview.Error is { } err)
+                    {
+                        <span class="mono">@err</span>
+                    }
+                    else
+                    {
+                        <span class="mono">@HexPreview(_preview.Bytes!)</span>
+                        @if (_preview.Unchanged)
+                        {
+                            <span class="note">（変更なし）</span>
+                        }
+                        else if (_preview.Note is { } note)
+                        {
+                            <span class="note">@note</span>
+                        }
+                    }
+                </dd>
+                @if (_preview.Dependencies.Count > 0)
+                {
+                    <dt>再計算</dt>
+                    <dd class="deps" title="適用時に自動で再計算されるチェックサム">
+                        @foreach (var d in _preview.Dependencies)
+                        {
+                            <span class="dep">@d.Path <em>@ChecksumAlgorithms.DisplayName(d.Algorithm)</em></span>
+                        }
+                    </dd>
+                }
+                <dt></dt>
+                <dd class="editbtns">
+                    <button class="btn primary apply" disabled="@(!_preview.CanApply)" @onclick="Apply">適用</button>
+                    <button class="btn revert" title="読み込み時のバイト列に戻す" disabled="@(!Document.IsFieldModified(id))" @onclick="Revert">元に戻す</button>
+                </dd>
+            }
+            else if (edit.Reason is { } reason && !NodeChildren.HasChildren(node) && id > 0)
+            {
+                <dt>編集</dt><dd class="note">@reason</dd>
             }
             @if (Flags(node) is { Count: > 0 } flags)
             {
@@ -43,11 +114,29 @@
                 <dt>説明</dt><dd class="note">@desc</dd>
             }
         </dl>
+        @if (_error is { } applyError)
+        {
+            <div class="affect warn" role="alert">@applyError</div>
+        }
+        else if (lastEdit is not null)
+        {
+            <div class="affect done" role="status">
+                適用しました: <b>@lastEdit.Summary</b>
+                @if (lastEdit.ChecksumFixes.Count > 0)
+                {
+                    <span>。チェックサム再計算: @string.Join(", ", lastEdit.ChecksumFixes.Select(f => f.Path))</span>
+                }
+            </div>
+        }
+        @if (editing && edit.MayShiftLayout)
+        {
+            <div class="affect warn">この値は後続フィールドのサイズや個数を決めている可能性があります。変更すると再デコードで後続の全オフセットが変わります。</div>
+        }
         @if (node is DecodedCompressed c)
         {
             <div class="affect">@c.Algorithm を展開（@c.CompressedSize B → @c.DecompressedSize B）。@(c.DecodedContent is null ? "展開後の構造は定義されていません。" : "展開後の構造はツリーの子として辿れます。")</div>
         }
-        else if (kind == FieldKind.Len && Document.Index.ParentOf(id) is { } parent)
+        else if (!editing && kind == FieldKind.Len && Document.Index.ParentOf(id) is { } parent)
         {
             <div class="affect">この値は <b>@(Document.Index.PathOf(parent))</b> 内の後続フィールドのサイズを決めている可能性があります。</div>
         }
@@ -56,6 +145,89 @@
 
 @code {
     [Parameter, EditorRequired] public GuiDocument Document { get; set; } = null!;
+
+    private int _editId = -1;
+    private int _editRevision = -1;
+    private GuiDocument? _editDocument;
+    private string _input = "";
+    private EditPreview? _preview;
+    private string? _error;
+
+    /// <summary>選択ノードまたはデータ世代が変わったら編集欄を現在値で初期化する。入力中の再描画では保持する。</summary>
+    private void SyncEditor(int id)
+    {
+        if (id == _editId && Document.Revision == _editRevision && ReferenceEquals(Document, _editDocument))
+            return;
+        _editId = id;
+        _editRevision = Document.Revision;
+        _editDocument = Document;
+        _error = null;
+        var edit = FieldEditability.Of(Document.Index, id);
+        if (edit.CanEdit)
+        {
+            _input = Document.EditText(id);
+            _preview = Document.PreviewEdit(id, _input);
+        }
+        else
+        {
+            _input = "";
+            _preview = null;
+        }
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _input = e.Value?.ToString() ?? "";
+        _error = null;
+        _preview = Document.PreviewEdit(_editId, _input);
+    }
+
+    private void OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") Apply();
+        else if (e.Key == "Escape") { _input = Document.EditText(_editId); _preview = Document.PreviewEdit(_editId, _input); }
+    }
+
+    private void Apply()
+    {
+        if (_preview is null || !_preview.CanApply) return;
+        var outcome = Document.ApplyEdit(_editId, _input);
+        _error = outcome.Success ? null : outcome.Error;
+    }
+
+    private void Revert()
+    {
+        _error = null;
+        Document.RevertField(_editId);
+    }
+
+    private static bool IsEditedRow(string key, EditKind kind) => kind switch
+    {
+        EditKind.Integer or EditKind.Enum => key is "Value",
+        EditKind.Float => key is "Value",
+        EditKind.String => key is "Value",
+        EditKind.Bytes => key is "Hex",
+        _ => false,
+    };
+
+    private static string Placeholder(EditKind kind) => kind switch
+    {
+        EditKind.Integer => "10進 または 0x16進",
+        EditKind.Float => "例: 1.5",
+        EditKind.String => "文字列",
+        EditKind.Bytes => "16進 例: 89 50 4E 47",
+        _ => "",
+    };
+
+    private static string HexPreview(byte[] bytes)
+    {
+        var shown = bytes.Length > 16 ? bytes.AsSpan(0, 16) : bytes.AsSpan();
+        var text = BinAnalyzer.Engine.FieldEncoder.FormatHex(shown);
+        return bytes.Length > 16 ? $"{text} … ({bytes.Length} B)" : text;
+    }
+
+    private IReadOnlyList<EnumEntry>? EnumEntries(DecodedNode node)
+        => node is DecodedInteger { EnumRef: { } name } && Document.Format.Definition.Enums.TryGetValue(name, out var def) ? def.Entries : null;
 
     private string? RawBytes(DecodedNode node, int id)
     {
