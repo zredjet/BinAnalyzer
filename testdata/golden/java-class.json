@@ -10,7 +10,7 @@
       "type": "bytes",
       "offset": 0,
       "size": 4,
-      "description": "Java\u30AF\u30E9\u30B9\u30D5\u30A1\u30A4\u30EB\u30DE\u30B8\u30C3\u30AF\uFF080xCAFEBABE\uFF09",
+      "description": "\u30DE\u30B8\u30C3\u30AF\uFF08CA FE BA BE\uFF09",
       "name": "magic",
       "hex": "CA FE BA BE",
       "valid": true
@@ -20,6 +20,7 @@
       "type": "uint16",
       "offset": 4,
       "size": 2,
+      "description": "\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08Java 12 \u4EE5\u964D\u306F 0\u3001\u30D7\u30EC\u30D3\u30E5\u30FC\u6A5F\u80FD\u3092\u4F7F\u3046\u30AF\u30E9\u30B9\u306F 0xFFFF\uFF09",
       "name": "minor_version",
       "value": 0,
       "hex": "0x0"
@@ -29,19 +30,31 @@
       "type": "uint16",
       "offset": 6,
       "size": 2,
+      "description": "\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08Java SE \u306E\u7248 \u002B 44\uFF09",
       "name": "major_version",
       "value": 61,
       "hex": "0x3D",
-      "enum_label": "Java_17"
+      "enum_label": "Java_17",
+      "enum_description": "Java SE 17\uFF08\u30B7\u30FC\u30EB\u30AF\u30E9\u30B9\uFF09"
     },
     "constant_pool_count": {
       "_type": "integer",
       "type": "uint16",
       "offset": 8,
       "size": 2,
+      "description": "\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u306E\u30B9\u30ED\u30C3\u30C8\u6570 \u002B 1\uFF08\u756A\u53F7\u306F 1\u301Cconstant_pool_count \u2212 1\uFF09",
       "name": "constant_pool_count",
       "value": 3,
       "hex": "0x3"
+    },
+    "next_is_unusable": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 10,
+      "size": 0,
+      "description": "\u6B21\u306E\u30B9\u30ED\u30C3\u30C8\u304C Long / Double \u306E 2 \u30B9\u30ED\u30C3\u30C8\u76EE\u304B\u306E\u521D\u671F\u5024\uFF08\u5404\u30B9\u30ED\u30C3\u30C8\u3067\u7F6E\u304D\u63DB\u308F\u308B\uFF09",
+      "name": "next_is_unusable",
+      "value": 0
     },
     "constant_pool": {
       "_type": "array",
@@ -57,17 +70,37 @@
           "offset": 10,
           "size": 3,
           "name": "constant_pool",
-          "struct_type": "cp_entry",
+          "struct_type": "cp_slot",
           "children": {
+            "index": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 10,
+              "size": 0,
+              "description": "\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u306E\u756A\u53F7",
+              "name": "index",
+              "value": 1
+            },
+            "unusable": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 10,
+              "size": 0,
+              "description": "1 \u306A\u3089 Long / Double \u306E 2 \u30B9\u30ED\u30C3\u30C8\u76EE\uFF08\u4F7F\u3048\u306A\u3044\u3002\u30D0\u30A4\u30C8\u3092\u6301\u305F\u306A\u3044\uFF09",
+              "name": "unusable",
+              "value": 0
+            },
             "tag": {
               "_type": "integer",
               "type": "uint8",
               "offset": 10,
               "size": 1,
+              "description": "\u5B9A\u6570\u306E\u7A2E\u985E",
               "name": "tag",
               "value": 7,
               "hex": "0x7",
-              "enum_label": "Class"
+              "enum_label": "Class",
+              "enum_description": "\u30AF\u30E9\u30B9\u30FB\u30A4\u30F3\u30BF\u30D5\u30A7\u30FC\u30B9"
             },
             "info": {
               "_type": "struct",
@@ -82,12 +115,21 @@
                   "type": "uint16",
                   "offset": 11,
                   "size": 2,
-                  "description": "\u30AF\u30E9\u30B9\u540D\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08CONSTANT_Utf8\uFF09",
+                  "description": "\u30AF\u30E9\u30B9\u540D\u306E CONSTANT_Utf8 \u306E\u756A\u53F7\uFF08\u5185\u90E8\u5F62\u5F0F\u3001\u914D\u5217\u306A\u3089\u8A18\u8FF0\u5B50\uFF09",
                   "name": "name_index",
                   "value": 2,
                   "hex": "0x2"
                 }
               }
+            },
+            "next_is_unusable": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 13,
+              "size": 0,
+              "description": "\u6B21\u306E\u30B9\u30ED\u30C3\u30C8\u304C\u4F7F\u3048\u306A\u3044\u304B\uFF08Long / Double \u306E\u3068\u304D 1\uFF09",
+              "name": "next_is_unusable",
+              "value": 0
             }
           }
         },
@@ -97,17 +139,37 @@
           "offset": 13,
           "size": 7,
           "name": "constant_pool",
-          "struct_type": "cp_entry",
+          "struct_type": "cp_slot",
           "children": {
+            "index": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 13,
+              "size": 0,
+              "description": "\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u306E\u756A\u53F7",
+              "name": "index",
+              "value": 2
+            },
+            "unusable": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 13,
+              "size": 0,
+              "description": "1 \u306A\u3089 Long / Double \u306E 2 \u30B9\u30ED\u30C3\u30C8\u76EE\uFF08\u4F7F\u3048\u306A\u3044\u3002\u30D0\u30A4\u30C8\u3092\u6301\u305F\u306A\u3044\uFF09",
+              "name": "unusable",
+              "value": 0
+            },
             "tag": {
               "_type": "integer",
               "type": "uint8",
               "offset": 13,
               "size": 1,
+              "description": "\u5B9A\u6570\u306E\u7A2E\u985E",
               "name": "tag",
               "value": 1,
               "hex": "0x1",
-              "enum_label": "Utf8"
+              "enum_label": "Utf8",
+              "enum_description": "\u6587\u5B57\u5217\uFF08\u4FEE\u6B63 UTF-8\uFF09"
             },
             "info": {
               "_type": "struct",
@@ -122,20 +184,31 @@
                   "type": "uint16",
                   "offset": 14,
                   "size": 2,
+                  "description": "\u6587\u5B57\u5217\u306E\u30D0\u30A4\u30C8\u6570",
                   "name": "length",
                   "value": 4,
                   "hex": "0x4"
                 },
                 "value": {
-                  "_type": "bytes",
-                  "type": "bytes",
+                  "_type": "string",
+                  "type": "utf8",
                   "offset": 16,
                   "size": 4,
-                  "description": "UTF-8\u30A8\u30F3\u30B3\u30FC\u30C9\u6587\u5B57\u5217\u30D0\u30A4\u30C8\u5217",
+                  "description": "\u6587\u5B57\u5217\uFF08\u4FEE\u6B63 UTF-8\u3002\u30AF\u30E9\u30B9\u540D\u306F \u0027/\u0027 \u533A\u5207\u308A\u306E\u5185\u90E8\u5F62\u5F0F\u3001\u8A18\u8FF0\u5B50\u306F \u0027(I)V\u0027 \u306E\u3088\u3046\u306A\u5F62\u5F0F\uFF09",
                   "name": "value",
-                  "hex": "54 65 73 74"
+                  "value": "Test",
+                  "encoding": "utf8"
                 }
               }
+            },
+            "next_is_unusable": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 20,
+              "size": 0,
+              "description": "\u6B21\u306E\u30B9\u30ED\u30C3\u30C8\u304C\u4F7F\u3048\u306A\u3044\u304B\uFF08Long / Double \u306E\u3068\u304D 1\uFF09",
+              "name": "next_is_unusable",
+              "value": 0
             }
           }
         }
@@ -146,6 +219,7 @@
       "type": "uint16",
       "offset": 20,
       "size": 2,
+      "description": "\u30AF\u30E9\u30B9\u306E\u30A2\u30AF\u30BB\u30B9\u30D5\u30E9\u30B0\u3068\u6027\u8CEA",
       "name": "access_flags",
       "raw_value": "0x21",
       "flags": {
@@ -180,6 +254,10 @@
         "ACC_ENUM": {
           "set": false,
           "meaning": ""
+        },
+        "ACC_MODULE": {
+          "set": false,
+          "meaning": ""
         }
       }
     },
@@ -188,17 +266,26 @@
       "type": "uint16",
       "offset": 22,
       "size": 2,
-      "description": "\u3053\u306E\u30AF\u30E9\u30B9\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+      "description": "\u3053\u306E\u30AF\u30E9\u30B9\u306E CONSTANT_Class \u306E\u756A\u53F7",
       "name": "this_class",
       "value": 1,
       "hex": "0x1"
+    },
+    "this_class_name": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 24,
+      "size": 0,
+      "description": "\u3053\u306E\u30AF\u30E9\u30B9\u306E\u540D\u524D\uFF08\u5185\u90E8\u5F62\u5F0F\u3002\u4F8B: java/lang/String\uFF09",
+      "name": "this_class_name",
+      "value": "Test"
     },
     "super_class": {
       "_type": "integer",
       "type": "uint16",
       "offset": 24,
       "size": 2,
-      "description": "\u30B9\u30FC\u30D1\u30FC\u30AF\u30E9\u30B9\u306E\u30B3\u30F3\u30B9\u30BF\u30F3\u30C8\u30D7\u30FC\u30EB\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+      "description": "\u30B9\u30FC\u30D1\u30FC\u30AF\u30E9\u30B9\u306E CONSTANT_Class \u306E\u756A\u53F7\uFF08java/lang/Object \u3068 module-info \u306F 0\uFF09",
       "name": "super_class",
       "value": 0,
       "hex": "0x0"
@@ -208,13 +295,14 @@
       "type": "uint16",
       "offset": 26,
       "size": 2,
+      "description": "\u76F4\u63A5\u5B9F\u88C5\u3059\u308B\u30A4\u30F3\u30BF\u30D5\u30A7\u30FC\u30B9\u306E\u6570",
       "name": "interfaces_count",
       "value": 0,
       "hex": "0x0"
     },
     "interfaces": {
       "_type": "array",
-      "type": "uint16",
+      "type": "struct",
       "offset": 28,
       "size": 0,
       "name": "interfaces",
@@ -226,6 +314,7 @@
       "type": "uint16",
       "offset": 28,
       "size": 2,
+      "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u6570",
       "name": "fields_count",
       "value": 0,
       "hex": "0x0"
@@ -244,6 +333,7 @@
       "type": "uint16",
       "offset": 30,
       "size": 2,
+      "description": "\u30E1\u30BD\u30C3\u30C9\u306E\u6570",
       "name": "methods_count",
       "value": 0,
       "hex": "0x0"
@@ -262,6 +352,7 @@
       "type": "uint16",
       "offset": 32,
       "size": 2,
+      "description": "\u30AF\u30E9\u30B9\u306E\u5C5E\u6027\u306E\u6570",
       "name": "attributes_count",
       "value": 0,
       "hex": "0x0"

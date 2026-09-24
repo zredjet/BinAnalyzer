@@ -183,7 +183,12 @@
             "struct", "switch", "bitfield",
             "zlib", "deflate",
             "gzip", "bzip2", "lzma", "zstd", "zstandard", "lz4",
-            "virtual"
+            "virtual",
+            "uleb128",
+            "leb128u",
+            "sleb128",
+            "leb128s",
+            "vlq"
           ]
         },
         "size": {

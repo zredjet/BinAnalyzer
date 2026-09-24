@@ -33,12 +33,6 @@ public sealed class FormatDefinitionQualityTests
         "mkv.bdef.yaml",
         "common/riff.bdef.yaml",
         "common/isobmff.bdef.yaml",
-        // 実行形式・バイトコード
-        "elf.bdef.yaml",
-        "pe.bdef.yaml",
-        "macho.bdef.yaml",
-        "java-class.bdef.yaml",
-        "wasm.bdef.yaml",
         // データ・その他
         "sqlite.bdef.yaml",
         "parquet.bdef.yaml",

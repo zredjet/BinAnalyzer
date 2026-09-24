@@ -1,3 +1,13 @@
+# WebAssembly のバイナリモジュール（.wasm）
+# 仕様: WebAssembly Specification 3.0（2026-09-21） 第 5 章 Binary Format https://webassembly.github.io/spec/core/binary/index.html
+#   （GC の型・例外のタグ・memory64・複数メモリを含む）。共有メモリのフラグはスレッドの提案（threads）
+# 構造: マジック '\0asm' → 版（1）と層（0 = コアモジュール）→ セクション（ID 1 バイト + サイズ LEB128 + 中身）の並び。
+#   セクションの中身は ID で switch し、ほとんどは「要素数 LEB128 + 要素」のベクタ。値の型は参照型（0x63 / 0x64 + ヒープ型）が可変長なので struct にする。
+#   定数式（グローバルの初期値・要素とデータのオフセット）は命令を 1 つずつ読み、end（0x0B）で終わる。
+#   カスタムセクションは名前で switch し、name・producers・target_features・sourceMappingURL・build_id を分解する。
+# 対応していないもの: 関数の本体の命令（バイト列として表示）、定数式の GC（0xFB）とベクタ（0xFD）の命令、
+#   コンポーネントモデルのバイナリ（層 1。セクションはバイト列として表示）、name セクションのローカル名以降のサブセクション、
+#   LLVM のオブジェクトファイルの linking / reloc.* セクションの中身、dylink.0 の中身
 name: WASM
 endianness: little
 root: wasm
@@ -6,28 +16,236 @@ enums:
   section_id:
     - value: 0
       label: custom
+      description: "カスタムセクション（名前 + 任意のデータ。デバッグ情報など）"
     - value: 1
       label: type
+      description: "型セクション（関数・構造体・配列の型）"
     - value: 2
       label: import
+      description: "インポートセクション"
     - value: 3
       label: function
+      description: "関数セクション（各関数の型の番号）"
     - value: 4
       label: table
+      description: "テーブルセクション"
     - value: 5
       label: memory
+      description: "メモリセクション"
     - value: 6
       label: global
+      description: "グローバルセクション"
     - value: 7
       label: export
+      description: "エクスポートセクション"
     - value: 8
       label: start
+      description: "開始関数セクション"
     - value: 9
       label: element
+      description: "要素セグメントのセクション（テーブルの初期値）"
     - value: 10
       label: code
+      description: "コードセクション（関数の本体）"
     - value: 11
       label: data
+      description: "データセグメントのセクション（メモリの初期値）"
+    - value: 12
+      label: datacount
+      description: "データの数のセクション（memory.init などの検証用）"
+    - value: 13
+      label: tag
+      description: "タグセクション（例外処理）"
+
+  value_type:
+    - value: 0x7F
+      label: i32
+      description: "32 ビット整数"
+    - value: 0x7E
+      label: i64
+      description: "64 ビット整数"
+    - value: 0x7D
+      label: f32
+      description: "32 ビット浮動小数点数"
+    - value: 0x7C
+      label: f64
+      description: "64 ビット浮動小数点数"
+    - value: 0x7B
+      label: v128
+      description: "128 ビットのベクタ（SIMD）"
+    - value: 0x78
+      label: i8
+      description: "8 ビット整数（構造体・配列のフィールドだけのパック型）"
+    - value: 0x77
+      label: i16
+      description: "16 ビット整数（構造体・配列のフィールドだけのパック型）"
+    - value: 0x74
+      label: nullexnref
+      description: "(ref null noexn)"
+    - value: 0x73
+      label: nullfuncref
+      description: "(ref null nofunc)"
+    - value: 0x72
+      label: nullexternref
+      description: "(ref null noextern)"
+    - value: 0x71
+      label: nullref
+      description: "(ref null none)"
+    - value: 0x70
+      label: funcref
+      description: "(ref null func)"
+    - value: 0x6F
+      label: externref
+      description: "(ref null extern)"
+    - value: 0x6E
+      label: anyref
+      description: "(ref null any)"
+    - value: 0x6D
+      label: eqref
+      description: "(ref null eq)"
+    - value: 0x6C
+      label: i31ref
+      description: "(ref null i31)"
+    - value: 0x6B
+      label: structref
+      description: "(ref null struct)"
+    - value: 0x6A
+      label: arrayref
+      description: "(ref null array)"
+    - value: 0x69
+      label: exnref
+      description: "(ref null exn)"
+    - value: 0x64
+      label: ref
+      description: "null を許さない参照（後ろにヒープ型）"
+    - value: 0x63
+      label: ref_null
+      description: "null を許す参照（後ろにヒープ型）"
+
+  composite_type:
+    - value: 0x60
+      label: func
+      description: "関数型（引数の型の並び + 結果の型の並び）"
+    - value: 0x5F
+      label: struct
+      description: "構造体型（フィールドの並び）"
+    - value: 0x5E
+      label: array
+      description: "配列型（要素のフィールド 1 個）"
+    - value: 0x50
+      label: sub
+      description: "部分型（親の型の番号の並び + 複合型。さらに派生できる）"
+    - value: 0x4F
+      label: sub_final
+      description: "final の部分型（これ以上派生できない）"
+    - value: 0x4E
+      label: rec
+      description: "再帰型のグループ（部分型の並び）"
+
+  external_kind:
+    - value: 0
+      label: func
+      description: "関数（型の番号）"
+    - value: 1
+      label: table
+      description: "テーブル"
+    - value: 2
+      label: memory
+      description: "メモリ"
+    - value: 3
+      label: global
+      description: "グローバル変数"
+    - value: 4
+      label: tag
+      description: "例外のタグ"
+
+  opcode:
+    - value: 0x0B
+      label: end
+      description: "式の終わり"
+    - value: 0x23
+      label: global.get
+      description: "グローバル変数の値"
+    - value: 0x41
+      label: i32.const
+      description: "i32 の定数"
+    - value: 0x42
+      label: i64.const
+      description: "i64 の定数"
+    - value: 0x43
+      label: f32.const
+      description: "f32 の定数"
+    - value: 0x44
+      label: f64.const
+      description: "f64 の定数"
+    - value: 0x6A
+      label: i32.add
+      description: "i32 の加算（拡張定数式）"
+    - value: 0x6B
+      label: i32.sub
+      description: "i32 の減算（拡張定数式）"
+    - value: 0x6C
+      label: i32.mul
+      description: "i32 の乗算（拡張定数式）"
+    - value: 0x7C
+      label: i64.add
+      description: "i64 の加算（拡張定数式）"
+    - value: 0x7D
+      label: i64.sub
+      description: "i64 の減算（拡張定数式）"
+    - value: 0x7E
+      label: i64.mul
+      description: "i64 の乗算（拡張定数式）"
+    - value: 0xD0
+      label: ref.null
+      description: "null の参照"
+    - value: 0xD2
+      label: ref.func
+      description: "関数の参照"
+    - value: 0xFB
+      label: gc_prefix
+      description: "GC の命令の接頭辞（struct.new など。中身は読まない）"
+    - value: 0xFD
+      label: vector_prefix
+      description: "ベクタの命令の接頭辞（v128.const など。中身は読まない）"
+
+  name_subsection:
+    - value: 0
+      label: module_name
+      description: "モジュール名"
+    - value: 1
+      label: function_names
+      description: "関数名"
+    - value: 2
+      label: local_names
+      description: "ローカル変数名"
+    - value: 3
+      label: label_names
+      description: "ラベル名（拡張名前セクション）"
+    - value: 4
+      label: type_names
+      description: "型の名前（拡張名前セクション）"
+    - value: 5
+      label: table_names
+      description: "テーブル名（拡張名前セクション）"
+    - value: 6
+      label: memory_names
+      description: "メモリ名（拡張名前セクション）"
+    - value: 7
+      label: global_names
+      description: "グローバル変数名（拡張名前セクション）"
+    - value: 8
+      label: elem_segment_names
+      description: "要素セグメント名（拡張名前セクション）"
+    - value: 9
+      label: data_segment_names
+      description: "データセグメント名（拡張名前セクション）"
+    - value: 10
+      label: field_names
+      description: "構造体のフィールド名（GC）"
+    - value: 11
+      label: tag_names
+      description: "タグ名（例外処理）"
 
 structs:
   wasm:
@@ -35,128 +253,725 @@ structs:
       type: bytes
       size: "4"
       expected: [0x00, 0x61, 0x73, 0x6D]
-      description: "WASMマジック（'\\0asm'）"
+      description: "マジック（00 'asm'）"
     - name: version
-      type: uint32
-      validate: "{version == 1}"
-      description: "WASMバイナリフォーマットバージョン"
+      type: uint16
+      description: "バイナリ形式の版（コアモジュールは 1。コンポーネントは 0x0D など）"
+    - name: layer
+      type: uint16
+      validate: "{layer != 0 or version == 1}"
+      description: "層（0 = コアモジュール、1 = コンポーネントモデルのコンポーネント）。コアモジュールなら version が 1 であることを検証する"
+    - name: body
+      type: switch
+      switch_on: "{layer}"
+      size: remaining
+      cases:
+        "0": core_module
+      default: raw_data
+      description: "モジュールの本体（コアモジュールはセクションの並び）"
+
+  core_module:
     - name: sections
       type: struct
       struct: section
       repeat: eof
+      description: "セクションの並び（カスタムセクション以外は ID の決まった順に 1 回まで）"
 
   section:
     - name: section_id
       type: uint8
       enum: section_id
+      description: "セクションの種類"
     - name: section_size
       type: uleb128
-      description: "セクションサイズ（バイト）"
+      description: "中身のバイト数"
     - name: section_data
       type: switch
       size: "{section_size}"
       switch_on: "{section_id}"
       cases:
-        "0": custom_section_data
-        "1": type_section_data
-        "3": function_section_data
-        "5": memory_section_data
-        "7": export_section_data
+        "0": custom_section
+        "1": type_section
+        "2": import_section
+        "3": function_section
+        "4": table_section
+        "5": memory_section
+        "6": global_section
+        "7": export_section
+        "8": start_section
+        "9": element_section
+        "10": code_section
+        "11": data_section
+        "12": datacount_section
+        "13": tag_section
       default: raw_data
+      description: "セクションの中身（section_size バイト。ID で振り分ける）"
 
-  custom_section_data:
-    - name: name_len
-      type: uleb128
-      description: "カスタムセクション名の長さ"
-    - name: name
-      type: utf8
-      size: "{name_len}"
-      description: "カスタムセクション名"
-    - name: data
-      type: bytes
-      size: remaining
-      description: "カスタムセクションデータ"
+  # ===== 型 =====
+  val_type:
+    - name: code
+      type: uint8
+      enum: value_type
+      description: "値の型の符号（数値型・ベクタ型・参照型の略記、または 0x63 / 0x64 + ヒープ型）"
+    - name: heap_type
+      type: sleb128
+      if: "{code == 0x63 or code == 0x64}"
+      description: "ヒープ型（0 以上なら型の番号、負ならヒープ型の略記の符号を s33 で表した値。例: −16 = func）"
 
-  type_section_data:
+  type_section:
     - name: count
       type: uleb128
-      description: "関数型の数"
+      description: "再帰型のグループの数（ほとんどは 1 型ずつ）"
     - name: entries
       type: struct
-      struct: func_type
+      struct: rec_type
       repeat_count: "{count}"
+      description: "型の定義"
 
-  func_type:
+  rec_type:
     - name: form
       type: uint8
-      validate: "{form == 96}"
-      description: "関数型マーカー（0x60）"
-    - name: param_count
-      type: uleb128
-      description: "パラメータ数"
-    - name: params
-      type: uint8
-      repeat_count: "{param_count}"
-      description: "パラメータ値型"
-    - name: result_count
-      type: uleb128
-      description: "戻り値数"
-    - name: results
-      type: uint8
-      repeat_count: "{result_count}"
-      description: "戻り値型"
+      enum: composite_type
+      description: "型の形（0x4E = 再帰グループ、0x50 / 0x4F = 部分型、0x60 / 0x5F / 0x5E = 複合型そのもの）"
+    - name: body
+      type: switch
+      switch_on: "{form}"
+      cases:
+        "0x4E": rec_group
+        "0x50": sub_type_body
+        "0x4F": sub_type_body
+        "0x60": func_type
+        "0x5F": struct_type
+        "0x5E": array_type
+      default: raw_data
+      description: "型の中身"
 
-  function_section_data:
+  rec_group:
     - name: count
       type: uleb128
-      description: "関数数"
+      description: "グループの中の型の数"
+    - name: types
+      type: struct
+      struct: sub_type
+      repeat_count: "{count}"
+      description: "互いに参照できる型の並び"
+
+  sub_type:
+    - name: form
+      type: uint8
+      enum: composite_type
+      description: "部分型（0x50 / 0x4F）か、複合型そのもの（final の部分型の略記）"
+    - name: body
+      type: switch
+      switch_on: "{form}"
+      cases:
+        "0x50": sub_type_body
+        "0x4F": sub_type_body
+        "0x60": func_type
+        "0x5F": struct_type
+        "0x5E": array_type
+      default: raw_data
+      description: "部分型の中身"
+
+  sub_type_body:
+    - name: supertype_count
+      type: uleb128
+      description: "親の型の数（0 か 1）"
+    - name: supertypes
+      type: uleb128
+      repeat_count: "{supertype_count}"
+      description: "親の型の番号"
+    - name: comp_form
+      type: uint8
+      enum: composite_type
+      description: "複合型の形（0x60 / 0x5F / 0x5E）"
+    - name: comp_type
+      type: switch
+      switch_on: "{comp_form}"
+      cases:
+        "0x60": func_type
+        "0x5F": struct_type
+        "0x5E": array_type
+      default: raw_data
+      description: "複合型の中身"
+
+  func_type:
+    - name: param_count
+      type: uleb128
+      description: "引数の数"
+    - name: params
+      type: struct
+      struct: val_type
+      repeat_count: "{param_count}"
+      description: "引数の型"
+    - name: result_count
+      type: uleb128
+      description: "結果の数（複数の戻り値を返せる）"
+    - name: results
+      type: struct
+      struct: val_type
+      repeat_count: "{result_count}"
+      description: "結果の型"
+
+  struct_type:
+    - name: field_count
+      type: uleb128
+      description: "フィールドの数"
+    - name: fields
+      type: struct
+      struct: field_type
+      repeat_count: "{field_count}"
+      description: "フィールドの型と可変性"
+
+  array_type:
+    - name: element
+      type: struct
+      struct: field_type
+      description: "要素の型と可変性"
+
+  field_type:
+    - name: storage_type
+      type: struct
+      struct: val_type
+      description: "格納する型（値の型、またはパック型 i8 / i16）"
+    - name: mutable
+      type: uint8
+      description: "可変性（0 = 変更不可、1 = mut）"
+
+  limits:
+    - name: flags
+      type: uint8
+      description: "フラグ（bit 0 = 最大値あり、bit 1 = 共有メモリ（スレッド）、bit 2 = 64 ビットのアドレス（memory64 / table64））"
+    - name: min
+      type: uleb128
+      description: "最小の大きさ（メモリはページ数（64 KiB 単位）、テーブルは要素数）"
+    - name: max
+      type: uleb128
+      if: "{(flags & 1) != 0}"
+      description: "最大の大きさ（flags の bit 0 が 1 のとき）"
+
+  table_type:
+    - name: ref_type
+      type: struct
+      struct: val_type
+      description: "要素の参照型（funcref・externref など）"
+    - name: limits
+      type: struct
+      struct: limits
+      description: "テーブルの大きさ"
+
+  global_type:
+    - name: val_type
+      type: struct
+      struct: val_type
+      description: "値の型"
+    - name: mutable
+      type: uint8
+      description: "可変性（0 = const、1 = mut）"
+
+  tag_type:
+    - name: attribute
+      type: uint8
+      description: "属性（0 = 例外）"
+    - name: type_index
+      type: uleb128
+      description: "例外の引数を表す関数型の番号"
+
+  # ===== 定数式 =====
+  const_expr:
+    - name: instructions
+      type: struct
+      struct: const_instruction
+      repeat_until: "{opcode == 0x0B}"
+      description: "命令の並び（end = 0x0B で終わる）"
+
+  const_instruction:
+    - name: opcode
+      type: uint8
+      enum: opcode
+      description: "命令"
+    - name: immediate
+      type: switch
+      switch_on: "{opcode}"
+      cases:
+        "0x41": sleb_immediate
+        "0x42": sleb_immediate
+        "0x43": f32_immediate
+        "0x44": f64_immediate
+        "0x23": uleb_immediate
+        "0xD2": uleb_immediate
+        "0xD0": sleb_immediate
+        "0x0B": no_immediate
+        "0x6A": no_immediate
+        "0x6B": no_immediate
+        "0x6C": no_immediate
+        "0x7C": no_immediate
+        "0x7D": no_immediate
+        "0x7E": no_immediate
+      default: raw_data
+      description: "即値（i32.const / i64.const は符号付き LEB128、global.get / ref.func は番号、ref.null はヒープ型。0xFB / 0xFD は残り全部）"
+
+  sleb_immediate:
+    - name: value
+      type: sleb128
+      description: "符号付き LEB128 の即値（定数、または ref.null のヒープ型）"
+
+  uleb_immediate:
+    - name: index
+      type: uleb128
+      description: "番号（グローバル変数・関数）"
+
+  f32_immediate:
+    - name: value
+      type: float32
+      description: "f32 の定数"
+
+  f64_immediate:
+    - name: value
+      type: float64
+      description: "f64 の定数"
+
+  no_immediate: []
+
+  # ===== セクション =====
+  import_section:
+    - name: count
+      type: uleb128
+      description: "インポートの数"
+    - name: entries
+      type: struct
+      struct: import_entry
+      repeat_count: "{count}"
+      description: "インポート"
+
+  import_entry:
+    - name: module_length
+      type: uleb128
+      description: "モジュール名のバイト数"
+    - name: module
+      type: utf8
+      size: "{module_length}"
+      description: "モジュール名（JavaScript の import オブジェクトのキー。例: env・wasi_snapshot_preview1）"
+    - name: name_length
+      type: uleb128
+      description: "名前のバイト数"
+    - name: name
+      type: utf8
+      size: "{name_length}"
+      description: "インポートする名前"
+    - name: kind
+      type: uint8
+      enum: external_kind
+      description: "インポートするものの種類"
+    - name: desc
+      type: switch
+      switch_on: "{kind}"
+      cases:
+        "0": uleb_immediate
+        "1": table_type
+        "2": limits
+        "3": global_type
+        "4": tag_type
+      default: raw_data
+      description: "インポートするものの型（関数は型の番号、テーブル・メモリ・グローバル・タグはその型）"
+
+  function_section:
+    - name: count
+      type: uleb128
+      description: "このモジュールで定義する関数の数"
     - name: type_indices
       type: uleb128
       repeat_count: "{count}"
-      description: "型インデックス"
+      description: "各関数の型の番号（コードセクションの本体と同じ順）"
 
-  memory_section_data:
+  table_section:
     - name: count
       type: uleb128
-      description: "メモリ数"
+      description: "テーブルの数"
+    - name: tables
+      type: struct
+      struct: table_entry
+      repeat_count: "{count}"
+      description: "テーブル"
+
+  table_entry:
+    - name: prefix
+      type: uint8
+      description: "先頭のバイト（0x40 なら初期値の式付きのテーブル。それ以外は参照型の先頭バイト）"
+    - name: reserved
+      type: uint8
+      if: "{prefix == 0x40}"
+      description: "予約（0）"
+    - name: table_with_init
+      type: struct
+      struct: table_type
+      if: "{prefix == 0x40}"
+      description: "テーブルの型"
+    - name: init
+      type: struct
+      struct: const_expr
+      if: "{prefix == 0x40}"
+      description: "要素の初期値の式"
+    - name: heap_type
+      type: sleb128
+      if: "{prefix == 0x63 or prefix == 0x64}"
+      description: "参照型のヒープ型（prefix が 0x63 / 0x64 のとき）"
+    - name: limits
+      type: struct
+      struct: limits
+      if: "{prefix != 0x40}"
+      description: "テーブルの大きさ（prefix が参照型のとき）"
+
+  memory_section:
+    - name: count
+      type: uleb128
+      description: "メモリの数（複数メモリに対応。通常 0 か 1）"
     - name: entries
       type: struct
-      struct: memory_type
+      struct: limits
       repeat_count: "{count}"
+      description: "メモリの大きさ（64 KiB のページ数）"
 
-  memory_type:
-    - name: flags
-      type: uleb128
-      description: "フラグ（0=最小のみ, 1=最小+最大）"
-    - name: initial
-      type: uleb128
-      description: "初期ページ数"
-
-  export_section_data:
+  global_section:
     - name: count
       type: uleb128
-      description: "エクスポート数"
+      description: "グローバル変数の数"
+    - name: globals
+      type: struct
+      struct: global_entry
+      repeat_count: "{count}"
+      description: "グローバル変数"
+
+  global_entry:
+    - name: type
+      type: struct
+      struct: global_type
+      description: "型と可変性"
+    - name: init
+      type: struct
+      struct: const_expr
+      description: "初期値の式"
+
+  export_section:
+    - name: count
+      type: uleb128
+      description: "エクスポートの数"
     - name: entries
       type: struct
       struct: export_entry
       repeat_count: "{count}"
+      description: "エクスポート"
 
   export_entry:
     - name: name_len
       type: uleb128
-      description: "エクスポート名の長さ"
+      description: "エクスポート名のバイト数"
     - name: name
       type: utf8
       size: "{name_len}"
       description: "エクスポート名"
     - name: kind
       type: uint8
-      description: "エクスポート種別（0=function, 1=table, 2=memory, 3=global）"
+      enum: external_kind
+      description: "エクスポートするものの種類"
     - name: index
       type: uleb128
-      description: "エクスポートインデックス"
+      description: "エクスポートするものの番号（インポートしたものを先に数える）"
+
+  start_section:
+    - name: function_index
+      type: uleb128
+      description: "インスタンス化のときに呼ぶ関数の番号"
+
+  element_section:
+    - name: count
+      type: uleb128
+      description: "要素セグメントの数"
+    - name: segments
+      type: struct
+      struct: element_segment
+      repeat_count: "{count}"
+      description: "要素セグメント"
+
+  element_segment:
+    - name: flags
+      type: uleb128
+      description: "形式（bit 0 = パッシブ / 宣言、bit 1 = テーブル番号の明示（アクティブ）か宣言、bit 2 = 要素を式で書く。0〜7）"
+    - name: table_index
+      type: uleb128
+      if: "{flags == 2 or flags == 6}"
+      description: "初期化するテーブルの番号（形式 2 / 6）"
+    - name: offset
+      type: struct
+      struct: const_expr
+      if: "{(flags & 1) == 0}"
+      description: "テーブルの中の開始位置の式（アクティブのとき）"
+    - name: elem_kind
+      type: uint8
+      if: "{(flags & 3) != 0 ? (flags & 4) == 0 : 0}"
+      description: "要素の種類（0 = funcref）"
+    - name: ref_type
+      type: struct
+      struct: val_type
+      if: "{(flags & 3) != 0 ? (flags & 4) != 0 : 0}"
+      description: "要素の参照型"
+    - name: item_count
+      type: uleb128
+      description: "要素の数"
+    - name: function_indices
+      type: uleb128
+      repeat_count: "{item_count}"
+      if: "{(flags & 4) == 0}"
+      description: "要素（関数の番号）"
+    - name: expressions
+      type: struct
+      struct: const_expr
+      repeat_count: "{item_count}"
+      if: "{(flags & 4) != 0}"
+      description: "要素（参照を作る式）"
+
+  code_section:
+    - name: count
+      type: uleb128
+      description: "関数の本体の数（関数セクションの数と同じ）"
+    - name: bodies
+      type: struct
+      struct: function_body
+      repeat_count: "{count}"
+      description: "関数の本体"
+
+  function_body:
+    - name: body_size
+      type: uleb128
+      description: "本体のバイト数（ローカル変数の宣言と命令）"
+    - name: body
+      type: struct
+      struct: function_body_content
+      size: "{body_size}"
+      description: "本体"
+
+  function_body_content:
+    - name: local_group_count
+      type: uleb128
+      description: "ローカル変数の宣言の数（同じ型の連続をまとめる）"
+    - name: locals
+      type: struct
+      struct: local_group
+      repeat_count: "{local_group_count}"
+      description: "ローカル変数の宣言（数 + 型）"
+    - name: instructions
+      type: bytes
+      size: remaining
+      description: "命令の並び（end = 0x0B で終わる。分解しない）"
+
+  local_group:
+    - name: count
+      type: uleb128
+      description: "この型のローカル変数の数"
+    - name: val_type
+      type: struct
+      struct: val_type
+      description: "ローカル変数の型"
+
+  data_section:
+    - name: count
+      type: uleb128
+      description: "データセグメントの数"
+    - name: segments
+      type: struct
+      struct: data_segment
+      repeat_count: "{count}"
+      description: "データセグメント"
+
+  data_segment:
+    - name: flags
+      type: uleb128
+      description: "形式（0 = メモリ 0 にアクティブ、1 = パッシブ、2 = メモリ番号を明示してアクティブ）"
+    - name: memory_index
+      type: uleb128
+      if: "{flags == 2}"
+      description: "初期化するメモリの番号（形式 2）"
+    - name: offset
+      type: struct
+      struct: const_expr
+      if: "{flags != 1}"
+      description: "メモリの中の開始位置の式（アクティブのとき）"
+    - name: data_length
+      type: uleb128
+      description: "データのバイト数"
+    - name: data
+      type: bytes
+      size: "{data_length}"
+      description: "メモリの初期値"
+
+  datacount_section:
+    - name: data_count
+      type: uleb128
+      description: "データセグメントの数（データセクションより前に置き、memory.init / data.drop の検証に使う）"
+
+  tag_section:
+    - name: count
+      type: uleb128
+      description: "タグの数"
+    - name: tags
+      type: struct
+      struct: tag_type
+      repeat_count: "{count}"
+      description: "例外のタグ"
+
+  # ===== カスタムセクション =====
+  custom_section:
+    - name: name_len
+      type: uleb128
+      description: "カスタムセクション名のバイト数"
+    - name: name
+      type: utf8
+      size: "{name_len}"
+      description: "カスタムセクション名（name・producers・target_features・.debug_* など）"
+    - name: content
+      type: switch
+      switch_on: "{name}"
+      size: remaining
+      cases:
+        "'name'": name_section
+        "'producers'": producers_section
+        "'target_features'": target_features_section
+        "'sourceMappingURL'": source_mapping_url_section
+        "'build_id'": build_id_section
+      default: raw_data
+      description: "カスタムセクションの中身（名前で振り分ける。DWARF の .debug_* などはバイト列）"
+
+  name_section:
+    - name: subsections
+      type: struct
+      struct: name_subsection
+      repeat: eof
+      description: "名前のサブセクション（ID + サイズ + 中身）"
+
+  name_subsection:
+    - name: id
+      type: uint8
+      enum: name_subsection
+      description: "サブセクションの種類"
+    - name: size
+      type: uleb128
+      description: "中身のバイト数"
+    - name: content
+      type: switch
+      switch_on: "{id}"
+      size: "{size}"
+      cases:
+        "0": wasm_name
+        "1": name_map
+        "4": name_map
+        "5": name_map
+        "6": name_map
+        "7": name_map
+        "8": name_map
+        "9": name_map
+        "11": name_map
+      default: raw_data
+      description: "サブセクションの中身（モジュール名、または番号と名前の対応。ローカル名などの二重の対応はバイト列）"
+
+  wasm_name:
+    - name: length
+      type: uleb128
+      description: "名前のバイト数"
+    - name: value
+      type: utf8
+      size: "{length}"
+      description: "名前（UTF-8）"
+
+  name_map:
+    - name: count
+      type: uleb128
+      description: "対応の数"
+    - name: entries
+      type: struct
+      struct: name_assoc
+      repeat_count: "{count}"
+      description: "番号と名前の対応（番号の昇順）"
+
+  name_assoc:
+    - name: index
+      type: uleb128
+      description: "番号（関数・型・グローバル変数など）"
+    - name: name
+      type: struct
+      struct: wasm_name
+      description: "名前"
+
+  producers_section:
+    - name: field_count
+      type: uleb128
+      description: "フィールドの数"
+    - name: fields
+      type: struct
+      struct: producers_field
+      repeat_count: "{field_count}"
+      description: "生成したツールの情報（language・processed-by・sdk）"
+
+  producers_field:
+    - name: field_name
+      type: struct
+      struct: wasm_name
+      description: "フィールド名（language / processed-by / sdk）"
+    - name: value_count
+      type: uleb128
+      description: "値の数"
+    - name: values
+      type: struct
+      struct: producers_value
+      repeat_count: "{value_count}"
+      description: "ツール名と版"
+
+  producers_value:
+    - name: name
+      type: struct
+      struct: wasm_name
+      description: "言語・ツールの名前（例: C11・clang・rustc）"
+    - name: version
+      type: struct
+      struct: wasm_name
+      description: "版"
+
+  target_features_section:
+    - name: count
+      type: uleb128
+      description: "機能の数"
+    - name: features
+      type: struct
+      struct: target_feature
+      repeat_count: "{count}"
+      description: "コンパイル時に使った・使わなかった機能"
+
+  target_feature:
+    - name: prefix
+      type: ascii
+      size: "1"
+      description: "'+' = 使った、'-' = 使っていない、'=' = 必須"
+    - name: feature
+      type: struct
+      struct: wasm_name
+      description: "機能名（bulk-memory・mutable-globals・sign-ext・simd128 など）"
+
+  source_mapping_url_section:
+    - name: url
+      type: struct
+      struct: wasm_name
+      description: "ソースマップの URL"
+
+  build_id_section:
+    - name: length
+      type: uleb128
+      description: "ビルド ID のバイト数"
+    - name: build_id
+      type: bytes
+      size: "{length}"
+      description: "ビルド ID（ビルドごとに一意なバイト列）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ"

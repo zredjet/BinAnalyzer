@@ -1,117 +1,556 @@
+# ELF（Executable and Linkable Format。実行ファイル・共有ライブラリ・オブジェクトファイル・コアダンプ）
+# 仕様: ELF Object File Format Version 4.3 DRAFT（System V gABI、Xinuos 2025） https://gabi.xinuos.com/ 、
+#   GNU の拡張（PT_GNU_* / SHT_GNU_* / DT_GNU_HASH / NT_GNU_*。Linux Standard Base Core 5.0 と binutils の elf/common.h）
+# 構造: e_ident（16 バイト。クラスとエンディアン）→ ELF ヘッダ → プログラムヘッダ表（e_phoff）・セクションヘッダ表（e_shoff）。
+#   e_ident の ei_class で 32 / 64 ビットを switch し、ei_data から struct のエンディアンを決める。
+#   各エントリは e_phoff + 番号 × e_phentsize へ seek して読む。セクション名は .shstrtab（e_shstrndx）を先読みして引く。
+#   セクションの中身は種類で switch する（シンボル表・文字列表・再配置・動的セクション・ノート・圧縮セクション）。
+#   シンボル名・DT_NEEDED などの名前は、sh_link のセクションヘッダの sh_offset を先読みして文字列表から引く。
+# 対応していないもの: 機械語・データの中身、再配置のシンボル名と種類のラベル（アーキテクチャごとに異なる）、
+#   e_flags とプロセッサ固有の値（0x70000000 以上の p_type / sh_type は ARM など一部のみ）、e_machine の主要な値以外のラベル、
+#   セクションの無いファイルの PT_NOTE / PT_DYNAMIC の中身（プログラムヘッダ側は PT_INTERP だけ分解する）、
+#   シンボルのバージョン（.gnu.version*）・ハッシュ表・グループ・.eh_frame の分解、コアダンプのノートの中身
 name: ELF
 root: elf
 
 enums:
   ei_class:
+    - value: 0
+      label: ELFCLASSNONE
+      description: "不正なクラス"
     - value: 1
       label: ELFCLASS32
+      description: "32 ビット"
     - value: 2
       label: ELFCLASS64
+      description: "64 ビット"
 
   ei_data:
+    - value: 0
+      label: ELFDATANONE
+      description: "不正なエンディアン"
     - value: 1
       label: ELFDATA2LSB
-      description: "リトルエンディアン"
+      description: "リトルエンディアン（2 の補数）"
     - value: 2
       label: ELFDATA2MSB
-      description: "ビッグエンディアン"
+      description: "ビッグエンディアン（2 の補数）"
 
   ei_osabi:
     - value: 0
       label: ELFOSABI_NONE
-      description: "System V"
+      description: "拡張なし・指定なし（System V。Linux の多くの実行ファイルもこの値）"
+    - value: 1
+      label: ELFOSABI_HPUX
+      description: "HP-UX"
     - value: 2
       label: ELFOSABI_NETBSD
       description: "NetBSD"
     - value: 3
-      label: ELFOSABI_LINUX
-      description: "Linux"
+      label: ELFOSABI_GNU
+      description: "GNU（ELFOSABI_LINUX は同じ値の旧名。GNU_IFUNC などの GNU 拡張を使うとき）"
     - value: 6
       label: ELFOSABI_SOLARIS
       description: "Solaris"
+    - value: 7
+      label: ELFOSABI_AIX
+      description: "AIX"
+    - value: 8
+      label: ELFOSABI_IRIX
+      description: "IRIX"
     - value: 9
       label: ELFOSABI_FREEBSD
       description: "FreeBSD"
+    - value: 10
+      label: ELFOSABI_TRU64
+      description: "Compaq TRU64 UNIX"
+    - value: 11
+      label: ELFOSABI_MODESTO
+      description: "Novell Modesto"
+    - value: 12
+      label: ELFOSABI_OPENBSD
+      description: "OpenBSD"
+    - value: 13
+      label: ELFOSABI_OPENVMS
+      description: "OpenVMS"
+    - value: 14
+      label: ELFOSABI_NSK
+      description: "HP Non-Stop Kernel"
+    - value: 15
+      label: ELFOSABI_AROS
+      description: "Amiga Research OS"
+    - value: 16
+      label: ELFOSABI_FENIXOS
+      description: "FenixOS"
+    - value: 17
+      label: ELFOSABI_CLOUDABI
+      description: "Nuxi CloudABI"
+    - value: 18
+      label: ELFOSABI_OPENVOS
+      description: "Stratus Technologies OpenVOS"
+    - value: 64
+      label: ELFOSABI_ARM_AEABI
+      description: "ARM EABI（64〜255 はアーキテクチャ固有）"
+    - value: 97
+      label: ELFOSABI_ARM
+      description: "ARM（古い ABI）"
+    - value: 255
+      label: ELFOSABI_STANDALONE
+      description: "組み込み向けのスタンドアロン"
 
   e_type:
     - value: 0
       label: ET_NONE
+      description: "種類なし"
     - value: 1
       label: ET_REL
+      description: "再配置可能なオブジェクトファイル（.o）"
     - value: 2
       label: ET_EXEC
+      description: "実行ファイル（固定アドレス）"
     - value: 3
       label: ET_DYN
+      description: "共有オブジェクト（.so、位置独立実行ファイル PIE）"
     - value: 4
       label: ET_CORE
+      description: "コアダンプ"
 
   e_machine:
+    - value: 0
+      label: EM_NONE
+      description: "マシンなし"
     - value: 2
       label: EM_SPARC
+      description: "SPARC"
     - value: 3
       label: EM_386
+      description: "Intel 80386（x86 32 ビット）"
+    - value: 4
+      label: EM_68K
+      description: "Motorola 68000"
     - value: 8
       label: EM_MIPS
+      description: "MIPS"
+    - value: 15
+      label: EM_PARISC
+      description: "HP PA-RISC"
+    - value: 18
+      label: EM_SPARC32PLUS
+      description: "SPARC V8+"
     - value: 20
       label: EM_PPC
+      description: "PowerPC（32 ビット）"
+    - value: 21
+      label: EM_PPC64
+      description: "PowerPC（64 ビット）"
     - value: 22
       label: EM_S390
+      description: "IBM S/390・z/Architecture"
     - value: 40
       label: EM_ARM
+      description: "ARM（32 ビット）"
+    - value: 42
+      label: EM_SH
+      description: "SuperH"
+    - value: 43
+      label: EM_SPARCV9
+      description: "SPARC V9（64 ビット）"
+    - value: 50
+      label: EM_IA_64
+      description: "Intel IA-64（Itanium）"
     - value: 62
       label: EM_X86_64
+      description: "AMD x86-64"
+    - value: 83
+      label: EM_AVR
+      description: "Atmel AVR"
+    - value: 94
+      label: EM_XTENSA
+      description: "Tensilica Xtensa"
+    - value: 105
+      label: EM_MSP430
+      description: "TI MSP430"
+    - value: 164
+      label: EM_QDSP6
+      description: "Qualcomm Hexagon"
     - value: 183
       label: EM_AARCH64
+      description: "ARM AArch64（64 ビット）"
+    - value: 190
+      label: EM_CUDA
+      description: "NVIDIA CUDA"
+    - value: 224
+      label: EM_AMDGPU
+      description: "AMD GPU"
     - value: 243
       label: EM_RISCV
+      description: "RISC-V"
+    - value: 247
+      label: EM_BPF
+      description: "Linux BPF"
+    - value: 252
+      label: EM_CSKY
+      description: "C-SKY"
+    - value: 258
+      label: EM_LOONGARCH
+      description: "LoongArch"
 
   p_type:
     - value: 0
       label: PT_NULL
+      description: "未使用のエントリ"
     - value: 1
       label: PT_LOAD
+      description: "メモリに読み込むセグメント"
     - value: 2
       label: PT_DYNAMIC
+      description: "動的リンクの情報（.dynamic）"
     - value: 3
       label: PT_INTERP
+      description: "プログラムインタプリタ（動的リンカ）のパス"
     - value: 4
       label: PT_NOTE
+      description: "補助情報（ノート）"
+    - value: 5
+      label: PT_SHLIB
+      description: "予約（意味は定義されていない）"
     - value: 6
       label: PT_PHDR
+      description: "プログラムヘッダ表そのもの"
     - value: 7
       label: PT_TLS
+      description: "スレッドローカル記憶域の初期値"
     - value: 0x6474E550
       label: PT_GNU_EH_FRAME
+      description: "GNU: 例外処理のフレーム表（.eh_frame_hdr）"
     - value: 0x6474E551
       label: PT_GNU_STACK
+      description: "GNU: スタックの実行可否（p_flags の PF_X）"
     - value: 0x6474E552
       label: PT_GNU_RELRO
+      description: "GNU: 再配置の後に読み取り専用にする範囲"
+    - value: 0x6474E553
+      label: PT_GNU_PROPERTY
+      description: "GNU: プロパティのノート（.note.gnu.property。CET・BTI など）"
+    - value: 0x6474E554
+      label: PT_GNU_SFRAME
+      description: "GNU: SFrame のスタック情報"
+    - value: 0x70000001
+      label: PT_ARM_EXIDX
+      description: "ARM: 例外の索引表（プロセッサ固有。0x70000000〜0x7FFFFFFF はアーキテクチャごとに意味が違う）"
 
   sh_type:
     - value: 0
       label: SHT_NULL
+      description: "未使用のセクションヘッダ"
     - value: 1
       label: SHT_PROGBITS
+      description: "プログラムが定義する内容（.text・.data・.rodata など）"
     - value: 2
       label: SHT_SYMTAB
+      description: "シンボル表（リンク用。.symtab）"
     - value: 3
       label: SHT_STRTAB
+      description: "文字列表（.strtab・.dynstr・.shstrtab）"
     - value: 4
       label: SHT_RELA
+      description: "加数付きの再配置（.rela.*）"
+    - value: 5
+      label: SHT_HASH
+      description: "シンボルのハッシュ表（.hash）"
     - value: 6
       label: SHT_DYNAMIC
+      description: "動的リンクの情報（.dynamic）"
     - value: 7
       label: SHT_NOTE
+      description: "ノート（.note.*）"
     - value: 8
       label: SHT_NOBITS
+      description: "ファイル上に領域を持たない（.bss）"
     - value: 9
       label: SHT_REL
+      description: "加数なしの再配置（.rel.*）"
+    - value: 10
+      label: SHT_SHLIB
+      description: "予約"
     - value: 11
       label: SHT_DYNSYM
+      description: "動的リンク用のシンボル表（.dynsym）"
     - value: 14
       label: SHT_INIT_ARRAY
+      description: "初期化関数のポインタの配列"
     - value: 15
       label: SHT_FINI_ARRAY
+      description: "終了処理関数のポインタの配列"
+    - value: 16
+      label: SHT_PREINIT_ARRAY
+      description: "前初期化関数のポインタの配列"
+    - value: 17
+      label: SHT_GROUP
+      description: "セクショングループ（COMDAT など）"
+    - value: 18
+      label: SHT_SYMTAB_SHNDX
+      description: "シンボルの拡張セクション番号"
+    - value: 19
+      label: SHT_RELR
+      description: "相対再配置のコンパクトな表（.relr.dyn）"
+    - value: 0x6FFFFFF5
+      label: SHT_GNU_ATTRIBUTES
+      description: "GNU: オブジェクトの属性"
+    - value: 0x6FFFFFF6
+      label: SHT_GNU_HASH
+      description: "GNU: シンボルのハッシュ表（.gnu.hash）"
+    - value: 0x6FFFFFF7
+      label: SHT_GNU_LIBLIST
+      description: "GNU: 事前リンクのライブラリ一覧"
+    - value: 0x6FFFFFFD
+      label: SHT_GNU_verdef
+      description: "GNU: シンボルのバージョン定義（.gnu.version_d）"
+    - value: 0x6FFFFFFE
+      label: SHT_GNU_verneed
+      description: "GNU: 必要なシンボルのバージョン（.gnu.version_r）"
+    - value: 0x6FFFFFFF
+      label: SHT_GNU_versym
+      description: "GNU: シンボルごとのバージョン番号（.gnu.version）"
+    - value: 0x70000001
+      label: SHT_ARM_EXIDX
+      description: "ARM: 例外の索引表（x86-64 の SHT_X86_64_UNWIND も同じ値。プロセッサ固有）"
+    - value: 0x70000003
+      label: SHT_ARM_ATTRIBUTES
+      description: "ARM / RISC-V: 属性（.ARM.attributes・.riscv.attributes。プロセッサ固有）"
+
+  sym_bind:
+    - value: 0
+      label: STB_LOCAL
+      description: "ローカル（ファイルの外から見えない）"
+    - value: 1
+      label: STB_GLOBAL
+      description: "グローバル"
+    - value: 2
+      label: STB_WEAK
+      description: "弱いグローバル（同名の強い定義があればそちらが使われる）"
+    - value: 10
+      label: STB_GNU_UNIQUE
+      description: "GNU: プロセス内で一意"
+
+  sym_type:
+    - value: 0
+      label: STT_NOTYPE
+      description: "種類なし"
+    - value: 1
+      label: STT_OBJECT
+      description: "データ（変数・配列）"
+    - value: 2
+      label: STT_FUNC
+      description: "関数"
+    - value: 3
+      label: STT_SECTION
+      description: "セクション"
+    - value: 4
+      label: STT_FILE
+      description: "ソースファイル名"
+    - value: 5
+      label: STT_COMMON
+      description: "未初期化の共通ブロック"
+    - value: 6
+      label: STT_TLS
+      description: "スレッドローカル"
+    - value: 10
+      label: STT_GNU_IFUNC
+      description: "GNU: 間接関数（実行時に実装を選ぶ）"
+
+  sym_visibility:
+    - value: 0
+      label: STV_DEFAULT
+      description: "既定（結合方法どおり）"
+    - value: 1
+      label: STV_INTERNAL
+      description: "内部（プロセッサ固有の隠し方）"
+    - value: 2
+      label: STV_HIDDEN
+      description: "隠す（共有オブジェクトの外から見えない）"
+    - value: 3
+      label: STV_PROTECTED
+      description: "保護（外から見えるが、中の参照は置き換えられない）"
+
+  special_section_index:
+    - value: 0
+      label: SHN_UNDEF
+      description: "未定義（ほかのファイルで定義される）"
+    - value: 0xFFF1
+      label: SHN_ABS
+      description: "絶対値（再配置されない）"
+    - value: 0xFFF2
+      label: SHN_COMMON
+      description: "共通ブロック"
+    - value: 0xFFFF
+      label: SHN_XINDEX
+      description: "番号は SHT_SYMTAB_SHNDX セクションにある"
+
+  d_tag:
+    - value: 0
+      label: DT_NULL
+      description: "終わり"
+    - value: 1
+      label: DT_NEEDED
+      description: "必要な共有ライブラリの名前（.dynstr のオフセット）"
+    - value: 2
+      label: DT_PLTRELSZ
+      description: "PLT の再配置のバイト数"
+    - value: 3
+      label: DT_PLTGOT
+      description: "PLT / GOT のアドレス"
+    - value: 4
+      label: DT_HASH
+      description: "シンボルのハッシュ表のアドレス"
+    - value: 5
+      label: DT_STRTAB
+      description: "動的文字列表のアドレス"
+    - value: 6
+      label: DT_SYMTAB
+      description: "動的シンボル表のアドレス"
+    - value: 7
+      label: DT_RELA
+      description: "加数付き再配置表のアドレス"
+    - value: 8
+      label: DT_RELASZ
+      description: "加数付き再配置表のバイト数"
+    - value: 9
+      label: DT_RELAENT
+      description: "加数付き再配置のエントリのバイト数"
+    - value: 10
+      label: DT_STRSZ
+      description: "動的文字列表のバイト数"
+    - value: 11
+      label: DT_SYMENT
+      description: "シンボルのエントリのバイト数"
+    - value: 12
+      label: DT_INIT
+      description: "初期化関数のアドレス"
+    - value: 13
+      label: DT_FINI
+      description: "終了処理関数のアドレス"
+    - value: 14
+      label: DT_SONAME
+      description: "この共有オブジェクトの名前（.dynstr のオフセット）"
+    - value: 15
+      label: DT_RPATH
+      description: "ライブラリの検索パス（旧式。.dynstr のオフセット）"
+    - value: 16
+      label: DT_SYMBOLIC
+      description: "シンボルをこのオブジェクトの中から先に探す"
+    - value: 17
+      label: DT_REL
+      description: "加数なし再配置表のアドレス"
+    - value: 18
+      label: DT_RELSZ
+      description: "加数なし再配置表のバイト数"
+    - value: 19
+      label: DT_RELENT
+      description: "加数なし再配置のエントリのバイト数"
+    - value: 20
+      label: DT_PLTREL
+      description: "PLT の再配置の種類（DT_REL か DT_RELA）"
+    - value: 21
+      label: DT_DEBUG
+      description: "デバッガ用"
+    - value: 22
+      label: DT_TEXTREL
+      description: "読み取り専用のセグメントに再配置がある"
+    - value: 23
+      label: DT_JMPREL
+      description: "PLT の再配置のアドレス"
+    - value: 24
+      label: DT_BIND_NOW
+      description: "読み込み時にすべて解決する"
+    - value: 25
+      label: DT_INIT_ARRAY
+      description: "初期化関数の配列のアドレス"
+    - value: 26
+      label: DT_FINI_ARRAY
+      description: "終了処理関数の配列のアドレス"
+    - value: 27
+      label: DT_INIT_ARRAYSZ
+      description: "初期化関数の配列のバイト数"
+    - value: 28
+      label: DT_FINI_ARRAYSZ
+      description: "終了処理関数の配列のバイト数"
+    - value: 29
+      label: DT_RUNPATH
+      description: "ライブラリの検索パス（.dynstr のオフセット）"
+    - value: 30
+      label: DT_FLAGS
+      description: "フラグ（DF_ORIGIN・DF_BIND_NOW など）"
+    - value: 32
+      label: DT_PREINIT_ARRAY
+      description: "前初期化関数の配列のアドレス"
+    - value: 33
+      label: DT_PREINIT_ARRAYSZ
+      description: "前初期化関数の配列のバイト数"
+    - value: 34
+      label: DT_SYMTAB_SHNDX
+      description: "拡張セクション番号の表のアドレス"
+    - value: 35
+      label: DT_RELRSZ
+      description: "RELR 再配置表のバイト数"
+    - value: 36
+      label: DT_RELR
+      description: "RELR 再配置表のアドレス"
+    - value: 37
+      label: DT_RELRENT
+      description: "RELR のエントリのバイト数"
+    - value: 0x6FFFFEF5
+      label: DT_GNU_HASH
+      description: "GNU: ハッシュ表のアドレス"
+    - value: 0x6FFFFFF0
+      label: DT_VERSYM
+      description: "GNU: シンボルのバージョン番号の表のアドレス"
+    - value: 0x6FFFFFF9
+      label: DT_RELACOUNT
+      description: "GNU: 相対の加数付き再配置の数"
+    - value: 0x6FFFFFFA
+      label: DT_RELCOUNT
+      description: "GNU: 相対の加数なし再配置の数"
+    - value: 0x6FFFFFFB
+      label: DT_FLAGS_1
+      description: "GNU / Solaris: 追加のフラグ（DF_1_NOW・DF_1_PIE など）"
+    - value: 0x6FFFFFFC
+      label: DT_VERDEF
+      description: "GNU: バージョン定義の表のアドレス"
+    - value: 0x6FFFFFFD
+      label: DT_VERDEFNUM
+      description: "GNU: バージョン定義の数"
+    - value: 0x6FFFFFFE
+      label: DT_VERNEED
+      description: "GNU: 必要なバージョンの表のアドレス"
+    - value: 0x6FFFFFFF
+      label: DT_VERNEEDNUM
+      description: "GNU: 必要なバージョンの数"
+
+  compression_type:
+    - value: 1
+      label: ELFCOMPRESS_ZLIB
+      description: "zlib（deflate）"
+    - value: 2
+      label: ELFCOMPRESS_ZSTD
+      description: "Zstandard"
+
+  gnu_note_type:
+    - value: 1
+      label: NT_GNU_ABI_TAG
+      description: "対象の OS と最低の版"
+    - value: 2
+      label: NT_GNU_HWCAP
+      description: "ハードウェアの機能"
+    - value: 3
+      label: NT_GNU_BUILD_ID
+      description: "ビルド ID（ビルドごとに一意なハッシュ）"
+    - value: 4
+      label: NT_GNU_GOLD_VERSION
+      description: "gold リンカの版"
+    - value: 5
+      label: NT_GNU_PROPERTY_TYPE_0
+      description: "プログラムのプロパティ（CET・BTI・ISA の要件など）"
 
 flags:
   p_flags:
@@ -124,11 +563,38 @@ flags:
       - name: PF_R
         bit: 2
 
+  sh_flags:
+    bit_size: 32
+    fields:
+      - name: SHF_WRITE
+        bit: 0
+      - name: SHF_ALLOC
+        bit: 1
+      - name: SHF_EXECINSTR
+        bit: 2
+      - name: SHF_MERGE
+        bit: 4
+      - name: SHF_STRINGS
+        bit: 5
+      - name: SHF_INFO_LINK
+        bit: 6
+      - name: SHF_LINK_ORDER
+        bit: 7
+      - name: SHF_OS_NONCONFORMING
+        bit: 8
+      - name: SHF_GROUP
+        bit: 9
+      - name: SHF_TLS
+        bit: 10
+      - name: SHF_COMPRESSED
+        bit: 11
+
 structs:
   elf:
     - name: e_ident
       type: struct
       struct: elf_ident
+      description: "ELF 識別子（先頭 16 バイト。クラス・エンディアン・OS ABI）"
     - name: body
       type: switch
       switch_on: "{ei_class}"
@@ -136,212 +602,788 @@ structs:
         "1": elf32_body
         "2": elf64_body
       default: raw_data
+      description: "ELF ヘッダ以降（ei_class で 32 / 64 ビットを振り分ける）"
 
   elf_ident:
     - name: magic
       type: bytes
       size: "4"
       expected: [0x7F, 0x45, 0x4C, 0x46]
+      description: "マジック（7F 'ELF'）"
     - name: ei_class
       type: uint8
       enum: ei_class
+      description: "クラス（アドレスと主なフィールドの幅。1 = 32 ビット、2 = 64 ビット）"
     - name: ei_data
       type: uint8
       enum: ei_data
+      description: "データのエンディアン（以降のすべての多バイト値に当てはまる）"
     - name: ei_version
       type: uint8
+      validate: "{ei_version == 1}"
+      description: "ELF の版（EV_CURRENT = 1）"
     - name: ei_osabi
       type: uint8
       enum: ei_osabi
+      description: "OS・ABI の拡張の種類"
     - name: ei_abiversion
       type: uint8
+      description: "ABI の版（ei_osabi ごとの意味。通常 0）"
     - name: ei_pad
       type: bytes
       size: "7"
+      padding: true
+      description: "予約（0）"
 
-  # 64ビットELF本体: ヘッダ + プログラムヘッダ + セクションヘッダ
+  # ===== 64 ビット =====
   elf64_body:
     endianness: "{ei_data == 1 ? 'little' : 'big'}"
     fields:
       - name: header
         type: struct
         struct: elf64_header
+        description: "ELF ヘッダ（e_ident の後ろの 48 バイト）"
+      - name: section0_size
+        type: uint64
+        seek: "{e_shoff + 32}"
+        seek_restore: true
+        if: "{e_shnum == 0 ? e_shoff != 0 : 0}"
+        description: "0 番のセクションヘッダの sh_size（先読み。e_shnum が 0 でセクションが 0xFF00 個以上あるとき、これが本当の数）"
+      - name: section0_link
+        type: uint32
+        seek: "{e_shoff + 40}"
+        seek_restore: true
+        if: "{e_shstrndx == 0xFFFF ? e_shoff != 0 : 0}"
+        description: "0 番のセクションヘッダの sh_link（先読み。e_shstrndx が SHN_XINDEX のとき、これが本当の .shstrtab の番号）"
+      - name: section_count
+        type: virtual
+        value: "{e_shoff == 0 ? 0 : (e_shnum == 0 ? section0_size : e_shnum)}"
+        description: "セクションの数（e_shnum。0 なら 0 番の sh_size）"
+      - name: shstrtab_index
+        type: virtual
+        value: "{e_shstrndx == 0xFFFF ? section0_link : e_shstrndx}"
+        description: "セクション名の文字列表（.shstrtab）のセクション番号（SHN_XINDEX なら 0 番の sh_link）"
+      - name: shstrtab_offset
+        type: uint64
+        seek: "{e_shoff + shstrtab_index * e_shentsize + 24}"
+        seek_restore: true
+        if: "{shstrtab_index == 0 ? 0 : shstrtab_index < section_count}"
+        description: ".shstrtab の sh_offset（先読み。セクション名を引くのに使う）"
       - name: program_headers
         type: struct
         struct: elf64_phdr
         repeat_count: "{e_phnum}"
+        seek: "{e_phoff + _index * e_phentsize}"
+        seek_restore: true
+        description: "プログラムヘッダ表（e_phoff + 番号 × e_phentsize の位置の e_phnum 個。実行時のセグメント）"
       - name: section_headers
         type: struct
         struct: elf64_shdr
-        seek: "{e_shoff}"
-        repeat_count: "{e_shnum}"
+        repeat_count: "{section_count}"
+        seek: "{e_shoff + _index * e_shentsize}"
+        seek_restore: true
+        description: "セクションヘッダ表（e_shoff + 番号 × e_shentsize の位置の section_count 個。リンク用のセクションとその中身）"
 
   elf64_header:
     - name: e_type
       type: uint16
       enum: e_type
+      description: "ファイルの種類（0xFE00〜0xFEFF は OS 固有、0xFF00〜0xFFFF はプロセッサ固有）"
     - name: e_machine
       type: uint16
       enum: e_machine
+      description: "対象のアーキテクチャ"
     - name: e_version
       type: uint32
+      description: "ELF の版（1）"
     - name: e_entry
       type: uint64
+      description: "エントリポイントの仮想アドレス（無ければ 0）"
     - name: e_phoff
       type: uint64
+      description: "プログラムヘッダ表の位置（ファイル先頭から。無ければ 0）"
     - name: e_shoff
       type: uint64
+      description: "セクションヘッダ表の位置（ファイル先頭から。無ければ 0）"
     - name: e_flags
       type: uint32
+      description: "プロセッサ固有のフラグ（ARM の EABI 版、RISC-V の浮動小数点 ABI など）"
     - name: e_ehsize
       type: uint16
+      description: "ELF ヘッダのバイト数（64 ビットは 64）"
     - name: e_phentsize
       type: uint16
+      description: "プログラムヘッダ 1 個のバイト数（64 ビットは 56）"
     - name: e_phnum
       type: uint16
+      description: "プログラムヘッダの数"
     - name: e_shentsize
       type: uint16
+      description: "セクションヘッダ 1 個のバイト数（64 ビットは 64）"
     - name: e_shnum
       type: uint16
+      description: "セクションヘッダの数（0xFF00 以上なら 0 で、本当の数は 0 番の sh_size）"
     - name: e_shstrndx
       type: uint16
+      enum: special_section_index
+      description: "セクション名の文字列表（.shstrtab）のセクション番号（SHN_XINDEX なら 0 番の sh_link）"
 
   elf64_phdr:
     - name: p_type
       type: uint32
       enum: p_type
+      description: "セグメントの種類"
     - name: p_flags
       type: uint32
       flags: p_flags
+      description: "セグメントのアクセス権（PF_X = 実行、PF_W = 書き込み、PF_R = 読み取り）"
     - name: p_offset
       type: uint64
+      description: "セグメントのファイル上の位置"
     - name: p_vaddr
       type: uint64
+      description: "セグメントを置く仮想アドレス"
     - name: p_paddr
       type: uint64
+      description: "物理アドレス（物理アドレスを使う環境向け。通常は p_vaddr と同じ）"
     - name: p_filesz
       type: uint64
+      description: "セグメントのファイル上のバイト数"
     - name: p_memsz
       type: uint64
+      description: "セグメントのメモリ上のバイト数（p_filesz より大きい分は 0 で埋める。.bss など）"
     - name: p_align
       type: uint64
+      description: "アラインメント（p_vaddr と p_offset はこの値を法として等しい）"
+    - name: interpreter
+      type: asciiz
+      seek: "{p_offset}"
+      seek_restore: true
+      if: "{p_type == 3}"
+      description: "プログラムインタプリタのパス（PT_INTERP のとき。例: /lib64/ld-linux-x86-64.so.2）"
 
   elf64_shdr:
     - name: sh_name
       type: uint32
-      description: "セクション名（文字列テーブルへのオフセット）"
+      description: "セクション名（.shstrtab の中のオフセット）"
+    - name: name
+      type: asciiz
+      seek: "{shstrtab_offset + sh_name}"
+      seek_restore: true
+      if: "{shstrtab_index == 0 ? 0 : shstrtab_index < section_count}"
+      description: "セクション名（.shstrtab から引いた文字列。例: .text・.dynsym）"
     - name: sh_type
       type: uint32
       enum: sh_type
+      description: "セクションの種類"
     - name: sh_flags
       type: uint64
+      flags: sh_flags
+      description: "セクションの属性（SHF_ALLOC = 実行時にメモリに置く、SHF_EXECINSTR = 機械語、SHF_COMPRESSED = 圧縮 など）"
     - name: sh_addr
       type: uint64
+      description: "実行時の仮想アドレス（メモリに置かないセクションは 0）"
     - name: sh_offset
       type: uint64
+      description: "中身のファイル上の位置"
     - name: sh_size
       type: uint64
+      description: "中身のバイト数（SHT_NOBITS はファイル上に領域を持たない）"
     - name: sh_link
       type: uint32
+      description: "関連するセクションの番号（シンボル表なら文字列表、再配置ならシンボル表 など）"
     - name: sh_info
       type: uint32
+      description: "種類ごとの追加情報（シンボル表なら最初の非ローカルシンボルの番号、再配置なら適用先のセクション番号）"
     - name: sh_addralign
       type: uint64
+      description: "アラインメント（0 と 1 は制約なし）"
     - name: sh_entsize
       type: uint64
+      description: "固定長のエントリの表ならエントリ 1 個のバイト数（そうでなければ 0）"
+    - name: contents
+      type: switch
+      switch_on: "{(sh_flags & 0x800) != 0 ? -2 : sh_type}"
+      seek: "{sh_offset}"
+      seek_restore: true
+      if: "{sh_type == 0 ? 0 : (sh_type == 8 ? 0 : sh_size > 0)}"
+      cases:
+        "2": elf64_symbol_table
+        "11": elf64_symbol_table
+        "3": string_table
+        "4": elf64_rela_table
+        "9": elf64_rel_table
+        "6": elf64_dynamic_table
+        "7": note_list
+        "-2": elf64_compressed_section
+      default: section_data
+      description: "セクションの中身（sh_offset から sh_size バイト。種類で振り分け、SHF_COMPRESSED は展開する）"
 
-  # 32ビットELF本体: ヘッダ + プログラムヘッダ + セクションヘッダ
+  elf64_symbol_table:
+    - name: string_table_offset
+      type: uint64
+      seek: "{e_shoff + sh_link * e_shentsize + 24}"
+      seek_restore: true
+      description: "シンボル名の文字列表（sh_link のセクション）の sh_offset（先読み）"
+    - name: symbols
+      type: struct
+      struct: elf64_sym
+      repeat_count: "{sh_size / 24}"
+      description: "シンボル（24 バイトずつ sh_size ÷ 24 個。0 番は未定義の空のシンボル）"
+
+  elf64_sym:
+    - name: st_name
+      type: uint32
+      description: "シンボル名（文字列表の中のオフセット。0 なら名前なし）"
+    - name: name
+      type: asciiz
+      seek: "{string_table_offset + st_name}"
+      seek_restore: true
+      if: "{st_name != 0}"
+      description: "シンボル名（文字列表から引いた文字列。C++ はマングルされた名前）"
+    - name: st_info
+      type: uint8
+      description: "結合方法（上位 4 ビット）と種類（下位 4 ビット）"
+    - name: bind
+      type: virtual
+      value: "{st_info >> 4}"
+      enum: sym_bind
+      description: "結合方法（st_info の上位 4 ビット）"
+    - name: symbol_type
+      type: virtual
+      value: "{st_info & 0x0F}"
+      enum: sym_type
+      description: "シンボルの種類（st_info の下位 4 ビット）"
+    - name: st_other
+      type: uint8
+      description: "可視性（下位 2 ビット）"
+    - name: visibility
+      type: virtual
+      value: "{st_other & 3}"
+      enum: sym_visibility
+      description: "可視性（st_other の下位 2 ビット）"
+    - name: st_shndx
+      type: uint16
+      enum: special_section_index
+      description: "定義されているセクションの番号（SHN_UNDEF = 未定義、SHN_ABS = 絶対値）"
+    - name: st_value
+      type: uint64
+      description: "値（実行ファイル・共有オブジェクトでは仮想アドレス、.o ではセクション内のオフセット）"
+    - name: st_size
+      type: uint64
+      description: "大きさ（関数・データのバイト数。不明なら 0）"
+
+  elf64_rela_table:
+    - name: relocations
+      type: struct
+      struct: elf64_rela
+      repeat_count: "{sh_size / 24}"
+      description: "加数付きの再配置（24 バイトずつ）"
+
+  elf64_rela:
+    - name: r_offset
+      type: uint64
+      description: "再配置を当てる位置（.o ではセクション内のオフセット、それ以外は仮想アドレス）"
+    - name: r_info
+      type: uint64
+      description: "シンボルの番号（上位 32 ビット）と再配置の種類（下位 32 ビット）"
+    - name: symbol_index
+      type: virtual
+      value: "{r_info >> 32}"
+      description: "再配置が参照するシンボルの番号（sh_link のシンボル表の中）"
+    - name: relocation_type
+      type: virtual
+      value: "{r_info & 0xFFFFFFFF}"
+      description: "再配置の種類（アーキテクチャごとの番号。例: x86-64 の R_X86_64_RELATIVE = 8）"
+    - name: r_addend
+      type: int64
+      description: "加数（計算に加える定数）"
+
+  elf64_rel_table:
+    - name: relocations
+      type: struct
+      struct: elf64_rel
+      repeat_count: "{sh_size / 16}"
+      description: "加数なしの再配置（16 バイトずつ）"
+
+  elf64_rel:
+    - name: r_offset
+      type: uint64
+      description: "再配置を当てる位置"
+    - name: r_info
+      type: uint64
+      description: "シンボルの番号（上位 32 ビット）と再配置の種類（下位 32 ビット）"
+    - name: symbol_index
+      type: virtual
+      value: "{r_info >> 32}"
+      description: "再配置が参照するシンボルの番号"
+    - name: relocation_type
+      type: virtual
+      value: "{r_info & 0xFFFFFFFF}"
+      description: "再配置の種類（アーキテクチャごとの番号）"
+
+  elf64_dynamic_table:
+    - name: string_table_offset
+      type: uint64
+      seek: "{e_shoff + sh_link * e_shentsize + 24}"
+      seek_restore: true
+      description: "動的文字列表（sh_link のセクション。.dynstr）の sh_offset（先読み）"
+    - name: entries
+      type: struct
+      struct: elf64_dyn
+      repeat_count: "{sh_size / 16}"
+      description: "動的リンクの情報（16 バイトずつ。DT_NULL の後ろは詰め物）"
+
+  elf64_dyn:
+    - name: d_tag
+      type: int64
+      enum: d_tag
+      description: "エントリの種類"
+    - name: d_val
+      type: uint64
+      description: "値またはアドレス（種類ごとの意味）"
+    - name: string_value
+      type: asciiz
+      seek: "{string_table_offset + d_val}"
+      seek_restore: true
+      if: "{d_tag == 1 or d_tag == 14 or d_tag == 15 or d_tag == 29}"
+      description: "名前（DT_NEEDED・DT_SONAME・DT_RPATH・DT_RUNPATH のとき、.dynstr から引いた文字列）"
+
+  elf64_compressed_section:
+    - name: ch_type
+      type: uint32
+      enum: compression_type
+      description: "圧縮方式"
+    - name: ch_reserved
+      type: uint32
+      description: "予約（0）"
+    - name: ch_size
+      type: uint64
+      description: "展開後のバイト数"
+    - name: ch_addralign
+      type: uint64
+      description: "展開後のデータのアラインメント"
+    - name: data
+      type: switch
+      switch_on: "{ch_type}"
+      size: "{sh_size - 24}"
+      cases:
+        "1": zlib_data
+        "2": zstd_data
+      default: raw_data
+      description: "圧縮データ（zlib / Zstandard は展開して表示）"
+
+  # ===== 32 ビット =====
   elf32_body:
     endianness: "{ei_data == 1 ? 'little' : 'big'}"
     fields:
       - name: header
         type: struct
         struct: elf32_header
+        description: "ELF ヘッダ（e_ident の後ろの 36 バイト）"
+      - name: section0_size
+        type: uint32
+        seek: "{e_shoff + 20}"
+        seek_restore: true
+        if: "{e_shnum == 0 ? e_shoff != 0 : 0}"
+        description: "0 番のセクションヘッダの sh_size（先読み。e_shnum が 0 でセクションが 0xFF00 個以上あるとき、これが本当の数）"
+      - name: section0_link
+        type: uint32
+        seek: "{e_shoff + 24}"
+        seek_restore: true
+        if: "{e_shstrndx == 0xFFFF ? e_shoff != 0 : 0}"
+        description: "0 番のセクションヘッダの sh_link（先読み。e_shstrndx が SHN_XINDEX のとき、これが本当の .shstrtab の番号）"
+      - name: section_count
+        type: virtual
+        value: "{e_shoff == 0 ? 0 : (e_shnum == 0 ? section0_size : e_shnum)}"
+        description: "セクションの数（e_shnum。0 なら 0 番の sh_size）"
+      - name: shstrtab_index
+        type: virtual
+        value: "{e_shstrndx == 0xFFFF ? section0_link : e_shstrndx}"
+        description: "セクション名の文字列表（.shstrtab）のセクション番号（SHN_XINDEX なら 0 番の sh_link）"
+      - name: shstrtab_offset
+        type: uint32
+        seek: "{e_shoff + shstrtab_index * e_shentsize + 16}"
+        seek_restore: true
+        if: "{shstrtab_index == 0 ? 0 : shstrtab_index < section_count}"
+        description: ".shstrtab の sh_offset（先読み。セクション名を引くのに使う）"
       - name: program_headers
         type: struct
         struct: elf32_phdr
         repeat_count: "{e_phnum}"
+        seek: "{e_phoff + _index * e_phentsize}"
+        seek_restore: true
+        description: "プログラムヘッダ表（e_phoff + 番号 × e_phentsize の位置の e_phnum 個。実行時のセグメント）"
       - name: section_headers
         type: struct
         struct: elf32_shdr
-        seek: "{e_shoff}"
-        repeat_count: "{e_shnum}"
+        repeat_count: "{section_count}"
+        seek: "{e_shoff + _index * e_shentsize}"
+        seek_restore: true
+        description: "セクションヘッダ表（e_shoff + 番号 × e_shentsize の位置の section_count 個。リンク用のセクションとその中身）"
 
   elf32_header:
     - name: e_type
       type: uint16
       enum: e_type
+      description: "ファイルの種類（0xFE00〜0xFEFF は OS 固有、0xFF00〜0xFFFF はプロセッサ固有）"
     - name: e_machine
       type: uint16
       enum: e_machine
+      description: "対象のアーキテクチャ"
     - name: e_version
       type: uint32
+      description: "ELF の版（1）"
     - name: e_entry
       type: uint32
+      description: "エントリポイントの仮想アドレス（無ければ 0）"
     - name: e_phoff
       type: uint32
+      description: "プログラムヘッダ表の位置（ファイル先頭から。無ければ 0）"
     - name: e_shoff
       type: uint32
+      description: "セクションヘッダ表の位置（ファイル先頭から。無ければ 0）"
     - name: e_flags
       type: uint32
+      description: "プロセッサ固有のフラグ（ARM の EABI 版、MIPS の ABI など）"
     - name: e_ehsize
       type: uint16
+      description: "ELF ヘッダのバイト数（32 ビットは 52）"
     - name: e_phentsize
       type: uint16
+      description: "プログラムヘッダ 1 個のバイト数（32 ビットは 32）"
     - name: e_phnum
       type: uint16
+      description: "プログラムヘッダの数"
     - name: e_shentsize
       type: uint16
+      description: "セクションヘッダ 1 個のバイト数（32 ビットは 40）"
     - name: e_shnum
       type: uint16
+      description: "セクションヘッダの数（0xFF00 以上なら 0 で、本当の数は 0 番の sh_size）"
     - name: e_shstrndx
       type: uint16
+      enum: special_section_index
+      description: "セクション名の文字列表（.shstrtab）のセクション番号（SHN_XINDEX なら 0 番の sh_link）"
 
   elf32_phdr:
     - name: p_type
       type: uint32
       enum: p_type
+      description: "セグメントの種類"
     - name: p_offset
       type: uint32
+      description: "セグメントのファイル上の位置"
     - name: p_vaddr
       type: uint32
+      description: "セグメントを置く仮想アドレス"
     - name: p_paddr
       type: uint32
+      description: "物理アドレス（通常は p_vaddr と同じ）"
     - name: p_filesz
       type: uint32
+      description: "セグメントのファイル上のバイト数"
     - name: p_memsz
       type: uint32
+      description: "セグメントのメモリ上のバイト数（p_filesz より大きい分は 0 で埋める）"
     - name: p_flags
       type: uint32
       flags: p_flags
+      description: "セグメントのアクセス権（32 ビットでは p_memsz の後ろ。PF_X / PF_W / PF_R）"
     - name: p_align
       type: uint32
+      description: "アラインメント（p_vaddr と p_offset はこの値を法として等しい）"
+    - name: interpreter
+      type: asciiz
+      seek: "{p_offset}"
+      seek_restore: true
+      if: "{p_type == 3}"
+      description: "プログラムインタプリタのパス（PT_INTERP のとき。例: /lib/ld-linux.so.2）"
 
   elf32_shdr:
     - name: sh_name
       type: uint32
-      description: "セクション名（文字列テーブルへのオフセット）"
+      description: "セクション名（.shstrtab の中のオフセット）"
+    - name: name
+      type: asciiz
+      seek: "{shstrtab_offset + sh_name}"
+      seek_restore: true
+      if: "{shstrtab_index == 0 ? 0 : shstrtab_index < section_count}"
+      description: "セクション名（.shstrtab から引いた文字列）"
     - name: sh_type
       type: uint32
       enum: sh_type
+      description: "セクションの種類"
     - name: sh_flags
       type: uint32
+      flags: sh_flags
+      description: "セクションの属性（SHF_ALLOC / SHF_EXECINSTR / SHF_COMPRESSED など）"
     - name: sh_addr
       type: uint32
+      description: "実行時の仮想アドレス（メモリに置かないセクションは 0）"
     - name: sh_offset
       type: uint32
+      description: "中身のファイル上の位置"
     - name: sh_size
       type: uint32
+      description: "中身のバイト数（SHT_NOBITS はファイル上に領域を持たない）"
     - name: sh_link
       type: uint32
+      description: "関連するセクションの番号（シンボル表なら文字列表、再配置ならシンボル表 など）"
     - name: sh_info
       type: uint32
+      description: "種類ごとの追加情報（シンボル表なら最初の非ローカルシンボルの番号、再配置なら適用先のセクション番号）"
     - name: sh_addralign
       type: uint32
+      description: "アラインメント（0 と 1 は制約なし）"
     - name: sh_entsize
       type: uint32
+      description: "固定長のエントリの表ならエントリ 1 個のバイト数（そうでなければ 0）"
+    - name: contents
+      type: switch
+      switch_on: "{(sh_flags & 0x800) != 0 ? -2 : sh_type}"
+      seek: "{sh_offset}"
+      seek_restore: true
+      if: "{sh_type == 0 ? 0 : (sh_type == 8 ? 0 : sh_size > 0)}"
+      cases:
+        "2": elf32_symbol_table
+        "11": elf32_symbol_table
+        "3": string_table
+        "4": elf32_rela_table
+        "9": elf32_rel_table
+        "6": elf32_dynamic_table
+        "7": note_list
+        "-2": elf32_compressed_section
+      default: section_data
+      description: "セクションの中身（sh_offset から sh_size バイト。種類で振り分け、SHF_COMPRESSED は展開する）"
+
+  elf32_symbol_table:
+    - name: string_table_offset
+      type: uint32
+      seek: "{e_shoff + sh_link * e_shentsize + 16}"
+      seek_restore: true
+      description: "シンボル名の文字列表（sh_link のセクション）の sh_offset（先読み）"
+    - name: symbols
+      type: struct
+      struct: elf32_sym
+      repeat_count: "{sh_size / 16}"
+      description: "シンボル（16 バイトずつ sh_size ÷ 16 個。0 番は未定義の空のシンボル）"
+
+  elf32_sym:
+    - name: st_name
+      type: uint32
+      description: "シンボル名（文字列表の中のオフセット。0 なら名前なし）"
+    - name: name
+      type: asciiz
+      seek: "{string_table_offset + st_name}"
+      seek_restore: true
+      if: "{st_name != 0}"
+      description: "シンボル名（文字列表から引いた文字列）"
+    - name: st_value
+      type: uint32
+      description: "値（実行ファイル・共有オブジェクトでは仮想アドレス、.o ではセクション内のオフセット。32 ビットでは st_info より前）"
+    - name: st_size
+      type: uint32
+      description: "大きさ（関数・データのバイト数。不明なら 0）"
+    - name: st_info
+      type: uint8
+      description: "結合方法（上位 4 ビット）と種類（下位 4 ビット）"
+    - name: bind
+      type: virtual
+      value: "{st_info >> 4}"
+      enum: sym_bind
+      description: "結合方法（st_info の上位 4 ビット）"
+    - name: symbol_type
+      type: virtual
+      value: "{st_info & 0x0F}"
+      enum: sym_type
+      description: "シンボルの種類（st_info の下位 4 ビット）"
+    - name: st_other
+      type: uint8
+      description: "可視性（下位 2 ビット）"
+    - name: visibility
+      type: virtual
+      value: "{st_other & 3}"
+      enum: sym_visibility
+      description: "可視性（st_other の下位 2 ビット）"
+    - name: st_shndx
+      type: uint16
+      enum: special_section_index
+      description: "定義されているセクションの番号（SHN_UNDEF = 未定義、SHN_ABS = 絶対値）"
+
+  elf32_rela_table:
+    - name: relocations
+      type: struct
+      struct: elf32_rela
+      repeat_count: "{sh_size / 12}"
+      description: "加数付きの再配置（12 バイトずつ）"
+
+  elf32_rela:
+    - name: r_offset
+      type: uint32
+      description: "再配置を当てる位置"
+    - name: r_info
+      type: uint32
+      description: "シンボルの番号（上位 24 ビット）と再配置の種類（下位 8 ビット）"
+    - name: symbol_index
+      type: virtual
+      value: "{r_info >> 8}"
+      description: "再配置が参照するシンボルの番号"
+    - name: relocation_type
+      type: virtual
+      value: "{r_info & 0xFF}"
+      description: "再配置の種類（アーキテクチャごとの番号）"
+    - name: r_addend
+      type: int32
+      description: "加数（計算に加える定数）"
+
+  elf32_rel_table:
+    - name: relocations
+      type: struct
+      struct: elf32_rel
+      repeat_count: "{sh_size / 8}"
+      description: "加数なしの再配置（8 バイトずつ）"
+
+  elf32_rel:
+    - name: r_offset
+      type: uint32
+      description: "再配置を当てる位置"
+    - name: r_info
+      type: uint32
+      description: "シンボルの番号（上位 24 ビット）と再配置の種類（下位 8 ビット）"
+    - name: symbol_index
+      type: virtual
+      value: "{r_info >> 8}"
+      description: "再配置が参照するシンボルの番号"
+    - name: relocation_type
+      type: virtual
+      value: "{r_info & 0xFF}"
+      description: "再配置の種類（アーキテクチャごとの番号。例: ARM の R_ARM_RELATIVE = 23）"
+
+  elf32_dynamic_table:
+    - name: string_table_offset
+      type: uint32
+      seek: "{e_shoff + sh_link * e_shentsize + 16}"
+      seek_restore: true
+      description: "動的文字列表（sh_link のセクション。.dynstr）の sh_offset（先読み）"
+    - name: entries
+      type: struct
+      struct: elf32_dyn
+      repeat_count: "{sh_size / 8}"
+      description: "動的リンクの情報（8 バイトずつ。DT_NULL の後ろは詰め物）"
+
+  elf32_dyn:
+    - name: d_tag
+      type: int32
+      enum: d_tag
+      description: "エントリの種類"
+    - name: d_val
+      type: uint32
+      description: "値またはアドレス（種類ごとの意味）"
+    - name: string_value
+      type: asciiz
+      seek: "{string_table_offset + d_val}"
+      seek_restore: true
+      if: "{d_tag == 1 or d_tag == 14 or d_tag == 15 or d_tag == 29}"
+      description: "名前（DT_NEEDED・DT_SONAME・DT_RPATH・DT_RUNPATH のとき、.dynstr から引いた文字列）"
+
+  elf32_compressed_section:
+    - name: ch_type
+      type: uint32
+      enum: compression_type
+      description: "圧縮方式"
+    - name: ch_size
+      type: uint32
+      description: "展開後のバイト数"
+    - name: ch_addralign
+      type: uint32
+      description: "展開後のデータのアラインメント"
+    - name: data
+      type: switch
+      switch_on: "{ch_type}"
+      size: "{sh_size - 12}"
+      cases:
+        "1": zlib_data
+        "2": zstd_data
+      default: raw_data
+      description: "圧縮データ（zlib / Zstandard は展開して表示）"
+
+  # ===== 32 / 64 ビット共通 =====
+  string_table:
+    - name: strings
+      type: asciiz
+      size: "{sh_size}"
+      repeat: eof
+      description: "NUL 終端の文字列の並び（先頭は空文字列。ほかのセクションからオフセットで参照される）"
+
+  note_list:
+    - name: notes
+      type: struct
+      struct: note
+      size: "{sh_size}"
+      repeat: eof
+      description: "ノート（名前 + 種類 + 記述子）の並び"
+
+  note:
+    - name: note_align
+      type: virtual
+      value: "{sh_addralign == 8 ? 8 : 4}"
+      description: "名前と記述子のアラインメント（4 バイト。sh_addralign が 8 のセクションは 8 バイト）"
+    - name: n_namesz
+      type: uint32
+      description: "名前のバイト数（NUL を含む）"
+    - name: n_descsz
+      type: uint32
+      description: "記述子のバイト数"
+    - name: n_type
+      type: uint32
+      description: "ノートの種類（名前ごとの意味）"
+    - name: name
+      type: ascii
+      size: "{n_namesz}"
+      description: "作成者の名前（'GNU'・'FreeBSD'・'Android'・'CORE' など。NUL を含む）"
+    - name: gnu_type
+      type: virtual
+      value: "{n_type}"
+      enum: gnu_note_type
+      if: "{trim(name) == 'GNU'}"
+      description: "GNU のノートの種類（名前が 'GNU' のとき）"
+    - name: name_padding
+      type: bytes
+      size: "{(note_align - n_namesz % note_align) % note_align}"
+      padding: true
+      description: "名前の後ろの詰め物（4 バイト境界。sh_addralign が 8 のセクションは 8 バイト境界）"
+    - name: desc
+      type: bytes
+      size: "{n_descsz}"
+      description: "記述子（ビルド ID のハッシュ、ABI タグの OS と版、プロパティの並び など）"
+    - name: desc_padding
+      type: bytes
+      size: "{(note_align - n_descsz % note_align) % note_align}"
+      if: "{remaining > 0}"
+      padding: true
+      description: "記述子の後ろの詰め物"
+
+  zlib_data:
+    - name: content
+      type: zlib
+      size: remaining
+      description: "zlib で圧縮されたデータ（展開して表示。デバッグ情報など）"
+
+  zstd_data:
+    - name: content
+      type: zstd
+      size: remaining
+      description: "Zstandard で圧縮されたデータ（展開して表示）"
+
+  section_data:
+    - name: data
+      type: bytes
+      size: "{sh_size}"
+      description: "分解しないセクションの中身（機械語・データなど。sh_size バイト）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ"

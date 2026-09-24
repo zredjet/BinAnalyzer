@@ -77,6 +77,19 @@ public sealed class JsonSchemaTests
     }
 
     [Fact]
+    public void Schema_FieldTypeEnum_MatchesDslTypeNames()
+    {
+        // スキーマの type の列挙が DSL の型名とずれないようにする（REQ-188 で uleb128 / sleb128 / vlq の抜けが見つかった）
+        using var doc = JsonDocument.Parse(File.ReadAllText(SchemaPath));
+        var names = doc.RootElement.GetProperty("$defs").GetProperty("field").GetProperty("properties")
+            .GetProperty("type").GetProperty("enum").EnumerateArray().Select(e => e.GetString()!).ToList();
+
+        foreach (var type in Enum.GetValues<BinAnalyzer.Core.Models.FieldType>())
+            names.Should().Contain(BinAnalyzer.Core.Models.FieldTypeNames.ToDslName(type), $"{type} の正規名がスキーマに必要");
+        names.Where(n => !BinAnalyzer.Core.Models.FieldTypeNames.TryParse(n, out var _)).Should().BeEmpty("スキーマの型名は DSL で解析できること");
+    }
+
+    [Fact]
     public void Schema_IsValidJson()
     {
         var json = File.ReadAllText(SchemaPath);
@@ -196,6 +209,10 @@ public sealed class JsonSchemaTests
     [InlineData("7z.bdef.yaml")]
     [InlineData("lz4.bdef.yaml")]
     [InlineData("elf.bdef.yaml")]
+    [InlineData("pe.bdef.yaml")]
+    [InlineData("macho.bdef.yaml")]
+    [InlineData("java-class.bdef.yaml")]
+    [InlineData("wasm.bdef.yaml")]
     public void Schema_ValidatesFormatFile(string fileName)
     {
         var schema = LoadSchema();

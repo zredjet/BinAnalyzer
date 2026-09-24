@@ -18,7 +18,7 @@
           "type": "bytes",
           "offset": 0,
           "size": 2,
-          "description": "DOS\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC\uFF08\u0027MZ\u0027\uFF09",
+          "description": "MS-DOS \u306E\u30DE\u30B8\u30C3\u30AF\uFF08\u0027MZ\u0027\uFF09",
           "name": "e_magic",
           "hex": "4D 5A",
           "valid": true
@@ -28,6 +28,7 @@
           "type": "uint16",
           "offset": 2,
           "size": 2,
+          "description": "DOS \u5B9F\u884C\u30D5\u30A1\u30A4\u30EB\u306E\u6700\u5F8C\u306E\u30DA\u30FC\u30B8\u306E\u30D0\u30A4\u30C8\u6570",
           "name": "e_cblp",
           "value": 0,
           "hex": "0x0"
@@ -37,6 +38,7 @@
           "type": "uint16",
           "offset": 4,
           "size": 2,
+          "description": "DOS \u5B9F\u884C\u30D5\u30A1\u30A4\u30EB\u306E\u30DA\u30FC\u30B8\u6570\uFF08512 \u30D0\u30A4\u30C8\u5358\u4F4D\uFF09",
           "name": "e_cp",
           "value": 0,
           "hex": "0x0"
@@ -46,6 +48,7 @@
           "type": "uint16",
           "offset": 6,
           "size": 2,
+          "description": "DOS \u306E\u518D\u914D\u7F6E\u306E\u6570",
           "name": "e_crlc",
           "value": 0,
           "hex": "0x0"
@@ -55,6 +58,7 @@
           "type": "uint16",
           "offset": 8,
           "size": 2,
+          "description": "DOS \u30D8\u30C3\u30C0\u306E\u30B5\u30A4\u30BA\uFF0816 \u30D0\u30A4\u30C8\u306E\u30D1\u30E9\u30B0\u30E9\u30D5\u5358\u4F4D\uFF09",
           "name": "e_cparhdr",
           "value": 0,
           "hex": "0x0"
@@ -64,6 +68,7 @@
           "type": "uint16",
           "offset": 10,
           "size": 2,
+          "description": "DOS \u3067\u8FFD\u52A0\u306B\u5FC5\u8981\u306A\u6700\u5C0F\u306E\u30D1\u30E9\u30B0\u30E9\u30D5\u6570",
           "name": "e_minalloc",
           "value": 0,
           "hex": "0x0"
@@ -73,6 +78,7 @@
           "type": "uint16",
           "offset": 12,
           "size": 2,
+          "description": "DOS \u3067\u8FFD\u52A0\u306B\u5FC5\u8981\u306A\u6700\u5927\u306E\u30D1\u30E9\u30B0\u30E9\u30D5\u6570",
           "name": "e_maxalloc",
           "value": 0,
           "hex": "0x0"
@@ -82,6 +88,7 @@
           "type": "uint16",
           "offset": 14,
           "size": 2,
+          "description": "DOS \u306E\u521D\u671F\u306E SS\uFF08\u76F8\u5BFE\uFF09",
           "name": "e_ss",
           "value": 0,
           "hex": "0x0"
@@ -91,6 +98,7 @@
           "type": "uint16",
           "offset": 16,
           "size": 2,
+          "description": "DOS \u306E\u521D\u671F\u306E SP",
           "name": "e_sp",
           "value": 0,
           "hex": "0x0"
@@ -100,6 +108,7 @@
           "type": "uint16",
           "offset": 18,
           "size": 2,
+          "description": "DOS \u306E\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08\u901A\u5E38 0\uFF09",
           "name": "e_csum",
           "value": 0,
           "hex": "0x0"
@@ -109,6 +118,7 @@
           "type": "uint16",
           "offset": 20,
           "size": 2,
+          "description": "DOS \u306E\u521D\u671F\u306E IP",
           "name": "e_ip",
           "value": 0,
           "hex": "0x0"
@@ -118,6 +128,7 @@
           "type": "uint16",
           "offset": 22,
           "size": 2,
+          "description": "DOS \u306E\u521D\u671F\u306E CS\uFF08\u76F8\u5BFE\uFF09",
           "name": "e_cs",
           "value": 0,
           "hex": "0x0"
@@ -127,6 +138,7 @@
           "type": "uint16",
           "offset": 24,
           "size": 2,
+          "description": "DOS \u306E\u518D\u914D\u7F6E\u8868\u306E\u4F4D\u7F6E",
           "name": "e_lfarlc",
           "value": 0,
           "hex": "0x0"
@@ -136,6 +148,7 @@
           "type": "uint16",
           "offset": 26,
           "size": 2,
+          "description": "DOS \u306E\u30AA\u30FC\u30D0\u30FC\u30EC\u30A4\u756A\u53F7",
           "name": "e_ovno",
           "value": 0,
           "hex": "0x0"
@@ -145,7 +158,7 @@
           "type": "bytes",
           "offset": 28,
           "size": 8,
-          "description": "\u4E88\u7D04\u9818\u57DF",
+          "description": "\u4E88\u7D04\uFF080\uFF09",
           "name": "e_res",
           "hex": "00 00 00 00 00 00 00 00"
         },
@@ -154,6 +167,7 @@
           "type": "uint16",
           "offset": 36,
           "size": 2,
+          "description": "OEM \u306E\u8B58\u5225\u5B50",
           "name": "e_oemid",
           "value": 0,
           "hex": "0x0"
@@ -163,6 +177,7 @@
           "type": "uint16",
           "offset": 38,
           "size": 2,
+          "description": "OEM \u3054\u3068\u306E\u60C5\u5831",
           "name": "e_oeminfo",
           "value": 0,
           "hex": "0x0"
@@ -172,7 +187,7 @@
           "type": "bytes",
           "offset": 40,
           "size": 20,
-          "description": "\u4E88\u7D04\u9818\u57DF",
+          "description": "\u4E88\u7D04\uFF080\uFF09",
           "name": "e_res2",
           "hex": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
         },
@@ -181,7 +196,7 @@
           "type": "uint32",
           "offset": 60,
           "size": 4,
-          "description": "PE\u30D8\u30C3\u30C0\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
+          "description": "PE \u30B7\u30B0\u30CD\u30C1\u30E3\uFF08PE \u30D8\u30C3\u30C0\uFF09\u306E\u4F4D\u7F6E\uFF08\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\uFF09",
           "name": "e_lfanew",
           "value": 64,
           "hex": "0x40"
@@ -193,7 +208,7 @@
       "type": "bytes",
       "offset": 64,
       "size": 4,
-      "description": "PE\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027PE\\0\\0\u0027\uFF09",
+      "description": "PE \u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027PE\u0027 00 00\uFF09",
       "name": "pe_signature",
       "hex": "50 45 00 00",
       "valid": true
@@ -211,17 +226,19 @@
           "type": "uint16",
           "offset": 68,
           "size": 2,
+          "description": "\u5BFE\u8C61\u306E CPU \u306E\u7A2E\u985E",
           "name": "machine",
           "value": 34404,
           "hex": "0x8664",
           "enum_label": "IMAGE_FILE_MACHINE_AMD64",
-          "enum_description": "AMD64 (x86-64)"
+          "enum_description": "x64\uFF08AMD64 / Intel 64\uFF09"
         },
         "number_of_sections": {
           "_type": "integer",
           "type": "uint16",
           "offset": 70,
           "size": 2,
+          "description": "\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u6570\uFF08\u30BB\u30AF\u30B7\u30E7\u30F3\u8868\u306E\u30A8\u30F3\u30C8\u30EA\u6570\uFF09",
           "name": "number_of_sections",
           "value": 1,
           "hex": "0x1"
@@ -231,6 +248,7 @@
           "type": "uint32",
           "offset": 72,
           "size": 4,
+          "description": "\u4F5C\u6210\u65E5\u6642\uFF08UNIX \u6642\u523B\u306E\u79D2\u3002\u518D\u73FE\u53EF\u80FD\u306A\u30D3\u30EB\u30C9\u3067\u306F\u5185\u5BB9\u306E\u30CF\u30C3\u30B7\u30E5\uFF09",
           "name": "time_date_stamp",
           "value": 0,
           "hex": "0x0"
@@ -240,6 +258,7 @@
           "type": "uint32",
           "offset": 76,
           "size": 4,
+          "description": "COFF \u30B7\u30F3\u30DC\u30EB\u8868\u306E\u4F4D\u7F6E\uFF08\u30A4\u30E1\u30FC\u30B8\u3067\u306F\u5EC3\u6B62\u3055\u308C\u901A\u5E38 0\uFF09",
           "name": "pointer_to_symbol_table",
           "value": 0,
           "hex": "0x0"
@@ -249,6 +268,7 @@
           "type": "uint32",
           "offset": 80,
           "size": 4,
+          "description": "COFF \u30B7\u30F3\u30DC\u30EB\u8868\u306E\u30A8\u30F3\u30C8\u30EA\u6570\uFF08\u30A4\u30E1\u30FC\u30B8\u3067\u306F\u901A\u5E38 0\uFF09",
           "name": "number_of_symbols",
           "value": 0,
           "hex": "0x0"
@@ -258,6 +278,7 @@
           "type": "uint16",
           "offset": 84,
           "size": 2,
+          "description": "\u30AA\u30D7\u30B7\u30E7\u30F3\u30D8\u30C3\u30C0\u306E\u30D0\u30A4\u30C8\u6570\uFF08PE32 \u306F 224\u3001PE32\u002B \u306F 240 \u304C\u4E00\u822C\u7684\u3002\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u30D5\u30A1\u30A4\u30EB\u306F 0\uFF09",
           "name": "size_of_optional_header",
           "value": 128,
           "hex": "0x80"
@@ -267,6 +288,7 @@
           "type": "uint16",
           "offset": 86,
           "size": 2,
+          "description": "\u30D5\u30A1\u30A4\u30EB\u306E\u7279\u6027\uFF08EXECUTABLE_IMAGE = \u30A4\u30E1\u30FC\u30B8\u3001DLL\u3001LARGE_ADDRESS_AWARE \u306A\u3069\uFF09",
           "name": "characteristics",
           "raw_value": "0x22",
           "flags": {
@@ -282,8 +304,14 @@
             "LOCAL_SYMS_STRIPPED": {
               "set": false
             },
+            "AGGRESSIVE_WS_TRIM": {
+              "set": false
+            },
             "LARGE_ADDRESS_AWARE": {
               "set": true
+            },
+            "BYTES_REVERSED_LO": {
+              "set": false
             },
             "32BIT_MACHINE": {
               "set": false
@@ -291,10 +319,22 @@
             "DEBUG_STRIPPED": {
               "set": false
             },
+            "REMOVABLE_RUN_FROM_SWAP": {
+              "set": false
+            },
+            "NET_RUN_FROM_SWAP": {
+              "set": false
+            },
             "SYSTEM": {
               "set": false
             },
             "DLL": {
+              "set": false
+            },
+            "UP_SYSTEM_ONLY": {
+              "set": false
+            },
+            "BYTES_REVERSED_HI": {
               "set": false
             }
           }
@@ -314,11 +354,12 @@
           "type": "uint16",
           "offset": 88,
           "size": 2,
+          "description": "\u30AA\u30D7\u30B7\u30E7\u30F3\u30D8\u30C3\u30C0\u306E\u7A2E\u985E\uFF08PE32 = 0x10B\u3001PE32\u002B = 0x20B\uFF09",
           "name": "magic",
           "value": 523,
           "hex": "0x20B",
           "enum_label": "PE32\u002B",
-          "enum_description": "64\u30D3\u30C3\u30C8\u5B9F\u884C\u30D5\u30A1\u30A4\u30EB"
+          "enum_description": "64 \u30D3\u30C3\u30C8\u306E\u30A4\u30E1\u30FC\u30B8\uFF08\u30A2\u30C9\u30EC\u30B9 8 \u30D0\u30A4\u30C8\uFF09"
         },
         "fields": {
           "_type": "struct",
@@ -333,6 +374,7 @@
               "type": "uint8",
               "offset": 90,
               "size": 1,
+              "description": "\u30EA\u30F3\u30AB\u306E\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "major_linker_version",
               "value": 14,
               "hex": "0xE"
@@ -342,6 +384,7 @@
               "type": "uint8",
               "offset": 91,
               "size": 1,
+              "description": "\u30EA\u30F3\u30AB\u306E\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "minor_linker_version",
               "value": 0,
               "hex": "0x0"
@@ -351,6 +394,7 @@
               "type": "uint32",
               "offset": 92,
               "size": 4,
+              "description": "\u30B3\u30FC\u30C9\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u5408\u8A08\u30D0\u30A4\u30C8\u6570",
               "name": "size_of_code",
               "value": 512,
               "hex": "0x200"
@@ -360,6 +404,7 @@
               "type": "uint32",
               "offset": 96,
               "size": 4,
+              "description": "\u521D\u671F\u5316\u6E08\u307F\u30C7\u30FC\u30BF\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u5408\u8A08\u30D0\u30A4\u30C8\u6570",
               "name": "size_of_initialized_data",
               "value": 0,
               "hex": "0x0"
@@ -369,6 +414,7 @@
               "type": "uint32",
               "offset": 100,
               "size": 4,
+              "description": "\u672A\u521D\u671F\u5316\u30C7\u30FC\u30BF\uFF08.bss\uFF09\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u5408\u8A08\u30D0\u30A4\u30C8\u6570",
               "name": "size_of_uninitialized_data",
               "value": 0,
               "hex": "0x0"
@@ -378,6 +424,7 @@
               "type": "uint32",
               "offset": 104,
               "size": 4,
+              "description": "\u30A8\u30F3\u30C8\u30EA\u30DD\u30A4\u30F3\u30C8\u306E RVA\uFF08DLL \u3067\u306F\u7701\u7565\u53EF\u80FD\u3067 0\uFF09",
               "name": "address_of_entry_point",
               "value": 4096,
               "hex": "0x1000"
@@ -387,6 +434,7 @@
               "type": "uint32",
               "offset": 108,
               "size": 4,
+              "description": "\u30B3\u30FC\u30C9\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u5148\u982D\u306E RVA",
               "name": "base_of_code",
               "value": 4096,
               "hex": "0x1000"
@@ -396,6 +444,7 @@
               "type": "uint64",
               "offset": 112,
               "size": 8,
+              "description": "\u8AAD\u307F\u8FBC\u307F\u306E\u512A\u5148\u30A2\u30C9\u30EC\u30B9\uFF08PE32\u002B \u306F 8 \u30D0\u30A4\u30C8\u3002EXE \u306E\u65E2\u5B9A\u306F 0x140000000\uFF09",
               "name": "image_base",
               "value": 5368709120,
               "hex": "0x140000000"
@@ -405,6 +454,7 @@
               "type": "uint32",
               "offset": 120,
               "size": 4,
+              "description": "\u30E1\u30E2\u30EA\u4E0A\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A2\u30E9\u30A4\u30F3\u30E1\u30F3\u30C8\uFF08\u65E2\u5B9A\u306F\u30DA\u30FC\u30B8\u30B5\u30A4\u30BA\uFF09",
               "name": "section_alignment",
               "value": 4096,
               "hex": "0x1000"
@@ -414,6 +464,7 @@
               "type": "uint32",
               "offset": 124,
               "size": 4,
+              "description": "\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A2\u30E9\u30A4\u30F3\u30E1\u30F3\u30C8\uFF08512\u301C64 KiB \u306E 2 \u306E\u3079\u304D\u4E57\u3002\u65E2\u5B9A 512\uFF09",
               "name": "file_alignment",
               "value": 512,
               "hex": "0x200"
@@ -423,6 +474,7 @@
               "type": "uint16",
               "offset": 128,
               "size": 2,
+              "description": "\u5FC5\u8981\u306A OS \u306E\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "major_os_version",
               "value": 6,
               "hex": "0x6"
@@ -432,6 +484,7 @@
               "type": "uint16",
               "offset": 130,
               "size": 2,
+              "description": "\u5FC5\u8981\u306A OS \u306E\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "minor_os_version",
               "value": 0,
               "hex": "0x0"
@@ -441,6 +494,7 @@
               "type": "uint16",
               "offset": 132,
               "size": 2,
+              "description": "\u30A4\u30E1\u30FC\u30B8\u306E\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "major_image_version",
               "value": 0,
               "hex": "0x0"
@@ -450,6 +504,7 @@
               "type": "uint16",
               "offset": 134,
               "size": 2,
+              "description": "\u30A4\u30E1\u30FC\u30B8\u306E\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "minor_image_version",
               "value": 0,
               "hex": "0x0"
@@ -459,6 +514,7 @@
               "type": "uint16",
               "offset": 136,
               "size": 2,
+              "description": "\u30B5\u30D6\u30B7\u30B9\u30C6\u30E0\u306E\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "major_subsystem_version",
               "value": 6,
               "hex": "0x6"
@@ -468,6 +524,7 @@
               "type": "uint16",
               "offset": 138,
               "size": 2,
+              "description": "\u30B5\u30D6\u30B7\u30B9\u30C6\u30E0\u306E\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3",
               "name": "minor_subsystem_version",
               "value": 0,
               "hex": "0x0"
@@ -477,6 +534,7 @@
               "type": "uint32",
               "offset": 140,
               "size": 4,
+              "description": "\u4E88\u7D04\uFF080\uFF09",
               "name": "win32_version_value",
               "value": 0,
               "hex": "0x0"
@@ -486,6 +544,7 @@
               "type": "uint32",
               "offset": 144,
               "size": 4,
+              "description": "\u8AAD\u307F\u8FBC\u307F\u5F8C\u306E\u30A4\u30E1\u30FC\u30B8\u5168\u4F53\u306E\u30D0\u30A4\u30C8\u6570\uFF08section_alignment \u306E\u500D\u6570\uFF09",
               "name": "size_of_image",
               "value": 8192,
               "hex": "0x2000"
@@ -495,6 +554,7 @@
               "type": "uint32",
               "offset": 148,
               "size": 4,
+              "description": "\u30D8\u30C3\u30C0\u5168\u4F53\uFF08DOS \u30B9\u30BF\u30D6\u30FBPE \u30D8\u30C3\u30C0\u30FB\u30BB\u30AF\u30B7\u30E7\u30F3\u8868\uFF09\u306E\u30D0\u30A4\u30C8\u6570\uFF08file_alignment \u306E\u500D\u6570\uFF09",
               "name": "size_of_headers",
               "value": 512,
               "hex": "0x200"
@@ -504,6 +564,7 @@
               "type": "uint32",
               "offset": 152,
               "size": 4,
+              "description": "\u30A4\u30E1\u30FC\u30B8\u306E\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08PE \u72EC\u81EA\u306E\u30A2\u30EB\u30B4\u30EA\u30BA\u30E0\u306E\u305F\u3081\u691C\u8A3C\u3057\u306A\u3044\uFF09",
               "name": "checksum",
               "value": 0,
               "hex": "0x0"
@@ -513,26 +574,47 @@
               "type": "uint16",
               "offset": 156,
               "size": 2,
+              "description": "\u5B9F\u884C\u306B\u5FC5\u8981\u306A\u30B5\u30D6\u30B7\u30B9\u30C6\u30E0",
               "name": "subsystem",
               "value": 3,
               "hex": "0x3",
-              "enum_label": "IMAGE_SUBSYSTEM_WINDOWS_CUI"
+              "enum_label": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+              "enum_description": "Windows \u306E\u30B3\u30F3\u30BD\u30FC\u30EB\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3"
             },
             "dll_characteristics": {
               "_type": "flags",
               "type": "uint16",
               "offset": 158,
               "size": 2,
+              "description": "DLL \u306E\u7279\u6027\uFF08HIGH_ENTROPY_VA = 64 \u30D3\u30C3\u30C8\u306E ASLR\u3001DYNAMIC_BASE\u3001NX_COMPAT\u3001GUARD_CF \u306A\u3069\uFF09",
               "name": "dll_characteristics",
               "raw_value": "0x8160",
               "flags": {
+                "HIGH_ENTROPY_VA": {
+                  "set": true
+                },
                 "DYNAMIC_BASE": {
                   "set": true
+                },
+                "FORCE_INTEGRITY": {
+                  "set": false
                 },
                 "NX_COMPAT": {
                   "set": true
                 },
+                "NO_ISOLATION": {
+                  "set": false
+                },
                 "NO_SEH": {
+                  "set": false
+                },
+                "NO_BIND": {
+                  "set": false
+                },
+                "APPCONTAINER": {
+                  "set": false
+                },
+                "WDM_DRIVER": {
                   "set": false
                 },
                 "GUARD_CF": {
@@ -548,6 +630,7 @@
               "type": "uint64",
               "offset": 160,
               "size": 8,
+              "description": "\u30B9\u30BF\u30C3\u30AF\u306E\u4E88\u7D04\u30B5\u30A4\u30BA\uFF08PE32\u002B \u306F 8 \u30D0\u30A4\u30C8\uFF09",
               "name": "size_of_stack_reserve",
               "value": 1048576,
               "hex": "0x100000"
@@ -557,6 +640,7 @@
               "type": "uint64",
               "offset": 168,
               "size": 8,
+              "description": "\u30B9\u30BF\u30C3\u30AF\u306E\u521D\u671F\u306E\u30B3\u30DF\u30C3\u30C8\u30B5\u30A4\u30BA",
               "name": "size_of_stack_commit",
               "value": 4096,
               "hex": "0x1000"
@@ -566,6 +650,7 @@
               "type": "uint64",
               "offset": 176,
               "size": 8,
+              "description": "\u30D2\u30FC\u30D7\u306E\u4E88\u7D04\u30B5\u30A4\u30BA",
               "name": "size_of_heap_reserve",
               "value": 1048576,
               "hex": "0x100000"
@@ -575,6 +660,7 @@
               "type": "uint64",
               "offset": 184,
               "size": 8,
+              "description": "\u30D2\u30FC\u30D7\u306E\u521D\u671F\u306E\u30B3\u30DF\u30C3\u30C8\u30B5\u30A4\u30BA",
               "name": "size_of_heap_commit",
               "value": 4096,
               "hex": "0x1000"
@@ -584,6 +670,7 @@
               "type": "uint32",
               "offset": 192,
               "size": 4,
+              "description": "\u4E88\u7D04\uFF080\uFF09",
               "name": "loader_flags",
               "value": 0,
               "hex": "0x0"
@@ -593,6 +680,7 @@
               "type": "uint32",
               "offset": 196,
               "size": 4,
+              "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306E\u6570\uFF08\u901A\u5E38 16\uFF09",
               "name": "number_of_rva_and_sizes",
               "value": 2,
               "hex": "0x2"
@@ -613,11 +701,23 @@
                   "name": "data_directories",
                   "struct_type": "data_directory",
                   "children": {
+                    "directory": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 200,
+                      "size": 0,
+                      "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306E\u756A\u53F7\uFF08\u4E26\u3073\u9806\u3067\u610F\u5473\u304C\u6C7A\u307E\u308B\uFF09",
+                      "name": "directory",
+                      "value": 0,
+                      "enum_label": "EXPORT",
+                      "enum_description": "\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u8868\uFF08.edata\uFF09"
+                    },
                     "virtual_address": {
                       "_type": "integer",
                       "type": "uint32",
                       "offset": 200,
                       "size": 4,
+                      "description": "\u8868\u306E RVA\uFF08\u8A3C\u660E\u66F8\u306E\u8868\u3060\u3051\u306F\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u4F4D\u7F6E\u3002\u7121\u3051\u308C\u3070 0\uFF09",
                       "name": "virtual_address",
                       "value": 0,
                       "hex": "0x0"
@@ -627,6 +727,7 @@
                       "type": "uint32",
                       "offset": 204,
                       "size": 4,
+                      "description": "\u8868\u306E\u30D0\u30A4\u30C8\u6570",
                       "name": "size",
                       "value": 0,
                       "hex": "0x0"
@@ -641,11 +742,23 @@
                   "name": "data_directories",
                   "struct_type": "data_directory",
                   "children": {
+                    "directory": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 208,
+                      "size": 0,
+                      "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306E\u756A\u53F7\uFF08\u4E26\u3073\u9806\u3067\u610F\u5473\u304C\u6C7A\u307E\u308B\uFF09",
+                      "name": "directory",
+                      "value": 1,
+                      "enum_label": "IMPORT",
+                      "enum_description": "\u30A4\u30F3\u30DD\u30FC\u30C8\u8868\uFF08.idata\uFF09"
+                    },
                     "virtual_address": {
                       "_type": "integer",
                       "type": "uint32",
                       "offset": 208,
                       "size": 4,
+                      "description": "\u8868\u306E RVA\uFF08\u8A3C\u660E\u66F8\u306E\u8868\u3060\u3051\u306F\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u4F4D\u7F6E\u3002\u7121\u3051\u308C\u3070 0\uFF09",
                       "name": "virtual_address",
                       "value": 0,
                       "hex": "0x0"
@@ -655,6 +768,7 @@
                       "type": "uint32",
                       "offset": 212,
                       "size": 4,
+                      "description": "\u8868\u306E\u30D0\u30A4\u30C8\u6570",
                       "name": "size",
                       "value": 0,
                       "hex": "0x0"
@@ -666,6 +780,105 @@
           }
         }
       }
+    },
+    "is_pe32plus": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "PE32\u002B\uFF0864 \u30D3\u30C3\u30C8\uFF09\u304B\uFF081 \u306A\u3089\u30A4\u30F3\u30DD\u30FC\u30C8\u306E\u30B5\u30F3\u30AF\u304C 8 \u30D0\u30A4\u30C8\uFF09",
+      "name": "is_pe32plus",
+      "value": 1
+    },
+    "directory_count": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306E\u6570\uFF08NumberOfRvaAndSizes\uFF09",
+      "name": "directory_count",
+      "value": 2
+    },
+    "export_rva": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u8868\u306E RVA\uFF08\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA 0\uFF09",
+      "name": "export_rva",
+      "value": 0
+    },
+    "import_rva": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u30A4\u30F3\u30DD\u30FC\u30C8\u8868\u306E RVA\uFF08\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA 1\uFF09",
+      "name": "import_rva",
+      "value": 0
+    },
+    "certificate_offset": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u8A3C\u660E\u66F8\u306E\u8868\u306E\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u4F4D\u7F6E\uFF08\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA 4\u3002\u3053\u308C\u3060\u3051\u306F RVA \u3067\u306F\u306A\u3044\uFF09",
+      "name": "certificate_offset",
+      "value": 0
+    },
+    "certificate_size": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u8A3C\u660E\u66F8\u306E\u8868\u306E\u30D0\u30A4\u30C8\u6570",
+      "name": "certificate_size",
+      "value": 0
+    },
+    "basereloc_rva": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u30D9\u30FC\u30B9\u518D\u914D\u7F6E\u306E\u8868\u306E RVA\uFF08\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA 5\uFF09",
+      "name": "basereloc_rva",
+      "value": 0
+    },
+    "basereloc_size": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u30D9\u30FC\u30B9\u518D\u914D\u7F6E\u306E\u8868\u306E\u30D0\u30A4\u30C8\u6570",
+      "name": "basereloc_size",
+      "value": 0
+    },
+    "debug_rva": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u30C7\u30D0\u30C3\u30B0\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306E RVA\uFF08\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA 6\uFF09",
+      "name": "debug_rva",
+      "value": 0
+    },
+    "debug_size": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "\u30C7\u30D0\u30C3\u30B0\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306E\u30D0\u30A4\u30C8\u6570\uFF0828 \u30D0\u30A4\u30C8 \u00D7 \u30A8\u30F3\u30C8\u30EA\u6570\uFF09",
+      "name": "debug_size",
+      "value": 0
+    },
+    "clr_rva": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 216,
+      "size": 0,
+      "description": "CLR \u30E9\u30F3\u30BF\u30A4\u30E0\u30D8\u30C3\u30C0\u306E RVA\uFF08\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA 14\u3002.NET \u306E\u30A2\u30BB\u30F3\u30D6\u30EA\u306E\u3068\u304D 0 \u4EE5\u5916\uFF09",
+      "name": "clr_rva",
+      "value": 0
     },
     "sections": {
       "_type": "array",
@@ -688,6 +901,7 @@
               "type": "ascii",
               "offset": 216,
               "size": 8,
+              "description": "\u30BB\u30AF\u30B7\u30E7\u30F3\u540D\uFF08NUL \u3067\u8A70\u3081\u305F 8 \u30D0\u30A4\u30C8\u3002\u4F8B: .text\u30FB.rdata\u30FB.data\u30FB.rsrc\u30FB.reloc\uFF09",
               "name": "name",
               "value": ".text\u0000\u0000\u0000",
               "encoding": "ascii"
@@ -697,6 +911,7 @@
               "type": "uint32",
               "offset": 224,
               "size": 4,
+              "description": "\u30E1\u30E2\u30EA\u4E0A\u306E\u30D0\u30A4\u30C8\u6570\uFF08size_of_raw_data \u3088\u308A\u5927\u304D\u3044\u5206\u306F 0 \u3067\u57CB\u3081\u308B\uFF09",
               "name": "virtual_size",
               "value": 256,
               "hex": "0x100"
@@ -706,6 +921,7 @@
               "type": "uint32",
               "offset": 228,
               "size": 4,
+              "description": "\u30E1\u30E2\u30EA\u4E0A\u306E\u5148\u982D\u306E RVA",
               "name": "virtual_address",
               "value": 4096,
               "hex": "0x1000"
@@ -715,6 +931,7 @@
               "type": "uint32",
               "offset": 232,
               "size": 4,
+              "description": "\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u30D0\u30A4\u30C8\u6570\uFF08file_alignment \u306E\u500D\u6570\uFF09",
               "name": "size_of_raw_data",
               "value": 512,
               "hex": "0x200"
@@ -724,6 +941,7 @@
               "type": "uint32",
               "offset": 236,
               "size": 4,
+              "description": "\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u4E2D\u8EAB\u306E\u4F4D\u7F6E\uFF08\u672A\u521D\u671F\u5316\u30C7\u30FC\u30BF\u3060\u3051\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306F 0\uFF09",
               "name": "pointer_to_raw_data",
               "value": 512,
               "hex": "0x200"
@@ -733,6 +951,7 @@
               "type": "uint32",
               "offset": 240,
               "size": 4,
+              "description": "COFF \u306E\u518D\u914D\u7F6E\u306E\u4F4D\u7F6E\uFF08\u30A4\u30E1\u30FC\u30B8\u3067\u306F 0\uFF09",
               "name": "pointer_to_relocations",
               "value": 0,
               "hex": "0x0"
@@ -742,6 +961,7 @@
               "type": "uint32",
               "offset": 244,
               "size": 4,
+              "description": "COFF \u306E\u884C\u756A\u53F7\u306E\u4F4D\u7F6E\uFF08\u5EC3\u6B62\u30020\uFF09",
               "name": "pointer_to_linenumbers",
               "value": 0,
               "hex": "0x0"
@@ -751,6 +971,7 @@
               "type": "uint16",
               "offset": 248,
               "size": 2,
+              "description": "COFF \u306E\u518D\u914D\u7F6E\u306E\u6570\uFF08\u30A4\u30E1\u30FC\u30B8\u3067\u306F 0\uFF09",
               "name": "number_of_relocations",
               "value": 0,
               "hex": "0x0"
@@ -760,6 +981,7 @@
               "type": "uint16",
               "offset": 250,
               "size": 2,
+              "description": "COFF \u306E\u884C\u756A\u53F7\u306E\u6570\uFF08\u5EC3\u6B62\u30020\uFF09",
               "name": "number_of_linenumbers",
               "value": 0,
               "hex": "0x0"
@@ -769,9 +991,13 @@
               "type": "uint32",
               "offset": 252,
               "size": 4,
+              "description": "\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u7279\u6027\uFF08CNT_CODE = \u30B3\u30FC\u30C9\u3001MEM_EXECUTE / MEM_READ / MEM_WRITE = \u30A2\u30AF\u30BB\u30B9\u6A29 \u306A\u3069\uFF09",
               "name": "characteristics",
               "raw_value": "0x60000020",
               "flags": {
+                "TYPE_NO_PAD": {
+                  "set": false
+                },
                 "CNT_CODE": {
                   "set": true
                 },
@@ -779,6 +1005,24 @@
                   "set": false
                 },
                 "CNT_UNINITIALIZED_DATA": {
+                  "set": false
+                },
+                "LNK_OTHER": {
+                  "set": false
+                },
+                "LNK_INFO": {
+                  "set": false
+                },
+                "LNK_REMOVE": {
+                  "set": false
+                },
+                "LNK_COMDAT": {
+                  "set": false
+                },
+                "GPREL": {
+                  "set": false
+                },
+                "ALIGN": {
                   "set": false
                 },
                 "LNK_NRELOC_OVFL": {
@@ -806,6 +1050,15 @@
                   "set": false
                 }
               }
+            },
+            "file_delta": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 256,
+              "size": 0,
+              "description": "\u3053\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306E RVA \u3092\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u4F4D\u7F6E\u306B\u76F4\u3059\u305F\u3081\u306E\u5DEE\uFF08RVA \u002B file_delta = \u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u4F4D\u7F6E\uFF09",
+              "name": "file_delta",
+              "value": -3584
             }
           }
         }
