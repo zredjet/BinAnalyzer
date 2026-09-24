@@ -19,6 +19,22 @@
     <!-- REQ-169: パッチ済みファイルを CLI でデコードする検証に BinaryPatcher と YAML ローダーを使う -->
     <ProjectReference Include="..\..\src\BinAnalyzer.Engine\BinAnalyzer.Engine.csproj" />
     <ProjectReference Include="..\..\src\BinAnalyzer.Dsl\BinAnalyzer.Dsl.csproj" />
+    <!-- CLI はテストと同じ構成でビルドだけしておき、テストは出力 dll を dotnet <dll> で起動する（CliRunner 参照）。
+         テスト中に dotnet run で入れ子ビルドするとハングすることがあったため。 -->
+    <ProjectReference Include="..\..\src\BinAnalyzer.Cli\BinAnalyzer.Cli.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <!-- ビルドした CLI の dll パスを AssemblyMetadata("CliAssemblyPath") としてテストアセンブリに埋め込む -->
+  <Target Name="EmbedCliAssemblyPath" BeforeTargets="GetAssemblyAttributes">
+    <MSBuild Projects="..\..\src\BinAnalyzer.Cli\BinAnalyzer.Cli.csproj" Targets="GetTargetPath">
+      <Output TaskParameter="TargetOutputs" PropertyName="_CliAssemblyPath" />
+    </MSBuild>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>CliAssemblyPath</_Parameter1>
+        <_Parameter2>$(_CliAssemblyPath)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
 
 </Project>

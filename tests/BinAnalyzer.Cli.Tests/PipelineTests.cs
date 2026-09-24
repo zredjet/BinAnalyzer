@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
@@ -10,52 +9,13 @@ namespace BinAnalyzer.Cli.Tests;
 public class PipelineTests
 {
     // プロジェクトルートからの相対パス
-    private static readonly string RepoRoot = FindRepoRoot();
-    private static readonly string CliProject = Path.Combine(RepoRoot, "src", "BinAnalyzer.Cli");
+    private static readonly string RepoRoot = CliRunner.RepoRoot;
     private static readonly string PngFormat = Path.Combine(RepoRoot, "formats", "png.bdef.yaml");
     // testdata/real は .gitignore 対象で CI に無いので、コミット済みのスモーク用サンプルを使う
     private static readonly string PngFile = Path.Combine(RepoRoot, "testdata", "smoke", "sample.png");
 
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            if (Directory.Exists(Path.Combine(dir, "src")) && Directory.Exists(Path.Combine(dir, "formats")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("リポジトリルートが見つかりません");
-    }
-
-    private static async Task<(int ExitCode, string StdOut, string StdErr)> RunCli(string args, byte[]? stdin = null)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"run --project \"{CliProject}\" -- {args}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = stdin is not null,
-            UseShellExecute = false,
-            WorkingDirectory = RepoRoot,
-        };
-
-        using var process = Process.Start(psi)!;
-
-        if (stdin is not null)
-        {
-            await process.StandardInput.BaseStream.WriteAsync(stdin);
-            process.StandardInput.Close();
-        }
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-
-        await process.WaitForExitAsync();
-
-        return (process.ExitCode, await stdoutTask, await stderrTask);
-    }
+    private static Task<(int ExitCode, string StdOut, string StdErr)> RunCli(string args, byte[]? stdin = null) =>
+        CliRunner.RunAsync(args, stdin);
 
     [Fact]
     public async Task StdinDash_DecodesSuccessfully()
@@ -131,23 +91,22 @@ public class PipelineTests
     public async Task BrokenPipe_ExitsCleanly()
     {
         // パイプ切断シミュレーション: head -c 1 で stdout を即座に閉じる
-        var psi = new ProcessStartInfo
-        {
-            FileName = "bash",
-            Arguments = $"-c \"dotnet run --project \\\"{CliProject}\\\" -- \\\"{PngFile}\\\" -f \\\"{PngFormat}\\\" | head -c 1\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            WorkingDirectory = RepoRoot,
-        };
+        // bash -c の $0 に dotnet ホスト、$@ に CLI の dll と引数を渡す（クォートの入れ子を避ける）
+        var psi = CliRunner.CreateStartInfo("bash");
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add("\"$0\" \"$@\" | head -c 1");
+        psi.ArgumentList.Add(CliRunner.DotnetHost);
+        psi.ArgumentList.Add(CliRunner.CliAssemblyPath);
+        psi.ArgumentList.Add(PngFile);
+        psi.ArgumentList.Add("-f");
+        psi.ArgumentList.Add(PngFormat);
 
-        using var process = Process.Start(psi)!;
-        await process.WaitForExitAsync();
+        var (exitCode, _, _) = await CliRunner.RunAsync(psi);
 
         // bash全体の終了コードは head のものになるが、
         // BinAnalyzer がクラッシュしないことが重要
         // (SIGPIPE で kill されると 141 になる)
-        process.ExitCode.Should().BeOneOf(0, 141);
+        exitCode.Should().BeOneOf(0, 141);
     }
 
     [Fact]
