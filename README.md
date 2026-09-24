@@ -186,7 +186,7 @@ dotnet run --project src/BinAnalyzer.Web
 
 ## フォーマット定義
 
-バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。
+バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。同梱の定義を追加・変更するときの規約（先頭コメントの準拠仕様、日本語の説明、テストデータの登録先）は [フォーマット定義の書き方](docs/format-authoring.md) にあります。
 
 <!-- doc-sync: formats -->
 サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（7z, AVI, BMP, CBOR, DNS, ELF, FAT, FLAC, FLV, GIF, GZIP, HEIF, ICC, ICO, Java Class, JPEG, LZ4, Mach-O, MIDI, MKV, MP3, MP4, MessagePack, OGG, OTF, Parquet, PCAP, PDF, PE, PNG, Protobuf, SQLite, TAR, TIFF, WASM, WAV, WebP, X.509, XZ, ZIP — 計40種）。

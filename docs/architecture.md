@@ -38,7 +38,7 @@ BinAnalyzer/
 │   └── BinAnalyzer.Fuzz.Tests/    # ファズ・プロパティベーステスト（全フォーマット定義 × ランダム / 切り詰め / 変異入力）
 ├── benchmarks/
 │   └── BinAnalyzer.Benchmarks/    # BenchmarkDotNetによるパフォーマンス計測
-└── formats/                       # フォーマット定義（*.bdef.yaml。一覧は README の「フォーマット定義」節）
+└── formats/                       # フォーマット定義（*.bdef.yaml。一覧は README の「フォーマット定義」節、書き方の規約は docs/format-authoring.md）
     └── common/                    # 共通型ライブラリ（riff / isobmff、imports で利用）
 ```
 <!-- /doc-sync -->

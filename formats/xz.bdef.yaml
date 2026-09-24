@@ -1,7 +1,9 @@
-# XZ 圧縮ファイル（.xz）— The .xz File Format 1.2.1
-# 構造: Stream Header → Block* → Index → Stream Footer（単一ストリーム）
-# Block Header は圧縮後サイズを省略できる（xz の既定）ため、先に末尾の Stream Footer と Index を読み、
-# Index の Unpadded Size から各 Block の圧縮データのサイズを求める。
+# XZ 圧縮ファイル（.xz / .txz）
+# 仕様: The .xz File Format 1.2.1 https://tukaani.org/xz/xz-file-format.txt
+# 構造: Stream Header → Block* → Index → Stream Footer（単一ストリーム）。
+#   Block Header は圧縮後サイズを省略できる（xz の既定のシングルスレッド動作など）ため、先に末尾の Stream Footer と Index を
+#   seek で読み、Index の Unpadded Size から各 Block の圧縮データのサイズを求める。CRC32 は 4 か所すべてを検証する。
+# 対応していないもの: 複数ストリームの連結とストリームパディング、圧縮データの展開（そのため Block 末尾の Check は検証せず値のみ表示）
 name: XZ
 endianness: little
 root: xz
@@ -10,34 +12,48 @@ enums:
   xz_check:
     - value: 0
       label: none
+      description: "整合性チェックなし"
     - value: 1
       label: CRC32
+      description: "CRC32（4 バイト）"
     - value: 4
       label: CRC64
+      description: "CRC64（8 バイト。xz の既定）"
     - value: 10
       label: SHA-256
+      description: "SHA-256（32 バイト）"
 
   xz_filter:
     - value: 0x03
       label: Delta
+      description: "差分フィルタ（音声・画像など、一定間隔のバイトの差を取る）"
     - value: 0x04
       label: BCJ_x86
+      description: "x86 の分岐命令のアドレスを変換するフィルタ（実行ファイルの圧縮率を上げる）"
     - value: 0x05
       label: BCJ_PowerPC
+      description: "PowerPC 向けの分岐命令変換フィルタ"
     - value: 0x06
       label: BCJ_IA64
+      description: "IA-64 向けの分岐命令変換フィルタ"
     - value: 0x07
       label: BCJ_ARM
+      description: "ARM 向けの分岐命令変換フィルタ"
     - value: 0x08
       label: BCJ_ARMThumb
+      description: "ARM Thumb 向けの分岐命令変換フィルタ"
     - value: 0x09
       label: BCJ_SPARC
+      description: "SPARC 向けの分岐命令変換フィルタ"
     - value: 0x0A
       label: BCJ_ARM64
+      description: "ARM64 向けの分岐命令変換フィルタ（仕様 1.1.0 で追加）"
     - value: 0x0B
       label: BCJ_RISCV
+      description: "RISC-V 向けの分岐命令変換フィルタ（仕様 1.2.0 で追加）"
     - value: 0x21
       label: LZMA2
+      description: "LZMA2 圧縮（最後のフィルタとして必須）"
 
 structs:
   xz:
@@ -48,21 +64,25 @@ structs:
     - name: stream_header
       type: struct
       struct: stream_header
+      description: "ストリームの先頭 12 バイト（マジック・Stream Flags・CRC32）"
     # 末尾の Stream Footer と Index を先に読む（位置は元に戻す）
     - name: stream_footer
       type: struct
       struct: stream_footer
       seek: "{file_size - 12}"
       seek_restore: true
+      description: "ストリームの末尾 12 バイト（Index の大きさと Stream Flags）。先に読んで Index の位置を求める"
     - name: index
       type: struct
       struct: index
       seek: "{file_size - 12 - stream_footer.backward_size_bytes}"
       seek_restore: true
+      description: "Block ごとの大きさの一覧。先に読んで各 Block の圧縮データのサイズを求める"
     - name: blocks
       type: struct
       struct: block
       repeat_count: "{index.body.record_count}"
+      description: "圧縮データの単位（Index のレコード数だけ並ぶ）"
 
   stream_header:
     - name: magic
@@ -73,6 +93,7 @@ structs:
     - name: stream_flags
       type: struct
       struct: stream_flags
+      description: "Stream Flags（整合性チェックの種類）。Stream Footer にも同じ値がある"
     - name: crc32
       type: uint32
       checksum:
@@ -84,10 +105,11 @@ structs:
     - name: reserved
       type: uint8
       validate: "{reserved == 0}"
+      description: "予約（0）"
     - name: check_type
       type: uint8
       enum: xz_check
-      description: "整合性チェックの種類（下位 4 ビット）"
+      description: "Block 末尾の Check の種類（下位 4 ビット。上位 4 ビットは予約）"
     - name: check_size
       type: virtual
       value: "{check_type == 0 ? 0 : 4 << ((check_type - 1) / 3)}"
@@ -109,9 +131,11 @@ structs:
     - name: backward_size_bytes
       type: virtual
       value: "{(backward_size + 1) * 4}"
+      description: "Index のバイト数（CRC32 を含む）"
     - name: stream_flags
       type: struct
       struct: stream_flags
+      description: "Stream Header と同じ Stream Flags"
     - name: magic
       type: bytes
       size: "2"
@@ -123,6 +147,7 @@ structs:
       type: struct
       struct: index_body
       size: "{stream_footer.backward_size_bytes - 4}"
+      description: "Index の本体（Index Indicator からパディングまで。CRC32 の対象）"
     - name: crc32
       type: uint32
       checksum:
@@ -134,7 +159,7 @@ structs:
     - name: indicator
       type: uint8
       validate: "{indicator == 0}"
-      description: "Index Indicator（0x00）"
+      description: "Index の開始を示すバイト（Index Indicator、0x00）。Block Header の先頭バイトは 0 以外なので区別できる"
     - name: record_count
       type: uleb128
       description: "レコード数（= Block 数）"
@@ -142,10 +167,12 @@ structs:
       type: struct
       struct: index_record
       repeat_count: "{record_count}"
+      description: "Block ごとのレコード（Block と同じ順）"
     - name: padding
       type: bytes
       size: remaining
       padding: true
+      description: "Index Padding（CRC32 の前を 4 バイト境界にそろえる 0）"
 
   index_record:
     - name: unpadded_size
@@ -153,11 +180,13 @@ structs:
       description: "Block Header + 圧縮データ + Check のバイト数（Block Padding を含まない）"
     - name: uncompressed_size
       type: uleb128
+      description: "Block を展開したあとのバイト数"
 
   block:
     - name: header
       type: struct
       struct: block_header
+      description: "Block Header（フィルタチェーンなど）"
     - name: compressed_data
       type: bytes
       size: "{index.body.records[_index].unpadded_size - header.header_size_bytes - stream_header.stream_flags.check_size}"
@@ -166,6 +195,7 @@ structs:
       type: bytes
       size: "{(4 - index.body.records[_index].unpadded_size % 4) % 4}"
       padding: true
+      description: "Block Padding（Check の前を 4 バイト境界にそろえる 0）"
     - name: check
       type: bytes
       size: "{stream_header.stream_flags.check_size}"
@@ -178,10 +208,12 @@ structs:
     - name: header_size_bytes
       type: virtual
       value: "{(header_size_raw + 1) * 4}"
+      description: "Block Header のバイト数（サイズのバイトと CRC32 を含む）"
     - name: body
       type: struct
       struct: block_header_body
       size: "{header_size_bytes - 5}"
+      description: "Block Header の本体（フラグ・サイズ・フィルタ・パディング）"
     - name: crc32
       type: uint32
       checksum:
@@ -193,37 +225,47 @@ structs:
     - name: flags
       type: bitfield
       size: "1"
+      description: "Block Flags（フィルタ数と、サイズの有無）"
       fields:
         - name: filter_count_minus1
           bits: "1:0"
           description: "フィルタ数 - 1"
         - name: reserved
           bits: "5:2"
+          description: "予約（0）"
         - name: has_compressed_size
           bits: "6"
+          description: "1 なら Compressed Size がある"
         - name: has_uncompressed_size
           bits: "7"
+          description: "1 なら Uncompressed Size がある"
     - name: compressed_size
       type: uleb128
       if: "{has_compressed_size == 1}"
+      description: "圧縮データのバイト数（省略可。省略時は Index から求める）"
     - name: uncompressed_size
       type: uleb128
       if: "{has_uncompressed_size == 1}"
+      description: "展開後のバイト数（省略可）"
     - name: filters
       type: struct
       struct: filter_flags
       repeat_count: "{filter_count_minus1 + 1}"
+      description: "フィルタチェーン（1〜4 個。最後は LZMA2）"
     - name: header_padding
       type: bytes
       size: remaining
       padding: true
+      description: "Header Padding（CRC32 の前を 4 バイト境界にそろえる 0）"
 
   filter_flags:
     - name: filter_id
       type: uleb128
       enum: xz_filter
+      description: "フィルタの ID"
     - name: properties_size
       type: uleb128
+      description: "Filter Properties のバイト数"
     - name: properties
       type: bytes
       size: "{properties_size}"
