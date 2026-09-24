@@ -935,6 +935,7 @@ structs:
 
 ### 対応アルゴリズム
 
+<!-- doc-sync: checksum-algorithms -->
 | アルゴリズム | カテゴリ | 出力サイズ | 対応フィールド型 |
 |---|---|---|---|
 | `crc32` | 整数系 | 4 bytes (32-bit) | uint32 等の整数型 |
@@ -954,10 +955,11 @@ structs:
 | `sha256` | ハッシュ系 | 32 bytes | bytes |
 | `sha384` | ハッシュ系 | 48 bytes | bytes |
 | `sha512` | ハッシュ系 | 64 bytes | bytes |
+<!-- /doc-sync -->
 
 整数系アルゴリズムは整数型フィールドに、ハッシュ系アルゴリズムは bytes 型フィールドに指定します。
 
-### 整数系（CRC-32 / CRC-16 / Adler-32）
+### 整数系（CRC / Adler-32 / Fletcher / xxHash）
 
 ```yaml
 - name: type
@@ -979,7 +981,7 @@ structs:
     fields: [magic, version, flags]
 ```
 
-### ハッシュ系（MD5 / SHA-1 / SHA-256）
+### ハッシュ系（MD5 / SHA-1 / SHA-2）
 
 ```yaml
 - name: content_hash
@@ -1403,7 +1405,9 @@ structs:
 
 ## 圧縮データ
 
+<!-- doc-sync: compression-types -->
 圧縮型（`zlib`, `deflate`, `gzip`, `bzip2`, `lzma`, `zstd`, `lz4`）は圧縮データを展開します。`struct` を指定すると、展開後のデータを構造体としてネスト解析できます。
+<!-- /doc-sync -->
 
 ```yaml
 - name: compressed_data
@@ -1862,21 +1866,27 @@ structs:
 
 ### 基本的な使い方
 
+<!-- doc-sync: resync-marker-example -->
 ```yaml
+name: MIDI track
+endianness: big
+root: midi_track
+
 structs:
   midi_track:
     resync_marker: [0x4D, 0x54, 0x72, 0x6B]  # "MTrk"
     fields:
       - name: magic
-        type: ascii
-        size: 4
-        expect: "MTrk"
+        type: bytes
+        size: "4"
+        expected: [0x4D, 0x54, 0x72, 0x6B]  # "MTrk"
       - name: length
         type: uint32
       - name: data
         type: bytes
         size: "{length}"
 ```
+<!-- /doc-sync -->
 
 ### 動作
 

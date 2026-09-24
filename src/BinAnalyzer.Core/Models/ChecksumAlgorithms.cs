@@ -20,14 +20,16 @@ public static class ChecksumAlgorithms
     public const string Sha384 = "sha384";
     public const string Sha512 = "sha512";
 
-    private static readonly HashSet<string> IntegerAlgorithms = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>整数系アルゴリズム（整数型フィールドに指定する）。大文字小文字を区別しない。</summary>
+    public static IReadOnlySet<string> IntegerAlgorithms { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         Crc32, Crc16Ccitt, Crc16Ibm, Adler32,
         Crc8, Crc8Maxim, Crc8Cdma2000, Crc64Ecma,
         XxHash32, XxHash64, Fletcher16, Fletcher32,
     };
 
-    private static readonly HashSet<string> HashAlgorithms = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>ハッシュ系アルゴリズム（bytes 型フィールドに指定する）。大文字小文字を区別しない。</summary>
+    public static IReadOnlySet<string> HashAlgorithms { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         Md5, Sha1, Sha256, Sha384, Sha512,
     };

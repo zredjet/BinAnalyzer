@@ -199,8 +199,8 @@ public static class FormatValidator
 
         if (field.Type is FieldType.Bytes or FieldType.Ascii or FieldType.Utf8
                 or FieldType.Utf16Le or FieldType.Utf16Be or FieldType.ShiftJis or FieldType.Latin1
-                or FieldType.Bitfield or FieldType.Zlib or FieldType.Deflate
-                or FieldType.Gzip or FieldType.Bzip2 or FieldType.Lzma or FieldType.Zstd or FieldType.Lz4)
+                or FieldType.Bitfield
+            || FieldTypeCategories.IsCompressed(field.Type))
         {
             if (!field.Size.HasValue && field.SizeExpression is null && !field.SizeRemaining)
             {

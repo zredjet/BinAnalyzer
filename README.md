@@ -21,7 +21,7 @@
 ## 機能一覧
 
 - **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
-- **圧縮データ対応** — zlib / deflate 圧縮フィールドの展開・ネスト解析
+- **圧縮データ対応** — zlib / deflate / gzip / bzip2 / lzma / zstd / lz4 圧縮フィールドの展開・ネスト解析
 - **9種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv, tui（対話型ターミナルUI）, gui（デスクトップGUI）
 - **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）
 - **構造的差分比較** — `diff` サブコマンドで2つのバイナリの差分を表示（フラット形式 / ツリー形式）、ディレクトリ指定によるバッチdiffにも対応
@@ -30,7 +30,7 @@
 - **カラー出力** — 端末でのANSIカラー表示（auto / always / never）
 - **式・演算子** — 算術・比較・論理演算に加え、ビット演算（`&`, `|`, `^`, `<<`, `>>`）をサポート
 - **enum / flags / bitfield** — 値のラベルマッピング、ビットフラグ解析
-- **条件フィールド / チェックサム** — `if` による条件スキップ、CRC-32チェックサム検証
+- **条件フィールド / チェックサム** — `if` による条件スキップ、チェックサム検証（CRC-8 / CRC-16 / CRC-32 / CRC-64・Adler-32・Fletcher・xxHash の整数系、MD5 / SHA-1 / SHA-2 のハッシュ系）
 - **DSLインポート** — 共通定義を別ファイルに分離し `imports` で再利用
 - **アライメント / パディング** — フィールド・構造体レベルのバイト境界調整、パディング非表示
 - **エンディアン切り替え** — 構造体・フィールドレベルでエンディアンを上書き（優先順位: フィールド > 構造体 > フォーマットデフォルト）
@@ -188,7 +188,9 @@ dotnet run --project src/BinAnalyzer.Web
 
 バイナリフォーマットはYAML-DSLファイル（`.bdef.yaml`）で定義します。完全な仕様は [DSLリファレンス](docs/dsl-reference.md) を参照してください。
 
+<!-- doc-sync: formats -->
 サンプルフォーマット定義が `formats/` ディレクトリに同梱されています（7z, AVI, BMP, CBOR, DNS, ELF, FAT, FLAC, FLV, GIF, GZIP, HEIF, ICC, ICO, Java Class, JPEG, LZ4, Mach-O, MIDI, MP3, MP4, MessagePack, OGG, OTF, Parquet, PCAP, PDF, PE, PNG, Protobuf, SQLite, TAR, TIFF, WASM, WAV, WebP, X.509, ZIP — 計38種）。
+<!-- /doc-sync -->
 
 ### エディタ補完（JSON Schema）
 

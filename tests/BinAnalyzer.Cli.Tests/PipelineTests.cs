@@ -13,7 +13,8 @@ public class PipelineTests
     private static readonly string RepoRoot = FindRepoRoot();
     private static readonly string CliProject = Path.Combine(RepoRoot, "src", "BinAnalyzer.Cli");
     private static readonly string PngFormat = Path.Combine(RepoRoot, "formats", "png.bdef.yaml");
-    private static readonly string PngFile = Path.Combine(RepoRoot, "testdata", "real", "test.png");
+    // testdata/real は .gitignore 対象で CI に無いので、コミット済みのスモーク用サンプルを使う
+    private static readonly string PngFile = Path.Combine(RepoRoot, "testdata", "smoke", "sample.png");
 
     private static string FindRepoRoot()
     {
