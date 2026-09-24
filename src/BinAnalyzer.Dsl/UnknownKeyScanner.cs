@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using BinAnalyzer.Core.Models;
+using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl.YamlModels;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
@@ -14,9 +15,6 @@ namespace BinAnalyzer.Dsl;
 /// </summary>
 public static class UnknownKeyScanner
 {
-    /// <summary>候補として示す最大の編集距離。</summary>
-    private const int MaxSuggestionDistance = 2;
-
     private static readonly ConcurrentDictionary<Type, DtoInfo?> DtoCache = new();
 
     /// <summary>
@@ -149,44 +147,9 @@ public static class UnknownKeyScanner
         return parent with { Describe = describe, FieldName = fieldName };
     }
 
-    /// <summary>
-    /// 同じ場所で受け付けるキーのうち、<paramref name="key"/> との編集距離（大文字小文字を無視）が最小で
-    /// <see cref="MaxSuggestionDistance"/> 以内のもの。同点は定義順で先のもの。
-    /// </summary>
-    internal static string? Suggest(string key, IReadOnlyList<string> candidates)
-    {
-        string? best = null;
-        var bestDistance = MaxSuggestionDistance + 1;
-        foreach (var candidate in candidates)
-        {
-            var d = Levenshtein(key.ToLowerInvariant(), candidate.ToLowerInvariant());
-            if (d < bestDistance)
-            {
-                best = candidate;
-                bestDistance = d;
-            }
-        }
-        return best;
-    }
-
-    private static int Levenshtein(string a, string b)
-    {
-        var prev = new int[b.Length + 1];
-        var curr = new int[b.Length + 1];
-        for (var j = 0; j <= b.Length; j++)
-            prev[j] = j;
-        for (var i = 1; i <= a.Length; i++)
-        {
-            curr[0] = i;
-            for (var j = 1; j <= b.Length; j++)
-            {
-                var cost = a[i - 1] == b[j - 1] ? 0 : 1;
-                curr[j] = Math.Min(Math.Min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
-            }
-            (prev, curr) = (curr, prev);
-        }
-        return prev[b.Length];
-    }
+    /// <summary>同じ場所で受け付けるキーのうち、<paramref name="key"/> に近いもの（<see cref="NameSuggestion"/>。同点は定義順で先のもの）。</summary>
+    internal static string? Suggest(string key, IReadOnlyList<string> candidates) =>
+        NameSuggestion.Suggest(key, candidates);
 
     /// <summary>DTO（<c>[YamlMember(Alias)]</c> を持つクラス）の Alias → プロパティ。DTO でなければ null。</summary>
     private static DtoInfo? GetDto(Type type) => DtoCache.GetOrAdd(type, static t =>

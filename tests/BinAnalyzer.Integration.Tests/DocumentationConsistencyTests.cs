@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using BinAnalyzer.Core.Decoded;
+using BinAnalyzer.Core.Expressions;
 using BinAnalyzer.Core.Models;
 using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl;
@@ -142,6 +143,28 @@ public sealed class DocumentationConsistencyTests
     {
         DocConsistency.CheckCompressionTypes(DslReference, [.. CompressionTypeNames(), "brotli"])
             .Should().ContainSingle(p => p.Contains("brotli"));
+    }
+
+    // --- 組み込み関数（dsl-reference.md と Core の一覧。REQ-189） ---
+
+    [Fact]
+    public void DslReference_BuiltinFunctions_MatchCoreList()
+    {
+        DocConsistency.CheckBuiltinFunctions(DslReference, BuiltinFunctions.Names).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DslReference_BuiltinFunctions_DetectsFunctionAddedWithoutDocUpdate()
+    {
+        DocConsistency.CheckBuiltinFunctions(DslReference, [.. BuiltinFunctions.Names, "sqrt"])
+            .Should().ContainSingle(p => p.Contains("sqrt"));
+    }
+
+    [Fact]
+    public void DslReference_BuiltinFunctions_DetectsDocumentedFunctionMissingFromList()
+    {
+        DocConsistency.CheckBuiltinFunctions(DslReference, BuiltinFunctions.Names.Where(n => n != "log2").ToList())
+            .Should().ContainSingle(p => p.Contains("log2"));
     }
 
     // --- 検証コード（parser-design.md と文書全体） ---

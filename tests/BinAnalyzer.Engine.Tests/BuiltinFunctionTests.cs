@@ -520,6 +520,26 @@ public class BuiltinFunctionTests
             .WithMessage("*Unknown function*");
     }
 
+    /// <summary>検証器（VAL125）が使う Core の一覧の関数は、どれも評価器が知っている（REQ-189）。</summary>
+    [Fact]
+    public void EveryBuiltinFunctionName_IsKnownToEvaluator()
+    {
+        foreach (var name in BuiltinFunctions.Names)
+        {
+            var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+            var expr = ExpressionParser.Parse($"{{{name}()}}");
+            // 引数なしで呼ぶので大半は引数のエラーになる。「未知の関数」でなければよい
+            try
+            {
+                ExpressionEvaluator.Evaluate(expr, ctx);
+            }
+            catch (Exception ex)
+            {
+                ex.Message.Should().NotContain("Unknown function", because: $"'{name}' は BuiltinFunctions.Names にある");
+            }
+        }
+    }
+
     // --- existing functions still work ---
 
     [Fact]

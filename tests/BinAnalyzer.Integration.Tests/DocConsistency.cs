@@ -134,6 +134,25 @@ internal static class DocConsistency
         return problems;
     }
 
+    /// <summary>dsl-reference.md の「組み込み関数」節の見出し（<c>#### `name(…)`</c>）と、Core の組み込み関数の一覧の比較（REQ-189）。</summary>
+    public static List<string> CheckBuiltinFunctions(string dslReference, IReadOnlyCollection<string> implementedNames)
+    {
+        var problems = new List<string>();
+        var section = Regex.Match(dslReference, @"^### 組み込み関数\n(?<body>.*?)(?=^#{2,3} |\z)", RegexOptions.Multiline | RegexOptions.Singleline);
+        if (!section.Success)
+        {
+            problems.Add("dsl-reference.md に「### 組み込み関数」の節がありません");
+            return problems;
+        }
+        var documented = Regex.Matches(section.Groups["body"].Value, @"^#### `(?<name>\w+)\(", RegexOptions.Multiline)
+            .Select(m => m.Groups["name"].Value).ToHashSet();
+        foreach (var name in implementedNames.Where(n => !documented.Contains(n)).Order())
+            problems.Add($"組み込み関数 `{name}` が dsl-reference.md の組み込み関数の節にありません");
+        foreach (var name in documented.Where(n => !implementedNames.Contains(n)).Order())
+            problems.Add($"dsl-reference.md の組み込み関数 `{name}` は BuiltinFunctions.Names にありません");
+        return problems;
+    }
+
     /// <summary>
     /// FormatValidator のソースから検証コードと重大度を集める。コードは <c>Error("VALnnn", …)</c> / <c>Warning("VALnnn", …)</c>
     /// のリテラルで渡している前提で、その書き方から外れた呼び出し（抜き出し漏れ）は problems に入れる。
