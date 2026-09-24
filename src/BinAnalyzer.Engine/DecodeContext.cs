@@ -90,6 +90,43 @@ public sealed class DecodeContext
         _scopeStack.Push(Rent().Reset(_position, CurrentScope.End, null, isOverlay: true, capturesVariables: true));
     }
 
+    /// <summary>
+    /// seek の行き先 <paramref name="target"/> が今の境界（最も内側の size 付きのスコープ）の外なら、
+    /// 行き先を含む最も内側の外側の境界（無ければファイル全体）と同じ範囲のオーバーレイスコープを push して true を返す（REQ-191）。
+    /// 境界は [Start, End) で判定する（End ちょうどのバイトはその境界の外にある）。どの境界も含まない行き先（ファイルの終わり）と、
+    /// 今の境界の中の行き先では何もしない（従来どおり）。
+    /// 広げたスコープは変数を捕捉せず（フィールドの値はいつもの場所に束縛される）、エンディアンも変えない。
+    /// 範囲は元の境界と同じ扱いなので、中の seek もこのスコープを基準に判定する。
+    /// </summary>
+    public bool PushSeekBoundary(int target)
+    {
+        var isCurrent = true;
+        foreach (var scope in _scopeStack)
+        {
+            if (!scope.IsBoundary)
+                continue;
+            if (target >= scope.Start && target < scope.End)
+            {
+                if (isCurrent)
+                    return false;
+                _scopeStack.Push(Rent().Reset(scope.Start, scope.End, null, isOverlay: true, capturesVariables: false, isBoundary: true));
+                return true;
+            }
+            isCurrent = false;
+        }
+        return false;
+    }
+
+    /// <summary>スコープの深さ（<see cref="PopScopesTo"/> で戻す位置の記録用）。</summary>
+    public int ScopeDepth => _scopeStack.Count;
+
+    /// <summary>スコープの深さが <paramref name="depth"/> になるまで Pop する（REQ-191。seek で広げたスコープを戻す）。</summary>
+    public void PopScopesTo(int depth)
+    {
+        while (_scopeStack.Count > depth)
+            PopScope();
+    }
+
     private Scope Rent() => _scopePool.Count > 0 ? _scopePool.Pop() : new Scope();
 
     public void PopScope()
@@ -494,15 +531,21 @@ public sealed class DecodeContext
         public bool IsOverlay { get; private set; }
         /// <summary>false のとき <see cref="SetVariable"/> はこのスコープを素通りして外側に書く。</summary>
         public bool CapturesVariables { get; private set; }
+        /// <summary>
+        /// 読み取りの境界を決めるスコープか（size 付きのスコープ・ルート・seek で広げたスコープ）。
+        /// エンディアン・変数だけのオーバーレイは親の境界をそのまま使うので false（Start が境界の先頭ではない）。
+        /// </summary>
+        public bool IsBoundary { get; private set; }
         public Dictionary<string, object> Variables { get; } = new();
 
-        public Scope Reset(int start, int end, Endianness? endianness, bool isOverlay, bool capturesVariables)
+        public Scope Reset(int start, int end, Endianness? endianness, bool isOverlay, bool capturesVariables, bool? isBoundary = null)
         {
             Start = start;
             End = end;
             ScopeEndianness = endianness;
             IsOverlay = isOverlay;
             CapturesVariables = capturesVariables;
+            IsBoundary = isBoundary ?? !isOverlay;
             return this;
         }
     }
