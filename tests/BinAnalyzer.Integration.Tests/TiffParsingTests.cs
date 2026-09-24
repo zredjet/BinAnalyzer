@@ -255,4 +255,45 @@ public class TiffParsingTests
         var denominator = rational.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         denominator.Value.Should().Be(1);
     }
+
+    // --- REQ-188: IFD の連なりと BigTIFF ---
+
+    private static DecodedStruct Child(DecodedStruct s, string name) => (DecodedStruct)s.Children.Single(c => c.Name == name);
+
+    private static DecodedNode Field(DecodedStruct s, string name) => s.Children.Single(c => c.Name == name);
+
+    private static DecodedStruct Entry(DecodedStruct ifd, int index) =>
+        (DecodedStruct)((DecodedArray)Field(ifd, "entries")).Elements[index];
+
+    private static object Virtual(DecodedStruct entry, string name) => ((DecodedVirtual)Field(entry, name)).Value;
+
+    [Fact]
+    public void TwoPageTiff_FollowsNextIfd()
+    {
+        var decoded = new BinaryDecoder().Decode(TiffTestDataGenerator.CreateTwoPageTiff(), new YamlFormatLoader().Load(TiffFormatPath));
+
+        var ifd0 = Child((DecodedStruct)decoded.Children[1], "ifd0");
+        Virtual(Entry(ifd0, 1), "compression").Should().Be(5L);
+        ((DecodedVirtual)Field(Entry(ifd0, 1), "compression")).EnumLabel.Should().Be("LZW");
+        var ifd1 = Child(ifd0, "next_ifd");
+        Virtual(Entry(ifd1, 0), "inline_short_value").Should().Be(5L);
+        ifd1.Children.Should().NotContain(c => c.Name == "next_ifd", "next_ifd_offset が 0 なら終わり");
+    }
+
+    [Fact]
+    public void BigTiff_HeaderEntriesAndNextIfd()
+    {
+        var decoded = new BinaryDecoder().Decode(TiffTestDataGenerator.CreateBigTiff(), new YamlFormatLoader().Load(TiffFormatPath));
+
+        var body = (DecodedStruct)decoded.Children[1];
+        ((DecodedInteger)Field(body, "magic")).Value.Should().Be(43);
+        ((DecodedInteger)Field(body, "bigtiff_offset_size")).Value.Should().Be(8);
+        body.Children.Should().NotContain(c => c.Name == "ifd_offset", "TIFF（42）用のフィールドは読まない");
+
+        var ifd0 = Child(body, "bigtiff_ifd0");
+        Virtual(Entry(ifd0, 0), "inline_long_value").Should().Be(640L);
+        ((DecodedVirtual)Field(Entry(ifd0, 1), "compression")).EnumLabel.Should().Be("Deflate");
+        Virtual(Entry(ifd0, 2), "inline_long8_value").Should().Be(0x1_0000_0000L);
+        Virtual(Entry(Child(ifd0, "next_ifd"), 0), "inline_short_value").Should().Be(7L);
+    }
 }

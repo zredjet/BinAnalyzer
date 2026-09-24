@@ -55,4 +55,34 @@ public static class WebpTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// 拡張形式のアニメーション WebP（REQ-188）。VP8X（アルファ + アニメーション + XMP）、ANIM、
+    /// ANMF 2 つ（それぞれ VP8L のサブチャンク）、XMP。VP8L は 5 バイトのヘッダ（2x3、アルファあり）+ ダミーのビットストリーム。
+    /// </summary>
+    public static byte[] CreateAnimatedWebp()
+    {
+        var body = new List<byte>();
+        body.AddRange("WEBP"u8.ToArray());
+        body.AddRange(Chunk("VP8X", [0x16, 0, 0, 0, .. U24(4 - 1), .. U24(4 - 1)]));   // alpha(0x10) | xmp(0x04) | animation(0x02)
+        body.AddRange(Chunk("ANIM", [0x00, 0x00, 0xFF, 0xFF, 3, 0]));                  // 背景 BGRA、3 回繰り返し
+        body.AddRange(Chunk("ANMF", [.. U24(0), .. U24(1), .. U24(2 - 1), .. U24(3 - 1), .. U24(120), 0x02, .. Chunk("VP8L", Vp8l(2, 3))]));
+        body.AddRange(Chunk("ANMF", [.. U24(1), .. U24(0), .. U24(2 - 1), .. U24(3 - 1), .. U24(80), 0x01, .. Chunk("VP8L", Vp8l(2, 3))]));
+        body.AddRange(Chunk("XMP ", "<x:xmpmeta/>"u8.ToArray()));
+        return [.. "RIFF"u8, .. U32(body.Count), .. body];
+    }
+
+    /// <summary>VP8L: シグネチャ + 32 ビット LE（幅 - 1 : 14、高さ - 1 : 14、アルファ : 1、バージョン : 3）+ ダミー 1 バイト。</summary>
+    private static byte[] Vp8l(int width, int height)
+    {
+        var header = (uint)(width - 1) | ((uint)(height - 1) << 14) | (1u << 28);
+        return [0x2F, .. U32((int)header), 0x00];
+    }
+
+    private static byte[] Chunk(string id, byte[] data) =>
+        [.. System.Text.Encoding.ASCII.GetBytes(id), .. U32(data.Length), .. data, .. data.Length % 2 == 1 ? new byte[] { 0 } : []];
+
+    private static byte[] U24(int v) => [(byte)v, (byte)(v >> 8), (byte)(v >> 16)];
+
+    private static byte[] U32(int v) => [(byte)v, (byte)(v >> 8), (byte)(v >> 16), (byte)(v >> 24)];
 }

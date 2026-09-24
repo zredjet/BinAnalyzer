@@ -118,4 +118,69 @@ public class PngParsingTests
         ancillary.IsSet.Should().BeFalse();
         ancillary.Meaning.Should().Be("no");
     }
+
+    // --- REQ-188: PNG 第 3 版のチャンク・APNG・カラータイプで形が変わるチャンク ---
+
+    private DecodedStruct ChunkData(DecodedStruct root, string type, int occurrence = 0)
+    {
+        var chunk = ((DecodedArray)root.Children[1]).Elements.Cast<DecodedStruct>()
+            .Where(c => ((DecodedString)c.Children[1]).Value == type)
+            .ElementAt(occurrence);
+        chunk.Children.OfType<DecodedInteger>().Single(n => n.Name == "crc").ChecksumValid.Should().BeTrue(type);
+        return (DecodedStruct)chunk.Children[2];
+    }
+
+    private static long Int(DecodedStruct s, string name) => ((DecodedInteger)s.Children.Single(c => c.Name == name)).Value;
+
+    private DecodedStruct DecodeThirdEdition() =>
+        _decoder.Decode(PngTestDataGenerator.CreateThirdEditionApng(), _loader.Load(PngFormatPath));
+
+    [Fact]
+    public void ThirdEdition_ColourChunks()
+    {
+        var root = DecodeThirdEdition();
+
+        var cicp = ChunkData(root, "cICP");
+        ((DecodedInteger)cicp.Children[0]).EnumLabel.Should().Be("BT2020");
+        ((DecodedInteger)cicp.Children[1]).EnumLabel.Should().Be("PQ");
+        cicp.Children[2].ValidationPassed.Should().NotBe(false);
+        Int(ChunkData(root, "mDCV"), "max_luminance").Should().Be(10_000_000);
+        Int(ChunkData(root, "cLLI"), "max_frame_average_light_level").Should().Be(4_000_000);
+
+        var iccp = ChunkData(root, "iCCP");
+        ((DecodedString)iccp.Children[0]).Value.Should().Be("icc");
+        iccp.Children.OfType<DecodedCompressed>().Single().DecompressedSize.Should().Be("not a real ICC profile".Length);
+    }
+
+    [Fact]
+    public void Apng_AnimationAndFrameControl()
+    {
+        var root = DecodeThirdEdition();
+
+        Int(ChunkData(root, "acTL"), "num_frames").Should().Be(2);
+        var second = ChunkData(root, "fcTL", occurrence: 1);
+        Int(second, "sequence_number").Should().Be(1);
+        ((DecodedInteger)second.Children.Single(c => c.Name == "dispose_op")).EnumLabel.Should().Be("background");
+        ((DecodedInteger)second.Children.Single(c => c.Name == "blend_op")).EnumLabel.Should().Be("over");
+        Int(ChunkData(root, "fdAT"), "sequence_number").Should().Be(2);
+    }
+
+    [Fact]
+    public void ColourTypeDependentChunks_AreDecodedByIhdrColourType()
+    {
+        var root = DecodeThirdEdition();   // カラータイプ 2（RGB）
+
+        var sbit = (DecodedStruct)ChunkData(root, "sBIT").Children[0];
+        sbit.StructType.Should().Be("sbit_rgb");
+        Int(sbit, "green").Should().Be(6);
+        var bkgd = (DecodedStruct)ChunkData(root, "bKGD").Children[0];
+        bkgd.StructType.Should().Be("bkgd_rgb");
+        Int(bkgd, "blue").Should().Be(3);
+        ((DecodedArray)ChunkData(root, "hIST").Children[0]).Elements.Should().HaveCount(2);
+        var splt = ChunkData(root, "sPLT");
+        ((DecodedString)splt.Children[0]).Value.Should().Be("suggested");
+        ((DecodedStruct)splt.Children[2]).StructType.Should().Be("splt_entries8");
+        ((DecodedString)ChunkData(root, "eXIf").Children[0]).Value.Should().Be("MM");
+        Int(ChunkData(root, "tIME"), "year").Should().Be(2026);
+    }
 }

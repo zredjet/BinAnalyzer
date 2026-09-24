@@ -1,3 +1,12 @@
+# HEIF / HEIC 画像（.heif / .heic）
+# 仕様: ISO/IEC 23008-12:2022（HEIF。有料のため本文は未参照。代わりに MIAF（ISO/IEC 23000-22）の公開資料と
+#   libheif https://github.com/strukturag/libheif のソースでボックスの配置を確認）、ISO/IEC 14496-12:2022（ISO BMFF）
+# 構造: ボックス（size + type + 本体）の列（通常 ftyp → meta → mdat）。box_type で本体を switch で振り分け、
+#   コンテナ（meta・iprp・ipco・dinf・moov・trak・mdia）は子ボックスを再帰的に読む。
+#   meta の中は hdlr（'pict'）・pitm・iloc・iinf（infe の列）・iprp・iref・idat。ftyp・hdlr・dref・コンテナは formats/common/isobmff.bdef.yaml を使う。
+# 対応していないもの: iloc のアイテム配列・ipma・iref・idat の中身、アイテムプロパティ（ispe・colr・hvcC・av1C・pixi・irot 等）
+#   （いずれもバイト列として表示）、'uuid' ボックスの拡張型、画像シーケンスのトラック構造（moov・trak・mdia は子ボックスを並べるだけ）、
+#   符号化データ（HEVC / AV1 等）の展開
 name: HEIF
 endianness: big
 root: heif_file
@@ -10,16 +19,20 @@ structs:
       type: struct
       struct: iso_box
       repeat: eof
+      description: "トップレベルのボックスの列（ファイル末尾まで。通常 ftyp・meta・mdat）"
 
   iso_box:
     - name: box_size
       type: uint32
+      description: "ボックス全体のバイト数（このヘッダを含む）。1 なら実際のサイズは extended_size、0 なら親（ファイル）の末尾まで"
     - name: box_type
       type: ascii
       size: "4"
+      description: "ボックスの種類（4 文字コード。例 'ftyp'・'meta'・'iloc'・'mdat'）"
     - name: extended_size
       type: uint64
       if: "{box_size == 1}"
+      description: "64 ビットのボックスサイズ（box_size が 1 のときのみ。ヘッダ 16 バイトを含む）"
     - name: box_data
       type: switch
       size: "{box_size == 0 ? remaining : (box_size == 1 ? extended_size - 16 : box_size - 8)}"
@@ -46,108 +59,113 @@ structs:
         "'trak'": container_box
         "'mdia'": container_box
       default: raw_data
+      description: "ボックスの本体（box_size − 8 バイト。extended_size のときは extended_size − 16、box_size が 0 なら残り全部）。box_type で振り分ける"
 
   meta_box:
     - name: version
       type: uint8
-      description: "FullBox バージョン"
+      description: "FullBox のバージョン（0）"
     - name: flags
       type: bytes
       size: "3"
-      description: "FullBox フラグ"
+      description: "FullBox のフラグ（24 ビット、0）"
     - name: children
       type: struct
       struct: iso_box
       repeat: eof
+      description: "子ボックスの列（先頭が hdlr。続いて pitm・iloc・iinf・iprp・iref・idat など）"
 
   pitm_box:
     - name: version
       type: uint8
-      description: "FullBox バージョン"
+      description: "FullBox のバージョン（0 なら item_id が 16 ビット、1 なら 32 ビット）"
     - name: flags
       type: bytes
       size: "3"
+      description: "FullBox のフラグ（24 ビット、0）"
     - name: item_id
       type: uint16
       if: "{version == 0}"
-      description: "プライマリアイテムID（version 0）"
+      description: "プライマリアイテム（既定で表示する画像）のアイテム ID（version 0、16 ビット）。infe の item_id に対応する"
     - name: item_id_v1
       type: uint32
       if: "{version != 0}"
-      description: "プライマリアイテムID（version 1+）"
+      description: "プライマリアイテム（既定で表示する画像）のアイテム ID（version 1、32 ビット）。infe の item_id に対応する"
 
   iloc_box:
     - name: version
       type: uint8
-      description: "FullBox バージョン"
+      description: "FullBox のバージョン（0〜2。1 以上で index_size と construction_method、2 でアイテム数と item_ID が 32 ビット）"
     - name: flags
       type: bytes
       size: "3"
+      description: "FullBox のフラグ（24 ビット、0）"
     - name: size_info
       type: uint16
-      description: "offset_size(4bit) + length_size(4bit) + base_offset_size(4bit) + reserved/index_size(4bit)"
+      description: "アイテム配列の各フィールドのバイト数（上位から 4 ビットずつ offset_size・length_size・base_offset_size・index_size。値は 0 / 4 / 8。index_size は version 1 / 2 のみで、version 0 では予約）"
     - name: item_count
       type: uint16
       if: "{version < 2}"
-      description: "アイテム数（version 0/1）"
+      description: "位置情報を持つアイテムの数（version 0 / 1、16 ビット）"
     - name: item_count_v2
       type: uint32
       if: "{version >= 2}"
-      description: "アイテム数（version 2）"
+      description: "位置情報を持つアイテムの数（version 2、32 ビット）"
     - name: items_data
       type: bytes
       size: remaining
       if: "{remaining > 0}"
-      description: "アイテムロケーション配列（可変長）"
+      description: "アイテムごとの位置情報（item_ID・construction_method・data_reference_index・base_offset・エクステント数と各エクステントの offset / length）。size_info のバイト数で可変長のため、バイト列として表示"
 
   iinf_box:
     - name: version
       type: uint8
-      description: "FullBox バージョン"
+      description: "FullBox のバージョン（0 なら entry_count が 16 ビット、1 以上なら 32 ビット）"
     - name: flags
       type: bytes
       size: "3"
+      description: "FullBox のフラグ（24 ビット、0）"
     - name: entry_count
       type: uint16
       if: "{version == 0}"
-      description: "エントリ数（version 0）"
+      description: "アイテム情報エントリ（infe）の数（version 0、16 ビット）"
     - name: entry_count_v1
       type: uint32
       if: "{version != 0}"
-      description: "エントリ数（version 1+）"
+      description: "アイテム情報エントリ（infe）の数（version 1 以上、32 ビット）"
     - name: entries
       type: struct
       struct: iso_box
       repeat: eof
       if: "{remaining > 0}"
-      description: "infe ボックスの配列"
+      description: "アイテム情報エントリ（infe ボックス）の列。entry_count 個（ボックスの末尾まで読む）"
 
   infe_box:
     - name: version
       type: uint8
-      description: "FullBox バージョン"
+      description: "FullBox のバージョン（HEIF では 2 か 3。0 / 1 は旧形式で item_type を持たない）"
     - name: flags
       type: bytes
       size: "3"
+      description: "FullBox のフラグ（24 ビット）。最下位ビットが 1 なら隠しアイテム（単独では表示しない）"
     - name: item_id
       type: uint16
       if: "{version < 3}"
-      description: "アイテムID（version 0-2）"
+      description: "アイテム ID（version 0〜2、16 ビット）。pitm・iloc・iref・ipma からこの値で参照される"
     - name: item_id_v3
       type: uint32
       if: "{version >= 3}"
-      description: "アイテムID（version 3+）"
+      description: "アイテム ID（version 3、32 ビット）。pitm・iloc・iref・ipma からこの値で参照される"
     - name: item_protection_index
       type: uint16
-      description: "保護インデックス"
+      description: "保護方式のインデックス（ipro ボックス内の番号、1 始まり）。0 なら保護なし"
     - name: item_type
       type: ascii
       size: "4"
       if: "{version >= 2}"
-      description: "アイテムタイプ（例: 'hvc1', 'grid'）"
+      description: "アイテムの種類（4 文字コード、version 2 以上。'hvc1' = HEVC 画像、'av01' = AV1 画像、'grid' = タイルの合成、'iovl' = 重ね合わせ、'iden' = 派生画像、'Exif' = Exif、'mime' = MIME タイプ付きデータ（XMP 等）、'uri ' = URI で型を示すデータ）"
     - name: item_name
       type: bytes
       size: remaining
       if: "{remaining > 0}"
-      description: "アイテム名（null終端文字列）"
-
+      description: "アイテム名（UTF-8、NUL 終端）とその後ろ全部。item_type が 'mime'（または version 0 / 1）なら content_type と content_encoding、'uri ' なら item_uri_type の NUL 終端文字列が続く（まとめてバイト列として表示）"

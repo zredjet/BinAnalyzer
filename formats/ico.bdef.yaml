@@ -1,3 +1,10 @@
+# Windows アイコン / カーソル（.ico / .cur）
+# 仕様: Microsoft "Icons"（John Hornick, 1995）https://learn.microsoft.com/en-us/previous-versions/ms997538(v=msdn.10)、
+#   Windows Vista 以降の PNG 圧縮アイコン（Microsoft Learn "Icons" UX ガイドライン https://learn.microsoft.com/en-us/windows/win32/uxguide/vis-icons）
+# 構造: ICONDIR（6 バイト）→ ICONDIRENTRY × idCount（各 16 バイト）。各エントリの画像データは dwImageOffset へ seek して読み、
+#   先頭 4 バイトが PNG シグネチャ（89 'PNG'）なら PNG、それ以外は BMP の DIB（BITMAPINFOHEADER + パレット + XOR / AND マスク）として switch で振り分ける。
+# 対応していないもの: 画像データの中身（DIB のヘッダ・パレット・マスク、PNG のチャンク。どちらもバイト列として表示）、
+#   実行ファイル内のアイコンリソース（RT_GROUP_ICON。別の形式）、アニメーションカーソル（.ani。RIFF 形式）
 name: ICO
 endianness: little
 root: ico
@@ -9,55 +16,58 @@ enums:
       description: "アイコン画像形式（.ico）"
     - value: 2
       label: CUR
-      description: "カーソル画像形式（.cur）"
+      description: "カーソル画像形式（.cur）。エントリの planes / bpp がホットスポット座標になる"
 
 structs:
   ico:
     - name: reserved
       type: uint16
       expected: [0x00, 0x00]
+      description: "予約（idReserved、0）。0 であることを検証する"
     - name: type
       type: uint16
       enum: ico_type
-      description: "1 = ICO（アイコン）、2 = CUR（カーソル）"
+      description: "リソースの種類（idType）。1 = アイコン（.ico）、2 = カーソル（.cur）"
     - name: count
       type: uint16
-      description: "ファイル内の画像数"
+      description: "格納されている画像の数（idCount）。この数だけ ICONDIRENTRY が続く"
     - name: entries
       type: struct
       struct: ico_entry
       repeat_count: "{count}"
+      description: "画像ごとのディレクトリエントリ（ICONDIRENTRY、各 16 バイト）。count 個"
 
   ico_entry:
     - name: width
       type: uint8
-      description: "幅（ピクセル、0は256を意味する）"
+      description: "画像の幅（ピクセル、bWidth）。0 は 256 ピクセルを表す"
     - name: height
       type: uint8
-      description: "高さ（ピクセル、0は256を意味する）"
+      description: "画像の高さ（ピクセル、bHeight）。0 は 256 ピクセルを表す。DIB の biHeight（XOR + AND マスクで 2 倍）とは異なる"
     - name: color_count
       type: uint8
-      description: "パレットの色数（256色以上の場合は0）"
+      description: "パレットの色数（bColorCount）。8 bpp 以上（256 色以上・パレットなし）なら 0"
     - name: reserved
       type: uint8
+      description: "予約（bReserved、0。.NET の Icon.Save のように 255 を書く実装もある）"
     - name: planes
       type: uint16
-      description: "カラープレーン数（ICO）またはホットスポットX座標（CUR）"
+      description: "ICO: カラープレーン数（wPlanes、0 または 1）。CUR: ホットスポットの X 座標（画像の左端からのピクセル数）"
     - name: bpp
       type: uint16
-      description: "ビット/ピクセル（ICO）またはホットスポットY座標（CUR）"
+      description: "ICO: 1 ピクセルあたりのビット数（wBitCount。1 / 4 / 8 / 24 / 32、0 なら画像データ側の値を使う）。CUR: ホットスポットの Y 座標（画像の上端からのピクセル数）"
     - name: bytes_in_res
       type: uint32
-      description: "画像データのサイズ（バイト）"
+      description: "画像データのバイト数（dwBytesInRes）"
     - name: image_offset
       type: uint32
-      description: "ファイル先頭から画像データまでのオフセット"
+      description: "画像データの位置（dwImageOffset、ファイル先頭からのバイトオフセット）"
     - name: image_magic
       type: uint32
       endianness: big
       seek: "{image_offset}"
       seek_restore: true
-      description: "画像形式シグネチャ（0x89504E47 = PNG、それ以外はBMP DIBヘッダ）"
+      description: "画像データの先頭 4 バイト（ビッグエンディアンで読む。振り分け用）。0x89504E47（89 'PNG'）なら PNG、それ以外は DIB（通常は BITMAPINFOHEADER のサイズ 40 で 0x28000000）"
     - name: image_data
       type: switch
       seek: "{image_offset}"
@@ -67,15 +77,16 @@ structs:
       cases:
         "0x89504E47": png_image_data
       default: bmp_dib_image_data
+      description: "画像データ本体（image_offset から bytes_in_res バイト）。image_magic で PNG / DIB に振り分ける"
 
   png_image_data:
     - name: data
       type: bytes
       size: remaining
-      description: "PNG形式画像データ（PNGシグネチャ 89 50 4E 47 で開始）"
+      description: "PNG ファイルそのもの（シグネチャ 89 'PNG' 0D 0A 1A 0A から IEND まで）。Windows Vista 以降で主に 256×256 の画像に使われる"
 
   bmp_dib_image_data:
     - name: data
       type: bytes
       size: remaining
-      description: "BMP DIB形式画像データ（BMPファイルヘッダなしのBITMAPINFOHEADER）"
+      description: "BMP ファイルヘッダ（BITMAPFILEHEADER）を除いた DIB。BITMAPINFOHEADER（biHeight は XOR と AND の 2 枚分で画像の高さの 2 倍）、パレット、XOR マスク（色）、AND マスク（1 bpp の透過マスク）の順"

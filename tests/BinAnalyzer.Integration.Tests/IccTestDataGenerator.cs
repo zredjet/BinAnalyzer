@@ -149,4 +149,45 @@ public static class IccTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// v4 のプロファイル（REQ-188）。タグ 'desc'（mluc 型、en-US "Test v4"）、'rTRC'（para 型、関数 0: g = 2.2）、'chad'（sf32 型、3x3）。
+    /// </summary>
+    public static byte[] CreateV4ProfileWithTypedTags()
+    {
+        byte[] Be32(uint v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+        byte[] Be16(ushort v) => [(byte)(v >> 8), (byte)v];
+        var text = Encoding.BigEndianUnicode.GetBytes("Test v4");
+        byte[] mluc = [.. "mluc"u8, 0, 0, 0, 0, .. Be32(1), .. Be32(12), .. "en"u8, .. "US"u8, .. Be32((uint)text.Length), .. Be32(28), .. text];
+        byte[] para = [.. "para"u8, 0, 0, 0, 0, .. Be16(0), 0, 0, .. Be32(0x00023333)];
+        byte[] sf32 = [.. "sf32"u8, 0, 0, 0, 0, .. Enumerable.Range(0, 9).SelectMany(i => Be32(i % 4 == 0 ? 0x00010000u : 0u))];
+        var tagData = new List<(string Sig, byte[] Data)> { ("desc", mluc), ("rTRC", para), ("chad", sf32) };
+
+        const int headerSize = 128;
+        var tableSize = 4 + tagData.Count * 12;
+        var offsets = new List<int>();
+        var pos = headerSize + tableSize;
+        foreach (var (_, d) in tagData)
+        {
+            offsets.Add(pos);
+            pos += (d.Length + 3) / 4 * 4;
+        }
+        var data = new byte[pos];
+        Be32((uint)pos).CopyTo(data, 0);                   // プロファイルサイズ
+        Be32(0x04400000).CopyTo(data, 8);                  // バージョン 4.4
+        "mntr"u8.ToArray().CopyTo(data, 12);
+        "RGB "u8.ToArray().CopyTo(data, 16);
+        "XYZ "u8.ToArray().CopyTo(data, 20);
+        "acsp"u8.ToArray().CopyTo(data, 36);
+        Be32((uint)tagData.Count).CopyTo(data, headerSize);
+        for (var i = 0; i < tagData.Count; i++)
+        {
+            var entry = headerSize + 4 + i * 12;
+            Encoding.ASCII.GetBytes(tagData[i].Sig).CopyTo(data, entry);
+            Be32((uint)offsets[i]).CopyTo(data, entry + 4);
+            Be32((uint)tagData[i].Data.Length).CopyTo(data, entry + 8);
+            tagData[i].Data.CopyTo(data, offsets[i]);
+        }
+        return data;
+    }
 }

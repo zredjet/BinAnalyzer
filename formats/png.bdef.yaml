@@ -1,3 +1,10 @@
+# PNG 画像（.png / .apng）
+# 仕様: Portable Network Graphics (PNG) Specification (Third Edition)（W3C 勧告、2025） https://www.w3.org/TR/png-3/
+# 構造: 8 バイトのシグネチャ + チャンクの並び（長さ・種類・データ・CRC32）。CRC32 は種類とデータを対象に検証する。
+#   tRNS / bKGD / sBIT の中身は IHDR のカラータイプで形式が変わるので、先に読んだ IHDR の color_type で読み分ける。
+#   APNG（アニメーション PNG。第 3 版で正式化）の acTL / fcTL / fdAT を読む。
+# 対応していないもの: 画像データ（IDAT / fdAT）の展開、iTXt の圧縮テキストの展開、eXIf の中の Exif（TIFF 構造）の解析、
+#   拡張チャンク（oFFs / pCAL / sCAL / sTER / gIFg / gIFx / dSIG。第 3 版の本文ではなく PNG Extensions の登録チャンク）
 name: PNG
 endianness: big
 root: png
@@ -6,44 +13,107 @@ enums:
   color_type:
     - value: 0
       label: grayscale
+      description: "グレースケール（ビット深度 1 / 2 / 4 / 8 / 16）"
     - value: 2
       label: truecolor
+      description: "RGB（ビット深度 8 / 16）"
     - value: 3
       label: indexed
+      description: "パレット（PLTE の色番号。ビット深度 1 / 2 / 4 / 8）"
     - value: 4
       label: grayscale_alpha
+      description: "グレースケール + アルファ（ビット深度 8 / 16）"
     - value: 6
       label: truecolor_alpha
+      description: "RGBA（ビット深度 8 / 16）"
 
   compression_method:
     - value: 0
       label: deflate
+      description: "zlib（deflate）。PNG で定義されている唯一の方式"
 
   filter_method:
     - value: 0
       label: adaptive
+      description: "行ごとに 5 種類のフィルタ（None / Sub / Up / Average / Paeth）から選ぶ方式。唯一の方式"
 
   interlace_method:
     - value: 0
       label: none
+      description: "インターレースなし"
     - value: 1
       label: adam7
+      description: "Adam7（7 段階の飛び越し走査）"
 
   srgb_rendering_intent:
     - value: 0
       label: perceptual
+      description: "知覚的（写真向け。色域外の色を全体的に圧縮）"
     - value: 1
       label: relative_colorimetric
+      description: "相対的な色域を維持（白色点を合わせ、色域内の色は変えない）"
     - value: 2
       label: saturation
+      description: "彩度（グラフや図向け）"
     - value: 3
       label: absolute_colorimetric
+      description: "絶対的な色域を維持（白色点も合わせない。校正刷り向け）"
 
   phys_unit:
     - value: 0
       label: unknown
+      description: "単位なし（縦横比のみを表す）"
     - value: 1
       label: meter
+      description: "メートル（ピクセル / m）"
+
+  # ITU-T H.273（CICP）の値。PNG で使われる主なもの
+  cicp_colour_primaries:
+    - value: 1
+      label: BT709
+      description: "ITU-R BT.709（sRGB と同じ原色）"
+    - value: 9
+      label: BT2020
+      description: "ITU-R BT.2020 / BT.2100（広色域）"
+    - value: 12
+      label: P3_D65
+      description: "SMPTE EG 432-1（Display P3）"
+
+  cicp_transfer_function:
+    - value: 1
+      label: BT709
+      description: "ITU-R BT.709"
+    - value: 8
+      label: linear
+      description: "線形"
+    - value: 13
+      label: sRGB
+      description: "IEC 61966-2-1（sRGB）"
+    - value: 16
+      label: PQ
+      description: "SMPTE ST 2084（PQ。HDR）"
+    - value: 18
+      label: HLG
+      description: "ARIB STD-B67（HLG。HDR）"
+
+  apng_dispose_op:
+    - value: 0
+      label: none
+      description: "次のフレームの前に何もしない"
+    - value: 1
+      label: background
+      description: "フレームの領域を透明な黒に戻す"
+    - value: 2
+      label: previous
+      description: "フレームの領域をこのフレームを描く前の状態に戻す"
+
+  apng_blend_op:
+    - value: 0
+      label: source
+      description: "フレームで領域を置き換える（アルファも含めて上書き）"
+    - value: 1
+      label: over
+      description: "フレームをアルファ合成で重ねる"
 
 flags:
   chunk_type_flags:
@@ -72,18 +142,22 @@ structs:
       type: bytes
       size: "8"
       expected: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+      description: "PNG シグネチャ（89 'PNG' 0D 0A 1A 0A。改行コードの変換やテキスト転送による破損を検出できる並び）"
     - name: chunks
       type: struct
       struct: chunk
       repeat: eof
+      description: "チャンクの並び（先頭は IHDR、最後は IEND）"
 
   chunk:
     - name: length
       type: uint32
+      description: "データ部のバイト数（種類と CRC を含まない。2^31 - 1 以下）"
     - name: type
       type: ascii
       size: "4"
       flags: chunk_type_flags
+      description: "チャンクの種類（4 文字）。各文字の大文字・小文字（ビット 5）が補助 / 私用 / 予約 / コピー安全を表す"
     - name: data
       type: switch
       size: "{length}"
@@ -91,179 +165,532 @@ structs:
       cases:
         "'IHDR'": ihdr
         "'PLTE'": plte_chunk
+        "'IDAT'": idat_chunk
+        "'IEND'": iend_chunk
+        "'tRNS'": trns_chunk
+        "'cHRM'": chrm_chunk
+        "'gAMA'": gama_chunk
+        "'iCCP'": iccp_chunk
+        "'sBIT'": sbit_chunk
+        "'sRGB'": srgb_chunk
+        "'cICP'": cicp_chunk
+        "'mDCV'": mdcv_chunk
+        "'cLLI'": clli_chunk
         "'tEXt'": text_chunk
         "'zTXt'": ztxt_chunk
         "'iTXt'": itxt_chunk
-        "'tIME'": time_chunk
-        "'pHYs'": phys_chunk
-        "'sRGB'": srgb_chunk
-        "'gAMA'": gama_chunk
-        "'cHRM'": chrm_chunk
-        "'tRNS'": trns_chunk
         "'bKGD'": bkgd_chunk
-        "'sBIT'": sbit_chunk
+        "'hIST'": hist_chunk
+        "'pHYs'": phys_chunk
+        "'sPLT'": splt_chunk
+        "'eXIf'": exif_chunk
+        "'tIME'": time_chunk
+        "'acTL'": actl_chunk
+        "'fcTL'": fctl_chunk
+        "'fdAT'": fdat_chunk
       default: raw_data
+      description: "チャンクのデータ（種類ごとの構造。未知の種類はバイト列）"
     - name: crc
       type: uint32
       checksum:
         algorithm: crc32
         fields: [type, data]
+      description: "種類とデータの CRC32"
 
+  # --- 必須チャンク ---
   ihdr:
     - name: width
       type: uint32
+      description: "画像の幅（ピクセル、1〜2^31 - 1）"
     - name: height
       type: uint32
+      description: "画像の高さ（ピクセル、1〜2^31 - 1）"
     - name: bit_depth
       type: uint8
+      description: "1 サンプル（パレットでは 1 画素の色番号）のビット数。使える値はカラータイプで決まる"
     - name: color_type
       type: uint8
       enum: color_type
+      description: "カラータイプ（ビット 0 = パレット、ビット 1 = カラー、ビット 2 = アルファ）"
     - name: compression
       type: uint8
       enum: compression_method
+      description: "圧縮方式（0 = deflate のみ）"
     - name: filter
       type: uint8
       enum: filter_method
+      description: "フィルタ方式（0 のみ）"
     - name: interlace
       type: uint8
       enum: interlace_method
+      description: "インターレース方式"
 
   plte_chunk:
     - name: entries
       type: struct
       struct: plte_entry
       repeat_count: "{length / 3}"
-      description: "パレットエントリ（R, G, B）"
+      description: "パレット（1〜256 色。色番号 0 から順）"
 
   plte_entry:
     - name: red
       type: uint8
+      description: "赤（0〜255）"
     - name: green
       type: uint8
+      description: "緑（0〜255）"
     - name: blue
       type: uint8
+      description: "青（0〜255）"
 
-  text_chunk:
-    - name: keyword
-      type: asciiz
-      description: "キーワード（例: Title, Author, Description）"
-    - name: text
-      type: ascii
-      size: remaining
-      description: "テキスト値"
-
-  ztxt_chunk:
-    - name: keyword
-      type: asciiz
-      description: "キーワード"
-    - name: compression_method
-      type: uint8
-      enum: compression_method
-    - name: compressed_data
+  idat_chunk:
+    - name: data
       type: bytes
       size: remaining
-      description: "zlib圧縮テキストデータ"
+      description: "画像データ（zlib ストリームの一部。複数の IDAT をつなげて 1 つのストリームになる）"
 
-  itxt_chunk:
-    - name: keyword
-      type: asciiz
-      description: "キーワード"
-    - name: compression_flag
-      type: uint8
-      description: "0 = 非圧縮、1 = 圧縮"
-    - name: compression_method
-      type: uint8
-      enum: compression_method
-    - name: language_tag
-      type: asciiz
-      description: "言語タグ（例: en, ja）"
-    - name: translated_keyword
-      type: asciiz
-      description: "翻訳済みキーワード"
-    - name: text
+  iend_chunk:
+    - name: data
       type: bytes
       size: remaining
-      description: "テキストデータ（圧縮または非圧縮）"
+      description: "IEND のデータ（空。画像の終わりを示す）"
 
-  time_chunk:
-    - name: year
+  # --- 透明度・色空間 ---
+  trns_chunk:
+    - name: transparency
+      type: switch
+      switch_on: "{color_type}"
+      cases:
+        "0": trns_grayscale
+        "2": trns_truecolor
+        "3": trns_indexed
+      default: raw_data
+      description: "透明色（カラータイプで形式が変わる。アルファ付きのカラータイプでは使わない）"
+
+  trns_grayscale:
+    - name: gray
       type: uint16
-    - name: month
-      type: uint8
-    - name: day
-      type: uint8
-    - name: hour
-      type: uint8
-    - name: minute
-      type: uint8
-    - name: second
-      type: uint8
+      description: "透明として扱うグレーの値（ビット深度の範囲）"
 
-  phys_chunk:
-    - name: pixels_per_unit_x
-      type: uint32
-    - name: pixels_per_unit_y
-      type: uint32
-    - name: unit
+  trns_truecolor:
+    - name: red
+      type: uint16
+      description: "透明として扱う色の赤"
+    - name: green
+      type: uint16
+      description: "透明として扱う色の緑"
+    - name: blue
+      type: uint16
+      description: "透明として扱う色の青"
+
+  trns_indexed:
+    - name: alpha
       type: uint8
-      enum: phys_unit
+      repeat: eof
+      description: "パレットの色番号 0 から順のアルファ値（0 = 透明、255 = 不透明。足りない分は 255）"
+
+  chrm_chunk:
+    - name: white_point_x
+      type: uint32
+      description: "白色点の CIE x 座標 × 100000"
+    - name: white_point_y
+      type: uint32
+      description: "白色点の CIE y 座標 × 100000"
+    - name: red_x
+      type: uint32
+      description: "赤の原色の CIE x 座標 × 100000"
+    - name: red_y
+      type: uint32
+      description: "赤の原色の CIE y 座標 × 100000"
+    - name: green_x
+      type: uint32
+      description: "緑の原色の CIE x 座標 × 100000"
+    - name: green_y
+      type: uint32
+      description: "緑の原色の CIE y 座標 × 100000"
+    - name: blue_x
+      type: uint32
+      description: "青の原色の CIE x 座標 × 100000"
+    - name: blue_y
+      type: uint32
+      description: "青の原色の CIE y 座標 × 100000"
+
+  gama_chunk:
+    - name: gamma
+      type: uint32
+      description: "画像のガンマ × 100000（例: 45455 = 1 / 2.2）"
+
+  iccp_chunk:
+    - name: profile_name
+      type: asciiz
+      description: "プロファイル名（Latin-1、1〜79 バイト、NUL 終端）"
+    - name: compression_method
+      type: uint8
+      enum: compression_method
+      description: "圧縮方式（0 = zlib）"
+    - name: profile
+      type: zlib
+      size: remaining
+      description: "zlib で圧縮した ICC プロファイル（展開後のバイト列を表示）"
+
+  sbit_chunk:
+    - name: significant_bits
+      type: switch
+      switch_on: "{color_type}"
+      cases:
+        "0": sbit_grayscale
+        "2": sbit_rgb
+        "3": sbit_rgb
+        "4": sbit_grayscale_alpha
+        "6": sbit_rgba
+      default: raw_data
+      description: "元データの有効ビット数（カラータイプで形式が変わる）"
+
+  sbit_grayscale:
+    - name: gray
+      type: uint8
+      description: "グレーの有効ビット数"
+
+  sbit_rgb:
+    - name: red
+      type: uint8
+      description: "赤の有効ビット数"
+    - name: green
+      type: uint8
+      description: "緑の有効ビット数"
+    - name: blue
+      type: uint8
+      description: "青の有効ビット数"
+
+  sbit_grayscale_alpha:
+    - name: gray
+      type: uint8
+      description: "グレーの有効ビット数"
+    - name: alpha
+      type: uint8
+      description: "アルファの有効ビット数"
+
+  sbit_rgba:
+    - name: red
+      type: uint8
+      description: "赤の有効ビット数"
+    - name: green
+      type: uint8
+      description: "緑の有効ビット数"
+    - name: blue
+      type: uint8
+      description: "青の有効ビット数"
+    - name: alpha
+      type: uint8
+      description: "アルファの有効ビット数"
 
   srgb_chunk:
     - name: rendering_intent
       type: uint8
       enum: srgb_rendering_intent
+      description: "sRGB 色空間で表示するときのレンダリングインテント"
 
-  gama_chunk:
-    - name: gamma
-      type: uint32
-      description: "ガンマ値 × 100000"
+  cicp_chunk:
+    - name: colour_primaries
+      type: uint8
+      enum: cicp_colour_primaries
+      description: "原色（ITU-T H.273 の ColourPrimaries）"
+    - name: transfer_function
+      type: uint8
+      enum: cicp_transfer_function
+      description: "伝達関数（ITU-T H.273 の TransferCharacteristics。PQ / HLG なら HDR）"
+    - name: matrix_coefficients
+      type: uint8
+      validate: "{matrix_coefficients == 0}"
+      description: "行列係数（ITU-T H.273 の MatrixCoefficients。PNG は RGB なので 0）"
+    - name: video_full_range_flag
+      type: uint8
+      description: "1 = フルレンジ（0〜最大値）、0 = 狭いレンジ（映像の 16〜235 など）"
 
-  chrm_chunk:
-    - name: white_point_x
-      type: uint32
-      description: "白色点X（CIE xy × 100000）"
-    - name: white_point_y
-      type: uint32
-      description: "白色点Y（CIE xy × 100000）"
+  mdcv_chunk:
     - name: red_x
-      type: uint32
-      description: "赤X（CIE xy × 100000）"
+      type: uint16
+      description: "マスタリングディスプレイの赤の原色の CIE x 座標（0.00002 単位）"
     - name: red_y
-      type: uint32
-      description: "赤Y（CIE xy × 100000）"
+      type: uint16
+      description: "マスタリングディスプレイの赤の原色の CIE y 座標（0.00002 単位）"
     - name: green_x
-      type: uint32
-      description: "緑X（CIE xy × 100000）"
+      type: uint16
+      description: "緑の原色の CIE x 座標（0.00002 単位）"
     - name: green_y
-      type: uint32
-      description: "緑Y（CIE xy × 100000）"
+      type: uint16
+      description: "緑の原色の CIE y 座標（0.00002 単位）"
     - name: blue_x
-      type: uint32
-      description: "青X（CIE xy × 100000）"
+      type: uint16
+      description: "青の原色の CIE x 座標（0.00002 単位）"
     - name: blue_y
+      type: uint16
+      description: "青の原色の CIE y 座標（0.00002 単位）"
+    - name: white_point_x
+      type: uint16
+      description: "白色点の CIE x 座標（0.00002 単位）"
+    - name: white_point_y
+      type: uint16
+      description: "白色点の CIE y 座標（0.00002 単位）"
+    - name: max_luminance
       type: uint32
-      description: "青Y（CIE xy × 100000）"
+      description: "マスタリングディスプレイの最大輝度（0.0001 cd/m² 単位）"
+    - name: min_luminance
+      type: uint32
+      description: "マスタリングディスプレイの最小輝度（0.0001 cd/m² 単位）"
 
-  trns_chunk:
-    - name: data
+  clli_chunk:
+    - name: max_content_light_level
+      type: uint32
+      description: "最大コンテンツ輝度（MaxCLL。最も明るい画素の輝度、0.0001 cd/m² 単位）"
+    - name: max_frame_average_light_level
+      type: uint32
+      description: "最大フレーム平均輝度（MaxFALL。0.0001 cd/m² 単位）"
+
+  # --- テキスト ---
+  text_chunk:
+    - name: keyword
+      type: asciiz
+      description: "キーワード（Latin-1、1〜79 バイト。例: Title / Author / Description / Comment）"
+    - name: text
+      type: latin1
+      size: remaining
+      description: "テキスト（Latin-1、非圧縮）"
+
+  ztxt_chunk:
+    - name: keyword
+      type: asciiz
+      description: "キーワード（Latin-1、1〜79 バイト）"
+    - name: compression_method
+      type: uint8
+      enum: compression_method
+      description: "圧縮方式（0 = zlib）"
+    - name: compressed_data
+      type: zlib
+      size: remaining
+      description: "zlib で圧縮したテキスト（Latin-1。展開後のバイト列を表示）"
+
+  itxt_chunk:
+    - name: keyword
+      type: asciiz
+      description: "キーワード（Latin-1、1〜79 バイト）"
+    - name: compression_flag
+      type: uint8
+      description: "テキストの圧縮（0 = 非圧縮、1 = compression_method で圧縮）"
+    - name: compression_method
+      type: uint8
+      enum: compression_method
+      description: "圧縮方式（0 = zlib。非圧縮のときも 0）"
+    - name: language_tag
+      type: asciiz
+      description: "言語タグ（BCP 47。例: en / ja。空なら不明）"
+    - name: translated_keyword
+      type: utf8z
+      description: "キーワードを言語タグの言語に訳したもの（UTF-8）"
+    - name: text
       type: bytes
       size: remaining
-      description: "透明度データ（カラータイプにより形式が異なる）"
+      description: "テキスト（UTF-8。compression_flag が 1 なら zlib 圧縮）"
 
+  # --- その他の補助チャンク ---
   bkgd_chunk:
-    - name: data
-      type: bytes
-      size: remaining
-      description: "背景色データ（カラータイプにより形式が異なる）"
+    - name: background
+      type: switch
+      switch_on: "{color_type}"
+      cases:
+        "0": bkgd_gray
+        "4": bkgd_gray
+        "2": bkgd_rgb
+        "6": bkgd_rgb
+        "3": bkgd_indexed
+      default: raw_data
+      description: "推奨する背景色（カラータイプで形式が変わる）"
 
-  sbit_chunk:
-    - name: data
+  bkgd_gray:
+    - name: gray
+      type: uint16
+      description: "背景のグレーの値（ビット深度の範囲）"
+
+  bkgd_rgb:
+    - name: red
+      type: uint16
+      description: "背景の赤"
+    - name: green
+      type: uint16
+      description: "背景の緑"
+    - name: blue
+      type: uint16
+      description: "背景の青"
+
+  bkgd_indexed:
+    - name: palette_index
+      type: uint8
+      description: "背景色のパレットの色番号"
+
+  hist_chunk:
+    - name: frequencies
+      type: uint16
+      repeat: eof
+      description: "パレットの色ごとの使用頻度の目安（色番号 0 から順。PLTE と同じ個数）"
+
+  phys_chunk:
+    - name: pixels_per_unit_x
+      type: uint32
+      description: "横方向の単位あたりのピクセル数"
+    - name: pixels_per_unit_y
+      type: uint32
+      description: "縦方向の単位あたりのピクセル数"
+    - name: unit
+      type: uint8
+      enum: phys_unit
+      description: "単位（0 = 縦横比のみ、1 = メートル）"
+
+  splt_chunk:
+    - name: palette_name
+      type: asciiz
+      description: "推奨パレットの名前（Latin-1、1〜79 バイト）"
+    - name: sample_depth
+      type: uint8
+      description: "各成分のビット数（8 または 16）"
+    - name: entries
+      type: switch
+      switch_on: "{sample_depth}"
+      cases:
+        "8": splt_entries8
+        "16": splt_entries16
+      default: raw_data
+      description: "推奨パレットの色（sample_depth で 1 色 6 / 10 バイト）"
+
+  splt_entries8:
+    - name: entry
+      type: struct
+      struct: splt_entry8
+      repeat: eof
+      description: "色（8 ビット成分）"
+
+  splt_entry8:
+    - name: red
+      type: uint8
+      description: "赤"
+    - name: green
+      type: uint8
+      description: "緑"
+    - name: blue
+      type: uint8
+      description: "青"
+    - name: alpha
+      type: uint8
+      description: "アルファ（0 = 透明）"
+    - name: frequency
+      type: uint16
+      description: "使用頻度の目安（大きいほど多い）"
+
+  splt_entries16:
+    - name: entry
+      type: struct
+      struct: splt_entry16
+      repeat: eof
+      description: "色（16 ビット成分）"
+
+  splt_entry16:
+    - name: red
+      type: uint16
+      description: "赤"
+    - name: green
+      type: uint16
+      description: "緑"
+    - name: blue
+      type: uint16
+      description: "青"
+    - name: alpha
+      type: uint16
+      description: "アルファ（0 = 透明）"
+    - name: frequency
+      type: uint16
+      description: "使用頻度の目安（大きいほど多い）"
+
+  exif_chunk:
+    - name: byte_order
+      type: ascii
+      size: "2"
+      validate: "{byte_order == 'MM' or byte_order == 'II'}"
+      description: "Exif（TIFF 構造）のバイトオーダー（MM = ビッグエンディアン、II = リトルエンディアン）"
+    - name: exif_data
       type: bytes
       size: remaining
-      description: "有効ビット数データ（カラータイプにより形式が異なる）"
+      description: "Exif データの残り（TIFF ヘッダの 42 以降。中身は解析しない）"
+
+  time_chunk:
+    - name: year
+      type: uint16
+      description: "最終更新の年（UTC、4 桁）"
+    - name: month
+      type: uint8
+      description: "月（1〜12）"
+    - name: day
+      type: uint8
+      description: "日（1〜31）"
+    - name: hour
+      type: uint8
+      description: "時（0〜23）"
+    - name: minute
+      type: uint8
+      description: "分（0〜59）"
+    - name: second
+      type: uint8
+      description: "秒（0〜60。60 はうるう秒）"
+
+  # --- APNG ---
+  actl_chunk:
+    - name: num_frames
+      type: uint32
+      description: "アニメーションのフレーム数（fcTL の個数）"
+    - name: num_plays
+      type: uint32
+      description: "再生回数（0 = 無限に繰り返す）"
+
+  fctl_chunk:
+    - name: sequence_number
+      type: uint32
+      description: "fcTL / fdAT の通し番号（0 から。順序の検証に使う）"
+    - name: width
+      type: uint32
+      description: "フレームの幅（ピクセル）"
+    - name: height
+      type: uint32
+      description: "フレームの高さ（ピクセル）"
+    - name: x_offset
+      type: uint32
+      description: "フレームを描く位置の x（ピクセル）"
+    - name: y_offset
+      type: uint32
+      description: "フレームを描く位置の y（ピクセル）"
+    - name: delay_num
+      type: uint16
+      description: "表示時間の分子（秒 = delay_num / delay_den）"
+    - name: delay_den
+      type: uint16
+      description: "表示時間の分母（0 なら 100 とみなす）"
+    - name: dispose_op
+      type: uint8
+      enum: apng_dispose_op
+      description: "このフレームを表示したあとの領域の扱い"
+    - name: blend_op
+      type: uint8
+      enum: apng_blend_op
+      description: "このフレームの重ね方"
+
+  fdat_chunk:
+    - name: sequence_number
+      type: uint32
+      description: "fcTL / fdAT の通し番号"
+    - name: frame_data
+      type: bytes
+      size: remaining
+      description: "フレームの画像データ（IDAT と同じ形式の zlib ストリームの一部）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "未知の種類のチャンク、または形式が決まらないデータのバイト列"

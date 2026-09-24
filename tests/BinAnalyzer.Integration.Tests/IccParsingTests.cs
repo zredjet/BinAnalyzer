@@ -81,8 +81,9 @@ public class IccParsingTests
         var sig = descEntry.Children[0].Should().BeOfType<DecodedString>().Subject;
         sig.Value.Should().Be("desc");
 
-        // data → switch → desc_tag_data
-        var descData = descEntry.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+        // data → 型シグネチャ（tag_type）で振り分け → desc_tag_data（REQ-188）
+        ((DecodedString)descEntry.Children.Single(c => c.Name == "tag_type")).Value.Should().Be("desc");
+        var descData = descEntry.Children.Single(c => c.Name == "data").Should().BeOfType<DecodedStruct>().Subject;
         var typeSig = descData.Children[0].Should().BeOfType<DecodedString>().Subject;
         typeSig.Value.Should().Be("desc");
 
@@ -108,16 +109,19 @@ public class IccParsingTests
         var sig = xyzEntry.Children[0].Should().BeOfType<DecodedString>().Subject;
         sig.Value.Should().Be("XYZ ");
 
-        // data → switch → xyz_tag_data
-        var xyzData = xyzEntry.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+        // data → 型シグネチャで振り分け → xyz_tag_data。XYZType は XYZ 値の配列（REQ-188）
+        var xyzData = xyzEntry.Children.Single(c => c.Name == "data").Should().BeOfType<DecodedStruct>().Subject;
         var typeSig = xyzData.Children[0].Should().BeOfType<DecodedString>().Subject;
         typeSig.Value.Should().Be("XYZ ");
 
-        var x = xyzData.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        var values = xyzData.Children.Single(c => c.Name == "values").Should().BeOfType<DecodedArray>().Subject;
+        values.Elements.Should().HaveCount(1);
+        var xyz = (DecodedStruct)values.Elements[0];
+        var x = xyz.Children[0].Should().BeOfType<DecodedInteger>().Subject;
         x.Name.Should().Be("x");
         x.Value.Should().Be(0x0000F6D6);
 
-        var y = xyzData.Children[3].Should().BeOfType<DecodedInteger>().Subject;
+        var y = xyz.Children[1].Should().BeOfType<DecodedInteger>().Subject;
         y.Name.Should().Be("y");
         y.Value.Should().Be(0x00010000);
     }
@@ -136,5 +140,29 @@ public class IccParsingTests
         output.Should().Contain("RGB");
         output.Should().Contain("Perceptual");
         output.Should().Contain("tag_table");
+    }
+
+    [Fact]
+    public void IccV4Profile_TagsAreDecodedByTypeSignature()
+    {
+        // REQ-188: タグの名前ではなくデータ先頭の型シグネチャで振り分ける（v4 の mluc、para、sf32、chrm）
+        var data = IccTestDataGenerator.CreateV4ProfileWithTypedTags();
+        var decoded = new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(IccFormatPath));
+
+        var tags = ((DecodedArray)((DecodedStruct)decoded.Children[1]).Children[1]).Elements.Cast<DecodedStruct>().ToList();
+        DecodedStruct DataOf(string signature) =>
+            (DecodedStruct)tags.Single(t => ((DecodedString)t.Children[0]).Value == signature).Children.Single(c => c.Name == "data");
+
+        var desc = DataOf("desc");
+        desc.StructType.Should().Be("mluc_tag_data", "v4 の 'desc' タグは mluc 型");
+        var record = (DecodedStruct)((DecodedArray)desc.Children.Single(c => c.Name == "records")).Elements[0];
+        ((DecodedString)record.Children.Single(c => c.Name == "language")).Value.Should().Be("en");
+        ((DecodedString)record.Children.Single(c => c.Name == "text")).Value.Should().Be("Test v4");
+
+        var trc = DataOf("rTRC");
+        trc.StructType.Should().Be("para_tag_data");
+        ((DecodedArray)trc.Children.Single(c => c.Name == "parameters")).Elements.Should().HaveCount(1);
+        DataOf("chad").StructType.Should().Be("sf32_tag_data");
+        ((DecodedArray)DataOf("chad").Children.Single(c => c.Name == "values")).Elements.Should().HaveCount(9);
     }
 }

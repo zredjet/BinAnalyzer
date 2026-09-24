@@ -1,3 +1,11 @@
+# TIFF 画像（.tif / .tiff）と BigTIFF
+# 仕様: TIFF Revision 6.0（Adobe、1992） https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf 、
+#   BigTIFF（AWare Systems による提案。libtiff 4.0 以降が実装） https://www.awaresystems.be/imaging/tiff/bigtiff.html
+# 構造: バイトオーダー（II / MM）+ マジック（42 = TIFF、43 = BigTIFF）+ 最初の IFD へのオフセット。
+#   IFD（タグのエントリの並び）は次の IFD へのオフセットで連なる（複数ページ）ので、0 になるまで再帰的に読む。
+#   値が 4 バイト（BigTIFF は 8 バイト）に収まるエントリは値そのものを持ち、SHORT / LONG / Compression は virtual で取り出す。
+# 対応していないもの: 画像データ（ストリップ / タイル）の展開、SubIFDs・Exif IFD・GPS IFD の中身、
+#   RATIONAL 以外の外部値（配列・文字列）の読み取り、BigTIFF の外部の RATIONAL 値、DNG などの拡張タグの網羅
 name: TIFF
 root: tiff
 
@@ -5,6 +13,7 @@ enums:
   tiff_tag:
     - value: 254
       label: NewSubfileType
+      description: "サブファイルの種類（ビット 0 = 縮小画像、1 = 複数ページの 1 ページ、2 = 透過マスク）"
     - value: 256
       label: ImageWidth
     - value: 257
@@ -15,6 +24,10 @@ enums:
       label: Compression
     - value: 262
       label: PhotometricInterpretation
+      description: "色の解釈（0 = 白が 0、1 = 黒が 0、2 = RGB、3 = パレット、5 = CMYK、6 = YCbCr）"
+    - value: 269
+      label: DocumentName
+      description: "文書名"
     - value: 270
       label: ImageDescription
     - value: 271
@@ -23,28 +36,52 @@ enums:
       label: Model
     - value: 273
       label: StripOffsets
+      description: "各ストリップの先頭オフセット"
     - value: 274
       label: Orientation
+      description: "画像の向き（1 = 通常、6 = 90 度回転 など）"
     - value: 277
       label: SamplesPerPixel
     - value: 278
       label: RowsPerStrip
+      description: "1 ストリップの行数"
     - value: 279
       label: StripByteCounts
+      description: "各ストリップの圧縮後のバイト数"
     - value: 282
       label: XResolution
     - value: 283
       label: YResolution
     - value: 284
       label: PlanarConfiguration
+      description: "成分の並べ方（1 = 画素ごと、2 = 成分ごと）"
+    - value: 285
+      label: PageName
+      description: "ページ名"
     - value: 296
       label: ResolutionUnit
+      description: "解像度の単位（1 = なし、2 = インチ、3 = センチメートル）"
+    - value: 297
+      label: PageNumber
+      description: "ページ番号と総ページ数（SHORT × 2）"
     - value: 305
       label: Software
     - value: 306
       label: DateTime
     - value: 315
       label: Artist
+    - value: 316
+      label: HostComputer
+      description: "作成したコンピュータ"
+    - value: 317
+      label: Predictor
+      description: "LZW / Deflate の前処理（1 = なし、2 = 水平差分、3 = 浮動小数点）"
+    - value: 318
+      label: WhitePoint
+      description: "白色点の色度（RATIONAL × 2）"
+    - value: 319
+      label: PrimaryChromaticities
+      description: "原色の色度（RATIONAL × 6）"
     - value: 320
       label: ColorMap
     - value: 322
@@ -57,10 +94,19 @@ enums:
       label: TileByteCounts
     - value: 330
       label: SubIFDs
+      description: "子 IFD（縮小画像など）へのオフセット"
+    - value: 338
+      label: ExtraSamples
+      description: "色以外の追加チャンネル（1 = 乗算済みアルファ、2 = 非乗算アルファ）"
+    - value: 339
+      label: SampleFormat
+      description: "サンプルの数値形式（1 = 符号なし整数、2 = 符号付き整数、3 = 浮動小数点）"
     - value: 513
       label: JPEGInterchangeFormat
+      description: "JPEG 圧縮の縮小画像（旧形式）の先頭"
     - value: 514
       label: JPEGInterchangeFormatLength
+      description: "JPEG 圧縮の縮小画像（旧形式）のバイト数"
     - value: 529
       label: YCbCrCoefficients
     - value: 530
@@ -69,36 +115,68 @@ enums:
       label: YCbCrPositioning
     - value: 532
       label: ReferenceBlackWhite
+    - value: 700
+      label: XMP
+      description: "XMP メタデータ（XML）"
+    - value: 33432
+      label: Copyright
+      description: "著作権表示"
     - value: 34665
       label: ExifIFD
+      description: "Exif IFD へのオフセット"
+    - value: 34675
+      label: ICCProfile
+      description: "ICC プロファイル（InterColorProfile）"
     - value: 34853
       label: GPSIFD
+      description: "GPS 情報 IFD へのオフセット"
 
   tiff_field_type:
     - value: 1
       label: BYTE
+      description: "符号なし 8 ビット整数（1 バイト）"
     - value: 2
       label: ASCII
+      description: "NUL 終端の 7 ビット ASCII（1 バイト / 文字）"
     - value: 3
       label: SHORT
+      description: "符号なし 16 ビット整数（2 バイト）"
     - value: 4
       label: LONG
+      description: "符号なし 32 ビット整数（4 バイト）"
     - value: 5
       label: RATIONAL
+      description: "LONG 2 つの分数（分子 / 分母、8 バイト）"
     - value: 6
       label: SBYTE
+      description: "符号付き 8 ビット整数（1 バイト）"
     - value: 7
       label: UNDEFINED
+      description: "解釈がタグで決まるバイト（1 バイト）"
     - value: 8
       label: SSHORT
+      description: "符号付き 16 ビット整数（2 バイト）"
     - value: 9
       label: SLONG
+      description: "符号付き 32 ビット整数（4 バイト）"
     - value: 10
       label: SRATIONAL
+      description: "SLONG 2 つの分数（8 バイト）"
     - value: 11
       label: FLOAT
+      description: "単精度浮動小数点（4 バイト）"
     - value: 12
       label: DOUBLE
+      description: "倍精度浮動小数点（8 バイト）"
+    - value: 16
+      label: LONG8
+      description: "符号なし 64 ビット整数（8 バイト。BigTIFF）"
+    - value: 17
+      label: SLONG8
+      description: "符号付き 64 ビット整数（8 バイト。BigTIFF）"
+    - value: 18
+      label: IFD8
+      description: "64 ビットの IFD オフセット（8 バイト。BigTIFF）"
 
   tiff_compression:
     - value: 1
@@ -131,88 +209,122 @@ structs:
     - name: byte_order
       type: ascii
       size: "2"
-      description: "バイトオーダーマーク（II=LE, MM=BE）"
       validate: "{byte_order == 'II' or byte_order == 'MM'}"
+      description: "バイトオーダー（II = リトルエンディアン、MM = ビッグエンディアン）。以降のすべての数値に適用する"
     - name: body
       type: struct
       struct: tiff_body
+      description: "ヘッダの残りと IFD の連なり"
 
   tiff_body:
     endianness: "{byte_order == 'II' ? 'little' : 'big'}"
     fields:
       - name: magic
         type: uint16
-        description: "TIFFマジックナンバー（42）"
-        validate: "{magic == 42}"
+        validate: "{magic == 42 or magic == 43}"
+        description: "マジック（42 = TIFF、43 = BigTIFF）"
+      # --- TIFF（magic 42）---
       - name: ifd_offset
         type: uint32
-        description: "最初のIFDへのオフセット"
+        if: "{magic == 42}"
+        description: "最初の IFD へのオフセット（ファイル先頭から。偶数）"
       - name: ifd0
         type: struct
         struct: ifd
         seek: "{ifd_offset}"
-        description: "最初のIFD"
+        if: "{magic == 42}"
+        description: "最初の IFD（続く IFD は next_ifd で連なる）"
+      # --- BigTIFF（magic 43）---
+      - name: bigtiff_offset_size
+        type: uint16
+        if: "{magic == 43}"
+        validate: "{bigtiff_offset_size == 8}"
+        description: "オフセットのバイト数（BigTIFF では常に 8）"
+      - name: bigtiff_reserved
+        type: uint16
+        if: "{magic == 43}"
+        validate: "{bigtiff_reserved == 0}"
+        description: "予約（0）"
+      - name: bigtiff_ifd_offset
+        type: uint64
+        if: "{magic == 43}"
+        description: "最初の IFD へのオフセット（64 ビット）"
+      - name: bigtiff_ifd0
+        type: struct
+        struct: bigtiff_ifd
+        seek: "{bigtiff_ifd_offset}"
+        if: "{magic == 43}"
+        description: "最初の IFD（BigTIFF）"
 
+  # --- TIFF の IFD ---
   ifd:
     - name: entry_count
       type: uint16
-      description: "ディレクトリエントリ数"
+      description: "エントリの数"
     - name: entries
       type: struct
       struct: ifd_entry
       repeat_count: "{entry_count}"
+      description: "タグのエントリ（12 バイトずつ。タグ番号の昇順）"
     - name: next_ifd_offset
       type: uint32
-      description: "次のIFDへのオフセット（0の場合はなし）"
+      description: "次の IFD へのオフセット（0 なら最後の IFD）"
+    - name: next_ifd
+      type: struct
+      struct: ifd
+      seek: "{next_ifd_offset}"
+      if: "{next_ifd_offset != 0}"
+      description: "次の IFD（複数ページの TIFF の次のページなど）"
 
   ifd_entry:
     - name: tag
       type: uint16
       enum: tiff_tag
+      description: "タグ番号"
     - name: field_type
       type: uint16
       enum: tiff_field_type
-      description: "フィールドタイプとバイトサイズ: BYTE=1, ASCII=1, SHORT=2, LONG=4, RATIONAL=8, SBYTE=1, UNDEFINED=1, SSHORT=2, SLONG=4, SRATIONAL=8, FLOAT=4, DOUBLE=8"
+      description: "値の型（1 値のバイト数: BYTE / ASCII / SBYTE / UNDEFINED = 1、SHORT / SSHORT = 2、LONG / SLONG / FLOAT = 4、RATIONAL / SRATIONAL / DOUBLE = 8）"
     - name: count
       type: uint32
-      description: "値の数"
+      description: "値の個数（ASCII は NUL を含む文字数）"
     - name: value_offset
       type: uint32
-      description: "合計サイズ（type_size × count）が4バイト以下の場合は値そのもの、それ以外は値データへのオフセット"
+      description: "値のバイト数（型のバイト数 × count）が 4 以下なら値そのもの（先頭に詰める）、それ以外は値へのオフセット"
     - name: is_inline
       type: virtual
-      value: "{(field_type == 1 and count <= 4) or (field_type == 3 and count <= 2) or (field_type == 4 and count == 1) or (field_type == 6 and count <= 4) or (field_type == 8 and count <= 2) or (field_type == 9 and count == 1)}"
-      description: "値がインラインかどうか（type_size * count <= 4）"
+      value: "{(field_type == 1 and count <= 4) or (field_type == 2 and count <= 4) or (field_type == 3 and count <= 2) or (field_type == 4 and count == 1) or (field_type == 6 and count <= 4) or (field_type == 7 and count <= 4) or (field_type == 8 and count <= 2) or (field_type == 9 and count == 1) or (field_type == 11 and count == 1)}"
+      description: "値が value_offset の中にあるか（型のバイト数 × count が 4 以下）"
     - name: inline_short_value
       type: virtual
       value: "{byte_order == 'MM' ? value_offset >> 16 : value_offset & 0xFFFF}"
       if: "{field_type == 3 and count == 1}"
-      description: "SHORT型のインライン値（値フィールドの先頭2バイト。LEは下位16ビット、BEは上位16ビット）"
+      description: "SHORT 1 個の値（値欄の先頭 2 バイト。LE は下位 16 ビット、BE は上位 16 ビット）"
     - name: inline_long_value
       type: virtual
       value: "{value_offset}"
       if: "{field_type == 4 and count == 1}"
-      description: "LONG型のインライン値"
+      description: "LONG 1 個の値"
     - name: compression
       type: virtual
       value: "{byte_order == 'MM' ? value_offset >> 16 : value_offset & 0xFFFF}"
       if: "{tag == 259 and field_type == 3 and count == 1}"
       enum: tiff_compression
-      description: "圧縮方式（Compression タグのインライン SHORT 値）"
+      description: "圧縮方式（Compression タグの値）"
     - name: rational_value
       type: struct
       struct: rational_data
       seek: "{value_offset}"
       seek_restore: true
       if: "{field_type == 5 and count == 1}"
-      description: "RATIONAL型の外部値（numerator/denominator）"
+      description: "RATIONAL 1 個の値（value_offset が指す位置の分子 / 分母）"
     - name: srational_value
       type: struct
       struct: srational_data
       seek: "{value_offset}"
       seek_restore: true
       if: "{field_type == 10 and count == 1}"
-      description: "SRATIONAL型の外部値（signed numerator/denominator）"
+      description: "SRATIONAL 1 個の値（value_offset が指す位置の分子 / 分母）"
 
   rational_data:
     - name: numerator
@@ -229,3 +341,60 @@ structs:
     - name: denominator
       type: int32
       description: "分母（符号付き）"
+
+  # --- BigTIFF の IFD ---
+  bigtiff_ifd:
+    - name: entry_count
+      type: uint64
+      description: "エントリの数（64 ビット）"
+    - name: entries
+      type: struct
+      struct: bigtiff_entry
+      repeat_count: "{entry_count}"
+      description: "タグのエントリ（20 バイトずつ）"
+    - name: next_ifd_offset
+      type: uint64
+      description: "次の IFD へのオフセット（0 なら最後の IFD）"
+    - name: next_ifd
+      type: struct
+      struct: bigtiff_ifd
+      seek: "{next_ifd_offset}"
+      if: "{next_ifd_offset != 0}"
+      description: "次の IFD"
+
+  bigtiff_entry:
+    - name: tag
+      type: uint16
+      enum: tiff_tag
+      description: "タグ番号"
+    - name: field_type
+      type: uint16
+      enum: tiff_field_type
+      description: "値の型（TIFF の型に LONG8 / SLONG8 / IFD8 を加えたもの）"
+    - name: count
+      type: uint64
+      description: "値の個数（64 ビット）"
+    - name: value_offset
+      type: uint64
+      description: "値のバイト数が 8 以下なら値そのもの（先頭に詰める）、それ以外は値へのオフセット"
+    - name: inline_short_value
+      type: virtual
+      value: "{byte_order == 'MM' ? (value_offset >> 48) & 0xFFFF : value_offset & 0xFFFF}"
+      if: "{field_type == 3 and count == 1}"
+      description: "SHORT 1 個の値（値欄の先頭 2 バイト）"
+    - name: inline_long_value
+      type: virtual
+      value: "{byte_order == 'MM' ? (value_offset >> 32) & 0xFFFFFFFF : value_offset & 0xFFFFFFFF}"
+      if: "{field_type == 4 and count == 1}"
+      description: "LONG 1 個の値（値欄の先頭 4 バイト）"
+    - name: inline_long8_value
+      type: virtual
+      value: "{value_offset}"
+      if: "{(field_type == 16 or field_type == 18) and count == 1}"
+      description: "LONG8 / IFD8 1 個の値"
+    - name: compression
+      type: virtual
+      value: "{byte_order == 'MM' ? (value_offset >> 48) & 0xFFFF : value_offset & 0xFFFF}"
+      if: "{tag == 259 and field_type == 3 and count == 1}"
+      enum: tiff_compression
+      description: "圧縮方式（Compression タグの値）"

@@ -173,7 +173,7 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | 段階 | 内容 | 状態 |
 |---|---|---|
 | 土台 | `docs/format-authoring.md`、`FormatDefinitionQualityTests`（対応待ち 41 定義）、XZ をお手本に（先頭コメント、全 40 フィールドと enum の説明）、README / architecture.md / CLAUDE.md からの参照 | 済 |
-| 画像 | png / jpeg / gif / bmp / tiff / webp / ico / heif / icc | 未着手 |
+| 画像 | png / jpeg / gif / bmp / tiff / webp / ico / heif / icc（先頭コメント・全フィールドの説明、PNG 第 3 版・APNG、BigTIFF と IFD チェーン、WebP の RFC 9649 照合、ICC の型ごとの分解、下記のバグ修正） | 済 |
 | アーカイブ・圧縮 | zip / gzip / tar / 7z / lz4 | 未着手 |
 | 実行形式・バイトコード | elf / pe / macho / java-class / wasm | 未着手 |
 | 音声・映像 | mp3 / mp4 / wav / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff | 未着手 |
@@ -190,6 +190,40 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | FormatDefinitionQualityTests | Definition_FollowsTheAuthoringGuide（全 42 定義。対応待ちは「まだ満たしていない」ことも確かめる） | 2, 3 |
 | FormatDefinitionQualityTests | Pending_ListsOnlyExistingDefinitions | 3 |
 | FormatDefinitionQualityTests | Check_AcceptsAConformingDefinition / Check_ReportsMissingHeaderLines / Check_ReportsMissingAndEnglishDescriptions | 2, 3 |
+| PngParsingTests | ThirdEdition_ColourChunks / Apng_AnimationAndFrameControl / ColourTypeDependentChunks_AreDecodedByIhdrColourType | 4, 6 |
+| TiffParsingTests | TwoPageTiff_FollowsNextIfd / BigTiff_HeaderEntriesAndNextIfd | 4, 6 |
+| WebpParsingTests | AnimatedWebp_Vp8xFlagsFollowRfc9649 / AnimatedWebp_FramesContainVp8lSubChunks / AnimatedWebp_XmpChunkIsText | 4, 6 |
+| IccParsingTests | IccV4Profile_TagsAreDecodedByTypeSignature（既存 2 件は子を名前で引くよう更新） | 6 |
+| BmpParsingTests | ImplicitPalette_HasTwoToTheBppEntries / Bitfields_MasksFollowTheInfoHeader | 6 |
+| JpegParsingTests | JpegFormat_MergedTables_DecodesEveryDqtAndDhtTable | 6 |
+
+### 画像の見直し（PR: 画像）
+
+**直したバグ**
+
+- WebP: VP8X のフラグのビット位置がほぼ逆だった（アニメーション WebP で `icc_profile = 1` と表示）。RFC 9649 どおり ICC=5・alpha=4・Exif=3・XMP=2・animation=1 に直した
+- ICC: タグの中身をタグのシグネチャ（`desc` 等）で振り分けていたため、v4 の `mluc` 型などが誤読されていた。先頭 4 バイトの型シグネチャ（`tag_type`）で振り分けるよう変え、`mluc`（レコード + UTF-16BE の文字列）・`para`・`sf32`・`sig`・`chrm`・`curv` を分解した。XYZ は複数の値を持てるので配列にした
+- BMP: パレット数が `colors_used == 0` のとき 0 個になっていた（2^bpp 個が正しい）。BI_BITFIELDS / BI_ALPHABITFIELDS の色マスク（BITMAPINFOHEADER の後ろ）を読んでいなかった。画素データを `pixel_offset` へ seek せずに読んでいた。未知の DIB ヘッダのサイズが 4 バイト多かった
+- TIFF: 値がエントリ内に収まる型の判定から ASCII / UNDEFINED / FLOAT が抜けていた。次の IFD をたどっていなかった（複数ページの 2 ページ目以降が見えない）
+- JPEG: 1 つの DQT / DHT セグメントに複数のテーブルがあると、2 つ目以降を 1 つ目の値として読んでいた（ffmpeg の出力は DHT 4 個を 1 セグメントにまとめる）。テーブルの `repeat: eof` にし、DHT の値のバイト数を L1〜L16 の合計から求める
+
+**足した構造**
+
+- PNG 第 3 版（W3C 2025）: cICP・mDCV・cLLI・eXIf、APNG（acTL・fcTL・fdAT）、色の種類で形の変わる sBIT / tRNS / bKGD（IHDR の `color_type` で switch）、iCCP・hIST・sPLT。tEXt は Latin-1、zTXt / iCCP は zlib で展開
+- BigTIFF（マジック 43、64 ビットのオフセットと個数）。従来の TIFF の子の並びは変えず、BigTIFF 用のフィールドを `if` で足した。LONG8 / SLONG8 / IFD8 型と、Predictor・SampleFormat・ICCProfile・XMP など 12 タグ
+- WebP: VP8 のフレームヘッダ（幅・高さ・拡大率）、VP8L のヘッダ（14 ビットの幅・高さ、alpha_is_used、版）、ANMF の中のサブチャンク、XMP チャンク
+
+**実在のツールでの確認**: Pillow 12.3 で作った APNG（2 フレーム）・パレット / グレースケール PNG、LZW の複数ページ TIFF、可逆 α 付き / アニメーション / 非可逆 WebP、Pillow の v4.4 sRGB ICC プロファイル（mluc の文字列 "sRGB built-in" など）、BMP を読んで値が合うことを確かめた。自作の APNG は Pillow で 2 フレームとして読め、2 フレーム目の画素が意図どおり。JPEG は Pillow（テーブルごとに別セグメント）と ffmpeg（DHT 4 個を 1 セグメント）の両方で確認した
+
+**出力の大きさ**: 画像 9 件のゴールデン（JSON）は合計 74,233 → 104,520 バイト（+41%）。増分の大半は description と enum の説明で、残りは足した構造
+
+**残した課題**（各定義の「対応していないもの」に記載）
+
+- JPEG: プログレッシブの 2 つ目以降の SOS（最初の SOS のエントロピー符号化データにまとめて入る）、長さを持たない単独マーカー（RSTn 等）がセグメントの並びに現れる場合、JFXX 拡張、APPn の中身
+- GIF: NETSCAPE 拡張はサブブロック 1 個（ループ回数）を前提にしている。ANIMEXTS1.0 やバッファリング指定は分解しない
+- HEIF: iloc のアイテム配列・ipma・iref・アイテムプロパティ、uuid ボックス
+- ICO: 画像データの中身（DIB / PNG）はバイト列のまま
+- ICC: v5（iccMAX）の型
 
 ### 気づき・今後の課題
 
