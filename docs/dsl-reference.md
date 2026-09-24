@@ -622,6 +622,7 @@ structs:
 - `repeat: eof` の場合、`size` 境界内の EOF で繰り返し終了
 - `repeat_while` の場合、`remaining` は `size` 境界内の残りバイト数を参照
 - 繰り返し終了後、`size` の末尾まで未読バイトを自動スキップ
+- 要素の値は `size` の無い繰り返しと同じく外側のスコープに残り、繰り返しの後ろのフィールドから `{name}` で参照できる（[兄弟スコープ参照](#兄弟スコープ参照)）。`_index` / `_prev` は繰り返しの中だけで、後ろでは外側の繰り返しの値に戻る
 
 ### 要素サイズ指定（element_size）
 
@@ -799,7 +800,20 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 ```
 
 - 新しい DSL 構文は不要 — 既存の `{variable_name}` 参照をそのまま利用
-- 同名のフィールドは後続の要素で上書き（通常の変数セマンティクス）
+- 同名のフィールドは後続の要素で上書き（通常の変数セマンティクス）。繰り返しの前にある同名の変数も、繰り返しの後ろでは最後の要素の値になる
+- 昇格した値は繰り返しの後ろのフィールドからも参照できる。`size` 付きの繰り返し（配列全体の境界）でも同じ（REQ-190）。値が届くのは最も近い変数のスコープ（`size` 付きの struct / switch の中など）までで、その外からはメンバーアクセス（`{wrapper.field}`）で引く
+
+```yaml
+# ZIP の例: 拡張フィールドの中の Zip64 の値でヘッダの 0xFFFFFFFF を置き換える
+- name: extra
+  type: struct
+  struct: extra_field          # header_id + data_size + switch（0x0001 → zip64_compressed_size を持つ struct）
+  size: "{extra_length}"
+  repeat: eof
+- name: compressed_size_actual
+  type: virtual
+  value: "{compressed_size == 0xFFFFFFFF ? zip64_compressed_size : compressed_size}"
+```
 
 ## テンプレート構造体（パラメータ付きstruct）
 

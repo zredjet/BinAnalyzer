@@ -102,6 +102,46 @@ public class DecodeContextTests
     }
 
     [Fact]
+    public void PopScopeCarryingVariables_MovesVariablesOutExceptLocalNames()
+    {
+        // REQ-190: size 付きの繰り返しの境界スコープ
+        var data = new byte[] { 0x00, 0x00, 0x00 };
+        var ctx = new DecodeContext(data, Endianness.Big);
+
+        ctx.SetVariable("_index", 7L);
+        ctx.SetVariable("shadowed", 1L);
+        ctx.PushScope(2);
+        ctx.SetVariable("_index", 0L);
+        ctx.SetVariable("_prev", 5L);
+        ctx.SetVariable("shadowed", 2L);
+        ctx.SetVariable("element", 3L);
+
+        ctx.PopScopeCarryingVariables("_index", "_prev");
+
+        ctx.Position.Should().Be(2);
+        ctx.GetVariable("element").Should().Be(3L);
+        ctx.GetVariable("shadowed").Should().Be(2L);
+        ctx.GetVariable("_index").Should().Be(7L);
+        ctx.GetVariable("_prev").Should().BeNull();
+    }
+
+    [Fact]
+    public void PopScopeCarryingVariables_SkipsNonCapturingOverlay()
+    {
+        // フィールド単位の endianness のオーバーレイは変数を持たないので、その外側に移す
+        var data = new byte[] { 0x00, 0x00 };
+        var ctx = new DecodeContext(data, Endianness.Big);
+
+        ctx.PushEndiannessScope(Endianness.Little, capturesVariables: false);
+        ctx.PushScope(1);
+        ctx.SetVariable("element", 3L);
+        ctx.PopScopeCarryingVariables();
+        ctx.PopScope();
+
+        ctx.GetVariable("element").Should().Be(3L);
+    }
+
+    [Fact]
     public void ReadBeyondScope_Throws()
     {
         var data = new byte[] { 0x01, 0x02, 0x03, 0x04 };

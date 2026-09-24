@@ -596,6 +596,8 @@ GetVariable("missing") → 全スコープになし → 例外
 
 繰り返しブロック内で構造体をデコードした後、`BinaryDecoder.PromoteDecodedValues()` が呼ばれる。デコード済みツリーを再帰的に走査し、スカラー値（整数、文字列、浮動小数点、virtual、bitfieldサブフィールド）を親スコープに `SetVariable()` で登録する。これにより、前の要素のフィールド値が後続の要素の式から参照可能になる。
 
+`size` 付きの繰り返しでは、親スコープは配列全体の境界スコープになる。繰り返しの終わりに `DecodeContext.PopScopeCarryingVariables("_index", "_prev")` でこのスコープを抜け、束縛された変数を外側のスコープ（`SetVariable` と同じく最も近い、変数を持つスコープ）へ移す。これで `size` の無い繰り返しと同じく、繰り返しの後ろのフィールドから要素の値を参照できる。`_index` / `_prev` は移さないので、外側の繰り返しの値がそのまま見える（REQ-190）。
+
 ---
 
 ## 4. エラー処理
@@ -652,6 +654,7 @@ CLIでは `DecodeException` をキャッチし、`FormatMessage()` で構造化�
 | 繰り返しインデックス変数（`_index`） | Decoder | REQ-098 |
 | 要素ごとseek（繰り返し + seek 連携） | Decoder | REQ-098 |
 | 兄弟スコープ値昇格（PromoteDecodedValues） | Decoder | REQ-099 |
+| `size` 付きの繰り返しの値を外側のスコープに残す | Decoder + DecodeContext | REQ-190 |
 | ビットストリームモード（`mode: bitstream`） | Mapper（IsBitstream検証）+ Decoder（BitReader）+ Output（ビットオフセット表示） | REQ-122 |
 
 ### 将来的な拡張候補

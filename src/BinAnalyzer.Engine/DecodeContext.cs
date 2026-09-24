@@ -94,14 +94,37 @@ public sealed class DecodeContext
 
     public void PopScope()
     {
+        var scope = PopWithoutRecycling();
+        scope.Variables.Clear();
+        _scopePool.Push(scope);
+    }
+
+    /// <summary>
+    /// スコープを抜け、その間に束縛された変数を外側（最も近い変数を持つスコープ）に移す（REQ-190）。
+    /// size 付きの繰り返しの境界スコープ用。<paramref name="localNames"/> の変数（繰り返しの <c>_index</c> / <c>_prev</c>）は
+    /// 移さずに捨てるので、外側の同名の変数（外側の繰り返しの <c>_index</c> 等）がそのまま見える。
+    /// </summary>
+    public void PopScopeCarryingVariables(params ReadOnlySpan<string> localNames)
+    {
+        var scope = PopWithoutRecycling();
+        foreach (var (name, value) in scope.Variables)
+        {
+            if (!localNames.Contains(name))
+                SetVariable(name, value);
+        }
+        scope.Variables.Clear();
+        _scopePool.Push(scope);
+    }
+
+    private Scope PopWithoutRecycling()
+    {
         if (_scopeStack.Count <= 1)
             throw new InvalidOperationException("Cannot pop the root scope");
         var scope = _scopeStack.Pop();
         // オーバーレイスコープの場合はpositionを進めない
         if (!scope.IsOverlay)
             _position = scope.End;
-        scope.Variables.Clear();
-        _scopePool.Push(scope);
+        return scope;
     }
 
     /// <summary>

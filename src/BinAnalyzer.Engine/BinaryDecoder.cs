@@ -1279,8 +1279,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
             }
         }
 
+        // 要素の値（昇格した値を含む）は、size の無い繰り返しと同じく外側のスコープに残す（REQ-190）。
+        // _index / _prev はこの繰り返しのものなので捨てる（外側の繰り返しの _index / _prev を上書きしない）
         if (hasBoundarySize && !context.IsBitstreamMode)
-            context.PopScope();
+            context.PopScopeCarryingVariables("_index", "_prev");
 
         var array = new DecodedArray
         {
