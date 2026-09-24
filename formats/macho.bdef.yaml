@@ -1,124 +1,547 @@
+# Mach-O（macOS / iOS の実行ファイル・動的ライブラリ・オブジェクトファイル・バンドル。ユニバーサルバイナリを含む）
+# 仕様: Apple の XNU / cctools の公開ヘッダ（mach-o/loader.h・mach-o/fat.h・mach-o/nlist.h、macOS 26 SDK）と
+#   コード署名の構造（xnu の osfmk/kern/cs_blobs.h）。Apple の公式文書「OS X ABI Mach-O File Format Reference」は更新が止まっているため、ヘッダの定義を正とした
+# 構造: 先頭 4 バイトのマジックで switch する。ユニバーサルバイナリ（fat。ビッグエンディアン）は fat_arch の表から各スライスへ seek し、
+#   スライスの中を 1 つの Mach-O として読む（スライス内の位置はスライスの先頭 slice_offset からの相対）。
+#   Mach-O はマジックでエンディアン（MH_CIGAM ならビッグ）と 32 / 64 ビットを決め、ヘッダ → ロードコマンド（cmd で switch）を読む。
+#   LC_SYMTAB のシンボル表と LC_CODE_SIGNATURE のコード署名（SuperBlob。ビッグエンディアン）は、ロードコマンドを読んだ後に
+#   値の昇格で得た位置へ seek して読む（シンボル名は文字列表から引く）。
+# 対応していないもの: セクションの中身、再配置・間接シンボル表・dyld の情報（rebase / bind / export trie / chained fixups）の中身、
+#   LC_THREAD のレジスタの状態の分解、要件（Requirements）と CMS の署名の中身、CodeDirectory のハッシュの一覧の検証、
+#   dyld の共有キャッシュ、アーカイブ（.a）
 name: Mach-O
 endianness: little
 root: macho
 
 enums:
+  magic:
+    - value: 0xFEEDFACE
+      label: MH_MAGIC
+      description: "32 ビット（ファイルと同じエンディアン）"
+    - value: 0xCEFAEDFE
+      label: MH_CIGAM
+      description: "32 ビット（バイト順が逆 = ビッグエンディアンのファイル）"
+    - value: 0xFEEDFACF
+      label: MH_MAGIC_64
+      description: "64 ビット"
+    - value: 0xCFFAEDFE
+      label: MH_CIGAM_64
+      description: "64 ビット（ビッグエンディアンのファイル）"
+    - value: 0xBEBAFECA
+      label: FAT_MAGIC
+      description: "ユニバーサルバイナリ（CA FE BA BE。ビッグエンディアン）"
+    - value: 0xBFBAFECA
+      label: FAT_MAGIC_64
+      description: "ユニバーサルバイナリ（64 ビットのオフセット。CA FE BA BF）"
+
   cpu_type:
+    - value: 1
+      label: CPU_TYPE_VAX
+      description: "VAX"
+    - value: 6
+      label: CPU_TYPE_MC680x0
+      description: "Motorola 68000"
     - value: 7
       label: CPU_TYPE_X86
+      description: "Intel x86（32 ビット。CPU_TYPE_I386）"
+    - value: 10
+      label: CPU_TYPE_MC98000
+      description: "Motorola 98000"
+    - value: 11
+      label: CPU_TYPE_HPPA
+      description: "HP PA-RISC"
     - value: 12
       label: CPU_TYPE_ARM
+      description: "ARM（32 ビット）"
+    - value: 13
+      label: CPU_TYPE_MC88000
+      description: "Motorola 88000"
+    - value: 14
+      label: CPU_TYPE_SPARC
+      description: "SPARC"
+    - value: 15
+      label: CPU_TYPE_I860
+      description: "Intel i860"
     - value: 18
       label: CPU_TYPE_POWERPC
-    - value: 16777223
+      description: "PowerPC（32 ビット）"
+    - value: 0x01000007
       label: CPU_TYPE_X86_64
-      description: "x86-64 (0x01000007)"
-    - value: 16777228
+      description: "x86-64（CPU_TYPE_X86 | CPU_ARCH_ABI64）"
+    - value: 0x0100000C
       label: CPU_TYPE_ARM64
-      description: "ARM64 (0x0100000C)"
-    - value: 16777234
+      description: "ARM64（CPU_TYPE_ARM | CPU_ARCH_ABI64）"
+    - value: 0x0200000C
+      label: CPU_TYPE_ARM64_32
+      description: "ARM64 の 32 ビットポインタ（watchOS。CPU_TYPE_ARM | CPU_ARCH_ABI64_32）"
+    - value: 0x01000012
       label: CPU_TYPE_POWERPC64
-      description: "PowerPC64 (0x01000012)"
+      description: "PowerPC 64 ビット"
 
   file_type:
     - value: 1
       label: MH_OBJECT
-      description: "リロケータブルオブジェクト"
+      description: "再配置可能なオブジェクトファイル（.o）"
     - value: 2
       label: MH_EXECUTE
       description: "実行ファイル"
     - value: 3
       label: MH_FVMLIB
-      description: "固定VM共有ライブラリ"
+      description: "固定 VM の共有ライブラリ（古い形式）"
     - value: 4
       label: MH_CORE
       description: "コアダンプ"
     - value: 5
       label: MH_PRELOAD
+      description: "事前に読み込まれる実行ファイル"
     - value: 6
       label: MH_DYLIB
-      description: "ダイナミックライブラリ"
+      description: "動的ライブラリ（.dylib）"
     - value: 7
       label: MH_DYLINKER
-      description: "ダイナミックリンカ"
+      description: "動的リンカ（/usr/lib/dyld）"
     - value: 8
       label: MH_BUNDLE
-      description: "バンドル"
+      description: "動的に読み込むバンドル（プラグイン）"
+    - value: 9
+      label: MH_DYLIB_STUB
+      description: "共有ライブラリのスタブ（リンク専用）"
     - value: 10
       label: MH_DSYM
-      description: "デバッグシンボル"
+      description: "デバッグ情報だけのコンパニオンファイル（.dSYM）"
     - value: 11
       label: MH_KEXT_BUNDLE
-      description: "カーネル拡張バンドル"
+      description: "カーネル拡張（x86-64 の kext）"
     - value: 12
       label: MH_FILESET
-      description: "ファイルセット"
+      description: "複数の Mach-O をまとめたファイルセット（カーネルコレクション）"
+    - value: 13
+      label: MH_GPU_EXECUTE
+      description: "GPU の実行ファイル"
+    - value: 14
+      label: MH_GPU_DYLIB
+      description: "GPU の動的ライブラリ"
 
   lc_type:
-    - value: 1
+    - value: 0x1
       label: LC_SEGMENT
-    - value: 2
+      description: "32 ビットのセグメント"
+    - value: 0x2
       label: LC_SYMTAB
-    - value: 4
+      description: "シンボル表と文字列表の位置"
+    - value: 0x3
+      label: LC_SYMSEG
+      description: "gdb のシンボル表（廃止）"
+    - value: 0x4
       label: LC_THREAD
-    - value: 5
+      description: "スレッドの状態"
+    - value: 0x5
       label: LC_UNIXTHREAD
-    - value: 11
+      description: "初期スレッドの状態（古い実行ファイルのエントリポイント）"
+    - value: 0x6
+      label: LC_LOADFVMLIB
+      description: "固定 VM の共有ライブラリの読み込み（廃止）"
+    - value: 0x7
+      label: LC_IDFVMLIB
+      description: "固定 VM の共有ライブラリの識別（廃止）"
+    - value: 0x8
+      label: LC_IDENT
+      description: "オブジェクトの識別情報（廃止）"
+    - value: 0x9
+      label: LC_FVMFILE
+      description: "固定 VM のファイル（内部用）"
+    - value: 0xA
+      label: LC_PREPAGE
+      description: "予約（内部用）"
+    - value: 0xB
       label: LC_DYSYMTAB
-    - value: 12
+      description: "動的リンク用のシンボル表の情報"
+    - value: 0xC
       label: LC_LOAD_DYLIB
-    - value: 13
+      description: "動的ライブラリの読み込み"
+    - value: 0xD
       label: LC_ID_DYLIB
-    - value: 14
+      description: "この動的ライブラリの名前（インストール名）"
+    - value: 0xE
       label: LC_LOAD_DYLINKER
-    - value: 25
+      description: "動的リンカの読み込み"
+    - value: 0xF
+      label: LC_ID_DYLINKER
+      description: "この動的リンカの名前"
+    - value: 0x10
+      label: LC_PREBOUND_DYLIB
+      description: "事前バインドされた動的ライブラリ（廃止）"
+    - value: 0x11
+      label: LC_ROUTINES
+      description: "イメージの初期化ルーチン（32 ビット）"
+    - value: 0x12
+      label: LC_SUB_FRAMEWORK
+      description: "包括フレームワークの一部"
+    - value: 0x13
+      label: LC_SUB_UMBRELLA
+      description: "包括フレームワークのサブ"
+    - value: 0x14
+      label: LC_SUB_CLIENT
+      description: "リンクを許すクライアント"
+    - value: 0x15
+      label: LC_SUB_LIBRARY
+      description: "包括フレームワークのサブライブラリ"
+    - value: 0x16
+      label: LC_TWOLEVEL_HINTS
+      description: "2 レベル名前空間の検索のヒント"
+    - value: 0x17
+      label: LC_PREBIND_CKSUM
+      description: "事前バインドのチェックサム"
+    - value: 0x80000018
+      label: LC_LOAD_WEAK_DYLIB
+      description: "弱い参照の動的ライブラリの読み込み（無くてもよい）"
+    - value: 0x19
       label: LC_SEGMENT_64
-      description: "64ビットセグメント"
-    - value: 27
+      description: "64 ビットのセグメント"
+    - value: 0x1A
+      label: LC_ROUTINES_64
+      description: "イメージの初期化ルーチン（64 ビット）"
+    - value: 0x1B
       label: LC_UUID
-    - value: 29
-      label: LC_CODE_SIGNATURE
-    - value: 30
-      label: LC_SEGMENT_SPLIT_INFO
-    - value: 34
-      label: LC_SOURCE_VERSION
-    - value: 36
-      label: LC_VERSION_MIN_MACOSX
-    - value: 38
-      label: LC_FUNCTION_STARTS
-    - value: 44
-      label: LC_BUILD_VERSION
-    - value: 2147483676
+      description: "イメージの UUID"
+    - value: 0x8000001C
       label: LC_RPATH
-      description: "ランパス検索パス（0x8000001C）"
-    - value: 2147483682
+      description: "@rpath の検索パス"
+    - value: 0x1D
+      label: LC_CODE_SIGNATURE
+      description: "コード署名の位置"
+    - value: 0x1E
+      label: LC_SEGMENT_SPLIT_INFO
+      description: "セグメントの分割情報の位置"
+    - value: 0x8000001F
+      label: LC_REEXPORT_DYLIB
+      description: "再エクスポートする動的ライブラリの読み込み"
+    - value: 0x20
+      label: LC_LAZY_LOAD_DYLIB
+      description: "使うときに読み込む動的ライブラリ"
+    - value: 0x21
+      label: LC_ENCRYPTION_INFO
+      description: "暗号化されたセグメントの情報（32 ビット）"
+    - value: 0x22
+      label: LC_DYLD_INFO
+      description: "dyld の圧縮された情報の位置"
+    - value: 0x80000022
       label: LC_DYLD_INFO_ONLY
-      description: "Dyld情報（0x80000022）"
-    - value: 2147483688
+      description: "dyld の圧縮された情報の位置（これが無いと読めない）"
+    - value: 0x80000023
+      label: LC_LOAD_UPWARD_DYLIB
+      description: "上位の動的ライブラリの読み込み（循環を許す）"
+    - value: 0x24
+      label: LC_VERSION_MIN_MACOSX
+      description: "対象の macOS の最低の版"
+    - value: 0x25
+      label: LC_VERSION_MIN_IPHONEOS
+      description: "対象の iOS の最低の版"
+    - value: 0x26
+      label: LC_FUNCTION_STARTS
+      description: "関数の先頭アドレスの表の位置"
+    - value: 0x27
+      label: LC_DYLD_ENVIRONMENT
+      description: "dyld の環境変数"
+    - value: 0x80000028
       label: LC_MAIN
-      description: "エントリポイント（0x80000028）"
-    - value: 2147483699
+      description: "エントリポイント（main の位置とスタックサイズ）"
+    - value: 0x29
+      label: LC_DATA_IN_CODE
+      description: "コードの中のデータの表の位置"
+    - value: 0x2A
+      label: LC_SOURCE_VERSION
+      description: "ソースの版"
+    - value: 0x2B
+      label: LC_DYLIB_CODE_SIGN_DRS
+      description: "リンクした動的ライブラリのコード署名の要件"
+    - value: 0x2C
+      label: LC_ENCRYPTION_INFO_64
+      description: "暗号化されたセグメントの情報（64 ビット）"
+    - value: 0x2D
+      label: LC_LINKER_OPTION
+      description: "リンカへのオプション（.o の自動リンク）"
+    - value: 0x2E
+      label: LC_LINKER_OPTIMIZATION_HINT
+      description: "リンカの最適化のヒントの位置"
+    - value: 0x2F
+      label: LC_VERSION_MIN_TVOS
+      description: "対象の tvOS の最低の版"
+    - value: 0x30
+      label: LC_VERSION_MIN_WATCHOS
+      description: "対象の watchOS の最低の版"
+    - value: 0x31
+      label: LC_NOTE
+      description: "任意のデータ（コアダンプの情報など）"
+    - value: 0x32
+      label: LC_BUILD_VERSION
+      description: "対象のプラットフォーム・OS の最低の版・SDK・ビルドツール"
+    - value: 0x80000033
       label: LC_DYLD_EXPORTS_TRIE
-      description: "Dyldエクスポートトライ（0x80000033）"
-    - value: 2147483700
+      description: "エクスポートの trie の位置"
+    - value: 0x80000034
       label: LC_DYLD_CHAINED_FIXUPS
-      description: "Dyldチェインフィクスアップ（0x80000034）"
+      description: "連鎖した修正（chained fixups）の位置"
+    - value: 0x80000035
+      label: LC_FILESET_ENTRY
+      description: "ファイルセットの中の Mach-O"
+    - value: 0x36
+      label: LC_ATOM_INFO
+      description: "アトムの情報の位置"
+    - value: 0x37
+      label: LC_FUNCTION_VARIANTS
+      description: "関数の変種の表の位置"
+    - value: 0x38
+      label: LC_FUNCTION_VARIANT_FIXUPS
+      description: "関数の変種の修正の位置"
+    - value: 0x39
+      label: LC_TARGET_TRIPLE
+      description: "対象の LLVM ターゲットトリプル"
 
   platform:
+    - value: 0
+      label: PLATFORM_UNKNOWN
+      description: "不明"
     - value: 1
-      label: MACOS
+      label: PLATFORM_MACOS
+      description: "macOS"
     - value: 2
-      label: IOS
+      label: PLATFORM_IOS
+      description: "iOS"
     - value: 3
-      label: TVOS
+      label: PLATFORM_TVOS
+      description: "tvOS"
     - value: 4
-      label: WATCHOS
+      label: PLATFORM_WATCHOS
+      description: "watchOS"
     - value: 5
-      label: BRIDGEOS
+      label: PLATFORM_BRIDGEOS
+      description: "bridgeOS（T2 チップ）"
     - value: 6
-      label: MACCATALYST
+      label: PLATFORM_MACCATALYST
+      description: "Mac Catalyst"
     - value: 7
-      label: IOSSIMULATOR
+      label: PLATFORM_IOSSIMULATOR
+      description: "iOS シミュレータ"
+    - value: 8
+      label: PLATFORM_TVOSSIMULATOR
+      description: "tvOS シミュレータ"
+    - value: 9
+      label: PLATFORM_WATCHOSSIMULATOR
+      description: "watchOS シミュレータ"
+    - value: 10
+      label: PLATFORM_DRIVERKIT
+      description: "DriverKit"
+    - value: 11
+      label: PLATFORM_VISIONOS
+      description: "visionOS"
+    - value: 12
+      label: PLATFORM_VISIONOSSIMULATOR
+      description: "visionOS シミュレータ"
+    - value: 13
+      label: PLATFORM_FIRMWARE
+      description: "ファームウェア"
+    - value: 14
+      label: PLATFORM_SEPOS
+      description: "Secure Enclave の OS"
+
+  build_tool:
+    - value: 1
+      label: TOOL_CLANG
+      description: "clang"
+    - value: 2
+      label: TOOL_SWIFT
+      description: "swiftc"
+    - value: 3
+      label: TOOL_LD
+      description: "ld（Apple のリンカ）"
+    - value: 4
+      label: TOOL_LLD
+      description: "LLVM の lld"
+    - value: 1024
+      label: TOOL_METAL
+      description: "Metal のコンパイラ"
+    - value: 1025
+      label: TOOL_AIRLLD
+      description: "Metal の AIR のリンカ"
+    - value: 1026
+      label: TOOL_AIRNT
+      description: "Metal の AIR のツール"
+    - value: 1027
+      label: TOOL_AIRNT_PLUGIN
+      description: "Metal の AIR のプラグイン"
+    - value: 1028
+      label: TOOL_AIRPACK
+      description: "Metal の AIR のまとめツール"
+    - value: 1031
+      label: TOOL_GPUARCHIVER
+      description: "GPU のアーカイバ"
+    - value: 1032
+      label: TOOL_METAL_FRAMEWORK
+      description: "Metal のフレームワーク"
+
+  section_type:
+    - value: 0x00
+      label: S_REGULAR
+      description: "通常のセクション"
+    - value: 0x01
+      label: S_ZEROFILL
+      description: "0 で埋める（ファイル上に領域なし）"
+    - value: 0x02
+      label: S_CSTRING_LITERALS
+      description: "C 文字列のリテラルだけ"
+    - value: 0x03
+      label: S_4BYTE_LITERALS
+      description: "4 バイトのリテラルだけ"
+    - value: 0x04
+      label: S_8BYTE_LITERALS
+      description: "8 バイトのリテラルだけ"
+    - value: 0x05
+      label: S_LITERAL_POINTERS
+      description: "リテラルへのポインタだけ"
+    - value: 0x06
+      label: S_NON_LAZY_SYMBOL_POINTERS
+      description: "遅延しないシンボルのポインタ（GOT）"
+    - value: 0x07
+      label: S_LAZY_SYMBOL_POINTERS
+      description: "遅延するシンボルのポインタ"
+    - value: 0x08
+      label: S_SYMBOL_STUBS
+      description: "シンボルのスタブ"
+    - value: 0x09
+      label: S_MOD_INIT_FUNC_POINTERS
+      description: "初期化関数のポインタ"
+    - value: 0x0A
+      label: S_MOD_TERM_FUNC_POINTERS
+      description: "終了処理関数のポインタ"
+    - value: 0x0B
+      label: S_COALESCED
+      description: "まとめてよいシンボル"
+    - value: 0x0C
+      label: S_GB_ZEROFILL
+      description: "0 で埋める（4 GiB を超えてよい）"
+    - value: 0x0D
+      label: S_INTERPOSING
+      description: "関数の差し替えの組"
+    - value: 0x0E
+      label: S_16BYTE_LITERALS
+      description: "16 バイトのリテラルだけ"
+    - value: 0x0F
+      label: S_DTRACE_DOF
+      description: "DTrace のオブジェクト形式"
+    - value: 0x10
+      label: S_LAZY_DYLIB_SYMBOL_POINTERS
+      description: "遅延読み込みの動的ライブラリのシンボルのポインタ"
+    - value: 0x11
+      label: S_THREAD_LOCAL_REGULAR
+      description: "スレッドローカルの初期値"
+    - value: 0x12
+      label: S_THREAD_LOCAL_ZEROFILL
+      description: "スレッドローカルの 0 埋め"
+    - value: 0x13
+      label: S_THREAD_LOCAL_VARIABLES
+      description: "スレッドローカル変数の記述子"
+    - value: 0x14
+      label: S_THREAD_LOCAL_VARIABLE_POINTERS
+      description: "スレッドローカル変数へのポインタ"
+    - value: 0x15
+      label: S_THREAD_LOCAL_INIT_FUNCTION_POINTERS
+      description: "スレッドローカルの初期化関数のポインタ"
+    - value: 0x16
+      label: S_INIT_FUNC_OFFSETS
+      description: "初期化関数の 32 ビットのオフセット"
+
+  nlist_type:
+    - value: 0x0
+      label: N_UNDF
+      description: "未定義（ほかのイメージにある）"
+    - value: 0x2
+      label: N_ABS
+      description: "絶対値"
+    - value: 0xE
+      label: N_SECT
+      description: "n_sect のセクションで定義"
+    - value: 0xC
+      label: N_PBUD
+      description: "事前バインドされた未定義"
+    - value: 0xA
+      label: N_INDR
+      description: "別名（n_value が別のシンボル名）"
+
+  cs_magic:
+    - value: 0xFADE0C00
+      label: CSMAGIC_REQUIREMENT
+      description: "要件 1 個"
+    - value: 0xFADE0C01
+      label: CSMAGIC_REQUIREMENTS
+      description: "要件の集まり"
+    - value: 0xFADE0C02
+      label: CSMAGIC_CODEDIRECTORY
+      description: "CodeDirectory（ページごとのハッシュと識別子）"
+    - value: 0xFADE0CC0
+      label: CSMAGIC_EMBEDDED_SIGNATURE
+      description: "埋め込みの署名（SuperBlob）"
+    - value: 0xFADE0CC1
+      label: CSMAGIC_DETACHED_SIGNATURE
+      description: "分離した署名"
+    - value: 0xFADE0B01
+      label: CSMAGIC_BLOBWRAPPER
+      description: "CMS の署名"
+    - value: 0xFADE7171
+      label: CSMAGIC_EMBEDDED_ENTITLEMENTS
+      description: "エンタイトルメント（XML のプロパティリスト）"
+    - value: 0xFADE7172
+      label: CSMAGIC_EMBEDDED_DER_ENTITLEMENTS
+      description: "エンタイトルメント（DER）"
+    - value: 0xFADE8001
+      label: CSMAGIC_EMBEDDED_LAUNCH_CONSTRAINT
+      description: "起動の制約"
+
+  cs_slot:
+    - value: 0
+      label: CSSLOT_CODEDIRECTORY
+      description: "CodeDirectory"
+    - value: 1
+      label: CSSLOT_INFOSLOT
+      description: "Info.plist のハッシュ"
+    - value: 2
+      label: CSSLOT_REQUIREMENTS
+      description: "要件"
+    - value: 3
+      label: CSSLOT_RESOURCEDIR
+      description: "リソースのディレクトリ"
+    - value: 4
+      label: CSSLOT_APPLICATION
+      description: "アプリケーション固有"
+    - value: 5
+      label: CSSLOT_ENTITLEMENTS
+      description: "エンタイトルメント"
+    - value: 7
+      label: CSSLOT_DER_ENTITLEMENTS
+      description: "DER のエンタイトルメント"
+    - value: 8
+      label: CSSLOT_LAUNCH_CONSTRAINT_SELF
+      description: "自分の起動の制約"
+    - value: 0x1000
+      label: CSSLOT_ALTERNATE_CODEDIRECTORIES
+      description: "別のハッシュ方式の CodeDirectory（0x1000〜0x1004）"
+    - value: 0x10000
+      label: CSSLOT_SIGNATURESLOT
+      description: "CMS の署名"
+
+  cs_hash_type:
+    - value: 1
+      label: CS_HASHTYPE_SHA1
+      description: "SHA-1（20 バイト）"
+    - value: 2
+      label: CS_HASHTYPE_SHA256
+      description: "SHA-256（32 バイト）"
+    - value: 3
+      label: CS_HASHTYPE_SHA256_TRUNCATED
+      description: "SHA-256 の先頭 20 バイト"
+    - value: 4
+      label: CS_HASHTYPE_SHA384
+      description: "SHA-384（48 バイト）"
 
 flags:
   mh_flags:
@@ -126,278 +549,1078 @@ flags:
     fields:
       - name: MH_NOUNDEFS
         bit: 0
+      - name: MH_INCRLINK
+        bit: 1
       - name: MH_DYLDLINK
         bit: 2
+      - name: MH_BINDATLOAD
+        bit: 3
+      - name: MH_PREBOUND
+        bit: 4
+      - name: MH_SPLIT_SEGS
+        bit: 5
+      - name: MH_LAZY_INIT
+        bit: 6
       - name: MH_TWOLEVEL
         bit: 7
+      - name: MH_FORCE_FLAT
+        bit: 8
+      - name: MH_NOMULTIDEFS
+        bit: 9
+      - name: MH_NOFIXPREBINDING
+        bit: 10
+      - name: MH_PREBINDABLE
+        bit: 11
+      - name: MH_ALLMODSBOUND
+        bit: 12
+      - name: MH_SUBSECTIONS_VIA_SYMBOLS
+        bit: 13
+      - name: MH_CANONICAL
+        bit: 14
+      - name: MH_WEAK_DEFINES
+        bit: 15
+      - name: MH_BINDS_TO_WEAK
+        bit: 16
+      - name: MH_ALLOW_STACK_EXECUTION
+        bit: 17
+      - name: MH_ROOT_SAFE
+        bit: 18
+      - name: MH_SETUID_SAFE
+        bit: 19
+      - name: MH_NO_REEXPORTED_DYLIBS
+        bit: 20
       - name: MH_PIE
         bit: 21
+      - name: MH_DEAD_STRIPPABLE_DYLIB
+        bit: 22
+      - name: MH_HAS_TLV_DESCRIPTORS
+        bit: 23
+      - name: MH_NO_HEAP_EXECUTION
+        bit: 24
+      - name: MH_APP_EXTENSION_SAFE
+        bit: 25
+      - name: MH_NLIST_OUTOFSYNC_WITH_DYLDINFO
+        bit: 26
+      - name: MH_SIM_SUPPORT
+        bit: 27
+      - name: MH_IMPLICIT_PAGEZERO
+        bit: 28
+      - name: MH_DYLIB_IN_CACHE
+        bit: 31
+
+  vm_prot:
+    bit_size: 32
+    fields:
+      - name: VM_PROT_READ
+        bit: 0
+      - name: VM_PROT_WRITE
+        bit: 1
+      - name: VM_PROT_EXECUTE
+        bit: 2
+
+  section_attributes:
+    bit_size: 32
+    fields:
+      - name: S_ATTR_LOC_RELOC
+        bit: 8
+      - name: S_ATTR_EXT_RELOC
+        bit: 9
+      - name: S_ATTR_SOME_INSTRUCTIONS
+        bit: 10
+      - name: S_ATTR_DEBUG
+        bit: 25
+      - name: S_ATTR_SELF_MODIFYING_CODE
+        bit: 26
+      - name: S_ATTR_LIVE_SUPPORT
+        bit: 27
+      - name: S_ATTR_NO_DEAD_STRIP
+        bit: 28
+      - name: S_ATTR_STRIP_STATIC_SYMS
+        bit: 29
+      - name: S_ATTR_NO_TOC
+        bit: 30
+      - name: S_ATTR_PURE_INSTRUCTIONS
+        bit: 31
 
 structs:
   macho:
+    - name: slice_offset
+      type: virtual
+      value: "0"
+      description: "この Mach-O の先頭の位置（ファイル先頭。ユニバーサルバイナリのスライスではスライスの先頭）"
     - name: magic
       type: uint32
-      description: "Mach-Oマジックナンバー"
+      enum: magic
+      description: "マジック（Mach-O の 32 / 64 ビットとエンディアン、またはユニバーサルバイナリ）"
     - name: body
       type: switch
       switch_on: "{magic}"
       cases:
-        "0xFEEDFACE": mach_header_32_body
-        "0xFEEDFACF": mach_header_64_body
-      default: generic_body
+        "0xFEEDFACE": mach_image
+        "0xCEFAEDFE": mach_image
+        "0xFEEDFACF": mach_image
+        "0xCFFAEDFE": mach_image
+        "0xBEBAFECA": fat_binary
+        "0xBFBAFECA": fat_binary64
+      default: raw_data
+      description: "マジック以降（Mach-O のヘッダ、またはユニバーサルバイナリのアーキテクチャの表）"
 
-  # 64ビットヘッダ本体（マジック以降）
-  mach_header_64_body:
+  # ===== ユニバーサルバイナリ =====
+  fat_binary:
+    endianness: big
+    fields:
+      - name: nfat_arch
+        type: uint32
+        description: "スライス（アーキテクチャ）の数"
+      - name: archs
+        type: struct
+        struct: fat_arch
+        repeat_count: "{nfat_arch}"
+        description: "スライスの表（20 バイトずつ）と各スライスの中身"
+
+  fat_arch:
     - name: cputype
       type: uint32
       enum: cpu_type
+      description: "スライスの CPU の種類"
     - name: cpusubtype
       type: uint32
-    - name: filetype
+      description: "スライスの CPU の細分（下位 24 ビット。ARM64 なら 2 = arm64e）"
+    - name: offset
       type: uint32
-      enum: file_type
-    - name: ncmds
+      description: "スライスの位置（ファイル先頭から）"
+    - name: size
       type: uint32
-      description: "ロードコマンド数"
-    - name: sizeofcmds
+      description: "スライスのバイト数"
+    - name: align
       type: uint32
-      description: "ロードコマンドの合計サイズ"
-    - name: flags
+      description: "スライスのアラインメント（2 のべき指数。14 = 16 KiB）"
+    - name: image
+      type: struct
+      struct: fat_slice
+      seek: "{offset}"
+      seek_restore: true
+      size: "{size}"
+      description: "スライスの中の Mach-O"
+
+  fat_binary64:
+    endianness: big
+    fields:
+      - name: nfat_arch
+        type: uint32
+        description: "スライス（アーキテクチャ）の数"
+      - name: archs
+        type: struct
+        struct: fat_arch64
+        repeat_count: "{nfat_arch}"
+        description: "スライスの表（32 バイトずつ）と各スライスの中身"
+
+  fat_arch64:
+    - name: cputype
       type: uint32
-      flags: mh_flags
+      enum: cpu_type
+      description: "スライスの CPU の種類"
+    - name: cpusubtype
+      type: uint32
+      description: "スライスの CPU の細分"
+    - name: offset
+      type: uint64
+      description: "スライスの位置（ファイル先頭から）"
+    - name: size
+      type: uint64
+      description: "スライスのバイト数"
+    - name: align
+      type: uint32
+      description: "スライスのアラインメント（2 のべき指数）"
     - name: reserved
       type: uint32
-    - name: load_commands
+      description: "予約（0）"
+    - name: image
       type: struct
-      struct: load_command
-      repeat_count: "{ncmds}"
+      struct: fat_slice
+      seek: "{offset}"
+      seek_restore: true
+      size: "{size}"
+      description: "スライスの中の Mach-O"
 
-  # 32ビットヘッダ本体（マジック以降）
-  mach_header_32_body:
-    - name: cputype
-      type: uint32
-      enum: cpu_type
-    - name: cpusubtype
-      type: uint32
-    - name: filetype
-      type: uint32
-      enum: file_type
-    - name: ncmds
-      type: uint32
-      description: "ロードコマンド数"
-    - name: sizeofcmds
-      type: uint32
-      description: "ロードコマンドの合計サイズ"
-    - name: flags
-      type: uint32
-      flags: mh_flags
-    - name: load_commands
-      type: struct
-      struct: load_command
-      repeat_count: "{ncmds}"
-
-  load_command:
+  fat_slice:
     endianness: little
     fields:
-      - name: cmd
+      - name: slice_offset
+        type: virtual
+        value: "{offset}"
+        description: "スライスの先頭の位置（スライスの中の位置はここからの相対）"
+      - name: magic
         type: uint32
-        enum: lc_type
-      - name: cmdsize
-        type: uint32
-        description: "このロードコマンドの合計サイズ"
+        enum: magic
+        description: "スライスの Mach-O のマジック"
       - name: body
         type: switch
-        switch_on: "{cmd}"
-        size: "{cmdsize - 8}"
+        switch_on: "{magic}"
         cases:
-          "1": segment_32_body
-          "2": symtab_body
-          "12": load_dylib_body
-          "25": segment_64_body
-          "27": uuid_body
-          "44": build_version_body
-          "0x80000028": main_body
-        default: generic_body
+          "0xFEEDFACE": mach_image
+          "0xCEFAEDFE": mach_image
+          "0xFEEDFACF": mach_image
+          "0xCFFAEDFE": mach_image
+        default: raw_data
+        description: "スライスの Mach-O のヘッダ以降"
 
-  # LC_SEGMENT_64 (cmd=25)
+  # ===== Mach-O 本体 =====
+  mach_image:
+    endianness: "{(magic == 0xCEFAEDFE or magic == 0xCFFAEDFE) ? 'big' : 'little'}"
+    fields:
+      - name: is_64
+        type: virtual
+        value: "{magic == 0xFEEDFACF or magic == 0xCFFAEDFE ? 1 : 0}"
+        description: "64 ビットの Mach-O か（ヘッダの予約フィールドとシンボルの幅が変わる）"
+      - name: cputype
+        type: uint32
+        enum: cpu_type
+        description: "CPU の種類（上位 8 ビットは ABI のフラグ。0x01 = 64 ビット、0x02 = 64 ビットで 32 ビットポインタ）"
+      - name: cpusubtype
+        type: uint32
+        description: "CPU の細分（下位 24 ビット）と機能のビット（上位 8 ビット。arm64e のポインタ認証の版など）"
+      - name: cpu_subtype_value
+        type: virtual
+        value: "{cpusubtype & 0x00FFFFFF}"
+        description: "CPU の細分（ARM64: 0 = すべて、1 = v8、2 = arm64e。x86-64: 3 = すべて、8 = Haswell）"
+      - name: filetype
+        type: uint32
+        enum: file_type
+        description: "ファイルの種類"
+      - name: ncmds
+        type: uint32
+        description: "ロードコマンドの数"
+      - name: sizeofcmds
+        type: uint32
+        description: "ロードコマンドの合計バイト数"
+      - name: flags
+        type: uint32
+        flags: mh_flags
+        description: "ヘッダのフラグ（MH_PIE = 位置独立、MH_TWOLEVEL = 2 レベル名前空間、MH_DYLDLINK = dyld で読み込む など）"
+      - name: reserved
+        type: uint32
+        if: "{is_64 == 1}"
+        description: "予約（64 ビットのヘッダのみ。0）"
+      - name: symoff
+        type: virtual
+        value: "0"
+        description: "シンボル表の位置の初期値（LC_SYMTAB があれば置き換わる）"
+      - name: nsyms
+        type: virtual
+        value: "0"
+        description: "シンボルの数の初期値（LC_SYMTAB があれば置き換わる）"
+      - name: stroff
+        type: virtual
+        value: "0"
+        description: "文字列表の位置の初期値（LC_SYMTAB があれば置き換わる）"
+      - name: signature_offset
+        type: virtual
+        value: "0"
+        description: "コード署名の位置の初期値（LC_CODE_SIGNATURE があれば置き換わる）"
+      - name: signature_size
+        type: virtual
+        value: "0"
+        description: "コード署名のバイト数の初期値（LC_CODE_SIGNATURE があれば置き換わる）"
+      - name: load_commands
+        type: struct
+        struct: load_command
+        repeat_count: "{ncmds}"
+        description: "ロードコマンド（ncmds 個。種類 + バイト数 + 本体）"
+      - name: symbol_table
+        type: switch
+        switch_on: "{is_64}"
+        seek: "{slice_offset + symoff}"
+        seek_restore: true
+        if: "{nsyms > 0}"
+        cases:
+          "1": symbol_table_64
+        default: symbol_table_32
+        description: "シンボル表（LC_SYMTAB の symoff の位置の nsyms 個）"
+      - name: code_signature
+        type: struct
+        struct: code_signature
+        seek: "{slice_offset + signature_offset}"
+        seek_restore: true
+        if: "{signature_size > 0}"
+        description: "コード署名（LC_CODE_SIGNATURE の位置の SuperBlob。ビッグエンディアン）"
+
+  load_command:
+    - name: cmd
+      type: uint32
+      enum: lc_type
+      description: "ロードコマンドの種類（0x80000000 = LC_REQ_DYLD が立っていれば、dyld が知らないと読み込みが失敗する）"
+    - name: cmdsize
+      type: uint32
+      description: "このロードコマンドのバイト数（cmd と cmdsize を含む。8 の倍数）"
+    - name: body
+      type: switch
+      switch_on: "{cmd}"
+      size: "{cmdsize - 8}"
+      cases:
+        "0x1": segment_32_body
+        "0x19": segment_64_body
+        "0x2": symtab_body
+        "0xB": dysymtab_body
+        "0xC": dylib_body
+        "0xD": dylib_body
+        "0x80000018": dylib_body
+        "0x8000001F": dylib_body
+        "0x20": dylib_body
+        "0x80000023": dylib_body
+        "0xE": lc_str_body
+        "0xF": lc_str_body
+        "0x27": lc_str_body
+        "0x8000001C": lc_str_body
+        "0x12": lc_str_body
+        "0x13": lc_str_body
+        "0x14": lc_str_body
+        "0x15": lc_str_body
+        "0x1B": uuid_body
+        "0x1D": code_signature_command_body
+        "0x1E": linkedit_data_body
+        "0x26": linkedit_data_body
+        "0x29": linkedit_data_body
+        "0x2B": linkedit_data_body
+        "0x2E": linkedit_data_body
+        "0x80000033": linkedit_data_body
+        "0x80000034": linkedit_data_body
+        "0x36": linkedit_data_body
+        "0x37": linkedit_data_body
+        "0x38": linkedit_data_body
+        "0x22": dyld_info_body
+        "0x80000022": dyld_info_body
+        "0x24": version_min_body
+        "0x25": version_min_body
+        "0x2F": version_min_body
+        "0x30": version_min_body
+        "0x32": build_version_body
+        "0x2A": source_version_body
+        "0x80000028": main_body
+        "0x21": encryption_info_body
+        "0x2C": encryption_info_64_body
+        "0x2D": linker_option_body
+        "0x31": note_body
+        "0x80000035": fileset_entry_body
+        "0x39": lc_str_body
+      default: raw_data
+      description: "ロードコマンドの本体（cmdsize − 8 バイト。種類で振り分ける）"
+
   segment_64_body:
     - name: segname
       type: ascii
       size: "16"
+      description: "セグメント名（__PAGEZERO・__TEXT・__DATA・__LINKEDIT など）"
     - name: vmaddr
       type: uint64
+      description: "セグメントの仮想アドレス"
     - name: vmsize
       type: uint64
+      description: "セグメントのメモリ上のバイト数"
     - name: fileoff
       type: uint64
+      description: "セグメントのファイル上の位置（スライスの先頭から）"
     - name: filesize
       type: uint64
+      description: "セグメントのファイル上のバイト数"
     - name: maxprot
       type: uint32
+      flags: vm_prot
+      description: "許される最大のアクセス権"
     - name: initprot
       type: uint32
+      flags: vm_prot
+      description: "最初のアクセス権"
     - name: nsects
       type: uint32
+      description: "セクションの数"
     - name: flags
       type: uint32
+      description: "セグメントのフラグ（0x1 = SG_HIGHVM、0x4 = SG_NORELOC、0x8 = SG_PROTECTED_VERSION_1、0x10 = SG_READ_ONLY）"
     - name: sections
       type: struct
       struct: section_64
       repeat_count: "{nsects}"
+      description: "セクション（80 バイトずつ）"
 
   section_64:
     - name: sectname
       type: ascii
       size: "16"
+      description: "セクション名（__text・__cstring・__const など）"
     - name: segname
       type: ascii
       size: "16"
+      description: "属するセグメント名"
     - name: addr
       type: uint64
+      description: "セクションの仮想アドレス"
     - name: size
       type: uint64
+      description: "セクションのバイト数"
     - name: offset
       type: uint32
+      description: "セクションのファイル上の位置（0 埋めのセクションは 0）"
     - name: align
       type: uint32
+      description: "アラインメント（2 のべき指数）"
     - name: reloff
       type: uint32
+      description: "再配置のエントリの位置（.o のみ）"
     - name: nreloc
       type: uint32
+      description: "再配置のエントリの数"
     - name: flags
       type: uint32
+      flags: section_attributes
+      description: "セクションの種類（下位 8 ビット）と属性（上位 24 ビット）"
+    - name: section_type
+      type: virtual
+      value: "{flags & 0xFF}"
+      enum: section_type
+      description: "セクションの種類（flags の下位 8 ビット）"
     - name: reserved1
       type: uint32
+      description: "種類ごとの値（シンボルのポインタ・スタブなら間接シンボル表の開始番号）"
     - name: reserved2
       type: uint32
+      description: "種類ごとの値（スタブならスタブ 1 個のバイト数）"
     - name: reserved3
       type: uint32
+      description: "予約（0）"
 
-  # LC_SEGMENT (cmd=1) - 32ビットセグメント
   segment_32_body:
     - name: segname
       type: ascii
       size: "16"
+      description: "セグメント名（__TEXT・__DATA など）"
     - name: vmaddr
       type: uint32
+      description: "セグメントの仮想アドレス"
     - name: vmsize
       type: uint32
+      description: "セグメントのメモリ上のバイト数"
     - name: fileoff
       type: uint32
+      description: "セグメントのファイル上の位置"
     - name: filesize
       type: uint32
+      description: "セグメントのファイル上のバイト数"
     - name: maxprot
       type: uint32
+      flags: vm_prot
+      description: "許される最大のアクセス権"
     - name: initprot
       type: uint32
+      flags: vm_prot
+      description: "最初のアクセス権"
     - name: nsects
       type: uint32
+      description: "セクションの数"
     - name: flags
       type: uint32
+      description: "セグメントのフラグ"
     - name: sections
       type: struct
       struct: section_32
       repeat_count: "{nsects}"
+      description: "セクション（68 バイトずつ）"
 
   section_32:
     - name: sectname
       type: ascii
       size: "16"
+      description: "セクション名"
     - name: segname
       type: ascii
       size: "16"
+      description: "属するセグメント名"
     - name: addr
       type: uint32
+      description: "セクションの仮想アドレス"
     - name: size
       type: uint32
+      description: "セクションのバイト数"
     - name: offset
       type: uint32
+      description: "セクションのファイル上の位置"
     - name: align
       type: uint32
+      description: "アラインメント（2 のべき指数）"
     - name: reloff
       type: uint32
+      description: "再配置のエントリの位置"
     - name: nreloc
       type: uint32
+      description: "再配置のエントリの数"
     - name: flags
       type: uint32
+      flags: section_attributes
+      description: "セクションの種類（下位 8 ビット）と属性（上位 24 ビット）"
+    - name: section_type
+      type: virtual
+      value: "{flags & 0xFF}"
+      enum: section_type
+      description: "セクションの種類（flags の下位 8 ビット）"
     - name: reserved1
       type: uint32
+      description: "種類ごとの値"
     - name: reserved2
       type: uint32
+      description: "種類ごとの値"
 
-  # LC_SYMTAB (cmd=2)
   symtab_body:
     - name: symoff
       type: uint32
-      description: "シンボルテーブルオフセット"
+      description: "シンボル表の位置（スライスの先頭から）"
     - name: nsyms
       type: uint32
-      description: "シンボル数"
+      description: "シンボルの数"
     - name: stroff
       type: uint32
-      description: "文字列テーブルオフセット"
+      description: "文字列表の位置（スライスの先頭から）"
     - name: strsize
       type: uint32
-      description: "文字列テーブルサイズ"
+      description: "文字列表のバイト数"
 
-  # LC_UUID (cmd=27)
+  dysymtab_body:
+    - name: ilocalsym
+      type: uint32
+      description: "ローカルシンボルの開始番号"
+    - name: nlocalsym
+      type: uint32
+      description: "ローカルシンボルの数"
+    - name: iextdefsym
+      type: uint32
+      description: "外部に公開する定義済みシンボルの開始番号"
+    - name: nextdefsym
+      type: uint32
+      description: "外部に公開する定義済みシンボルの数"
+    - name: iundefsym
+      type: uint32
+      description: "未定義シンボルの開始番号"
+    - name: nundefsym
+      type: uint32
+      description: "未定義シンボルの数"
+    - name: tocoff
+      type: uint32
+      description: "目次の位置（動的ライブラリの古い形式）"
+    - name: ntoc
+      type: uint32
+      description: "目次のエントリの数"
+    - name: modtaboff
+      type: uint32
+      description: "モジュール表の位置"
+    - name: nmodtab
+      type: uint32
+      description: "モジュール表のエントリの数"
+    - name: extrefsymoff
+      type: uint32
+      description: "参照シンボル表の位置"
+    - name: nextrefsyms
+      type: uint32
+      description: "参照シンボル表のエントリの数"
+    - name: indirectsymoff
+      type: uint32
+      description: "間接シンボル表の位置（スタブ・GOT とシンボルの対応）"
+    - name: nindirectsyms
+      type: uint32
+      description: "間接シンボル表のエントリの数"
+    - name: extreloff
+      type: uint32
+      description: "外部の再配置の位置"
+    - name: nextrel
+      type: uint32
+      description: "外部の再配置の数"
+    - name: locreloff
+      type: uint32
+      description: "ローカルの再配置の位置"
+    - name: nlocrel
+      type: uint32
+      description: "ローカルの再配置の数"
+
+  dylib_body:
+    - name: name_offset
+      type: uint32
+      description: "ライブラリ名の位置（ロードコマンドの先頭から。通常 24）"
+    - name: timestamp
+      type: uint32
+      description: "ライブラリの作成日時（通常 2 などの固定値）"
+    - name: current_version
+      type: uint32
+      description: "ライブラリの現在の版（上位 16 ビット.次の 8 ビット.下位 8 ビット）"
+    - name: current_version_text
+      type: virtual
+      value: "{concat(current_version >> 16, '.', (current_version >> 8) & 0xFF, '.', current_version & 0xFF)}"
+      description: "現在の版（X.Y.Z）"
+    - name: compatibility_version
+      type: uint32
+      description: "互換性のある最も古い版（current_version と同じ表し方）"
+    - name: compatibility_version_text
+      type: virtual
+      value: "{concat(compatibility_version >> 16, '.', (compatibility_version >> 8) & 0xFF, '.', compatibility_version & 0xFF)}"
+      description: "互換性のある版（X.Y.Z）"
+    - name: name_padding_before
+      type: bytes
+      size: "{name_offset - 24}"
+      if: "{name_offset > 24}"
+      padding: true
+      description: "ライブラリ名の前の余白"
+    - name: name
+      type: asciiz
+      description: "ライブラリのパス（例: /usr/lib/libSystem.B.dylib、@rpath/...）"
+    - name: name_padding
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      padding: true
+      description: "ロードコマンドを 8 バイトの倍数にそろえる詰め物（0）"
+
+  lc_str_body:
+    - name: name_offset
+      type: uint32
+      description: "文字列の位置（ロードコマンドの先頭から。通常 12）"
+    - name: name_padding_before
+      type: bytes
+      size: "{name_offset - 12}"
+      if: "{name_offset > 12}"
+      padding: true
+      description: "文字列の前の余白"
+    - name: name
+      type: asciiz
+      description: "文字列（動的リンカのパス・@rpath の検索パス・フレームワーク名・環境変数・ターゲットトリプルなど）"
+    - name: name_padding
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      padding: true
+      description: "ロードコマンドを 8 バイトの倍数にそろえる詰め物（0）"
+
   uuid_body:
     - name: uuid
       type: bytes
       size: "16"
+      description: "イメージの UUID（ビルドごとに一意。dSYM との対応に使う）"
 
-  # LC_LOAD_DYLIB (cmd=12)
-  load_dylib_body:
-    - name: name_offset
+  code_signature_command_body:
+    - name: signature_offset
       type: uint32
-      description: "ライブラリ名文字列のオフセット"
-    - name: timestamp
+      description: "コード署名の位置（__LINKEDIT の中。スライスの先頭から）"
+    - name: signature_size
       type: uint32
-    - name: current_version
-      type: uint32
-    - name: compat_version
-      type: uint32
-    - name: name
-      type: ascii
-      size: remaining
-      description: "ライブラリ名"
+      description: "コード署名のバイト数"
 
-  # LC_MAIN (cmd=0x80000028)
-  main_body:
-    - name: entryoff
-      type: uint64
-      description: "エントリポイントのファイルオフセット"
-    - name: stacksize
-      type: uint64
+  linkedit_data_body:
+    - name: dataoff
+      type: uint32
+      description: "データの位置（__LINKEDIT の中。スライスの先頭から）"
+    - name: datasize
+      type: uint32
+      description: "データのバイト数"
 
-  # LC_BUILD_VERSION (cmd=44)
+  dyld_info_body:
+    - name: rebase_off
+      type: uint32
+      description: "リベースの情報の位置"
+    - name: rebase_size
+      type: uint32
+      description: "リベースの情報のバイト数"
+    - name: bind_off
+      type: uint32
+      description: "バインドの情報の位置"
+    - name: bind_size
+      type: uint32
+      description: "バインドの情報のバイト数"
+    - name: weak_bind_off
+      type: uint32
+      description: "弱いバインドの情報の位置"
+    - name: weak_bind_size
+      type: uint32
+      description: "弱いバインドの情報のバイト数"
+    - name: lazy_bind_off
+      type: uint32
+      description: "遅延バインドの情報の位置"
+    - name: lazy_bind_size
+      type: uint32
+      description: "遅延バインドの情報のバイト数"
+    - name: export_off
+      type: uint32
+      description: "エクスポートの trie の位置"
+    - name: export_size
+      type: uint32
+      description: "エクスポートの trie のバイト数"
+
+  version_min_body:
+    - name: version
+      type: uint32
+      description: "対象の OS の最低の版（上位 16 ビット.次の 8 ビット.下位 8 ビット）"
+    - name: version_text
+      type: virtual
+      value: "{concat(version >> 16, '.', (version >> 8) & 0xFF, '.', version & 0xFF)}"
+      description: "対象の OS の最低の版（X.Y.Z）"
+    - name: sdk
+      type: uint32
+      description: "ビルドに使った SDK の版（version と同じ表し方）"
+
   build_version_body:
     - name: platform
       type: uint32
       enum: platform
+      description: "対象のプラットフォーム"
     - name: minos
       type: uint32
-      description: "最小OSバージョン"
+      description: "対象の OS の最低の版（上位 16 ビット.次の 8 ビット.下位 8 ビット）"
+    - name: minos_text
+      type: virtual
+      value: "{concat(minos >> 16, '.', (minos >> 8) & 0xFF, '.', minos & 0xFF)}"
+      description: "対象の OS の最低の版（X.Y.Z）"
     - name: sdk
       type: uint32
-      description: "SDKバージョン"
+      description: "ビルドに使った SDK の版（minos と同じ表し方）"
+    - name: sdk_text
+      type: virtual
+      value: "{concat(sdk >> 16, '.', (sdk >> 8) & 0xFF, '.', sdk & 0xFF)}"
+      description: "SDK の版（X.Y.Z）"
     - name: ntools
       type: uint32
-      description: "ビルドツール数"
+      description: "ビルドツールの数"
     - name: tools
       type: struct
       struct: build_tool_entry
       repeat_count: "{ntools}"
+      description: "ビルドツールと版"
 
   build_tool_entry:
     - name: tool
       type: uint32
-      description: "ビルドツール種別（1=clang, 2=swift, 3=ld, 4=lld）"
+      enum: build_tool
+      description: "ビルドツールの種類"
     - name: version
       type: uint32
-      description: "ツールバージョン（major.minor.patchをエンコード）"
+      description: "ツールの版（上位 16 ビット.次の 8 ビット.下位 8 ビット）"
 
-  generic_body:
+  source_version_body:
+    - name: version
+      type: uint64
+      description: "ソースの版（A.B.C.D.E を 24.10.10.10.10 ビットに詰めた値）"
+    - name: version_text
+      type: virtual
+      value: "{concat(version >> 40, '.', (version >> 30) & 0x3FF, '.', (version >> 20) & 0x3FF, '.', (version >> 10) & 0x3FF, '.', version & 0x3FF)}"
+      description: "ソースの版（A.B.C.D.E）"
+
+  main_body:
+    - name: entryoff
+      type: uint64
+      description: "main のファイル上の位置（__TEXT の先頭から）"
+    - name: stacksize
+      type: uint64
+      description: "初期スレッドのスタックサイズ（0 なら既定）"
+
+  encryption_info_body:
+    - name: cryptoff
+      type: uint32
+      description: "暗号化された範囲の位置"
+    - name: cryptsize
+      type: uint32
+      description: "暗号化された範囲のバイト数"
+    - name: cryptid
+      type: uint32
+      description: "暗号化の方式（0 = 暗号化されていない）"
+
+  encryption_info_64_body:
+    - name: cryptoff
+      type: uint32
+      description: "暗号化された範囲の位置"
+    - name: cryptsize
+      type: uint32
+      description: "暗号化された範囲のバイト数"
+    - name: cryptid
+      type: uint32
+      description: "暗号化の方式（0 = 暗号化されていない）"
+    - name: pad
+      type: uint32
+      description: "8 バイト境界にそろえる詰め物（0）"
+
+  linker_option_body:
+    - name: count
+      type: uint32
+      description: "文字列の数"
+    - name: options
+      type: asciiz
+      repeat_count: "{count}"
+      description: "リンカへのオプション（例: '-lz'、'-framework' 'Foundation'）"
+    - name: padding
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      padding: true
+      description: "ロードコマンドを 8 バイトの倍数にそろえる詰め物（0）"
+
+  note_body:
+    - name: data_owner
+      type: ascii
+      size: "16"
+      description: "データの所有者の名前"
+    - name: offset
+      type: uint64
+      description: "データの位置"
+    - name: size
+      type: uint64
+      description: "データのバイト数"
+
+  fileset_entry_body:
+    - name: vmaddr
+      type: uint64
+      description: "中の Mach-O の仮想アドレス"
+    - name: fileoff
+      type: uint64
+      description: "中の Mach-O の位置"
+    - name: entry_id_offset
+      type: uint32
+      description: "エントリ名の位置（ロードコマンドの先頭から）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: entry_id
+      type: asciiz
+      description: "エントリ名（カーネル拡張のバンドル ID など）"
+    - name: padding
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      padding: true
+      description: "ロードコマンドを 8 バイトの倍数にそろえる詰め物（0）"
+
+  # ===== シンボル表 =====
+  symbol_table_64:
+    - name: symbols
+      type: struct
+      struct: nlist_64
+      repeat_count: "{nsyms}"
+      description: "シンボル（16 バイトずつ）"
+
+  nlist_64:
+    - name: n_strx
+      type: uint32
+      description: "シンボル名（文字列表の中のオフセット）"
+    - name: name
+      type: asciiz
+      seek: "{slice_offset + stroff + n_strx}"
+      seek_restore: true
+      if: "{n_strx != 0}"
+      description: "シンボル名（文字列表から引いた文字列。C の関数は先頭に '_' が付く）"
+    - name: n_type
+      type: uint8
+      description: "種類（N_STAB = 0xE0 のビットがあればデバッグ用、N_PEXT = 0x10、N_TYPE = 0x0E、N_EXT = 0x01）"
+    - name: symbol_type
+      type: virtual
+      value: "{n_type & 0x0E}"
+      enum: nlist_type
+      if: "{(n_type & 0xE0) == 0}"
+      description: "シンボルの種類（n_type の N_TYPE のビット。デバッグ用でないとき）"
+    - name: is_external
+      type: virtual
+      value: "{n_type & 0x01}"
+      description: "外部シンボルか（N_EXT）"
+    - name: n_sect
+      type: uint8
+      description: "定義されているセクションの番号（1 から。0 = NO_SECT）"
+    - name: n_desc
+      type: uint16
+      description: "追加の情報（未定義シンボルなら上位 8 ビットがライブラリの番号、N_WEAK_REF・N_WEAK_DEF などのフラグ）"
+    - name: n_value
+      type: uint64
+      description: "値（定義済みシンボルならアドレス）"
+
+  symbol_table_32:
+    - name: symbols
+      type: struct
+      struct: nlist_32
+      repeat_count: "{nsyms}"
+      description: "シンボル（12 バイトずつ）"
+
+  nlist_32:
+    - name: n_strx
+      type: uint32
+      description: "シンボル名（文字列表の中のオフセット）"
+    - name: name
+      type: asciiz
+      seek: "{slice_offset + stroff + n_strx}"
+      seek_restore: true
+      if: "{n_strx != 0}"
+      description: "シンボル名（文字列表から引いた文字列）"
+    - name: n_type
+      type: uint8
+      description: "種類（N_STAB / N_PEXT / N_TYPE / N_EXT のビット）"
+    - name: symbol_type
+      type: virtual
+      value: "{n_type & 0x0E}"
+      enum: nlist_type
+      if: "{(n_type & 0xE0) == 0}"
+      description: "シンボルの種類（n_type の N_TYPE のビット。デバッグ用でないとき）"
+    - name: is_external
+      type: virtual
+      value: "{n_type & 0x01}"
+      description: "外部シンボルか（N_EXT）"
+    - name: n_sect
+      type: uint8
+      description: "定義されているセクションの番号（1 から。0 = NO_SECT）"
+    - name: n_desc
+      type: uint16
+      description: "追加の情報（ライブラリの番号・弱い参照のフラグなど）"
+    - name: n_value
+      type: uint32
+      description: "値（定義済みシンボルならアドレス）"
+
+  # ===== コード署名（ビッグエンディアン） =====
+  code_signature:
+    endianness: big
+    fields:
+      - name: signature_start
+        type: virtual
+        value: "{slice_offset + signature_offset}"
+        description: "SuperBlob の先頭の位置（ファイル先頭から）"
+      - name: magic
+        type: uint32
+        enum: cs_magic
+        validate: "{magic == 0xFADE0CC0}"
+        description: "SuperBlob のマジック（CSMAGIC_EMBEDDED_SIGNATURE）"
+      - name: length
+        type: uint32
+        description: "SuperBlob 全体のバイト数"
+      - name: count
+        type: uint32
+        description: "Blob の数"
+      - name: index
+        type: struct
+        struct: cs_blob_index
+        repeat_count: "{count}"
+        description: "Blob の索引（種類 + 位置）"
+      - name: blobs
+        type: struct
+        struct: cs_blob
+        repeat_count: "{count}"
+        seek: "{signature_start + index[_index].offset}"
+        seek_restore: true
+        description: "Blob（索引の順。CodeDirectory・要件・エンタイトルメント・CMS の署名）"
+
+  cs_blob_index:
+    - name: slot_type
+      type: uint32
+      enum: cs_slot
+      description: "Blob の種類（スロット番号）"
+    - name: offset
+      type: uint32
+      description: "Blob の位置（SuperBlob の先頭から）"
+
+  cs_blob:
+    - name: blob_start
+      type: virtual
+      value: "{signature_start + index[_index].offset}"
+      description: "この Blob の先頭の位置（ファイル先頭から）"
+    - name: magic
+      type: uint32
+      enum: cs_magic
+      description: "Blob の種類"
+    - name: length
+      type: uint32
+      description: "Blob のバイト数（magic と length を含む）"
+    - name: body
+      type: switch
+      switch_on: "{magic}"
+      size: "{length - 8}"
+      cases:
+        "0xFADE0C02": code_directory
+        "0xFADE7171": entitlements
+      default: raw_data
+      description: "Blob の本体（CodeDirectory とエンタイトルメントを分解する）"
+
+  code_directory:
+    - name: version
+      type: uint32
+      description: "CodeDirectory の版（0x20400 以上で実行セグメントの情報がある）"
+    - name: flags
+      type: uint32
+      description: "署名のフラグ（0x2 = adhoc、0x10000 = runtime（Hardened Runtime）、0x20000 = linker-signed など）"
+    - name: hash_offset
+      type: uint32
+      description: "コードのハッシュの並びの位置（CodeDirectory の先頭から。特別なスロットのハッシュはこの手前）"
+    - name: ident_offset
+      type: uint32
+      description: "識別子の文字列の位置（CodeDirectory の先頭から）"
+    - name: n_special_slots
+      type: uint32
+      description: "特別なスロット（Info.plist・要件・エンタイトルメントなど）のハッシュの数"
+    - name: n_code_slots
+      type: uint32
+      description: "コードのページのハッシュの数"
+    - name: code_limit
+      type: uint32
+      description: "署名の対象の範囲（スライスの先頭からのバイト数）"
+    - name: hash_size
+      type: uint8
+      description: "ハッシュ 1 個のバイト数"
+    - name: hash_type
+      type: uint8
+      enum: cs_hash_type
+      description: "ハッシュの方式"
+    - name: platform
+      type: uint8
+      description: "プラットフォームのバイナリなら 0 以外"
+    - name: page_size
+      type: uint8
+      description: "ページサイズ（2 のべき指数。12 = 4 KiB、14 = 16 KiB）"
+    - name: spare2
+      type: uint32
+      description: "予約（0）"
+    - name: scatter_offset
+      type: uint32
+      if: "{version >= 0x20100}"
+      description: "散在したページの表の位置（0 なら無し。版 0x20100 以降）"
+    - name: team_offset
+      type: uint32
+      if: "{version >= 0x20200}"
+      description: "チーム ID の文字列の位置（0 なら無し。版 0x20200 以降）"
+    - name: spare3
+      type: uint32
+      if: "{version >= 0x20300}"
+      description: "予約（0）"
+    - name: code_limit_64
+      type: uint64
+      if: "{version >= 0x20300}"
+      description: "4 GiB を超える署名の範囲（0 なら code_limit を使う。版 0x20300 以降）"
+    - name: exec_seg_base
+      type: uint64
+      if: "{version >= 0x20400}"
+      description: "実行セグメントの位置（版 0x20400 以降）"
+    - name: exec_seg_limit
+      type: uint64
+      if: "{version >= 0x20400}"
+      description: "実行セグメントのバイト数"
+    - name: exec_seg_flags
+      type: uint64
+      if: "{version >= 0x20400}"
+      description: "実行セグメントのフラグ（0x1 = メインの実行ファイル など）"
+    - name: identifier
+      type: asciiz
+      seek: "{blob_start + ident_offset}"
+      seek_restore: true
+      description: "識別子（通常はバンドル ID かファイル名。例: com.apple.ls）"
+    - name: team_id
+      type: asciiz
+      seek: "{blob_start + team_offset}"
+      seek_restore: true
+      if: "{version >= 0x20200 ? team_offset != 0 : 0}"
+      description: "開発者のチーム ID"
+
+  entitlements:
+    - name: xml
+      type: utf8
+      size: remaining
+      description: "エンタイトルメント（XML のプロパティリスト）"
+
+  raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ"

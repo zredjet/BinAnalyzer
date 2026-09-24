@@ -25,84 +25,54 @@ public class ElfParsingTests
     [Fact]
     public void ElfFormat_DecodesMinimalElf64()
     {
-        var elfData = ElfTestDataGenerator.CreateMinimalElf64();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
+        var decoded = Decode(ElfTestDataGenerator.CreateMinimalElf64());
 
         decoded.Name.Should().Be("ELF");
-        decoded.Children.Should().HaveCount(2);
-        decoded.Children[0].Name.Should().Be("e_ident");
-        decoded.Children[1].Name.Should().Be("body");
-
-        // body is elf64_body with header, program_headers, section_headers
-        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-        body.Children[0].Name.Should().Be("header");
-        body.Children[1].Name.Should().Be("program_headers");
-        body.Children[2].Name.Should().Be("section_headers");
+        decoded.Children.Select(c => c.Name).Should().Equal("e_ident", "body");
+        var body = Child(decoded, "body");
+        Child(body, "header").Should().BeOfType<DecodedStruct>();
+        ((DecodedArray)Child(body, "program_headers")).Elements.Should().HaveCount(1);
+        // e_shoff が 0 なのでセクションは無い
+        ((DecodedVirtual)Child(body, "section_count")).Value.Should().Be(0L);
+        ((DecodedArray)Child(body, "section_headers")).Elements.Should().BeEmpty();
     }
 
     [Fact]
     public void ElfFormat_Ident_DecodesCorrectly()
     {
-        var elfData = ElfTestDataGenerator.CreateMinimalElf64();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
+        var ident = Child(Decode(ElfTestDataGenerator.CreateMinimalElf64()), "e_ident");
 
-        var ident = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var magic = ident.Children[0].Should().BeOfType<DecodedBytes>().Subject;
-        magic.ValidationPassed.Should().BeTrue();
-
-        var eiClass = ident.Children[1].Should().BeOfType<DecodedInteger>().Subject;
+        ((DecodedBytes)Child(ident, "magic")).ValidationPassed.Should().BeTrue();
+        var eiClass = (DecodedInteger)Child(ident, "ei_class");
         eiClass.Value.Should().Be(2);
         eiClass.EnumLabel.Should().Be("ELFCLASS64");
-
-        var eiData = ident.Children[2].Should().BeOfType<DecodedInteger>().Subject;
+        var eiData = (DecodedInteger)Child(ident, "ei_data");
         eiData.Value.Should().Be(1);
         eiData.EnumLabel.Should().Be("ELFDATA2LSB");
+        Child(ident, "ei_version").Validation!.Passed.Should().BeTrue();
     }
 
     [Fact]
     public void ElfFormat_Header_DecodesCorrectly()
     {
-        var elfData = ElfTestDataGenerator.CreateMinimalElf64();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
+        var header = Child(Child(Decode(ElfTestDataGenerator.CreateMinimalElf64()), "body"), "header");
 
-        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var eType = header.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        eType.Value.Should().Be(2);
-        eType.EnumLabel.Should().Be("ET_EXEC");
-
-        var eMachine = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        eMachine.Value.Should().Be(62);
-        eMachine.EnumLabel.Should().Be("EM_X86_64");
-
-        var ePhnum = header.Children[9].Should().BeOfType<DecodedInteger>().Subject;
-        ePhnum.Value.Should().Be(1);
+        ((DecodedInteger)Child(header, "e_type")).EnumLabel.Should().Be("ET_EXEC");
+        ((DecodedInteger)Child(header, "e_machine")).EnumLabel.Should().Be("EM_X86_64");
+        ((DecodedInteger)Child(header, "e_phnum")).Value.Should().Be(1);
     }
 
     [Fact]
     public void ElfFormat_ProgramHeaders_DecodesCorrectly()
     {
-        var elfData = ElfTestDataGenerator.CreateMinimalElf64();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
+        var body = Child(Decode(ElfTestDataGenerator.CreateMinimalElf64()), "body");
+        var phdr = ((DecodedArray)Child(body, "program_headers")).Elements.Single();
 
-        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-        var phdrArray = body.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        phdrArray.Elements.Should().HaveCount(1);
-
-        var phdr = phdrArray.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var pType = phdr.Children[0].Should().BeOfType<DecodedInteger>().Subject;
+        var pType = (DecodedInteger)Child(phdr, "p_type");
         pType.Value.Should().Be(1);
         pType.EnumLabel.Should().Be("PT_LOAD");
 
-        // p_flags has flags: p_flags annotation, now decodes as DecodedFlags
-        var pFlags = phdr.Children[1].Should().BeOfType<DecodedFlags>().Subject;
+        var pFlags = (DecodedFlags)Child(phdr, "p_flags");
         pFlags.RawValue.Should().Be(5);
         pFlags.FlagStates.Should().HaveCount(3);
         pFlags.FlagStates.Should().Contain(f => f.Name == "PF_X" && f.IsSet);
@@ -113,10 +83,7 @@ public class ElfParsingTests
     [Fact]
     public void ElfFormat_TreeOutput_ContainsExpectedElements()
     {
-        var elfData = ElfTestDataGenerator.CreateMinimalElf64();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
-        var output = new TreeOutputFormatter().Format(decoded);
+        var output = new TreeOutputFormatter().Format(Decode(ElfTestDataGenerator.CreateMinimalElf64()));
 
         output.Should().Contain("ELF");
         output.Should().Contain("e_ident");
@@ -131,88 +98,78 @@ public class ElfParsingTests
     [Fact]
     public void ElfFormat_BigEndian64_DecodesCorrectly()
     {
-        var elfData = ElfTestDataGenerator.CreateMinimalElf64BigEndian();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
+        var decoded = Decode(ElfTestDataGenerator.CreateMinimalElf64BigEndian());
 
-        decoded.Name.Should().Be("ELF");
-
-        var ident = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-        var eiData = ident.Children[2].Should().BeOfType<DecodedInteger>().Subject;
-        eiData.Value.Should().Be(2);
-        eiData.EnumLabel.Should().Be("ELFDATA2MSB");
-
-        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var eType = header.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        eType.Value.Should().Be(2);
-        eType.EnumLabel.Should().Be("ET_EXEC");
-
-        var eMachine = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        eMachine.Value.Should().Be(62);
-        eMachine.EnumLabel.Should().Be("EM_X86_64");
-
-        var phdrArray = body.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        phdrArray.Elements.Should().HaveCount(1);
-
-        var phdr = phdrArray.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var pType = phdr.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        pType.Value.Should().Be(1);
-        pType.EnumLabel.Should().Be("PT_LOAD");
+        ((DecodedInteger)Child(Child(decoded, "e_ident"), "ei_data")).EnumLabel.Should().Be("ELFDATA2MSB");
+        var body = Child(decoded, "body");
+        var header = Child(body, "header");
+        ((DecodedInteger)Child(header, "e_type")).EnumLabel.Should().Be("ET_EXEC");
+        ((DecodedInteger)Child(header, "e_machine")).Value.Should().Be(62);
+        var phdr = ((DecodedArray)Child(body, "program_headers")).Elements.Single();
+        ((DecodedInteger)Child(phdr, "p_type")).EnumLabel.Should().Be("PT_LOAD");
     }
 
     [Fact]
     public void ElfFormat_BigEndian32_DecodesCorrectly()
     {
-        var elfData = ElfTestDataGenerator.CreateMinimalElf32BigEndian();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
+        var decoded = Decode(ElfTestDataGenerator.CreateMinimalElf32BigEndian());
 
-        decoded.Name.Should().Be("ELF");
-
-        var ident = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-        var eiClass = ident.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        eiClass.Value.Should().Be(1);
-        eiClass.EnumLabel.Should().Be("ELFCLASS32");
-
-        var eiData = ident.Children[2].Should().BeOfType<DecodedInteger>().Subject;
-        eiData.Value.Should().Be(2);
-        eiData.EnumLabel.Should().Be("ELFDATA2MSB");
-
-        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var eMachine = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        eMachine.Value.Should().Be(8);
-        eMachine.EnumLabel.Should().Be("EM_MIPS");
-
-        var phdrArray = body.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        phdrArray.Elements.Should().HaveCount(1);
-
-        var phdr = phdrArray.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var pType = phdr.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        pType.Value.Should().Be(1);
-        pType.EnumLabel.Should().Be("PT_LOAD");
+        var ident = Child(decoded, "e_ident");
+        ((DecodedInteger)Child(ident, "ei_class")).EnumLabel.Should().Be("ELFCLASS32");
+        ((DecodedInteger)Child(ident, "ei_data")).EnumLabel.Should().Be("ELFDATA2MSB");
+        var body = Child(decoded, "body");
+        ((DecodedInteger)Child(Child(body, "header"), "e_machine")).EnumLabel.Should().Be("EM_MIPS");
+        var phdr = ((DecodedArray)Child(body, "program_headers")).Elements.Single();
+        ((DecodedInteger)Child(phdr, "p_type")).EnumLabel.Should().Be("PT_LOAD");
     }
 
     [Fact]
-    public void ElfFormat_LittleEndian_StillWorksAfterDynamicEndianness()
+    public void Sections_ResolveNamesSymbolsNotesDynamicAndCompressedData()
     {
-        // Regression test: existing LE data should still decode correctly
-        var elfData = ElfTestDataGenerator.CreateMinimalElf64();
-        var format = new YamlFormatLoader().Load(ElfFormatPath);
-        var decoded = new BinaryDecoder().Decode(elfData, format);
+        var body = Child(Decode(ElfTestDataGenerator.CreateElf64WithSections()), "body");
 
-        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-        var header = body.Children[0].Should().BeOfType<DecodedStruct>().Subject;
+        var phdr = ((DecodedArray)Child(body, "program_headers")).Elements.Single();
+        ((DecodedInteger)Child(phdr, "p_type")).EnumLabel.Should().Be("PT_INTERP");
+        ((DecodedString)Child(phdr, "interpreter")).Value.Should().Be("/lib64/ld-linux-x86-64.so.2");
 
-        var eType = header.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        eType.Value.Should().Be(2);
-        eType.EnumLabel.Should().Be("ET_EXEC");
+        var sections = ((DecodedArray)Child(body, "section_headers")).Elements;
+        sections.Skip(1).Select(s => ((DecodedString)Child(s, "name")).Value).Should().Equal(
+            ".interp", ".note.gnu.build-id", ".dynsym", ".dynstr", ".rela.dyn", ".dynamic", ".debug_str", ".shstrtab");
+        DecodedNode Section(string name) => sections.Skip(1).Single(s => ((DecodedString)Child(s, "name")).Value == name);
 
-        var eMachine = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        eMachine.Value.Should().Be(62);
-        eMachine.EnumLabel.Should().Be("EM_X86_64");
+        var note = ((DecodedArray)Child(Child(Section(".note.gnu.build-id"), "contents"), "notes")).Elements.Single();
+        ((DecodedVirtual)Child(note, "gnu_type")).EnumLabel.Should().Be("NT_GNU_BUILD_ID");
+        ((DecodedBytes)Child(note, "desc")).RawBytes.Length.Should().Be(20);
+
+        var symbols = ((DecodedArray)Child(Child(Section(".dynsym"), "contents"), "symbols")).Elements;
+        symbols.Should().HaveCount(3);
+        ((DecodedString)Child(symbols[1], "name")).Value.Should().Be("add");
+        ((DecodedVirtual)Child(symbols[1], "symbol_type")).EnumLabel.Should().Be("STT_FUNC");
+        ((DecodedVirtual)Child(symbols[1], "bind")).EnumLabel.Should().Be("STB_GLOBAL");
+        ((DecodedString)Child(symbols[2], "name")).Value.Should().Be("counter");
+        ((DecodedVirtual)Child(symbols[2], "bind")).EnumLabel.Should().Be("STB_WEAK");
+        ((DecodedVirtual)Child(symbols[2], "visibility")).EnumLabel.Should().Be("STV_HIDDEN");
+        ((DecodedInteger)Child(symbols[2], "st_shndx")).EnumLabel.Should().Be("SHN_ABS");
+
+        var relocation = ((DecodedArray)Child(Child(Section(".rela.dyn"), "contents"), "relocations")).Elements.Single();
+        ((DecodedVirtual)Child(relocation, "symbol_index")).Value.Should().Be(2L);
+        ((DecodedVirtual)Child(relocation, "relocation_type")).Value.Should().Be(6L);
+        ((DecodedInteger)Child(relocation, "r_addend")).Value.Should().Be(-8);
+
+        var dynamic = ((DecodedArray)Child(Child(Section(".dynamic"), "contents"), "entries")).Elements;
+        ((DecodedInteger)Child(dynamic[0], "d_tag")).EnumLabel.Should().Be("DT_NEEDED");
+        ((DecodedString)Child(dynamic[0], "string_value")).Value.Should().Be("libc.so.6");
+        ((DecodedInteger)Child(dynamic[2], "d_tag")).EnumLabel.Should().Be("DT_NULL");
+
+        var compressed = Child(Section(".debug_str"), "contents");
+        ((DecodedInteger)Child(compressed, "ch_type")).EnumLabel.Should().Be("ELFCOMPRESS_ZLIB");
+        var content = (DecodedCompressed)Child(Child(compressed, "data"), "content");
+        content.DecompressedSize.Should().Be(130);
     }
+
+    private static DecodedStruct Decode(byte[] data) =>
+        new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(ElfFormatPath));
+
+    private static DecodedNode Child(DecodedNode node, string name) =>
+        ((DecodedStruct)node).Children.First(c => c.Name == name);
 }

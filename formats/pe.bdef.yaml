@@ -1,58 +1,347 @@
+# PE（Portable Executable。Windows の .exe / .dll / .sys、.NET のアセンブリ、UEFI のイメージ）
+# 仕様: Microsoft "PE Format"（Microsoft Learn、2024-07 更新） https://learn.microsoft.com/en-us/windows/win32/debug/pe-format 、
+#   .NET の CLI ヘッダとメタデータのルートは ECMA-335 第 6 版（2012）II.24–25 https://ecma-international.org/publications-and-standards/standards/ecma-335/
+# 構造: MS-DOS ヘッダ（'MZ'）→ DOS スタブ → e_lfanew の位置の 'PE\0\0' → COFF ヘッダ → オプションヘッダ（PE32 / PE32+ を magic で switch）
+#   → セクション表 → セクションの中身。データディレクトリは RVA（読み込み後のアドレス）で位置を持つため、
+#   各セクションヘッダで「RVA がこのセクションに入っているか」を確かめ、入っていれば RVA − VirtualAddress + PointerToRawData へ seek して読む。
+#   エクスポート・インポート・デバッグ（CodeView の PDB パス）・ベース再配置・CLR ヘッダ（.NET のメタデータのルート）を分解する。
+#   証明書の表だけはファイル上の位置で持つので、ルートから seek して読む。
+# 対応していないもの: オブジェクトファイル（'MZ' の無い COFF）、リソースの木構造・例外・TLS・ロード構成・遅延読み込み・バインドのディレクトリ、
+#   ほかのセクションにまたがるインポート名・エクスポート名（ディレクトリと同じセクションにある前提で引く）、
+#   Rich ヘッダ（DOS スタブの中の XOR された情報）、チェックサムの検証（PE 独自のアルゴリズム）、証明書（PKCS#7）の中身、
+#   .NET のメタデータの表（#~ ストリーム）の中身、COFF のシンボル表と長いセクション名（'/数字'）
 name: PE
 endianness: little
 root: pe
 
 enums:
   machine_type:
+    - value: 0x0
+      label: IMAGE_FILE_MACHINE_UNKNOWN
+      description: "どのマシンでもよい"
+    - value: 0x184
+      label: IMAGE_FILE_MACHINE_ALPHA
+      description: "Alpha AXP（32 ビット）"
+    - value: 0x284
+      label: IMAGE_FILE_MACHINE_ALPHA64
+      description: "Alpha 64"
+    - value: 0x1D3
+      label: IMAGE_FILE_MACHINE_AM33
+      description: "Matsushita AM33"
+    - value: 0x8664
+      label: IMAGE_FILE_MACHINE_AMD64
+      description: "x64（AMD64 / Intel 64）"
+    - value: 0x1C0
+      label: IMAGE_FILE_MACHINE_ARM
+      description: "ARM リトルエンディアン"
+    - value: 0xAA64
+      label: IMAGE_FILE_MACHINE_ARM64
+      description: "ARM64 リトルエンディアン"
+    - value: 0xA641
+      label: IMAGE_FILE_MACHINE_ARM64EC
+      description: "ARM64EC（x64 と混在できる ARM64 のコード）"
+    - value: 0xA64E
+      label: IMAGE_FILE_MACHINE_ARM64X
+      description: "ARM64X（ARM64 と ARM64EC を 1 ファイルに入れたもの）"
+    - value: 0x1C4
+      label: IMAGE_FILE_MACHINE_ARMNT
+      description: "ARM Thumb-2 リトルエンディアン"
+    - value: 0xEBC
+      label: IMAGE_FILE_MACHINE_EBC
+      description: "EFI バイトコード"
     - value: 0x14C
       label: IMAGE_FILE_MACHINE_I386
-      description: "Intel 386"
+      description: "Intel 386 以降（x86）"
     - value: 0x200
       label: IMAGE_FILE_MACHINE_IA64
       description: "Intel Itanium"
-    - value: 0x1C0
-      label: IMAGE_FILE_MACHINE_ARM
-      description: "ARM"
+    - value: 0x6232
+      label: IMAGE_FILE_MACHINE_LOONGARCH32
+      description: "LoongArch 32 ビット"
+    - value: 0x6264
+      label: IMAGE_FILE_MACHINE_LOONGARCH64
+      description: "LoongArch 64 ビット"
+    - value: 0x9041
+      label: IMAGE_FILE_MACHINE_M32R
+      description: "Mitsubishi M32R リトルエンディアン"
+    - value: 0x266
+      label: IMAGE_FILE_MACHINE_MIPS16
+      description: "MIPS16"
+    - value: 0x366
+      label: IMAGE_FILE_MACHINE_MIPSFPU
+      description: "FPU 付き MIPS"
+    - value: 0x466
+      label: IMAGE_FILE_MACHINE_MIPSFPU16
+      description: "FPU 付き MIPS16"
+    - value: 0x1F0
+      label: IMAGE_FILE_MACHINE_POWERPC
+      description: "PowerPC リトルエンディアン"
+    - value: 0x1F1
+      label: IMAGE_FILE_MACHINE_POWERPCFP
+      description: "浮動小数点対応の PowerPC"
+    - value: 0x1F2
+      label: IMAGE_FILE_MACHINE_POWERPCBE
+      description: "PowerPC ビッグエンディアン"
+    - value: 0x160
+      label: IMAGE_FILE_MACHINE_R3000BE
+      description: "MIPS I 互換の 32 ビット ビッグエンディアン"
+    - value: 0x162
+      label: IMAGE_FILE_MACHINE_R3000
+      description: "MIPS I 互換の 32 ビット リトルエンディアン"
+    - value: 0x166
+      label: IMAGE_FILE_MACHINE_R4000
+      description: "MIPS III 互換の 64 ビット リトルエンディアン"
+    - value: 0x168
+      label: IMAGE_FILE_MACHINE_R10000
+      description: "MIPS IV 互換の 64 ビット リトルエンディアン"
+    - value: 0x5032
+      label: IMAGE_FILE_MACHINE_RISCV32
+      description: "RISC-V 32 ビット"
     - value: 0x5064
       label: IMAGE_FILE_MACHINE_RISCV64
-      description: "RISC-V 64-bit"
-    - value: 0x8664
-      label: IMAGE_FILE_MACHINE_AMD64
-      description: "AMD64 (x86-64)"
-    - value: 0xA641
-      label: IMAGE_FILE_MACHINE_ARM64EC
-      description: "ARM64EC"
-    - value: 0xAA64
-      label: IMAGE_FILE_MACHINE_ARM64
-      description: "ARM64"
+      description: "RISC-V 64 ビット"
+    - value: 0x5128
+      label: IMAGE_FILE_MACHINE_RISCV128
+      description: "RISC-V 128 ビット"
+    - value: 0x1A2
+      label: IMAGE_FILE_MACHINE_SH3
+      description: "Hitachi SH3"
+    - value: 0x1A3
+      label: IMAGE_FILE_MACHINE_SH3DSP
+      description: "Hitachi SH3 DSP"
+    - value: 0x1A6
+      label: IMAGE_FILE_MACHINE_SH4
+      description: "Hitachi SH4"
+    - value: 0x1A8
+      label: IMAGE_FILE_MACHINE_SH5
+      description: "Hitachi SH5"
+    - value: 0x1C2
+      label: IMAGE_FILE_MACHINE_THUMB
+      description: "Thumb"
+    - value: 0x169
+      label: IMAGE_FILE_MACHINE_WCEMIPSV2
+      description: "MIPS リトルエンディアン WCE v2"
 
   pe_magic:
     - value: 0x10B
       label: PE32
-      description: "32ビット実行ファイル"
+      description: "32 ビットのイメージ（アドレス 4 バイト）"
     - value: 0x20B
       label: PE32+
-      description: "64ビット実行ファイル"
+      description: "64 ビットのイメージ（アドレス 8 バイト）"
+    - value: 0x107
+      label: ROM
+      description: "ROM イメージ"
 
   subsystem:
     - value: 0
       label: IMAGE_SUBSYSTEM_UNKNOWN
+      description: "不明"
     - value: 1
       label: IMAGE_SUBSYSTEM_NATIVE
+      description: "デバイスドライバ・ネイティブの Windows プロセス"
     - value: 2
       label: IMAGE_SUBSYSTEM_WINDOWS_GUI
+      description: "Windows の GUI アプリケーション"
     - value: 3
       label: IMAGE_SUBSYSTEM_WINDOWS_CUI
+      description: "Windows のコンソールアプリケーション"
+    - value: 5
+      label: IMAGE_SUBSYSTEM_OS2_CUI
+      description: "OS/2 のコンソール"
     - value: 7
       label: IMAGE_SUBSYSTEM_POSIX_CUI
+      description: "POSIX のコンソール"
+    - value: 8
+      label: IMAGE_SUBSYSTEM_NATIVE_WINDOWS
+      description: "ネイティブの Win9x ドライバ"
+    - value: 9
+      label: IMAGE_SUBSYSTEM_WINDOWS_CE_GUI
+      description: "Windows CE"
     - value: 10
       label: IMAGE_SUBSYSTEM_EFI_APPLICATION
+      description: "EFI アプリケーション"
     - value: 11
       label: IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER
+      description: "EFI のブートサービスドライバ"
     - value: 12
       label: IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
+      description: "EFI のランタイムドライバ"
+    - value: 13
+      label: IMAGE_SUBSYSTEM_EFI_ROM
+      description: "EFI の ROM イメージ"
     - value: 14
       label: IMAGE_SUBSYSTEM_XBOX
+      description: "Xbox"
+    - value: 16
+      label: IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION
+      description: "Windows のブートアプリケーション"
+
+  data_directory_index:
+    - value: 0
+      label: EXPORT
+      description: "エクスポート表（.edata）"
+    - value: 1
+      label: IMPORT
+      description: "インポート表（.idata）"
+    - value: 2
+      label: RESOURCE
+      description: "リソース表（.rsrc）"
+    - value: 3
+      label: EXCEPTION
+      description: "例外表（.pdata）"
+    - value: 4
+      label: CERTIFICATE
+      description: "属性証明書の表（Authenticode の署名。RVA ではなくファイル上の位置）"
+    - value: 5
+      label: BASERELOC
+      description: "ベース再配置の表（.reloc）"
+    - value: 6
+      label: DEBUG
+      description: "デバッグ情報のディレクトリ（.debug）"
+    - value: 7
+      label: ARCHITECTURE
+      description: "予約（0）"
+    - value: 8
+      label: GLOBALPTR
+      description: "グローバルポインタのレジスタ値の RVA（サイズは 0）"
+    - value: 9
+      label: TLS
+      description: "スレッドローカル記憶域の表（.tls）"
+    - value: 10
+      label: LOAD_CONFIG
+      description: "ロード構成の表（CFG・SEH のハンドラ表など）"
+    - value: 11
+      label: BOUND_IMPORT
+      description: "バインドされたインポートの表"
+    - value: 12
+      label: IAT
+      description: "インポートアドレス表"
+    - value: 13
+      label: DELAY_IMPORT
+      description: "遅延読み込みのインポート記述子"
+    - value: 14
+      label: CLR_RUNTIME_HEADER
+      description: "CLR ランタイムヘッダ（.NET のアセンブリ）"
+    - value: 15
+      label: RESERVED
+      description: "予約（0）"
+
+  debug_type:
+    - value: 0
+      label: IMAGE_DEBUG_TYPE_UNKNOWN
+      description: "不明"
+    - value: 1
+      label: IMAGE_DEBUG_TYPE_COFF
+      description: "COFF のデバッグ情報"
+    - value: 2
+      label: IMAGE_DEBUG_TYPE_CODEVIEW
+      description: "CodeView（PDB のパスと GUID）"
+    - value: 3
+      label: IMAGE_DEBUG_TYPE_FPO
+      description: "フレームポインタ省略の情報"
+    - value: 4
+      label: IMAGE_DEBUG_TYPE_MISC
+      description: "DBG ファイルの位置"
+    - value: 5
+      label: IMAGE_DEBUG_TYPE_EXCEPTION
+      description: ".pdata のコピー"
+    - value: 6
+      label: IMAGE_DEBUG_TYPE_FIXUP
+      description: "予約"
+    - value: 7
+      label: IMAGE_DEBUG_TYPE_OMAP_TO_SRC
+      description: "イメージのアドレスからソースのアドレスへの対応"
+    - value: 8
+      label: IMAGE_DEBUG_TYPE_OMAP_FROM_SRC
+      description: "ソースのアドレスからイメージのアドレスへの対応"
+    - value: 9
+      label: IMAGE_DEBUG_TYPE_BORLAND
+      description: "Borland 用に予約"
+    - value: 10
+      label: IMAGE_DEBUG_TYPE_RESERVED10
+      description: "予約"
+    - value: 11
+      label: IMAGE_DEBUG_TYPE_CLSID
+      description: "予約"
+    - value: 12
+      label: IMAGE_DEBUG_TYPE_VC_FEATURE
+      description: "Visual C++ の機能の情報"
+    - value: 13
+      label: IMAGE_DEBUG_TYPE_POGO
+      description: "プロファイルに基づく最適化（POGO）の情報"
+    - value: 14
+      label: IMAGE_DEBUG_TYPE_ILTCG
+      description: "中間言語のリンク時コード生成"
+    - value: 15
+      label: IMAGE_DEBUG_TYPE_MPX
+      description: "Intel MPX"
+    - value: 16
+      label: IMAGE_DEBUG_TYPE_REPRO
+      description: "再現可能なビルド（タイムスタンプは内容のハッシュ）"
+    - value: 17
+      label: IMAGE_DEBUG_TYPE_EMBEDDED_PORTABLE_PDB
+      description: "埋め込みの Portable PDB（.NET）"
+    - value: 19
+      label: IMAGE_DEBUG_TYPE_PDBCHECKSUM
+      description: "PDB のチェックサム（.NET）"
+    - value: 20
+      label: IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS
+      description: "追加の DLL 特性（CET 互換など）"
+
+  base_relocation_type:
+    - value: 0
+      label: IMAGE_REL_BASED_ABSOLUTE
+      description: "何もしない（ブロックを 4 バイトにそろえる詰め物）"
+    - value: 1
+      label: IMAGE_REL_BASED_HIGH
+      description: "差分の上位 16 ビットを加える"
+    - value: 2
+      label: IMAGE_REL_BASED_LOW
+      description: "差分の下位 16 ビットを加える"
+    - value: 3
+      label: IMAGE_REL_BASED_HIGHLOW
+      description: "差分の 32 ビットを加える（PE32 の通常の再配置）"
+    - value: 4
+      label: IMAGE_REL_BASED_HIGHADJ
+      description: "上位 16 ビットの調整（次のエントリも使う）"
+    - value: 5
+      label: IMAGE_REL_BASED_MIPS_JMPADDR
+      description: "MIPS のジャンプ命令・ARM の MOV32・RISC-V の HIGH20（マシンによって意味が違う）"
+    - value: 7
+      label: IMAGE_REL_BASED_THUMB_MOV32
+      description: "Thumb の MOV32・RISC-V の LOW12I（マシンによって意味が違う）"
+    - value: 8
+      label: IMAGE_REL_BASED_RISCV_LOW12S
+      description: "RISC-V の LOW12S・LoongArch の MARK_LA（マシンによって意味が違う）"
+    - value: 9
+      label: IMAGE_REL_BASED_MIPS_JMPADDR16
+      description: "MIPS16 のジャンプ命令"
+    - value: 10
+      label: IMAGE_REL_BASED_DIR64
+      description: "差分の 64 ビットを加える（PE32+ の通常の再配置）"
+
+  certificate_revision:
+    - value: 0x0100
+      label: WIN_CERT_REVISION_1_0
+      description: "旧版"
+    - value: 0x0200
+      label: WIN_CERT_REVISION_2_0
+      description: "現行の版"
+
+  certificate_type:
+    - value: 0x0001
+      label: WIN_CERT_TYPE_X509
+      description: "X.509 証明書（非対応）"
+    - value: 0x0002
+      label: WIN_CERT_TYPE_PKCS_SIGNED_DATA
+      description: "PKCS#7 の SignedData（Authenticode の署名）"
+    - value: 0x0003
+      label: WIN_CERT_TYPE_RESERVED_1
+      description: "予約"
+    - value: 0x0004
+      label: WIN_CERT_TYPE_TS_STACK_SIGNED
+      description: "ターミナルサーバのプロトコルスタックの証明書署名（非対応）"
 
 flags:
   pe_characteristics:
@@ -66,26 +355,50 @@ flags:
         bit: 2
       - name: LOCAL_SYMS_STRIPPED
         bit: 3
+      - name: AGGRESSIVE_WS_TRIM
+        bit: 4
       - name: LARGE_ADDRESS_AWARE
         bit: 5
+      - name: BYTES_REVERSED_LO
+        bit: 7
       - name: 32BIT_MACHINE
         bit: 8
       - name: DEBUG_STRIPPED
         bit: 9
+      - name: REMOVABLE_RUN_FROM_SWAP
+        bit: 10
+      - name: NET_RUN_FROM_SWAP
+        bit: 11
       - name: SYSTEM
         bit: 12
       - name: DLL
         bit: 13
+      - name: UP_SYSTEM_ONLY
+        bit: 14
+      - name: BYTES_REVERSED_HI
+        bit: 15
 
   dll_characteristics:
     bit_size: 16
     fields:
+      - name: HIGH_ENTROPY_VA
+        bit: 5
       - name: DYNAMIC_BASE
         bit: 6
+      - name: FORCE_INTEGRITY
+        bit: 7
       - name: NX_COMPAT
         bit: 8
+      - name: NO_ISOLATION
+        bit: 9
       - name: NO_SEH
         bit: 10
+      - name: NO_BIND
+        bit: 11
+      - name: APPCONTAINER
+        bit: 12
+      - name: WDM_DRIVER
+        bit: 13
       - name: GUARD_CF
         bit: 14
       - name: TERMINAL_SERVER_AWARE
@@ -94,12 +407,27 @@ flags:
   section_characteristics:
     bit_size: 32
     fields:
+      - name: TYPE_NO_PAD
+        bit: 3
       - name: CNT_CODE
         bit: 5
       - name: CNT_INITIALIZED_DATA
         bit: 6
       - name: CNT_UNINITIALIZED_DATA
         bit: 7
+      - name: LNK_OTHER
+        bit: 8
+      - name: LNK_INFO
+        bit: 9
+      - name: LNK_REMOVE
+        bit: 11
+      - name: LNK_COMDAT
+        bit: 12
+      - name: GPREL
+        bit: 15
+      - name: ALIGN
+        bit: 20
+        bit_size: 4
       - name: LNK_NRELOC_OVFL
         bit: 24
       - name: MEM_DISCARDABLE
@@ -117,100 +445,205 @@ flags:
       - name: MEM_WRITE
         bit: 31
 
+  clr_flags:
+    bit_size: 32
+    fields:
+      - name: ILONLY
+        bit: 0
+      - name: 32BITREQUIRED
+        bit: 1
+      - name: IL_LIBRARY
+        bit: 2
+      - name: STRONGNAMESIGNED
+        bit: 3
+      - name: NATIVE_ENTRYPOINT
+        bit: 4
+      - name: TRACKDEBUGDATA
+        bit: 16
+      - name: 32BITPREFERRED
+        bit: 17
+
 structs:
   pe:
     - name: dos_header
       type: struct
       struct: dos_header
+      description: "MS-DOS ヘッダ（64 バイト。e_lfanew が PE ヘッダの位置）"
+    - name: dos_stub
+      type: bytes
+      size: "{e_lfanew - 64}"
+      if: "{e_lfanew > 64}"
+      description: "DOS スタブ（DOS で実行したときのメッセージを出す小さなプログラムと、MSVC のリンカが置く Rich ヘッダ）"
     - name: pe_signature
       type: bytes
       size: "4"
       expected: [0x50, 0x45, 0x00, 0x00]
       seek: "{e_lfanew}"
-      description: "PEシグネチャ（'PE\\0\\0'）"
+      description: "PE シグネチャ（'PE' 00 00）"
     - name: coff_header
       type: struct
       struct: coff_header
+      description: "COFF ファイルヘッダ（20 バイト。マシン・セクション数・特性）"
     - name: optional_header
       type: struct
       struct: optional_header
       size: "{size_of_optional_header}"
+      if: "{size_of_optional_header > 0}"
+      description: "オプションヘッダ（イメージには必須。エントリポイント・イメージベース・データディレクトリ）"
+    - name: is_pe32plus
+      type: virtual
+      value: "{size_of_optional_header == 0 ? 0 : (optional_header.magic == 0x20B ? 1 : 0)}"
+      description: "PE32+（64 ビット）か（1 ならインポートのサンクが 8 バイト）"
+    - name: directory_count
+      type: virtual
+      value: "{size_of_optional_header == 0 ? 0 : optional_header.fields.number_of_rva_and_sizes}"
+      description: "データディレクトリの数（NumberOfRvaAndSizes）"
+    - name: export_rva
+      type: virtual
+      value: "{directory_count > 0 ? optional_header.fields.data_directories[0].virtual_address : 0}"
+      description: "エクスポート表の RVA（データディレクトリ 0）"
+    - name: import_rva
+      type: virtual
+      value: "{directory_count > 1 ? optional_header.fields.data_directories[1].virtual_address : 0}"
+      description: "インポート表の RVA（データディレクトリ 1）"
+    - name: certificate_offset
+      type: virtual
+      value: "{directory_count > 4 ? optional_header.fields.data_directories[4].virtual_address : 0}"
+      description: "証明書の表のファイル上の位置（データディレクトリ 4。これだけは RVA ではない）"
+    - name: certificate_size
+      type: virtual
+      value: "{directory_count > 4 ? optional_header.fields.data_directories[4].size : 0}"
+      description: "証明書の表のバイト数"
+    - name: basereloc_rva
+      type: virtual
+      value: "{directory_count > 5 ? optional_header.fields.data_directories[5].virtual_address : 0}"
+      description: "ベース再配置の表の RVA（データディレクトリ 5）"
+    - name: basereloc_size
+      type: virtual
+      value: "{directory_count > 5 ? optional_header.fields.data_directories[5].size : 0}"
+      description: "ベース再配置の表のバイト数"
+    - name: debug_rva
+      type: virtual
+      value: "{directory_count > 6 ? optional_header.fields.data_directories[6].virtual_address : 0}"
+      description: "デバッグディレクトリの RVA（データディレクトリ 6）"
+    - name: debug_size
+      type: virtual
+      value: "{directory_count > 6 ? optional_header.fields.data_directories[6].size : 0}"
+      description: "デバッグディレクトリのバイト数（28 バイト × エントリ数）"
+    - name: clr_rva
+      type: virtual
+      value: "{directory_count > 14 ? optional_header.fields.data_directories[14].virtual_address : 0}"
+      description: "CLR ランタイムヘッダの RVA（データディレクトリ 14。.NET のアセンブリのとき 0 以外）"
     - name: sections
       type: struct
       struct: section_header
       repeat_count: "{number_of_sections}"
+      description: "セクション表（オプションヘッダの直後の 40 バイト × number_of_sections）。セクションに入っているデータディレクトリも分解する"
+    - name: certificate_table
+      type: struct
+      struct: certificate_table
+      seek: "{certificate_offset}"
+      seek_restore: true
+      size: "{certificate_size}"
+      if: "{certificate_size > 0 ? certificate_offset > 0 : 0}"
+      description: "属性証明書の表（Authenticode の署名。ファイルの末尾にあり、イメージとしては読み込まれない）"
 
   dos_header:
     - name: e_magic
       type: bytes
       size: "2"
       expected: [0x4D, 0x5A]
-      description: "DOSマジックナンバー（'MZ'）"
+      description: "MS-DOS のマジック（'MZ'）"
     - name: e_cblp
       type: uint16
+      description: "DOS 実行ファイルの最後のページのバイト数"
     - name: e_cp
       type: uint16
+      description: "DOS 実行ファイルのページ数（512 バイト単位）"
     - name: e_crlc
       type: uint16
+      description: "DOS の再配置の数"
     - name: e_cparhdr
       type: uint16
+      description: "DOS ヘッダのサイズ（16 バイトのパラグラフ単位）"
     - name: e_minalloc
       type: uint16
+      description: "DOS で追加に必要な最小のパラグラフ数"
     - name: e_maxalloc
       type: uint16
+      description: "DOS で追加に必要な最大のパラグラフ数"
     - name: e_ss
       type: uint16
+      description: "DOS の初期の SS（相対）"
     - name: e_sp
       type: uint16
+      description: "DOS の初期の SP"
     - name: e_csum
       type: uint16
+      description: "DOS のチェックサム（通常 0）"
     - name: e_ip
       type: uint16
+      description: "DOS の初期の IP"
     - name: e_cs
       type: uint16
+      description: "DOS の初期の CS（相対）"
     - name: e_lfarlc
       type: uint16
+      description: "DOS の再配置表の位置"
     - name: e_ovno
       type: uint16
+      description: "DOS のオーバーレイ番号"
     - name: e_res
       type: bytes
       size: "8"
-      description: "予約領域"
+      padding: true
+      description: "予約（0）"
     - name: e_oemid
       type: uint16
+      description: "OEM の識別子"
     - name: e_oeminfo
       type: uint16
+      description: "OEM ごとの情報"
     - name: e_res2
       type: bytes
       size: "20"
-      description: "予約領域"
+      padding: true
+      description: "予約（0）"
     - name: e_lfanew
       type: uint32
-      description: "PEヘッダへのオフセット"
+      description: "PE シグネチャ（PE ヘッダ）の位置（ファイル先頭から）"
 
   coff_header:
     - name: machine
       type: uint16
       enum: machine_type
+      description: "対象の CPU の種類"
     - name: number_of_sections
       type: uint16
+      description: "セクションの数（セクション表のエントリ数）"
     - name: time_date_stamp
       type: uint32
+      description: "作成日時（UNIX 時刻の秒。再現可能なビルドでは内容のハッシュ）"
     - name: pointer_to_symbol_table
       type: uint32
+      description: "COFF シンボル表の位置（イメージでは廃止され通常 0）"
     - name: number_of_symbols
       type: uint32
+      description: "COFF シンボル表のエントリ数（イメージでは通常 0）"
     - name: size_of_optional_header
       type: uint16
+      description: "オプションヘッダのバイト数（PE32 は 224、PE32+ は 240 が一般的。オブジェクトファイルは 0）"
     - name: characteristics
       type: uint16
       flags: pe_characteristics
+      description: "ファイルの特性（EXECUTABLE_IMAGE = イメージ、DLL、LARGE_ADDRESS_AWARE など）"
 
   # magic を読んでから PE32 / PE32+ を選ぶ（switch_on は先に読んだ値しか参照できない）
   optional_header:
     - name: magic
       type: uint16
       enum: pe_magic
+      description: "オプションヘッダの種類（PE32 = 0x10B、PE32+ = 0x20B）"
     - name: fields
       type: switch
       switch_on: "{magic}"
@@ -219,168 +652,701 @@ structs:
         "267": pe32_optional_header
         "523": pe32plus_optional_header
       default: raw_data
+      description: "magic 以降のオプションヘッダ（PE32 / PE32+ で幅の違うフィールドがある）"
 
   pe32_optional_header:
     - name: major_linker_version
       type: uint8
+      description: "リンカのメジャーバージョン"
     - name: minor_linker_version
       type: uint8
+      description: "リンカのマイナーバージョン"
     - name: size_of_code
       type: uint32
+      description: "コードのセクションの合計バイト数"
     - name: size_of_initialized_data
       type: uint32
+      description: "初期化済みデータのセクションの合計バイト数"
     - name: size_of_uninitialized_data
       type: uint32
+      description: "未初期化データ（.bss）のセクションの合計バイト数"
     - name: address_of_entry_point
       type: uint32
+      description: "エントリポイントの RVA（DLL では省略可能で 0）"
     - name: base_of_code
       type: uint32
+      description: "コードのセクションの先頭の RVA"
     - name: base_of_data
       type: uint32
+      description: "データのセクションの先頭の RVA（PE32 のみ）"
     - name: image_base
       type: uint32
+      description: "読み込みの優先アドレス（64 KiB の倍数。EXE の既定は 0x400000）"
     - name: section_alignment
       type: uint32
+      description: "メモリ上のセクションのアラインメント（既定はページサイズ）"
     - name: file_alignment
       type: uint32
+      description: "ファイル上のセクションのアラインメント（512〜64 KiB の 2 のべき乗。既定 512）"
     - name: major_os_version
       type: uint16
+      description: "必要な OS のメジャーバージョン"
     - name: minor_os_version
       type: uint16
+      description: "必要な OS のマイナーバージョン"
     - name: major_image_version
       type: uint16
+      description: "イメージのメジャーバージョン"
     - name: minor_image_version
       type: uint16
+      description: "イメージのマイナーバージョン"
     - name: major_subsystem_version
       type: uint16
+      description: "サブシステムのメジャーバージョン"
     - name: minor_subsystem_version
       type: uint16
+      description: "サブシステムのマイナーバージョン"
     - name: win32_version_value
       type: uint32
+      description: "予約（0）"
     - name: size_of_image
       type: uint32
+      description: "読み込み後のイメージ全体のバイト数（section_alignment の倍数）"
     - name: size_of_headers
       type: uint32
+      description: "ヘッダ全体（DOS スタブ・PE ヘッダ・セクション表）のバイト数（file_alignment の倍数）"
     - name: checksum
       type: uint32
+      description: "イメージのチェックサム（ドライバなどで検証される。PE 独自のアルゴリズムのため検証しない）"
     - name: subsystem
       type: uint16
       enum: subsystem
+      description: "実行に必要なサブシステム"
     - name: dll_characteristics
       type: uint16
       flags: dll_characteristics
+      description: "DLL の特性（DYNAMIC_BASE = ASLR、NX_COMPAT = DEP、GUARD_CF など）"
     - name: size_of_stack_reserve
       type: uint32
+      description: "スタックの予約サイズ"
     - name: size_of_stack_commit
       type: uint32
+      description: "スタックの初期のコミットサイズ"
     - name: size_of_heap_reserve
       type: uint32
+      description: "ヒープの予約サイズ"
     - name: size_of_heap_commit
       type: uint32
+      description: "ヒープの初期のコミットサイズ"
     - name: loader_flags
       type: uint32
+      description: "予約（0）"
     - name: number_of_rva_and_sizes
       type: uint32
+      description: "データディレクトリの数（通常 16）"
     - name: data_directories
       type: struct
       struct: data_directory
       repeat_count: "{number_of_rva_and_sizes}"
+      description: "データディレクトリ（RVA + サイズ）の並び。番号ごとに意味が決まっている"
 
   pe32plus_optional_header:
     - name: major_linker_version
       type: uint8
+      description: "リンカのメジャーバージョン"
     - name: minor_linker_version
       type: uint8
+      description: "リンカのマイナーバージョン"
     - name: size_of_code
       type: uint32
+      description: "コードのセクションの合計バイト数"
     - name: size_of_initialized_data
       type: uint32
+      description: "初期化済みデータのセクションの合計バイト数"
     - name: size_of_uninitialized_data
       type: uint32
+      description: "未初期化データ（.bss）のセクションの合計バイト数"
     - name: address_of_entry_point
       type: uint32
+      description: "エントリポイントの RVA（DLL では省略可能で 0）"
     - name: base_of_code
       type: uint32
+      description: "コードのセクションの先頭の RVA"
     - name: image_base
       type: uint64
+      description: "読み込みの優先アドレス（PE32+ は 8 バイト。EXE の既定は 0x140000000）"
     - name: section_alignment
       type: uint32
+      description: "メモリ上のセクションのアラインメント（既定はページサイズ）"
     - name: file_alignment
       type: uint32
+      description: "ファイル上のセクションのアラインメント（512〜64 KiB の 2 のべき乗。既定 512）"
     - name: major_os_version
       type: uint16
+      description: "必要な OS のメジャーバージョン"
     - name: minor_os_version
       type: uint16
+      description: "必要な OS のマイナーバージョン"
     - name: major_image_version
       type: uint16
+      description: "イメージのメジャーバージョン"
     - name: minor_image_version
       type: uint16
+      description: "イメージのマイナーバージョン"
     - name: major_subsystem_version
       type: uint16
+      description: "サブシステムのメジャーバージョン"
     - name: minor_subsystem_version
       type: uint16
+      description: "サブシステムのマイナーバージョン"
     - name: win32_version_value
       type: uint32
+      description: "予約（0）"
     - name: size_of_image
       type: uint32
+      description: "読み込み後のイメージ全体のバイト数（section_alignment の倍数）"
     - name: size_of_headers
       type: uint32
+      description: "ヘッダ全体（DOS スタブ・PE ヘッダ・セクション表）のバイト数（file_alignment の倍数）"
     - name: checksum
       type: uint32
+      description: "イメージのチェックサム（PE 独自のアルゴリズムのため検証しない）"
     - name: subsystem
       type: uint16
       enum: subsystem
+      description: "実行に必要なサブシステム"
     - name: dll_characteristics
       type: uint16
       flags: dll_characteristics
+      description: "DLL の特性（HIGH_ENTROPY_VA = 64 ビットの ASLR、DYNAMIC_BASE、NX_COMPAT、GUARD_CF など）"
     - name: size_of_stack_reserve
       type: uint64
+      description: "スタックの予約サイズ（PE32+ は 8 バイト）"
     - name: size_of_stack_commit
       type: uint64
+      description: "スタックの初期のコミットサイズ"
     - name: size_of_heap_reserve
       type: uint64
+      description: "ヒープの予約サイズ"
     - name: size_of_heap_commit
       type: uint64
+      description: "ヒープの初期のコミットサイズ"
     - name: loader_flags
       type: uint32
+      description: "予約（0）"
     - name: number_of_rva_and_sizes
       type: uint32
+      description: "データディレクトリの数（通常 16）"
     - name: data_directories
       type: struct
       struct: data_directory
       repeat_count: "{number_of_rva_and_sizes}"
+      description: "データディレクトリ（RVA + サイズ）の並び。番号ごとに意味が決まっている"
 
   data_directory:
+    - name: directory
+      type: virtual
+      value: "{_index}"
+      enum: data_directory_index
+      description: "データディレクトリの番号（並び順で意味が決まる）"
     - name: virtual_address
       type: uint32
+      description: "表の RVA（証明書の表だけはファイル上の位置。無ければ 0）"
     - name: size
       type: uint32
+      description: "表のバイト数"
 
   section_header:
     - name: name
       type: ascii
       size: "8"
+      description: "セクション名（NUL で詰めた 8 バイト。例: .text・.rdata・.data・.rsrc・.reloc）"
     - name: virtual_size
       type: uint32
+      description: "メモリ上のバイト数（size_of_raw_data より大きい分は 0 で埋める）"
     - name: virtual_address
       type: uint32
+      description: "メモリ上の先頭の RVA"
     - name: size_of_raw_data
       type: uint32
+      description: "ファイル上のバイト数（file_alignment の倍数）"
     - name: pointer_to_raw_data
       type: uint32
+      description: "ファイル上の中身の位置（未初期化データだけのセクションは 0）"
     - name: pointer_to_relocations
       type: uint32
+      description: "COFF の再配置の位置（イメージでは 0）"
     - name: pointer_to_linenumbers
       type: uint32
+      description: "COFF の行番号の位置（廃止。0）"
     - name: number_of_relocations
       type: uint16
+      description: "COFF の再配置の数（イメージでは 0）"
     - name: number_of_linenumbers
       type: uint16
+      description: "COFF の行番号の数（廃止。0）"
     - name: characteristics
       type: uint32
       flags: section_characteristics
+      description: "セクションの特性（CNT_CODE = コード、MEM_EXECUTE / MEM_READ / MEM_WRITE = アクセス権 など）"
+    - name: file_delta
+      type: virtual
+      value: "{pointer_to_raw_data - virtual_address}"
+      description: "このセクションの RVA をファイル上の位置に直すための差（RVA + file_delta = ファイル上の位置）"
+    - name: export_directory
+      type: struct
+      struct: export_directory
+      seek: "{export_rva + file_delta}"
+      seek_restore: true
+      if: "{export_rva != 0 and export_rva >= virtual_address and export_rva < virtual_address + size_of_raw_data}"
+      description: "エクスポート表（このセクションに入っているとき）"
+    - name: import_directory
+      type: struct
+      struct: import_table
+      seek: "{import_rva + file_delta}"
+      seek_restore: true
+      if: "{import_rva != 0 and import_rva >= virtual_address and import_rva < virtual_address + size_of_raw_data}"
+      description: "インポート表（このセクションに入っているとき）"
+    - name: debug_directory
+      type: struct
+      struct: debug_directory
+      seek: "{debug_rva + file_delta}"
+      seek_restore: true
+      if: "{debug_rva != 0 and debug_rva >= virtual_address and debug_rva < virtual_address + size_of_raw_data}"
+      description: "デバッグディレクトリ（このセクションに入っているとき）"
+    - name: base_relocations
+      type: struct
+      struct: base_relocation_table
+      seek: "{basereloc_rva + file_delta}"
+      seek_restore: true
+      size: "{basereloc_size}"
+      if: "{basereloc_rva != 0 and basereloc_rva >= virtual_address and basereloc_rva < virtual_address + size_of_raw_data}"
+      description: "ベース再配置の表（このセクションに入っているとき。通常は .reloc）"
+    - name: clr_header
+      type: struct
+      struct: cor20_header
+      seek: "{clr_rva + file_delta}"
+      seek_restore: true
+      if: "{clr_rva != 0 and clr_rva >= virtual_address and clr_rva < virtual_address + size_of_raw_data}"
+      description: "CLR ランタイムヘッダ（.NET のアセンブリで、このセクションに入っているとき）"
+
+  # --- エクスポート ---
+  export_directory:
+    - name: characteristics
+      type: uint32
+      description: "予約（0）"
+    - name: time_date_stamp
+      type: uint32
+      description: "エクスポートデータの作成日時"
+    - name: major_version
+      type: uint16
+      description: "メジャーバージョン（利用者が設定）"
+    - name: minor_version
+      type: uint16
+      description: "マイナーバージョン（利用者が設定）"
+    - name: name_rva
+      type: uint32
+      description: "DLL 名の RVA"
+    - name: dll_name
+      type: asciiz
+      seek: "{name_rva + file_delta}"
+      seek_restore: true
+      description: "DLL 名（name_rva から引いた文字列）"
+    - name: ordinal_base
+      type: uint32
+      description: "序数の開始値（通常 1。エクスポートの序数 = 関数の番号 + ordinal_base）"
+    - name: number_of_functions
+      type: uint32
+      description: "エクスポートアドレス表のエントリ数"
+    - name: number_of_names
+      type: uint32
+      description: "名前付きのエクスポートの数（名前表と序数表のエントリ数）"
+    - name: address_of_functions
+      type: uint32
+      description: "エクスポートアドレス表の RVA"
+    - name: address_of_names
+      type: uint32
+      description: "名前表（名前の RVA の並び。名前の辞書順）の RVA"
+    - name: address_of_name_ordinals
+      type: uint32
+      description: "序数表（名前に対応する関数の番号）の RVA"
+    - name: names
+      type: struct
+      struct: export_name
+      repeat_count: "{number_of_names}"
+      seek: "{address_of_names + file_delta + _index * 4}"
+      seek_restore: true
+      description: "名前付きのエクスポート（number_of_names 個）"
+    - name: name_ordinals
+      type: uint16
+      repeat_count: "{number_of_names}"
+      seek: "{address_of_name_ordinals + file_delta}"
+      seek_restore: true
+      description: "名前ごとの関数の番号（エクスポートアドレス表の添字。ordinal_base を引いた値）"
+    - name: functions
+      type: uint32
+      repeat_count: "{number_of_functions}"
+      seek: "{address_of_functions + file_delta}"
+      seek_restore: true
+      description: "エクスポートアドレス表（関数の RVA。エクスポート表の範囲内なら別の DLL への転送名の RVA）"
+
+  export_name:
+    - name: name_rva
+      type: uint32
+      description: "名前の RVA"
+    - name: name
+      type: asciiz
+      seek: "{name_rva + file_delta}"
+      seek_restore: true
+      description: "エクスポートする名前"
+
+  # --- インポート ---
+  import_table:
+    - name: descriptors
+      type: struct
+      struct: import_descriptor
+      repeat_until: "{import_name_rva == 0}"
+      description: "インポート記述子（DLL ごとに 20 バイト。すべて 0 の記述子で終わる）"
+
+  import_descriptor:
+    - name: original_first_thunk
+      type: uint32
+      description: "インポート名表（ILT）の RVA（Characteristics。0 なら first_thunk を使う）"
+    - name: time_date_stamp
+      type: uint32
+      description: "バインドされていなければ 0、バインド済みなら -1 か DLL の日時"
+    - name: forwarder_chain
+      type: uint32
+      description: "転送の最初のエントリの番号（転送が無ければ -1）"
+    - name: import_name_rva
+      type: uint32
+      description: "DLL 名の RVA（0 なら表の終わり）"
+    - name: first_thunk
+      type: uint32
+      description: "インポートアドレス表（IAT。読み込み時にアドレスで上書きされる）の RVA"
+    - name: dll_name
+      type: asciiz
+      seek: "{import_name_rva + file_delta}"
+      seek_restore: true
+      if: "{import_name_rva != 0}"
+      description: "インポートする DLL の名前"
+    - name: functions
+      type: switch
+      switch_on: "{is_pe32plus}"
+      seek: "{(original_first_thunk != 0 ? original_first_thunk : first_thunk) + file_delta}"
+      seek_restore: true
+      if: "{import_name_rva != 0}"
+      cases:
+        "1": import_lookup_table64
+      default: import_lookup_table32
+      description: "インポートする関数（ILT の並び。PE32+ は 8 バイト、PE32 は 4 バイトのエントリ）"
+
+  import_lookup_table64:
+    - name: entries
+      type: struct
+      struct: import_lookup_entry64
+      repeat_until: "{thunk == 0}"
+      description: "インポート名表のエントリ（0 で終わる）"
+
+  import_lookup_entry64:
+    - name: thunk
+      type: uint64
+      description: "最上位ビットが 1 なら序数によるインポート（下位 16 ビットが序数）、0 なら名前（下位 31 ビットがヒント・名前の RVA）"
+    - name: by_ordinal
+      type: virtual
+      value: "{(thunk >> 63) & 1}"
+      description: "序数によるインポートか（thunk の最上位ビット）"
+    - name: ordinal
+      type: virtual
+      value: "{thunk & 0xFFFF}"
+      if: "{by_ordinal == 1}"
+      description: "インポートする序数"
+    - name: hint_name
+      type: struct
+      struct: hint_name
+      seek: "{(thunk & 0x7FFFFFFF) + file_delta}"
+      seek_restore: true
+      if: "{thunk == 0 ? 0 : by_ordinal == 0}"
+      description: "ヒントと名前（名前によるインポートのとき）"
+
+  import_lookup_table32:
+    - name: entries
+      type: struct
+      struct: import_lookup_entry32
+      repeat_until: "{thunk == 0}"
+      description: "インポート名表のエントリ（0 で終わる）"
+
+  import_lookup_entry32:
+    - name: thunk
+      type: uint32
+      description: "最上位ビットが 1 なら序数によるインポート（下位 16 ビットが序数）、0 なら名前（下位 31 ビットがヒント・名前の RVA）"
+    - name: by_ordinal
+      type: virtual
+      value: "{thunk >> 31}"
+      description: "序数によるインポートか（thunk の最上位ビット）"
+    - name: ordinal
+      type: virtual
+      value: "{thunk & 0xFFFF}"
+      if: "{by_ordinal == 1}"
+      description: "インポートする序数"
+    - name: hint_name
+      type: struct
+      struct: hint_name
+      seek: "{(thunk & 0x7FFFFFFF) + file_delta}"
+      seek_restore: true
+      if: "{thunk == 0 ? 0 : by_ordinal == 0}"
+      description: "ヒントと名前（名前によるインポートのとき）"
+
+  hint_name:
+    - name: hint
+      type: uint16
+      description: "DLL のエクスポート名表の中の位置の目安（探すのを速くするため）"
+    - name: name
+      type: asciiz
+      description: "インポートする関数の名前"
+
+  # --- デバッグ ---
+  debug_directory:
+    - name: entries
+      type: struct
+      struct: debug_entry
+      repeat_count: "{debug_size / 28}"
+      description: "デバッグディレクトリのエントリ（28 バイトずつ）"
+
+  debug_entry:
+    - name: characteristics
+      type: uint32
+      description: "予約（0）"
+    - name: time_date_stamp
+      type: uint32
+      description: "デバッグデータの作成日時"
+    - name: major_version
+      type: uint16
+      description: "デバッグデータの形式のメジャーバージョン"
+    - name: minor_version
+      type: uint16
+      description: "デバッグデータの形式のマイナーバージョン"
+    - name: debug_type
+      type: uint32
+      enum: debug_type
+      description: "デバッグ情報の種類"
+    - name: size_of_data
+      type: uint32
+      description: "デバッグデータのバイト数"
+    - name: address_of_raw_data
+      type: uint32
+      description: "デバッグデータの RVA（読み込まれないなら 0）"
+    - name: pointer_to_raw_data
+      type: uint32
+      description: "デバッグデータのファイル上の位置"
+    - name: codeview
+      type: struct
+      struct: codeview_rsds
+      seek: "{pointer_to_raw_data}"
+      seek_restore: true
+      if: "{debug_type == 2 ? size_of_data >= 24 : 0}"
+      description: "CodeView の情報（PDB を探すための GUID・世代・パス）"
+
+  codeview_rsds:
+    - name: signature
+      type: ascii
+      size: "4"
+      description: "CodeView の形式（'RSDS' = PDB 7.0）"
+    - name: guid
+      type: bytes
+      size: "16"
+      description: "PDB の GUID（PDB と実行ファイルの対応を確かめる）"
+    - name: age
+      type: uint32
+      description: "PDB の世代（更新のたびに増える）"
+    - name: pdb_path
+      type: utf8z
+      description: "ビルド時の PDB のパス（UTF-8）"
+
+  # --- ベース再配置 ---
+  base_relocation_table:
+    - name: blocks
+      type: struct
+      struct: base_relocation_block
+      repeat: eof
+      description: "再配置のブロック（4 KiB のページごと）"
+
+  base_relocation_block:
+    - name: page_rva
+      type: uint32
+      description: "このブロックの再配置を当てるページの RVA"
+    - name: block_size
+      type: uint32
+      description: "ブロックのバイト数（この 8 バイトを含む）"
+    - name: entries
+      type: struct
+      struct: base_relocation_entry
+      repeat_count: "{block_size >= 8 ? (block_size - 8) / 2 : 0}"
+      description: "再配置のエントリ（2 バイトずつ）"
+
+  base_relocation_entry:
+    - name: entry
+      type: bitfield
+      size: "2"
+      description: "再配置のエントリ（種類 4 ビット + ページ内のオフセット 12 ビット）"
+      fields:
+        - name: offset
+          bits: "11:0"
+          description: "ページ内のオフセット（page_rva からのバイト数）"
+        - name: relocation_type
+          bits: "15:12"
+          enum: base_relocation_type
+          description: "再配置の種類"
+
+  # --- 証明書 ---
+  certificate_table:
+    - name: certificates
+      type: struct
+      struct: win_certificate
+      repeat: eof
+      description: "属性証明書（WIN_CERTIFICATE。8 バイト境界に並ぶ）"
+
+  win_certificate:
+    - name: length
+      type: uint32
+      description: "このエントリのバイト数（このヘッダを含む）"
+    - name: revision
+      type: uint16
+      enum: certificate_revision
+      description: "WIN_CERTIFICATE の版"
+    - name: certificate_type
+      type: uint16
+      enum: certificate_type
+      description: "証明書の種類"
+    - name: certificate
+      type: bytes
+      size: "{length - 8}"
+      description: "証明書のデータ（Authenticode なら DER の PKCS#7 SignedData）"
+    - name: padding
+      type: bytes
+      size: "{(8 - length % 8) % 8}"
+      if: "{remaining > 0}"
+      padding: true
+      description: "次のエントリを 8 バイト境界にそろえる詰め物（0）"
+
+  # --- .NET ---
+  cor20_header:
+    - name: cb
+      type: uint32
+      description: "このヘッダのバイト数（72）"
+    - name: major_runtime_version
+      type: uint16
+      description: "必要なランタイムのメジャーバージョン（2）"
+    - name: minor_runtime_version
+      type: uint16
+      description: "必要なランタイムのマイナーバージョン（5）"
+    - name: metadata
+      type: struct
+      struct: rva_and_size
+      description: "メタデータの RVA とサイズ"
+    - name: flags
+      type: uint32
+      flags: clr_flags
+      description: "ランタイムのフラグ（ILONLY = IL のみ、32BITREQUIRED / 32BITPREFERRED = 32 ビットで実行 など）"
+    - name: entry_point_token
+      type: uint32
+      description: "エントリポイントのメソッドのトークン（NATIVE_ENTRYPOINT なら RVA。DLL は 0）"
+    - name: resources
+      type: struct
+      struct: rva_and_size
+      description: "マネージドのリソースの RVA とサイズ"
+    - name: strong_name_signature
+      type: struct
+      struct: rva_and_size
+      description: "厳密名の署名の RVA とサイズ"
+    - name: code_manager_table
+      type: struct
+      struct: rva_and_size
+      description: "予約（0）"
+    - name: vtable_fixups
+      type: struct
+      struct: rva_and_size
+      description: "VTable の修正の表（C++/CLI の混在アセンブリ）"
+    - name: export_address_table_jumps
+      type: struct
+      struct: rva_and_size
+      description: "予約（0）"
+    - name: managed_native_header
+      type: struct
+      struct: rva_and_size
+      description: "ReadyToRun などのネイティブコードのヘッダ（無ければ 0）"
+    - name: metadata_root
+      type: struct
+      struct: metadata_root
+      seek: "{metadata.virtual_address + file_delta}"
+      seek_restore: true
+      if: "{metadata.virtual_address != 0}"
+      description: "メタデータのルート（'BSJB'。CLR ヘッダと同じセクションにある前提）"
+
+  rva_and_size:
+    - name: virtual_address
+      type: uint32
+      description: "RVA（無ければ 0）"
+    - name: size
+      type: uint32
+      description: "バイト数"
+
+  metadata_root:
+    - name: signature
+      type: uint32
+      validate: "{signature == 0x424A5342}"
+      description: "メタデータのシグネチャ（'BSJB'）"
+    - name: major_version
+      type: uint16
+      description: "メタデータの形式のメジャーバージョン（1）"
+    - name: minor_version
+      type: uint16
+      description: "メタデータの形式のマイナーバージョン（1）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: version_length
+      type: uint32
+      description: "版の文字列のバイト数（NUL と 4 バイト境界までの詰め物を含む）"
+    - name: version
+      type: utf8
+      size: "{version_length}"
+      description: "対象のランタイムの版（例: 'v4.0.30319'。NUL で詰める）"
+    - name: flags
+      type: uint16
+      description: "予約（0）"
+    - name: stream_count
+      type: uint16
+      description: "ストリームの数"
+    - name: streams
+      type: struct
+      struct: metadata_stream_header
+      repeat_count: "{stream_count}"
+      description: "ストリームのヘッダ（#~・#Strings・#US・#GUID・#Blob など）"
+
+  metadata_stream_header:
+    - name: offset
+      type: uint32
+      description: "ストリームの位置（メタデータのルートの先頭から）"
+    - name: size
+      type: uint32
+      description: "ストリームのバイト数（4 の倍数）"
+    - name: name_length
+      type: virtual
+      value: "{until_marker(0x00)}"
+      description: "ストリーム名のバイト数（NUL の手前まで）"
+    - name: name
+      type: ascii
+      size: "{name_length}"
+      description: "ストリーム名（'#~' = メタデータの表、'#Strings'・'#US'・'#GUID'・'#Blob' = ヒープ）"
+    - name: name_padding
+      type: bytes
+      size: "{4 - name_length % 4}"
+      padding: true
+      description: "名前の NUL と 4 バイト境界までの詰め物"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ"

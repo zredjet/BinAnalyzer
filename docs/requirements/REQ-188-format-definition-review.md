@@ -175,7 +175,7 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | 土台 | `docs/format-authoring.md`、`FormatDefinitionQualityTests`（対応待ち 41 定義）、XZ をお手本に（先頭コメント、全 40 フィールドと enum の説明）、README / architecture.md / CLAUDE.md からの参照 | 済 |
 | 画像 | png / jpeg / gif / bmp / tiff / webp / ico / heif / icc（先頭コメント・全フィールドの説明、PNG 第 3 版・APNG、BigTIFF と IFD チェーン、WebP の RFC 9649 照合、ICC の型ごとの分解、下記のバグ修正） | 済 |
 | アーカイブ・圧縮 | zip / gzip / tar / 7z / lz4（先頭コメント・全フィールドの説明、ZIP を Central Directory から読む形に変更・Zip64・拡張フィールド、7z のヘッダの分解、pax / GNU tar、LZ4 のフレームの種類と Block Checksum、下記のバグ修正。画像の BMP の条件式のバグもここで直した） | 済 |
-| 実行形式・バイトコード | elf / pe / macho / java-class / wasm | 未着手 |
+| 実行形式・バイトコード | elf / pe / macho / java-class / wasm（先頭コメント・全フィールドの説明、ELF のセクションの中身、PE のデータディレクトリ、Mach-O のユニバーサルバイナリ・シンボル・コード署名、Java のコンスタントプールの 2 スロットと属性、WASM 3.0 の全セクション、下記のバグ修正） | 済 |
 | 音声・映像 | mp3 / mp4 / wav / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff | 未着手 |
 | データ・その他 | sqlite / parquet / pdf / pcap / dns / protobuf / msgpack / cbor / x509 / fat / otf | 未着手 |
 
@@ -203,6 +203,12 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | Lz4ParsingTests | SkippableFrame_AndBlockChecksum_AreDecoded（既存 6 件はフレームの下を引くよう更新） | 6 |
 | BmpParsingTests | V5Header_DecodesWithoutErrorAndReadsThePalette | 6 |
 | JsonSchemaTests | Schema_ValidatesFormatFile に gzip / tar / 7z / lz4 を追加（YAML の引用符付きの数字を整数にしないよう変換を直した） | 7 |
+| ElfParsingTests | Sections_ResolveNamesSymbolsNotesDynamicAndCompressedData（既存は子を名前で引くよう更新） | 4, 6 |
+| PeParsingTests | Pe32PlusDll_DecodesDirectoriesInsideTheirSections / ManagedPe32_DecodesClrHeaderMetadataAndThirtyTwoBitImports | 6 |
+| MachoParsingTests | UniversalBinary_DecodesBothSlicesWithTheirEndianness（既存の LC_BUILD_VERSION の値を 0x32 に直した） | 6 |
+| JavaClassParsingTests | WideConstants_TakeTwoSlotsAndNamesResolveThroughTheConstantPool | 4, 6 |
+| WasmParsingTests | Wasm3Module_DecodesGcTypesImportsConstantExpressionsAndNames | 4, 6 |
+| JsonSchemaTests | Schema_FieldTypeEnum_MatchesDslTypeNames（スキーマの型名に uleb128 / sleb128 / vlq と別名を追加）、Schema_ValidatesFormatFile に pe / macho / java-class / wasm を追加 | 7 |
 
 ### 画像の見直し（PR: 画像）
 
@@ -264,9 +270,53 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 - 7z: 圧縮ヘッダの展開（そのため既定の 7z はファイル一覧まで見えない）、ファイル名の 1 件ずつの分解
 - LZ4: ブロックの展開、Header Checksum の検証（xxHash-32 の 2 バイト目）
 
+### 実行形式・バイトコードの見直し（PR: 実行形式・バイトコード）
+
+**直したバグ**
+
+- Java: コンスタントプールを「constant_pool_count − 1 個のエントリ」として読んでいたため、Long / Double（2 スロットを使う）を含むクラスで、コンスタントプールの後ろを 2 エントリ分ずつ読みすぎてデコードエラーになっていた（Java 8 の実際のクラスファイルで確認）。1 スロットずつ読み、2 スロット目は空の要素にする
+- Mach-O: LC_BUILD_VERSION の値を 44（本当は LC_ENCRYPTION_INFO_64 = 0x2C）、LC_SOURCE_VERSION を 34（本当は LC_DYLD_INFO = 0x22）としていたため、実際のファイルの LC_BUILD_VERSION（0x32）が分解されていなかった。テストの Generator も誤った値を使っていた。ロードコマンドの struct がリトルエンディアン固定で、ビッグエンディアン（PowerPC）の Mach-O を読めなかった。ユニバーサルバイナリ（macOS の /bin/ls など）を読めなかった
+- ELF: プログラムヘッダを e_phoff へ seek せず ELF ヘッダの直後から読み、e_phentsize / e_shentsize も使っていなかった
+- WASM: メモリの limits の最大値（flags の bit 0）を読んでいなかった（セクションのサイズで区切られるため後ろはずれない）
+- JSON スキーマ（schemas/bdef.schema.json）の型名に uleb128 / sleb128 / vlq と別名が無く、これらを使う定義がスキーマで ✗ になっていた
+
+**足した構造**
+
+- ELF: セクション名（.shstrtab）、セクションの中身（シンボル表と名前・文字列表・再配置・動的セクションと DT_NEEDED などの名前・ノートと GNU の種類・zlib / Zstandard の圧縮セクションの展開）、PT_INTERP のパス、拡張番号（e_shnum = 0 / SHN_XINDEX）、gABI 4.3 の OS ABI・シンボルの属性・GNU の拡張の enum
+- PE: DOS スタブ、データディレクトリの番号の名前、エクスポート表・インポート表（PE32 / PE32+）・デバッグディレクトリ（CodeView の PDB のパス）・ベース再配置・証明書の表・CLR ヘッダとメタデータのルート（.NET）。RVA は各セクションヘッダで「そのセクションに入っているか」を確かめて、そのセクションの差でファイル上の位置に直す
+- Mach-O: ユニバーサルバイナリ（fat / fat64）、ビッグエンディアン、ロードコマンドの大半（dylib の名前と版・rpath・linkedit・dyld_info・version_min・source_version・暗号化・linker_option・note・fileset）、シンボル表と名前、コード署名（SuperBlob・CodeDirectory の識別子・エンタイトルメント）
+- Java: Java SE 25〜27 の版、クラス名・メンバー名・属性名の解決、属性の中身（Code・ConstantValue・Exceptions・SourceFile・LineNumberTable・LocalVariableTable・InnerClasses・BootstrapMethods など）
+- WASM: WebAssembly 3.0 の全セクション（GC の型・インポート・テーブル・グローバルと定数式・要素・データ・データの数・タグ・関数の本体のローカル変数）、コンポーネントの層の判別、name / producers / target_features などのカスタムセクション
+
+**実在のファイル・ツールでの確認**:
+
+- ELF: clang（LLVM 23）で x86-64 / i386 / AArch64 / PowerPC / MIPS64 / RISC-V 向けに作ったオブジェクトファイル（zlib で圧縮したデバッグ情報付き）と、SkiaSharp の libSkiaSharp.so（ARM 32 ビット・AArch64、約 10 MB）を読み、セクション・シンボルの数・ビルド ID・再配置の数を llvm-readelf と照合した
+- PE: .NET SDK の ilc.exe・clrjit（PE32+ x64）、SkiaSharp の ARM64 の DLL、onigwrap の x86 の DLL、このリポジトリの .NET のアセンブリを読み、インポート・エクスポート・PDB のパス・証明書・CLR のメタデータを llvm-readobj と照合した
+- Mach-O: macOS の /bin/ls・/usr/lib/dyld（ユニバーサルバイナリ）、Homebrew の dylib、clang のオブジェクトファイル（arm64・x86_64・i386）を読み、依存ライブラリと版・シンボル・署名の識別子を otool・nm・codesign と照合した
+- Java: Homebrew に同梱の jar（concurrent-ruby・Java 8）と JRE の jrt-fs.jar のクラスファイル 169 個、gettext の古いクラスファイルを読み、すべてエラーなく読めることを確かめた
+- WASM: clang の wasm32 のオブジェクトファイルと .NET の dotnet.native.wasm（約 3 MB）を読み、セクションのサイズを llvm-objdump と照合した
+- テスト用に組み立てたファイルも実際のツールで確かめた:
+  - ELF: llvm-readelf が同じ値を表示する
+  - PE: llvm-readobj がインポート・エクスポート・再配置・PDB のパスを読める
+  - Mach-O: lipo / llvm-objdump / nm で読め、codesign が識別子とエンタイトルメントを表示し、codesign -v の検証も通る
+  - Java: JRE 25 が -Xverify:all で読み込んで実行できる
+  - WASM: Node.js 24 の WebAssembly.validate が通り、インポートとエクスポートを読める
+
+**出力の大きさ**: 5 件のゴールデン（JSON）は合計 48,519 → 84,063 バイト（+73%）
+
+**残した課題**（各定義の「対応していないもの」に記載）
+
+- ELF: シンボルのバージョン・ハッシュ表・.eh_frame、セクションの無いファイルの PT_NOTE / PT_DYNAMIC
+- PE: リソース・例外・TLS・ロード構成・遅延読み込み、ほかのセクションにまたがる名前、Rich ヘッダ、メタデータの表の中身
+- Mach-O: dyld の情報（chained fixups など）の中身、要件と CMS の署名の中身
+- Java: バイトコードの逆アセンブル、StackMapTable・アノテーション・Module・Record の中身
+- WASM: 関数の本体の命令、コンポーネントモデル
+
 ### 気づき・今後の課題
 
+- size 付きのスコープ（size を持つ struct・switch）の中から、その範囲の外へ seek して読むと「範囲外」のデコードエラーになる。ELF のセクションの中身では、別のセクションの文字列を引くために switch の size を外し、各ケースで sh_size を使って大きさを決める形で避けた
+
 - `size` と `repeat` を一緒に指定したフィールドは、要素の値の昇格が親のスコープに届かない（BinaryDecoder の配列のバウンダリスコープで捨てられる）。ZIP の拡張フィールドは struct で包み、その中で Zip64 の値を使う形で避けた。エンジンで昇格を親に渡すかは別要望で検討する → REQ-190 で解消（size 付きの繰り返しでも値が外側のスコープに残る）。ZIP の書き直しは REQ-190 の実装メモを参照
-- 式に DSL に無い識別子（`false` など）を書いても検証では警告されず、その分岐を通るファイルで初めてデコードエラーになる（BMP のバグ）。未定義の変数の参照を検証で見つけられるとよい（値の昇格があるので静的に決めにくい）
+- 式に DSL に無い識別子（`false` など）を書いても検証では警告されず、その分岐を通るファイルで初めてデコードエラーになる（BMP のバグ）。未定義の変数の参照を検証で見つけられるとよい（値の昇格があるので静的に決めにくい） → REQ-189 で解消（未定義の名前・未知の関数を警告する）
 
 - XZ の見直しで、description が英語のみ（`Index Indicator（0x00）`）のものも検査で見つかった。原語を括弧で添えるのはよいが、日本語の説明を必ず含める

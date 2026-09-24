@@ -1,3 +1,12 @@
+# Java のクラスファイル（.class）
+# 仕様: The Java Virtual Machine Specification, Java SE 25 Edition（2025） 第 4 章 https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html
+# 構造: マジック → 版 → コンスタントプール → アクセスフラグ・this / super・インタフェース → フィールド → メソッド → 属性。
+#   コンスタントプールは Long / Double が 2 スロットを使うため、その次のスロットを空の要素（unusable）として並べ、
+#   配列の添字 = コンスタントプールの番号 − 1 にそろえる。これでクラス名・メンバー名・属性名を constant_pool[番号 − 1] から引ける。
+#   属性は名前（Code・ConstantValue・Exceptions・SourceFile・LineNumberTable など）で switch して中身を読む。
+# 対応していないもの: バイトコードの逆アセンブル（Code の code はバイト列）、StackMapTable・アノテーション・Module・Record の中身
+#   （バイト列として表示）、修正 UTF-8 の NUL（C0 80）と補助文字（サロゲートペア）の正しい表示（UTF-8 として表示）、
+#   コンスタントプールの番号が範囲外の壊れたファイルでの名前の解決
 name: JavaClass
 endianness: big
 root: java_class
@@ -6,86 +15,167 @@ enums:
   java_version:
     - value: 45
       label: Java_1_1
+      description: "JDK 1.1（1.0.2 も 45）"
     - value: 46
       label: Java_1_2
+      description: "J2SE 1.2"
     - value: 47
       label: Java_1_3
+      description: "J2SE 1.3"
     - value: 48
       label: Java_1_4
+      description: "J2SE 1.4"
     - value: 49
       label: Java_5
+      description: "Java SE 5.0"
     - value: 50
       label: Java_6
+      description: "Java SE 6（StackMapTable）"
     - value: 51
       label: Java_7
+      description: "Java SE 7（invokedynamic）"
     - value: 52
       label: Java_8
+      description: "Java SE 8（ラムダ式）"
     - value: 53
       label: Java_9
+      description: "Java SE 9（モジュール）"
     - value: 54
       label: Java_10
+      description: "Java SE 10"
     - value: 55
       label: Java_11
+      description: "Java SE 11（ネストメイト、CONSTANT_Dynamic）"
     - value: 56
       label: Java_12
+      description: "Java SE 12"
     - value: 57
       label: Java_13
+      description: "Java SE 13"
     - value: 58
       label: Java_14
+      description: "Java SE 14"
     - value: 59
       label: Java_15
+      description: "Java SE 15"
     - value: 60
       label: Java_16
+      description: "Java SE 16（レコード）"
     - value: 61
       label: Java_17
+      description: "Java SE 17（シールクラス）"
     - value: 62
       label: Java_18
+      description: "Java SE 18"
     - value: 63
       label: Java_19
+      description: "Java SE 19"
     - value: 64
       label: Java_20
+      description: "Java SE 20"
     - value: 65
       label: Java_21
+      description: "Java SE 21"
     - value: 66
       label: Java_22
+      description: "Java SE 22"
     - value: 67
       label: Java_23
+      description: "Java SE 23"
+    - value: 68
+      label: Java_24
+      description: "Java SE 24"
+    - value: 69
+      label: Java_25
+      description: "Java SE 25"
+    - value: 70
+      label: Java_26
+      description: "Java SE 26"
+    - value: 71
+      label: Java_27
+      description: "Java SE 27"
 
   cp_tag:
     - value: 1
       label: Utf8
+      description: "文字列（修正 UTF-8）"
     - value: 3
       label: Integer
+      description: "int の定数"
     - value: 4
       label: Float
+      description: "float の定数"
     - value: 5
       label: Long
+      description: "long の定数（2 スロットを使う）"
     - value: 6
       label: Double
+      description: "double の定数（2 スロットを使う）"
     - value: 7
       label: Class
+      description: "クラス・インタフェース"
     - value: 8
       label: String
+      description: "String の定数"
     - value: 9
       label: Fieldref
+      description: "フィールドの参照"
     - value: 10
       label: Methodref
+      description: "クラスのメソッドの参照"
     - value: 11
       label: InterfaceMethodref
+      description: "インタフェースのメソッドの参照"
     - value: 12
       label: NameAndType
+      description: "名前と記述子の組"
     - value: 15
       label: MethodHandle
+      description: "メソッドハンドル"
     - value: 16
       label: MethodType
+      description: "メソッドの型"
     - value: 17
       label: Dynamic
+      description: "動的に計算される定数（Java 11 以降）"
     - value: 18
       label: InvokeDynamic
+      description: "invokedynamic の呼び出し地点"
     - value: 19
       label: Module
+      description: "モジュール（module-info のみ）"
     - value: 20
       label: Package
+      description: "パッケージ（module-info のみ）"
+
+  reference_kind:
+    - value: 1
+      label: REF_getField
+      description: "インスタンスフィールドの取得"
+    - value: 2
+      label: REF_getStatic
+      description: "static フィールドの取得"
+    - value: 3
+      label: REF_putField
+      description: "インスタンスフィールドの設定"
+    - value: 4
+      label: REF_putStatic
+      description: "static フィールドの設定"
+    - value: 5
+      label: REF_invokeVirtual
+      description: "仮想メソッドの呼び出し"
+    - value: 6
+      label: REF_invokeStatic
+      description: "static メソッドの呼び出し"
+    - value: 7
+      label: REF_invokeSpecial
+      description: "特殊なメソッドの呼び出し（private・super）"
+    - value: 8
+      label: REF_newInvokeSpecial
+      description: "コンストラクタの呼び出し"
+    - value: 9
+      label: REF_invokeInterface
+      description: "インタフェースのメソッドの呼び出し"
 
 flags:
   class_access_flags:
@@ -123,8 +213,52 @@ flags:
         bit: 14
         set: "enum"
         clear: ""
+      - name: ACC_MODULE
+        bit: 15
+        set: "module"
+        clear: ""
 
-  member_access_flags:
+  field_access_flags:
+    bit_size: 16
+    fields:
+      - name: ACC_PUBLIC
+        bit: 0
+        set: "public"
+        clear: ""
+      - name: ACC_PRIVATE
+        bit: 1
+        set: "private"
+        clear: ""
+      - name: ACC_PROTECTED
+        bit: 2
+        set: "protected"
+        clear: ""
+      - name: ACC_STATIC
+        bit: 3
+        set: "static"
+        clear: ""
+      - name: ACC_FINAL
+        bit: 4
+        set: "final"
+        clear: ""
+      - name: ACC_VOLATILE
+        bit: 6
+        set: "volatile"
+        clear: ""
+      - name: ACC_TRANSIENT
+        bit: 7
+        set: "transient"
+        clear: ""
+      - name: ACC_SYNTHETIC
+        bit: 12
+        set: "synthetic"
+        clear: ""
+      - name: ACC_ENUM
+        bit: 14
+        set: "enum"
+        clear: ""
+
+  method_access_flags:
     bit_size: 16
     fields:
       - name: ACC_PUBLIC
@@ -167,6 +301,58 @@ flags:
         bit: 10
         set: "abstract"
         clear: ""
+      - name: ACC_STRICT
+        bit: 11
+        set: "strictfp"
+        clear: ""
+      - name: ACC_SYNTHETIC
+        bit: 12
+        set: "synthetic"
+        clear: ""
+
+  inner_class_access_flags:
+    bit_size: 16
+    fields:
+      - name: ACC_PUBLIC
+        bit: 0
+        set: "public"
+        clear: ""
+      - name: ACC_PRIVATE
+        bit: 1
+        set: "private"
+        clear: ""
+      - name: ACC_PROTECTED
+        bit: 2
+        set: "protected"
+        clear: ""
+      - name: ACC_STATIC
+        bit: 3
+        set: "static"
+        clear: ""
+      - name: ACC_FINAL
+        bit: 4
+        set: "final"
+        clear: ""
+      - name: ACC_INTERFACE
+        bit: 9
+        set: "interface"
+        clear: ""
+      - name: ACC_ABSTRACT
+        bit: 10
+        set: "abstract"
+        clear: ""
+      - name: ACC_SYNTHETIC
+        bit: 12
+        set: "synthetic"
+        clear: ""
+      - name: ACC_ANNOTATION
+        bit: 13
+        set: "annotation"
+        clear: ""
+      - name: ACC_ENUM
+        bit: 14
+        set: "enum"
+        clear: ""
 
 structs:
   java_class:
@@ -174,60 +360,97 @@ structs:
       type: bytes
       size: "4"
       expected: [0xCA, 0xFE, 0xBA, 0xBE]
-      description: "Javaクラスファイルマジック（0xCAFEBABE）"
+      description: "マジック（CA FE BA BE）"
     - name: minor_version
       type: uint16
+      description: "マイナーバージョン（Java 12 以降は 0、プレビュー機能を使うクラスは 0xFFFF）"
     - name: major_version
       type: uint16
       enum: java_version
+      description: "メジャーバージョン（Java SE の版 + 44）"
     - name: constant_pool_count
       type: uint16
+      description: "コンスタントプールのスロット数 + 1（番号は 1〜constant_pool_count − 1）"
+    - name: next_is_unusable
+      type: virtual
+      value: "0"
+      description: "次のスロットが Long / Double の 2 スロット目かの初期値（各スロットで置き換わる）"
     - name: constant_pool
       type: struct
-      struct: cp_entry
+      struct: cp_slot
       repeat_count: "{constant_pool_count - 1}"
-      description: "コンスタントプール（count - 1エントリ。Long/Doubleは2スロット占有 - 既知の制限事項）"
+      description: "コンスタントプール（constant_pool_count − 1 スロット。添字 = 番号 − 1。Long / Double の次は空のスロット）"
     - name: access_flags
       type: uint16
       flags: class_access_flags
+      description: "クラスのアクセスフラグと性質"
     - name: this_class
       type: uint16
-      description: "このクラスのコンスタントプールインデックス"
+      description: "このクラスの CONSTANT_Class の番号"
+    - name: this_class_name
+      type: virtual
+      value: "{constant_pool[constant_pool[this_class - 1].info.name_index - 1].info.value}"
+      description: "このクラスの名前（内部形式。例: java/lang/String）"
     - name: super_class
       type: uint16
-      description: "スーパークラスのコンスタントプールインデックス"
+      description: "スーパークラスの CONSTANT_Class の番号（java/lang/Object と module-info は 0）"
+    - name: super_class_name
+      type: virtual
+      value: "{constant_pool[constant_pool[super_class - 1].info.name_index - 1].info.value}"
+      if: "{super_class != 0}"
+      description: "スーパークラスの名前（内部形式）"
     - name: interfaces_count
       type: uint16
+      description: "直接実装するインタフェースの数"
     - name: interfaces
-      type: uint16
+      type: struct
+      struct: interface_ref
       repeat_count: "{interfaces_count}"
-      description: "インタフェースのコンスタントプールインデックス"
+      description: "直接実装するインタフェース（CONSTANT_Class の番号）"
     - name: fields_count
       type: uint16
+      description: "フィールドの数"
     - name: fields
       type: struct
-      struct: member_info
+      struct: field_info
       repeat_count: "{fields_count}"
+      description: "フィールド（このクラスで宣言したもの）"
     - name: methods_count
       type: uint16
+      description: "メソッドの数"
     - name: methods
       type: struct
-      struct: member_info
+      struct: method_info
       repeat_count: "{methods_count}"
+      description: "メソッド（コンストラクタ <init> と静的初期化子 <clinit> を含む）"
     - name: attributes_count
       type: uint16
+      description: "クラスの属性の数"
     - name: attributes
       type: struct
       struct: attribute_info
       repeat_count: "{attributes_count}"
+      description: "クラスの属性（SourceFile・InnerClasses・BootstrapMethods など）"
 
-  cp_entry:
+  # --- コンスタントプール ---
+  cp_slot:
+    - name: index
+      type: virtual
+      value: "{_index + 1}"
+      description: "コンスタントプールの番号"
+    - name: unusable
+      type: virtual
+      value: "{next_is_unusable}"
+      description: "1 なら Long / Double の 2 スロット目（使えない。バイトを持たない）"
     - name: tag
       type: uint8
       enum: cp_tag
+      if: "{unusable == 0}"
+      description: "定数の種類"
     - name: info
       type: switch
       switch_on: "{tag}"
+      if: "{unusable == 0}"
       cases:
         "1": cp_utf8
         "3": cp_integer
@@ -236,147 +459,416 @@ structs:
         "6": cp_double
         "7": cp_class
         "8": cp_string
-        "9": cp_fieldref
-        "10": cp_methodref
-        "11": cp_interface_methodref
+        "9": cp_ref
+        "10": cp_ref
+        "11": cp_ref
         "12": cp_name_and_type
         "15": cp_method_handle
         "16": cp_method_type
         "17": cp_dynamic
-        "18": cp_invoke_dynamic
+        "18": cp_dynamic
         "19": cp_module
-        "20": cp_package
+        "20": cp_module
       default: raw_data
+      description: "定数の中身（tag で振り分ける）"
+    - name: next_is_unusable
+      type: virtual
+      value: "{unusable == 1 ? 0 : (tag == 5 or tag == 6 ? 1 : 0)}"
+      description: "次のスロットが使えないか（Long / Double のとき 1）"
 
   cp_utf8:
     - name: length
       type: uint16
+      description: "文字列のバイト数"
     - name: value
-      type: bytes
+      type: utf8
       size: "{length}"
-      description: "UTF-8エンコード文字列バイト列"
+      description: "文字列（修正 UTF-8。クラス名は '/' 区切りの内部形式、記述子は '(I)V' のような形式）"
 
   cp_integer:
     - name: value
       type: int32
+      description: "int の値"
 
   cp_float:
     - name: value
       type: float32
+      description: "float の値（IEEE 754 単精度）"
 
   cp_long:
     - name: value
       type: int64
-      description: "Long値（コンスタントプール2スロット占有）"
+      description: "long の値（コンスタントプールの 2 スロットを使う）"
 
   cp_double:
     - name: value
       type: float64
-      description: "Double値（コンスタントプール2スロット占有）"
+      description: "double の値（IEEE 754 倍精度。コンスタントプールの 2 スロットを使う）"
 
   cp_class:
     - name: name_index
       type: uint16
-      description: "クラス名のコンスタントプールインデックス（CONSTANT_Utf8）"
+      description: "クラス名の CONSTANT_Utf8 の番号（内部形式、配列なら記述子）"
 
   cp_string:
     - name: string_index
       type: uint16
-      description: "文字列値のコンスタントプールインデックス（CONSTANT_Utf8）"
+      description: "文字列の値の CONSTANT_Utf8 の番号"
 
-  cp_fieldref:
+  cp_ref:
     - name: class_index
       type: uint16
-      description: "クラスのコンスタントプールインデックス（CONSTANT_Class）"
+      description: "メンバーを持つクラス・インタフェースの CONSTANT_Class の番号"
     - name: name_and_type_index
       type: uint16
-      description: "名前と型のコンスタントプールインデックス（CONSTANT_NameAndType）"
-
-  cp_methodref:
-    - name: class_index
-      type: uint16
-    - name: name_and_type_index
-      type: uint16
-
-  cp_interface_methodref:
-    - name: class_index
-      type: uint16
-    - name: name_and_type_index
-      type: uint16
+      description: "メンバーの名前と記述子の CONSTANT_NameAndType の番号"
 
   cp_name_and_type:
     - name: name_index
       type: uint16
-      description: "フィールド/メソッド名のコンスタントプールインデックス"
+      description: "名前の CONSTANT_Utf8 の番号"
     - name: descriptor_index
       type: uint16
-      description: "フィールド/メソッドディスクリプタのコンスタントプールインデックス"
+      description: "記述子（フィールドの型、メソッドの引数と戻り値の型）の CONSTANT_Utf8 の番号"
 
   cp_method_handle:
     - name: reference_kind
       type: uint8
-      description: "参照種別（1-9）"
+      enum: reference_kind
+      description: "ハンドルの種類（1〜9）"
     - name: reference_index
       type: uint16
+      description: "参照先の Fieldref / Methodref / InterfaceMethodref の番号"
 
   cp_method_type:
     - name: descriptor_index
       type: uint16
-
-  cp_invoke_dynamic:
-    - name: bootstrap_method_attr_index
-      type: uint16
-      description: "BootstrapMethods属性のbootstrap_methods配列へのインデックス"
-    - name: name_and_type_index
-      type: uint16
+      description: "メソッドの記述子の CONSTANT_Utf8 の番号"
 
   cp_dynamic:
     - name: bootstrap_method_attr_index
       type: uint16
-      description: "BootstrapMethods属性のbootstrap_methods配列へのインデックス"
+      description: "BootstrapMethods 属性の bootstrap_methods の添字"
     - name: name_and_type_index
       type: uint16
-      description: "名前と型のコンスタントプールインデックス（CONSTANT_NameAndType）"
+      description: "名前と記述子の CONSTANT_NameAndType の番号"
 
   cp_module:
     - name: name_index
       type: uint16
-      description: "モジュール名のコンスタントプールインデックス（CONSTANT_Utf8）"
+      description: "モジュール名・パッケージ名の CONSTANT_Utf8 の番号"
 
-  cp_package:
-    - name: name_index
+  interface_ref:
+    - name: class_index
       type: uint16
-      description: "パッケージ名のコンスタントプールインデックス（CONSTANT_Utf8）"
+      description: "インタフェースの CONSTANT_Class の番号"
+    - name: name
+      type: virtual
+      value: "{constant_pool[constant_pool[class_index - 1].info.name_index - 1].info.value}"
+      description: "インタフェースの名前（内部形式）"
 
-  member_info:
+  # --- フィールド・メソッド ---
+  field_info:
     - name: access_flags
       type: uint16
-      flags: member_access_flags
+      flags: field_access_flags
+      description: "フィールドのアクセスフラグと性質"
     - name: name_index
       type: uint16
-      description: "メンバー名のコンスタントプールインデックス"
+      description: "フィールド名の CONSTANT_Utf8 の番号"
+    - name: name
+      type: virtual
+      value: "{constant_pool[name_index - 1].info.value}"
+      description: "フィールド名"
     - name: descriptor_index
       type: uint16
-      description: "メンバーディスクリプタのコンスタントプールインデックス"
+      description: "フィールドの記述子の CONSTANT_Utf8 の番号"
+    - name: descriptor
+      type: virtual
+      value: "{constant_pool[descriptor_index - 1].info.value}"
+      description: "フィールドの型（I = int、J = long、Ljava/lang/String; など）"
     - name: attributes_count
       type: uint16
+      description: "フィールドの属性の数"
     - name: attributes
       type: struct
       struct: attribute_info
       repeat_count: "{attributes_count}"
+      description: "フィールドの属性（ConstantValue・Signature など）"
 
+  method_info:
+    - name: access_flags
+      type: uint16
+      flags: method_access_flags
+      description: "メソッドのアクセスフラグと性質"
+    - name: name_index
+      type: uint16
+      description: "メソッド名の CONSTANT_Utf8 の番号"
+    - name: name
+      type: virtual
+      value: "{constant_pool[name_index - 1].info.value}"
+      description: "メソッド名（<init> = コンストラクタ、<clinit> = 静的初期化子）"
+    - name: descriptor_index
+      type: uint16
+      description: "メソッドの記述子の CONSTANT_Utf8 の番号"
+    - name: descriptor
+      type: virtual
+      value: "{constant_pool[descriptor_index - 1].info.value}"
+      description: "メソッドの引数と戻り値の型（例: ([Ljava/lang/String;)V）"
+    - name: attributes_count
+      type: uint16
+      description: "メソッドの属性の数"
+    - name: attributes
+      type: struct
+      struct: attribute_info
+      repeat_count: "{attributes_count}"
+      description: "メソッドの属性（Code・Exceptions・Signature など）"
+
+  # --- 属性 ---
   attribute_info:
     - name: attribute_name_index
       type: uint16
-      description: "属性名のコンスタントプールインデックス（CONSTANT_Utf8）。attribute_name_indexが指すcp_utf8エントリの文字列値によりinfoの内部構造が決まる: 'Code' → code_attribute_body, 'ConstantValue' → constantvalue_attribute_body, 'Exceptions' → exceptions_attribute_body等"
+      description: "属性名の CONSTANT_Utf8 の番号"
+    - name: attribute_name
+      type: virtual
+      value: "{constant_pool[attribute_name_index - 1].info.value}"
+      description: "属性名（中身の構造を決める）"
     - name: attribute_length
       type: uint32
+      description: "属性の中身のバイト数（この 6 バイトを除く）"
     - name: info
-      type: bytes
+      type: switch
+      switch_on: "{attribute_name}"
       size: "{attribute_length}"
-      description: "属性データ（生バイト列）。内部構造はattribute_name_indexで解決される属性名に依存する。Code: [max_stack:u16, max_locals:u16, code_length:u32, code:bytes[code_length], exception_table_length:u16, exception_table:exception_entry[exception_table_length], attributes_count:u16, attributes:attribute_info[attributes_count]]。ConstantValue: [constantvalue_index:u16]。Exceptions: [number_of_exceptions:u16, exception_index_table:u16[number_of_exceptions]]"
+      cases:
+        "'Code'": code_attribute
+        "'ConstantValue'": constant_value_attribute
+        "'Exceptions'": exceptions_attribute
+        "'SourceFile'": index_attribute
+        "'Signature'": index_attribute
+        "'NestHost'": index_attribute
+        "'ModuleMainClass'": index_attribute
+        "'LineNumberTable'": line_number_table_attribute
+        "'LocalVariableTable'": local_variable_table_attribute
+        "'LocalVariableTypeTable'": local_variable_table_attribute
+        "'InnerClasses'": inner_classes_attribute
+        "'EnclosingMethod'": enclosing_method_attribute
+        "'BootstrapMethods'": bootstrap_methods_attribute
+        "'MethodParameters'": method_parameters_attribute
+        "'NestMembers'": class_list_attribute
+        "'PermittedSubclasses'": class_list_attribute
+        "'ModulePackages'": class_list_attribute
+        "'SourceDebugExtension'": source_debug_extension_attribute
+      default: raw_data
+      description: "属性の中身（名前で振り分ける。Deprecated・Synthetic は中身が無い）"
+
+  code_attribute:
+    - name: max_stack
+      type: uint16
+      description: "オペランドスタックの最大の深さ"
+    - name: max_locals
+      type: uint16
+      description: "ローカル変数の数（引数と this を含む。long / double は 2 つ分）"
+    - name: code_length
+      type: uint32
+      description: "バイトコードのバイト数（1〜65535）"
+    - name: code
+      type: bytes
+      size: "{code_length}"
+      description: "バイトコード（JVM の命令列）"
+    - name: exception_table_length
+      type: uint16
+      description: "例外ハンドラの数"
+    - name: exception_table
+      type: struct
+      struct: exception_table_entry
+      repeat_count: "{exception_table_length}"
+      description: "例外ハンドラの表（try の範囲と catch の位置）"
+    - name: attributes_count
+      type: uint16
+      description: "Code の属性の数"
+    - name: attributes
+      type: struct
+      struct: attribute_info
+      repeat_count: "{attributes_count}"
+      description: "Code の属性（LineNumberTable・LocalVariableTable・StackMapTable など）"
+
+  exception_table_entry:
+    - name: start_pc
+      type: uint16
+      description: "try の範囲の開始（code の中の位置）"
+    - name: end_pc
+      type: uint16
+      description: "try の範囲の終わり（この位置を含まない）"
+    - name: handler_pc
+      type: uint16
+      description: "例外ハンドラの開始位置"
+    - name: catch_type
+      type: uint16
+      description: "捕まえる例外のクラスの CONSTANT_Class の番号（0 なら全部。finally）"
+
+  constant_value_attribute:
+    - name: constantvalue_index
+      type: uint16
+      description: "定数の値（Integer / Long / Float / Double / String）の番号"
+
+  exceptions_attribute:
+    - name: number_of_exceptions
+      type: uint16
+      description: "throws に書いた例外の数"
+    - name: exception_index_table
+      type: uint16
+      repeat_count: "{number_of_exceptions}"
+      description: "例外のクラスの CONSTANT_Class の番号"
+
+  index_attribute:
+    - name: index
+      type: uint16
+      description: "コンスタントプールの番号（SourceFile・Signature はファイル名・型の CONSTANT_Utf8、NestHost・ModuleMainClass は CONSTANT_Class）"
+    - name: value
+      type: virtual
+      value: "{constant_pool[index - 1].tag == 1 ? constant_pool[index - 1].info.value : constant_pool[constant_pool[index - 1].info.name_index - 1].info.value}"
+      description: "番号の指す値（CONSTANT_Utf8 ならその文字列、CONSTANT_Class ならクラス名）"
+
+  line_number_table_attribute:
+    - name: line_number_table_length
+      type: uint16
+      description: "行番号の対応の数"
+    - name: line_number_table
+      type: struct
+      struct: line_number_entry
+      repeat_count: "{line_number_table_length}"
+      description: "バイトコードの位置とソースの行番号の対応"
+
+  line_number_entry:
+    - name: start_pc
+      type: uint16
+      description: "バイトコードの位置"
+    - name: line_number
+      type: uint16
+      description: "ソースの行番号"
+
+  local_variable_table_attribute:
+    - name: local_variable_table_length
+      type: uint16
+      description: "ローカル変数の数"
+    - name: local_variable_table
+      type: struct
+      struct: local_variable_entry
+      repeat_count: "{local_variable_table_length}"
+      description: "ローカル変数の名前・型・有効範囲"
+
+  local_variable_entry:
+    - name: start_pc
+      type: uint16
+      description: "有効範囲の開始（バイトコードの位置）"
+    - name: length
+      type: uint16
+      description: "有効範囲のバイト数"
+    - name: name_index
+      type: uint16
+      description: "変数名の CONSTANT_Utf8 の番号"
+    - name: name
+      type: virtual
+      value: "{constant_pool[name_index - 1].info.value}"
+      description: "変数名"
+    - name: descriptor_index
+      type: uint16
+      description: "型（LocalVariableTypeTable ではジェネリクスのシグネチャ）の CONSTANT_Utf8 の番号"
+    - name: index
+      type: uint16
+      description: "ローカル変数の番号"
+
+  inner_classes_attribute:
+    - name: number_of_classes
+      type: uint16
+      description: "内部クラスの数"
+    - name: classes
+      type: struct
+      struct: inner_class_entry
+      repeat_count: "{number_of_classes}"
+      description: "内部クラス（入れ子のクラス・無名クラス）"
+
+  inner_class_entry:
+    - name: inner_class_info_index
+      type: uint16
+      description: "内部クラスの CONSTANT_Class の番号"
+    - name: outer_class_info_index
+      type: uint16
+      description: "外側のクラスの CONSTANT_Class の番号（無名・ローカルクラスは 0）"
+    - name: inner_name_index
+      type: uint16
+      description: "ソース上の単純名の CONSTANT_Utf8 の番号（無名クラスは 0）"
+    - name: inner_class_access_flags
+      type: uint16
+      flags: inner_class_access_flags
+      description: "ソース上で宣言したアクセスフラグ"
+
+  enclosing_method_attribute:
+    - name: class_index
+      type: uint16
+      description: "外側のクラスの CONSTANT_Class の番号"
+    - name: method_index
+      type: uint16
+      description: "外側のメソッドの CONSTANT_NameAndType の番号（メソッドの外なら 0）"
+
+  bootstrap_methods_attribute:
+    - name: num_bootstrap_methods
+      type: uint16
+      description: "ブートストラップメソッドの数"
+    - name: bootstrap_methods
+      type: struct
+      struct: bootstrap_method
+      repeat_count: "{num_bootstrap_methods}"
+      description: "invokedynamic・CONSTANT_Dynamic のブートストラップメソッド"
+
+  bootstrap_method:
+    - name: bootstrap_method_ref
+      type: uint16
+      description: "ブートストラップメソッドの CONSTANT_MethodHandle の番号"
+    - name: num_bootstrap_arguments
+      type: uint16
+      description: "静的引数の数"
+    - name: bootstrap_arguments
+      type: uint16
+      repeat_count: "{num_bootstrap_arguments}"
+      description: "静的引数のコンスタントプールの番号"
+
+  method_parameters_attribute:
+    - name: parameters_count
+      type: uint8
+      description: "引数の数"
+    - name: parameters
+      type: struct
+      struct: method_parameter
+      repeat_count: "{parameters_count}"
+      description: "引数の名前とフラグ"
+
+  method_parameter:
+    - name: name_index
+      type: uint16
+      description: "引数名の CONSTANT_Utf8 の番号（0 なら名前なし）"
+    - name: access_flags
+      type: uint16
+      description: "引数のフラグ（0x0010 = final、0x1000 = synthetic、0x8000 = mandated）"
+
+  class_list_attribute:
+    - name: number_of_classes
+      type: uint16
+      description: "クラス（パッケージ）の数"
+    - name: classes
+      type: uint16
+      repeat_count: "{number_of_classes}"
+      description: "クラスの CONSTANT_Class（ModulePackages は CONSTANT_Package）の番号"
+
+  source_debug_extension_attribute:
+    - name: debug_extension
+      type: utf8
+      size: remaining
+      description: "ソースのデバッグ拡張（JSR-45 の SMAP など。修正 UTF-8）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しない属性の中身（StackMapTable・アノテーション・Module・Record など）"

@@ -10,156 +10,186 @@
       "type": "bytes",
       "offset": 0,
       "size": 4,
-      "description": "WASM\u30DE\u30B8\u30C3\u30AF\uFF08\u0027\\0asm\u0027\uFF09",
+      "description": "\u30DE\u30B8\u30C3\u30AF\uFF0800 \u0027asm\u0027\uFF09",
       "name": "magic",
       "hex": "00 61 73 6D",
       "valid": true
     },
     "version": {
       "_type": "integer",
-      "type": "uint32",
+      "type": "uint16",
       "offset": 4,
-      "size": 4,
-      "description": "WASM\u30D0\u30A4\u30CA\u30EA\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30D0\u30FC\u30B8\u30E7\u30F3",
-      "_validation": {
-        "passed": true,
-        "expression": "{version == 1}"
-      },
+      "size": 2,
+      "description": "\u30D0\u30A4\u30CA\u30EA\u5F62\u5F0F\u306E\u7248\uFF08\u30B3\u30A2\u30E2\u30B8\u30E5\u30FC\u30EB\u306F 1\u3002\u30B3\u30F3\u30DD\u30FC\u30CD\u30F3\u30C8\u306F 0x0D \u306A\u3069\uFF09",
       "name": "version",
       "value": 1,
       "hex": "0x1"
     },
-    "sections": {
-      "_type": "array",
-      "type": "struct",
+    "layer": {
+      "_type": "integer",
+      "type": "uint16",
+      "offset": 6,
+      "size": 2,
+      "description": "\u5C64\uFF080 = \u30B3\u30A2\u30E2\u30B8\u30E5\u30FC\u30EB\u30011 = \u30B3\u30F3\u30DD\u30FC\u30CD\u30F3\u30C8\u30E2\u30C7\u30EB\u306E\u30B3\u30F3\u30DD\u30FC\u30CD\u30F3\u30C8\uFF09\u3002\u30B3\u30A2\u30E2\u30B8\u30E5\u30FC\u30EB\u306A\u3089 version \u304C 1 \u3067\u3042\u308B\u3053\u3068\u3092\u691C\u8A3C\u3059\u308B",
+      "_validation": {
+        "passed": true,
+        "expression": "{layer != 0 or version == 1}"
+      },
+      "name": "layer",
+      "value": 0,
+      "hex": "0x0"
+    },
+    "body": {
+      "_type": "struct",
+      "type": "switch",
       "offset": 8,
       "size": 6,
-      "name": "sections",
-      "count": 1,
-      "elements": [
-        {
-          "_type": "struct",
+      "name": "body",
+      "struct_type": "core_module",
+      "children": {
+        "sections": {
+          "_type": "array",
           "type": "struct",
           "offset": 8,
           "size": 6,
           "name": "sections",
-          "struct_type": "section",
-          "children": {
-            "section_id": {
-              "_type": "integer",
-              "type": "uint8",
-              "offset": 8,
-              "size": 1,
-              "name": "section_id",
-              "value": 1,
-              "hex": "0x1",
-              "enum_label": "type"
-            },
-            "section_size": {
-              "_type": "integer",
-              "type": "uleb128",
-              "offset": 9,
-              "size": 1,
-              "description": "\u30BB\u30AF\u30B7\u30E7\u30F3\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
-              "name": "section_size",
-              "value": 4,
-              "hex": "0x4"
-            },
-            "section_data": {
+          "count": 1,
+          "elements": [
+            {
               "_type": "struct",
-              "type": "switch",
-              "offset": 10,
-              "size": 4,
-              "name": "section_data",
-              "struct_type": "type_section_data",
+              "type": "struct",
+              "offset": 8,
+              "size": 6,
+              "name": "sections",
+              "struct_type": "section",
               "children": {
-                "count": {
+                "section_id": {
+                  "_type": "integer",
+                  "type": "uint8",
+                  "offset": 8,
+                  "size": 1,
+                  "description": "\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u7A2E\u985E",
+                  "name": "section_id",
+                  "value": 1,
+                  "hex": "0x1",
+                  "enum_label": "type",
+                  "enum_description": "\u578B\u30BB\u30AF\u30B7\u30E7\u30F3\uFF08\u95A2\u6570\u30FB\u69CB\u9020\u4F53\u30FB\u914D\u5217\u306E\u578B\uFF09"
+                },
+                "section_size": {
                   "_type": "integer",
                   "type": "uleb128",
-                  "offset": 10,
+                  "offset": 9,
                   "size": 1,
-                  "description": "\u95A2\u6570\u578B\u306E\u6570",
-                  "name": "count",
-                  "value": 1,
-                  "hex": "0x1"
+                  "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570",
+                  "name": "section_size",
+                  "value": 4,
+                  "hex": "0x4"
                 },
-                "entries": {
-                  "_type": "array",
-                  "type": "struct",
-                  "offset": 11,
-                  "size": 3,
-                  "name": "entries",
-                  "count": 1,
-                  "elements": [
-                    {
-                      "_type": "struct",
+                "section_data": {
+                  "_type": "struct",
+                  "type": "switch",
+                  "offset": 10,
+                  "size": 4,
+                  "name": "section_data",
+                  "struct_type": "type_section",
+                  "children": {
+                    "count": {
+                      "_type": "integer",
+                      "type": "uleb128",
+                      "offset": 10,
+                      "size": 1,
+                      "description": "\u518D\u5E30\u578B\u306E\u30B0\u30EB\u30FC\u30D7\u306E\u6570\uFF08\u307B\u3068\u3093\u3069\u306F 1 \u578B\u305A\u3064\uFF09",
+                      "name": "count",
+                      "value": 1,
+                      "hex": "0x1"
+                    },
+                    "entries": {
+                      "_type": "array",
                       "type": "struct",
                       "offset": 11,
                       "size": 3,
                       "name": "entries",
-                      "struct_type": "func_type",
-                      "children": {
-                        "form": {
-                          "_type": "integer",
-                          "type": "uint8",
+                      "count": 1,
+                      "elements": [
+                        {
+                          "_type": "struct",
+                          "type": "struct",
                           "offset": 11,
-                          "size": 1,
-                          "description": "\u95A2\u6570\u578B\u30DE\u30FC\u30AB\u30FC\uFF080x60\uFF09",
-                          "_validation": {
-                            "passed": true,
-                            "expression": "{form == 96}"
-                          },
-                          "name": "form",
-                          "value": 96,
-                          "hex": "0x60"
-                        },
-                        "param_count": {
-                          "_type": "integer",
-                          "type": "uleb128",
-                          "offset": 12,
-                          "size": 1,
-                          "description": "\u30D1\u30E9\u30E1\u30FC\u30BF\u6570",
-                          "name": "param_count",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "params": {
-                          "_type": "array",
-                          "type": "uint8",
-                          "offset": 13,
-                          "size": 0,
-                          "name": "params",
-                          "count": 0,
-                          "elements": []
-                        },
-                        "result_count": {
-                          "_type": "integer",
-                          "type": "uleb128",
-                          "offset": 13,
-                          "size": 1,
-                          "description": "\u623B\u308A\u5024\u6570",
-                          "name": "result_count",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "results": {
-                          "_type": "array",
-                          "type": "uint8",
-                          "offset": 14,
-                          "size": 0,
-                          "name": "results",
-                          "count": 0,
-                          "elements": []
+                          "size": 3,
+                          "name": "entries",
+                          "struct_type": "rec_type",
+                          "children": {
+                            "form": {
+                              "_type": "integer",
+                              "type": "uint8",
+                              "offset": 11,
+                              "size": 1,
+                              "description": "\u578B\u306E\u5F62\uFF080x4E = \u518D\u5E30\u30B0\u30EB\u30FC\u30D7\u30010x50 / 0x4F = \u90E8\u5206\u578B\u30010x60 / 0x5F / 0x5E = \u8907\u5408\u578B\u305D\u306E\u3082\u306E\uFF09",
+                              "name": "form",
+                              "value": 96,
+                              "hex": "0x60",
+                              "enum_label": "func",
+                              "enum_description": "\u95A2\u6570\u578B\uFF08\u5F15\u6570\u306E\u578B\u306E\u4E26\u3073 \u002B \u7D50\u679C\u306E\u578B\u306E\u4E26\u3073\uFF09"
+                            },
+                            "body": {
+                              "_type": "struct",
+                              "type": "switch",
+                              "offset": 12,
+                              "size": 2,
+                              "name": "body",
+                              "struct_type": "func_type",
+                              "children": {
+                                "param_count": {
+                                  "_type": "integer",
+                                  "type": "uleb128",
+                                  "offset": 12,
+                                  "size": 1,
+                                  "description": "\u5F15\u6570\u306E\u6570",
+                                  "name": "param_count",
+                                  "value": 0,
+                                  "hex": "0x0"
+                                },
+                                "params": {
+                                  "_type": "array",
+                                  "type": "struct",
+                                  "offset": 13,
+                                  "size": 0,
+                                  "name": "params",
+                                  "count": 0,
+                                  "elements": []
+                                },
+                                "result_count": {
+                                  "_type": "integer",
+                                  "type": "uleb128",
+                                  "offset": 13,
+                                  "size": 1,
+                                  "description": "\u7D50\u679C\u306E\u6570\uFF08\u8907\u6570\u306E\u623B\u308A\u5024\u3092\u8FD4\u305B\u308B\uFF09",
+                                  "name": "result_count",
+                                  "value": 0,
+                                  "hex": "0x0"
+                                },
+                                "results": {
+                                  "_type": "array",
+                                  "type": "struct",
+                                  "offset": 14,
+                                  "size": 0,
+                                  "name": "results",
+                                  "count": 0,
+                                  "elements": []
+                                }
+                              }
+                            }
+                          }
                         }
-                      }
+                      ]
                     }
-                  ]
+                  }
                 }
               }
             }
-          }
+          ]
         }
-      ]
+      }
     }
   }
 }
