@@ -806,6 +806,7 @@ structs:
       switch_on: "{(sh_flags & 0x800) != 0 ? -2 : sh_type}"
       seek: "{sh_offset}"
       seek_restore: true
+      size: "{sh_size}"
       if: "{sh_type == 0 ? 0 : (sh_type == 8 ? 0 : sh_size > 0)}"
       cases:
         "2": elf64_symbol_table
@@ -966,7 +967,7 @@ structs:
     - name: data
       type: switch
       switch_on: "{ch_type}"
-      size: "{sh_size - 24}"
+      size: remaining
       cases:
         "1": zlib_data
         "2": zstd_data
@@ -1144,6 +1145,7 @@ structs:
       switch_on: "{(sh_flags & 0x800) != 0 ? -2 : sh_type}"
       seek: "{sh_offset}"
       seek_restore: true
+      size: "{sh_size}"
       if: "{sh_type == 0 ? 0 : (sh_type == 8 ? 0 : sh_size > 0)}"
       cases:
         "2": elf32_symbol_table
@@ -1301,7 +1303,7 @@ structs:
     - name: data
       type: switch
       switch_on: "{ch_type}"
-      size: "{sh_size - 12}"
+      size: remaining
       cases:
         "1": zlib_data
         "2": zstd_data
@@ -1312,7 +1314,6 @@ structs:
   string_table:
     - name: strings
       type: asciiz
-      size: "{sh_size}"
       repeat: eof
       description: "NUL 終端の文字列の並び（先頭は空文字列。ほかのセクションからオフセットで参照される）"
 
@@ -1320,7 +1321,6 @@ structs:
     - name: notes
       type: struct
       struct: note
-      size: "{sh_size}"
       repeat: eof
       description: "ノート（名前 + 種類 + 記述子）の並び"
 
@@ -1379,7 +1379,7 @@ structs:
   section_data:
     - name: data
       type: bytes
-      size: "{sh_size}"
+      size: remaining
       description: "分解しないセクションの中身（機械語・データなど。sh_size バイト）"
 
   raw_data:
