@@ -174,7 +174,7 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 |---|---|---|
 | 土台 | `docs/format-authoring.md`、`FormatDefinitionQualityTests`（対応待ち 41 定義）、XZ をお手本に（先頭コメント、全 40 フィールドと enum の説明）、README / architecture.md / CLAUDE.md からの参照 | 済 |
 | 画像 | png / jpeg / gif / bmp / tiff / webp / ico / heif / icc（先頭コメント・全フィールドの説明、PNG 第 3 版・APNG、BigTIFF と IFD チェーン、WebP の RFC 9649 照合、ICC の型ごとの分解、下記のバグ修正） | 済 |
-| アーカイブ・圧縮 | zip / gzip / tar / 7z / lz4 | 未着手 |
+| アーカイブ・圧縮 | zip / gzip / tar / 7z / lz4（先頭コメント・全フィールドの説明、ZIP を Central Directory から読む形に変更・Zip64・拡張フィールド、7z のヘッダの分解、pax / GNU tar、LZ4 のフレームの種類と Block Checksum、下記のバグ修正。画像の BMP の条件式のバグもここで直した） | 済 |
 | 実行形式・バイトコード | elf / pe / macho / java-class / wasm | 未着手 |
 | 音声・映像 | mp3 / mp4 / wav / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff | 未着手 |
 | データ・その他 | sqlite / parquet / pdf / pcap / dns / protobuf / msgpack / cbor / x509 / fat / otf | 未着手 |
@@ -196,6 +196,13 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | IccParsingTests | IccV4Profile_TagsAreDecodedByTypeSignature（既存 2 件は子を名前で引くよう更新） | 6 |
 | BmpParsingTests | ImplicitPalette_HasTwoToTheBppEntries / Bitfields_MasksFollowTheInfoHeader | 6 |
 | JpegParsingTests | JpegFormat_MergedTables_DecodesEveryDqtAndDhtTable | 6 |
+| ZipParsingTests | StreamedZip_UsesCentralDirectorySizesAndReadsDataDescriptors / Zip64_ReadsLocatorExtraFieldAndUnsignedDataDescriptor（既存 5 件は子を名前で引くよう更新） | 4, 6 |
+| GzipParsingTests | OptionalFields_AreReadInOrder | 6 |
+| TarParsingTests | PaxAndGnuTar_SplitsRecordsLongNamesAndEndOfArchive（既存の TarFormat_Magic_ValidatesCorrectly に検証の ✓ を追加） | 4, 6 |
+| SevenZipParsingTests | PlainHeader_DecodesStreamsAndFilesInfo / EncodedHeader_DecodesPackedHeaderLocationAndCoder | 6 |
+| Lz4ParsingTests | SkippableFrame_AndBlockChecksum_AreDecoded（既存 6 件はフレームの下を引くよう更新） | 6 |
+| BmpParsingTests | V5Header_DecodesWithoutErrorAndReadsThePalette | 6 |
+| JsonSchemaTests | Schema_ValidatesFormatFile に gzip / tar / 7z / lz4 を追加（YAML の引用符付きの数字を整数にしないよう変換を直した） | 7 |
 
 ### 画像の見直し（PR: 画像）
 
@@ -225,6 +232,41 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 - ICO: 画像データの中身（DIB / PNG）はバイト列のまま
 - ICC: v5（iccMAX）の型
 
+### アーカイブ・圧縮の見直し（PR: アーカイブ・圧縮）
+
+**直したバグ**
+
+- ZIP: 先頭から署名をたどって読んでいたため、Local File Header のサイズが 0 のエントリ（汎用フラグ bit 3。.NET の ZipArchive・Java の ZipOutputStream などのストリーム出力）で、2 つ目以降のエントリを読めていなかった。公式の読み方どおり End of Central Directory → Central Directory を先に読み、各ファイルの位置とサイズは Central Directory の値を使う形に変えた。Data Descriptor（署名は任意、Zip64 は 8 バイトのサイズ）も読む
+- tar: マジックの検証が `magic == 'ustar'` で、値の "ustar\0" の NUL まで比べていたため常に ✗ だった（`trim` で比べる。GNU 形式の "ustar " と v7 形式の空も受け付ける）。終端の 0 ブロック 2 個とレコードの詰め物をエントリとして読んでいた（次のヘッダの先頭バイトを先読みして終端を判定する）
+- gzip: FHCRC のヘッダ CRC16 を読んでおらず、FHCRC のあるファイルでは圧縮データが 2 バイトずれていた
+- LZ4: FLG の B.Checksum が 1 のとき、各ブロックの後ろの Block Checksum を読んでおらず、2 つ目のブロックでデコードエラーになっていた（`lz4 -BX` の出力）。Block Checksum は xxHash-32 で検証する
+- BMP（画像の見直しで入れたバグ）: color_masks と color_table の `if` に DSL に無い `false` を書いていたため、BITMAPINFOHEADER 以外（V4 / V5 / OS/2 の 12 バイトのヘッダ）でデコードエラーになっていた。ImageMagick の既定の出力（V5）が読めなかった
+
+**足した構造**
+
+- ZIP: Zip64（Locator・Zip64 End of Central Directory・拡張フィールド 0x0001）、MS-DOS の日時のビットフィールド、汎用フラグのビットフィールド、UNIX のモード、拡張フィールドの分解（NTFS の時刻・拡張タイムスタンプ・UTF-8 のファイル名・UID / GID・AES）、deflate / bzip2 / Zstandard のデータの展開、APPNOTE 6.3.10 の圧縮方式・OS・拡張フィールド ID の enum
+- gzip: FEXTRA のサブフィールド（ID + 長さ + データ）、XFL の enum
+- tar: pax 拡張ヘッダ（'x' / 'g'）のレコード（長さ・キーワード・値）、GNU の長い名前（'L' / 'K'）、更新日時の数値、GNU・Solaris の typeflag
+- 7z: Start Header と Next Header の CRC32 の検証、ヘッダの全体（kHeader の MainStreamsInfo・FilesInfo、kEncodedHeader の圧縮ヘッダの位置と圧縮方式）。7z の可変長整数、フォルダとコーダー（BCJ2 のような複数の入出力を含む）、LZMA / LZMA2 のプロパティ、CRC の並び（ビット列で有無を示す形を含む）、ファイル名・時刻・属性。Packed Streams の範囲
+- LZ4: フレームの並び（連結）、スキッパブルフレーム、レガシーフレーム、無圧縮ブロックのフラグ
+
+**DSL の書き方の工夫**: 7z のストリームの個数（フォルダの出力ストリームの合計など）は、親に初期値の virtual を置き、各要素で「親の値 + この要素の分」の virtual を定義して値の昇格で親の値を置き換える形で数える。昇格は配列の中を走査しないので、最終値は配列の後ろに別名の virtual で写す
+
+**実在のツールでの確認**: Info-ZIP の zip（拡張フィールド付き・`zip -` の Zip64）、Python の zipfile（UTF-8 の名前・コメント・強制 Zip64・シークできないストリームへの Data Descriptor 付きの出力）、gzip -9、Python の tarfile（ustar / GNU / pax）と macOS の bsdtar（pax の LIBARCHIVE / SCHILY の拡張属性）、7-Zip 26.03 の 7zz（既定の kEncodedHeader、`-mhc=off` の圧縮なしヘッダ、非ソリッド、Copy、BCJ2 + LZMA × 3）、lz4 1.10（`-BX` の Block Checksum、`--content-size`、`-l` のレガシー、スキッパブルフレームとの連結）で作ったファイルを読んで値が合うことを確かめた。テスト用に組み立てたファイルも、unzip・zipfile・gzip・tarfile・7zz（t / l）・lz4 -d・ImageMagick で読めることを確かめた。旧定義で ZIP のストリーム出力・LZ4 の Block Checksum・BMP の V5 が崩れることも確かめた
+
+**出力の大きさ**: 5 件のゴールデン（JSON）は合計 39,498 → 66,750 バイト（+69%）。ZIP は Central Directory と Local File Header の両方を表示し、日時・フラグをビットフィールドに分けた分が大きい
+
+**残した課題**（各定義の「対応していないもの」に記載）
+
+- ZIP: 分割アーカイブ、Central Directory の暗号化、コメント付きで先頭側に別の End of Central Directory 署名を含むファイル（先頭から探すため）、CP437 のファイル名、暗号化データ・Deflate64・LZMA 等の展開、CRC-32 の検証
+- gzip: 複数メンバーの連結（BGZF を含む）。deflate の終わりが分からないため
+- tar: ヘッダのチェックサムの検証（単純な合計のアルゴリズムが無い）、GNU の base-256 表現、GNU 形式の prefix の位置の atime 等
+- 7z: 圧縮ヘッダの展開（そのため既定の 7z はファイル一覧まで見えない）、ファイル名の 1 件ずつの分解
+- LZ4: ブロックの展開、Header Checksum の検証（xxHash-32 の 2 バイト目）
+
 ### 気づき・今後の課題
+
+- `size` と `repeat` を一緒に指定したフィールドは、要素の値の昇格が親のスコープに届かない（BinaryDecoder の配列のバウンダリスコープで捨てられる）。ZIP の拡張フィールドは struct で包み、その中で Zip64 の値を使う形で避けた。エンジンで昇格を親に渡すかは別要望で検討する
+- 式に DSL に無い識別子（`false` など）を書いても検証では警告されず、その分岐を通るファイルで初めてデコードエラーになる（BMP のバグ）。未定義の変数の参照を検証で見つけられるとよい（値の昇格があるので静的に決めにくい）
 
 - XZ の見直しで、description が英語のみ（`Index Indicator（0x00）`）のものも検査で見つかった。原語を括弧で添えるのはよいが、日本語の説明を必ず含める

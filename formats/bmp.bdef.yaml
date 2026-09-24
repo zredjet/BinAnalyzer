@@ -95,13 +95,13 @@ structs:
     - name: color_masks
       type: struct
       struct: color_masks
-      if: "{header_size == 40 ? compression == 3 or compression == 6 : false}"
+      if: "{header_size == 40 ? compression == 3 or compression == 6 : 0}"
       description: "カラーマスク（BITMAPINFOHEADER で BI_BITFIELDS なら赤・緑・青の 12 バイト、BI_ALPHABITFIELDS ならアルファを加えた 16 バイト。V4 / V5 ではヘッダの中にある）"
     - name: color_table
       type: struct
       struct: color_table_entry
       repeat_count: "{colors_used == 0 ? 1 << bits_per_pixel : colors_used}"
-      if: "{header_size >= 40 ? bits_per_pixel <= 8 : false}"
+      if: "{header_size >= 40 ? bits_per_pixel <= 8 : 0}"
       description: "カラーテーブル（パレット）。bits_per_pixel が 8 以下のとき、colors_used 個（0 なら 2^bits_per_pixel 個）の RGBQUAD（各 4 バイト）"
     - name: pixel_data
       type: bytes

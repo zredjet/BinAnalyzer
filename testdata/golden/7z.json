@@ -18,7 +18,7 @@
           "type": "bytes",
           "offset": 0,
           "size": 6,
-          "description": "7z\u30B7\u30B0\u30CD\u30C1\u30E3",
+          "description": "\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u00277z\u0027 BC AF 27 1C\uFF09",
           "name": "signature",
           "hex": "37 7A BC AF 27 1C",
           "valid": true
@@ -28,7 +28,7 @@
           "type": "uint8",
           "offset": 6,
           "size": 1,
-          "description": "\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u901A\u5E380\uFF09",
+          "description": "\u5F62\u5F0F\u306E\u30E1\u30B8\u30E3\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF080\uFF09",
           "name": "major_version",
           "value": 0,
           "hex": "0x0"
@@ -38,7 +38,7 @@
           "type": "uint8",
           "offset": 7,
           "size": 1,
-          "description": "\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u901A\u5E384\uFF09",
+          "description": "\u5F62\u5F0F\u306E\u30DE\u30A4\u30CA\u30FC\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u73FE\u5728\u306F 4\u30022\u301C4 \u304C\u3042\u308B\uFF09",
           "name": "minor_version",
           "value": 4,
           "hex": "0x4"
@@ -48,17 +48,20 @@
           "type": "uint32",
           "offset": 8,
           "size": 4,
-          "description": "StartHeader\u306ECRC32",
+          "description": "Start Header\uFF08\u5F8C\u308D\u306E 20 \u30D0\u30A4\u30C8: next_header_offset\u30FBnext_header_size\u30FBnext_header_crc\uFF09\u306E CRC32",
           "name": "start_header_crc",
           "value": 0,
-          "hex": "0x0"
+          "hex": "0x0",
+          "checksum_valid": false,
+          "checksum_expected": "0xE3EE0512",
+          "checksum_algorithm": "crc32"
         },
         "next_header_offset": {
           "_type": "integer",
           "type": "uint64",
           "offset": 12,
           "size": 8,
-          "description": "NextHeader\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF08SignatureHeader\u672B\u5C3E\u304B\u3089\u306E\u76F8\u5BFE\u4F4D\u7F6E\u3001\u30D0\u30A4\u30C832\u57FA\u6E96\uFF09",
+          "description": "\u30D8\u30C3\u30C0\u306E\u4F4D\u7F6E\uFF08Signature Header \u306E\u672B\u5C3E = \u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089 32 \u30D0\u30A4\u30C8\u306E\u4F4D\u7F6E\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF09",
           "name": "next_header_offset",
           "value": 0,
           "hex": "0x0"
@@ -68,7 +71,7 @@
           "type": "uint64",
           "offset": 20,
           "size": 8,
-          "description": "NextHeader\u306E\u30B5\u30A4\u30BA",
+          "description": "\u30D8\u30C3\u30C0\u306E\u30D0\u30A4\u30C8\u6570",
           "name": "next_header_size",
           "value": 2,
           "hex": "0x2"
@@ -78,12 +81,24 @@
           "type": "uint32",
           "offset": 28,
           "size": 4,
-          "description": "NextHeader\u306ECRC32",
+          "description": "\u30D8\u30C3\u30C0\uFF08next_header_size \u30D0\u30A4\u30C8\uFF09\u306E CRC32",
           "name": "next_header_crc",
           "value": 0,
-          "hex": "0x0"
+          "hex": "0x0",
+          "checksum_valid": false,
+          "checksum_expected": "0x58C223BE",
+          "checksum_algorithm": "crc32"
         }
       }
+    },
+    "packed_streams": {
+      "_type": "bytes",
+      "type": "bytes",
+      "offset": 32,
+      "size": 0,
+      "description": "Packed Streams\uFF08\u30D5\u30A1\u30A4\u30EB\u306E\u5185\u5BB9\u3068\u5727\u7E2E\u30D8\u30C3\u30C0\u306E\u5727\u7E2E\u30C7\u30FC\u30BF\u3002\u4F4D\u7F6E\u306F PackInfo \u306E pack_pos \u304B\u3089\uFF09",
+      "name": "packed_streams",
+      "hex": ""
     },
     "next_header": {
       "_type": "struct",
@@ -93,14 +108,59 @@
       "name": "next_header",
       "struct_type": "next_header",
       "children": {
-        "header_data": {
-          "_type": "bytes",
-          "type": "bytes",
+        "header_type": {
+          "_type": "integer",
+          "type": "uint8",
           "offset": 32,
-          "size": 2,
-          "description": "7z\u30A8\u30F3\u30B3\u30FC\u30C9\u6E08\u307F\u30D8\u30C3\u30C0\u3002\u5185\u90E8\u69CB\u9020\u306F\u53EF\u5909\u9577\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\u3092\u4F7F\u7528\u3057\u3066\u304A\u308A\u3001DSL\u306E\u8868\u73FE\u529B\u3092\u8D85\u3048\u308B\u305F\u3081\u69CB\u9020\u5316\u4E0D\u53EF",
-          "name": "header_data",
-          "hex": "01 00"
+          "size": 1,
+          "description": "\u30D8\u30C3\u30C0\u306E\u7A2E\u985E\uFF08kHeader = \u5727\u7E2E\u306A\u3057\u3001kEncodedHeader = \u5727\u7E2E\u30D8\u30C3\u30C0\uFF09",
+          "name": "header_type",
+          "value": 1,
+          "hex": "0x1",
+          "enum_label": "kHeader",
+          "enum_description": "\u30D8\u30C3\u30C0\uFF08\u5727\u7E2E\u3055\u308C\u3066\u3044\u306A\u3044\u30D8\u30C3\u30C0\u306E\u59CB\u307E\u308A\uFF09"
+        },
+        "body": {
+          "_type": "struct",
+          "type": "switch",
+          "offset": 33,
+          "size": 1,
+          "name": "body",
+          "struct_type": "header",
+          "children": {
+            "sections": {
+              "_type": "array",
+              "type": "struct",
+              "offset": 33,
+              "size": 1,
+              "name": "sections",
+              "count": 1,
+              "elements": [
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 33,
+                  "size": 1,
+                  "name": "sections",
+                  "struct_type": "header_section",
+                  "children": {
+                    "section_id": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 33,
+                      "size": 1,
+                      "description": "\u30D6\u30ED\u30C3\u30AF\u306E\u7A2E\u985E",
+                      "name": "section_id",
+                      "value": 0,
+                      "hex": "0x0",
+                      "enum_label": "kEnd",
+                      "enum_description": "\u30D6\u30ED\u30C3\u30AF\u306E\u7D42\u308F\u308A"
+                    }
+                  }
+                }
+              ]
+            }
+          }
         }
       }
     }

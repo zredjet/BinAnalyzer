@@ -1,3 +1,10 @@
+# gzip 圧縮ファイル（.gz / .tgz）
+# 仕様: RFC 1952 GZIP file format specification version 4.3（1996） https://www.rfc-editor.org/rfc/rfc1952
+# 構造: メンバー（10 バイトのヘッダ → FLG で決まる任意フィールド → deflate 圧縮データ → CRC32 + ISIZE の 8 バイト）。
+#   deflate データは長さを持たないため、ファイル末尾の 8 バイトを除いた残りを圧縮データとして展開する。
+# 対応していないもの: 複数メンバーの連結（gzip で連結したファイルや BGZF。先頭のメンバーの圧縮データに残り全部が入る）、
+#   CRC32・ISIZE・ヘッダ CRC16 の検証（展開後のデータ・ヘッダの CRC32 の下位 16 ビットに対する値のため）、
+#   ファイル名とコメントの ISO 8859-1（ASCII として表示）、拡張サブフィールドの中身（ID ごとの分解はせずバイト列として表示）
 name: GZIP
 endianness: little
 root: gzip
@@ -6,22 +13,38 @@ enums:
   compression_method:
     - value: 8
       label: deflate
+      description: "Deflate（RFC 1951）。0〜7 は予約"
+
+  extra_flags:
+    - value: 0
+      label: none
+      description: "指定なし"
+    - value: 2
+      label: maximum_compression
+      description: "最高圧縮（最も遅いアルゴリズム。gzip -9）"
+    - value: 4
+      label: fastest
+      description: "最速の圧縮（gzip -1）"
 
   os:
     - value: 0
       label: FAT
+      description: "FAT ファイルシステム（MS-DOS・OS/2・NT / Win32）"
     - value: 1
       label: Amiga
     - value: 2
       label: VMS
+      description: "VMS（OpenVMS）"
     - value: 3
       label: Unix
     - value: 4
       label: "VM/CMS"
     - value: 5
       label: Atari
+      description: "Atari TOS"
     - value: 6
       label: HPFS
+      description: "HPFS ファイルシステム（OS/2・NT）"
     - value: 7
       label: Macintosh
     - value: 8
@@ -32,12 +55,15 @@ enums:
       label: TOPS-20
     - value: 11
       label: NTFS
+      description: "NTFS ファイルシステム（NT）"
     - value: 12
       label: QDOS
     - value: 13
       label: Acorn
+      description: "Acorn RISCOS"
     - value: 255
       label: unknown
+      description: "不明"
 
 structs:
   gzip:
@@ -45,56 +71,88 @@ structs:
       type: bytes
       size: "2"
       expected: [0x1F, 0x8B]
+      description: "マジック（ID1 = 0x1F、ID2 = 0x8B）"
     - name: compression_method
       type: uint8
       enum: compression_method
+      description: "圧縮方式（CM。8 = deflate のみ）"
     - name: flags
       type: bitfield
       size: "1"
+      description: "フラグ（FLG）。後ろに続く任意フィールドの有無"
       fields:
         - name: FTEXT
           bits: "0"
+          description: "1 なら元データがおそらく ASCII テキスト（参考情報）"
         - name: FHCRC
           bits: "1"
+          description: "1 ならヘッダの CRC16（header_crc16）がある"
         - name: FEXTRA
           bits: "2"
+          description: "1 なら拡張フィールド（extra_length + extra）がある"
         - name: FNAME
           bits: "3"
+          description: "1 なら元のファイル名（original_name）がある"
         - name: FCOMMENT
           bits: "4"
+          description: "1 ならコメント（comment）がある"
+        - name: reserved
+          bits: "7:5"
+          description: "予約（0。0 でなければ展開してはいけない）"
     - name: mtime
       type: uint32
-      description: "更新日時（UNIXタイムスタンプ）"
+      description: "元ファイルの更新日時（MTIME。UNIX 時刻の秒、0 = 記録なし）"
     - name: xfl
       type: uint8
-      description: "追加フラグ（2=最高圧縮、4=最速圧縮）"
+      enum: extra_flags
+      description: "追加フラグ（XFL。deflate の圧縮レベル）"
     - name: os
       type: uint8
       enum: os
+      description: "圧縮したファイルシステム（OS。テキストの改行の扱いの参考）"
     - name: extra_length
       type: uint16
       if: "{FEXTRA == 1}"
-      description: "拡張フィールドの長さ"
-    - name: extra_data
-      type: bytes
+      description: "拡張フィールドのバイト数（XLEN）"
+    - name: extra
+      type: struct
+      struct: extra_subfield
       size: "{extra_length}"
+      repeat: eof
       if: "{FEXTRA == 1}"
-      description: "拡張フィールドデータ"
+      description: "拡張フィールド（サブフィールド ID 2 バイト + 長さ 2 バイト + データの並び）"
     - name: original_name
       type: asciiz
       if: "{FNAME == 1}"
-      description: "元ファイル名（NULL終端）"
+      description: "元のファイル名（ディレクトリを除いた名前。本来は ISO 8859-1、NUL 終端）"
     - name: comment
       type: asciiz
       if: "{FCOMMENT == 1}"
-      description: "ファイルコメント（NULL終端）"
+      description: "コメント（本来は ISO 8859-1、改行は LF、NUL 終端）"
+    - name: header_crc16
+      type: uint16
+      if: "{FHCRC == 1}"
+      description: "ヘッダの CRC16（ここまでのヘッダ全体の CRC32 の下位 16 ビット。検証しない）"
     - name: compressed_data
       type: deflate
       size: "{remaining - 8}"
-      description: "圧縮データ（deflate）"
+      description: "deflate 圧縮データ（ファイル末尾の 8 バイトを除いた残り）。展開した内容を表示する"
     - name: crc32
       type: uint32
-      description: "CRC-32（元データのCRC）"
+      description: "展開後のデータの CRC32（CRC32。展開が必要なため検証しない）"
     - name: isize
       type: uint32
-      description: "ISIZE（元データのサイズ mod 2^32）"
+      description: "展開後のデータのバイト数 mod 2^32（ISIZE）"
+
+  extra_subfield:
+    - name: subfield_id
+      type: ascii
+      size: "2"
+      description: "サブフィールド ID（SI1 SI2 の 2 文字。'AP' = Apollo のファイル種別、'BC' = BGZF のブロックサイズ、'RA' = dictzip のランダムアクセス情報 など）"
+    - name: length
+      type: uint16
+      description: "サブフィールドのデータのバイト数（LEN）"
+    - name: data
+      type: bytes
+      size: "{length}"
+      description: "サブフィールドのデータ（BGZF の 'BC' は、このメンバー全体のバイト数 − 1 の uint16）"

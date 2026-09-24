@@ -1,87 +1,183 @@
+# LZ4 圧縮ファイル（.lz4）
+# 仕様: LZ4 Frame Format Description 1.6.4（2023-12-28） https://github.com/lz4/lz4/blob/dev/doc/lz4_Frame_format.md
+# 構造: フレームの並び。フレームはマジック（4 バイト）で種類を switch する:
+#   LZ4 フレーム（Frame Descriptor → データブロック* → EndMark → Content Checksum）、スキッパブルフレーム（0x184D2A50〜5F。長さ + 任意データ）、
+#   旧形式のレガシーフレーム（0x184C2102。圧縮サイズ + ブロックの並び）。
+#   ブロックの最上位ビットが 1 なら無圧縮。Block Checksum（xxHash-32）はブロックのデータに対して検証する。
+# 対応していないもの: ブロックの展開（LZ4 のブロック形式）、Header Checksum の検証（xxHash-32 の 2 バイト目のため値のみ表示）、
+#   Content Checksum の検証（展開後のデータに対する値のため）、レガシーフレームの後ろに続くフレーム（レガシーフレームは終わりが分からないため末尾まで読む）
 name: LZ4
 endianness: little
 root: lz4
 
 enums:
+  frame_magic:
+    - value: 0x184D2204
+      label: LZ4_frame
+      description: "LZ4 フレーム"
+    - value: 0x184D2A50
+      label: skippable_frame
+      description: "スキッパブルフレーム（0x184D2A50〜0x184D2A5F。中身は読み飛ばされる任意のデータ）"
+    - value: 0x184C2102
+      label: legacy_frame
+      description: "レガシーフレーム（lz4 の旧形式。lz4 -l）"
+
   block_max_size:
     - value: 4
       label: 64KB
+      description: "64 KiB"
     - value: 5
       label: 256KB
+      description: "256 KiB"
     - value: 6
       label: 1MB
+      description: "1 MiB"
     - value: 7
       label: 4MB
+      description: "4 MiB（lz4 コマンドの既定）"
 
 structs:
   lz4:
+    - name: frames
+      type: struct
+      struct: frame
+      repeat: eof
+      description: "フレームの並び（複数のフレームを連結してよい）"
+
+  frame:
     - name: magic
       type: uint32
-      validate: "{magic == 0x184D2204}"
-      description: "LZ4フレームマジックナンバー（0x184D2204）"
+      description: "フレームの種類を示すマジック（0x184D2204 = LZ4 フレーム、0x184D2A50〜5F = スキッパブル、0x184C2102 = レガシー）"
+    - name: frame_type
+      type: virtual
+      value: "{(magic & 0xFFFFFFF0) == 0x184D2A50 ? 0x184D2A50 : magic}"
+      enum: frame_magic
+      description: "フレームの種類（スキッパブルフレームの 16 種類のマジックを 0x184D2A50 にまとめたもの）"
+    - name: body
+      type: switch
+      switch_on: "{frame_type}"
+      cases:
+        "0x184D2204": lz4_frame
+        "0x184D2A50": skippable_frame
+        "0x184C2102": legacy_frame
+      default: unknown_frame
+      description: "フレームの本体（種類で振り分ける）"
+
+  lz4_frame:
     - name: flg
       type: bitfield
       size: "1"
+      description: "FLG バイト（Frame Descriptor の先頭。後ろのフィールドの有無）"
       fields:
         - name: dict_id
           bits: "0"
-          description: "辞書IDフィールド有無"
+          description: "1 なら辞書 ID（dict_id_value）がある"
         - name: reserved
           bits: "1"
+          description: "予約（0）"
         - name: content_checksum
           bits: "2"
-          description: "コンテンツチェックサムフラグ"
+          description: "1 なら EndMark の後ろに Content Checksum（展開後の全データの xxHash-32）がある"
         - name: content_size
           bits: "3"
-          description: "コンテンツサイズフィールド有無"
+          description: "1 なら展開後のサイズ（content_size_value）がある"
         - name: b_checksum
           bits: "4"
-          description: "ブロックチェックサムフラグ"
+          description: "1 なら各ブロックの後ろに Block Checksum（ブロックのデータの xxHash-32）がある"
         - name: b_independence
           bits: "5"
-          description: "ブロック独立フラグ"
+          description: "1 なら各ブロックは独立（前のブロックを辞書として参照しない）"
         - name: version
           bits: "7:6"
-          description: "バージョン（常に01）"
+          description: "形式のバージョン（01）"
     - name: bd
       type: bitfield
       size: "1"
+      description: "BD バイト（ブロックの最大サイズ）"
       fields:
         - name: reserved_bd
           bits: "3:0"
+          description: "予約（0）"
         - name: block_max_size
           bits: "6:4"
           enum: block_max_size
-          description: "最大ブロックサイズ"
+          description: "ブロックの展開後の最大サイズ（4〜7）"
         - name: reserved_bd_high
           bits: "7"
+          description: "予約（0）"
     - name: content_size_value
       type: uint64
       if: "{content_size == 1}"
-      description: "元データの非圧縮サイズ"
+      description: "展開後の全データのバイト数"
     - name: dict_id_value
       type: uint32
       if: "{dict_id == 1}"
-      description: "辞書ID"
+      description: "辞書 ID（圧縮と展開で同じ辞書を使うための識別子）"
     - name: header_checksum
       type: uint8
-      description: "ヘッダチェックサム（xxHash-32の第2バイト）"
+      description: "ヘッダチェックサム（FLG から dict_id_value までの xxHash-32 の 2 バイト目 = (xxh32 >> 8) & 0xFF。検証しない）"
     - name: blocks
       type: struct
       struct: lz4_data_block
       repeat_until: "{block_size_raw == 0}"
-      description: "データブロック列（block_size=0のEndMarkで終了）"
+      description: "データブロックの並び（ブロックサイズ 0 の EndMark で終わる）"
     - name: content_checksum_value
       type: uint32
       if: "{content_checksum == 1}"
-      description: "コンテンツチェックサム（xxHash-32）"
+      description: "Content Checksum（展開後の全データの xxHash-32。展開が必要なため検証しない）"
 
   lz4_data_block:
     - name: block_size_raw
       type: uint32
-      description: "ブロックサイズ（最上位ビットは非圧縮フラグ、0=EndMark）"
+      description: "ブロックサイズ（最上位ビットは無圧縮フラグ、下位 31 ビットがデータのバイト数。0 = EndMark）"
+    - name: is_uncompressed
+      type: virtual
+      value: "{block_size_raw >> 31}"
+      description: "1 ならデータは無圧縮（block_size_raw の最上位ビット）"
+    - name: block_size
+      type: virtual
+      value: "{block_size_raw & 0x7FFFFFFF}"
+      description: "ブロックのデータのバイト数（block_size_raw の下位 31 ビット）"
     - name: block_data
       type: bytes
-      size: "{block_size_raw & 0x7FFFFFFF}"
+      size: "{block_size}"
       if: "{block_size_raw != 0}"
-      description: "ブロックデータ（圧縮または非圧縮）"
+      description: "ブロックのデータ（LZ4 のブロック形式で圧縮、または無圧縮）"
+    - name: block_checksum
+      type: uint32
+      if: "{block_size_raw == 0 ? 0 : b_checksum == 1}"
+      checksum:
+        algorithm: xxhash32
+        fields: [block_data]
+      description: "Block Checksum（block_data の xxHash-32。FLG の b_checksum が 1 のとき）"
+
+  skippable_frame:
+    - name: frame_size
+      type: uint32
+      description: "ユーザデータのバイト数"
+    - name: user_data
+      type: bytes
+      size: "{frame_size}"
+      description: "ユーザデータ（展開時は読み飛ばされる。メタデータの埋め込みなどに使う）"
+
+  legacy_frame:
+    - name: blocks
+      type: struct
+      struct: legacy_block
+      repeat: eof
+      description: "ブロックの並び（各ブロックは展開後 8 MiB。終わりを示すものが無いためファイル末尾まで）"
+
+  legacy_block:
+    - name: compressed_size
+      type: uint32
+      description: "ブロックの圧縮データのバイト数"
+    - name: block_data
+      type: bytes
+      size: "{compressed_size}"
+      description: "ブロックの圧縮データ（LZ4 のブロック形式）"
+
+  unknown_frame:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "マジックが不明なデータ（残り全部）"

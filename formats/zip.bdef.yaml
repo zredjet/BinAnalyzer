@@ -1,3 +1,16 @@
+# ZIP アーカイブ（.zip / .jar / .apk / .docx などの OOXML・ODF）
+# 仕様: PKWARE APPNOTE.TXT 6.3.10（2022-11-01） https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+# 構造: [Local File Header + ファイルデータ + (Data Descriptor)]* → Central Directory → [Zip64 End of Central Directory Record + Locator] → End of Central Directory。
+#   Local File Header はサイズを省略できる（汎用フラグ bit 3。Java の ZipOutputStream などのストリーム出力）ため、公式の読み方どおり
+#   末尾の End of Central Directory → Central Directory の順に先に読み、各ファイルの位置とサイズは Central Directory の値を使う。
+#   End of Central Directory はファイル末尾の 22 バイト（コメントなし）を先に確かめ、無ければ先頭から署名を探す。
+#   Zip64 の値（0xFFFFFFFF / 0xFFFF のフィールド）は拡張フィールド 0x0001 の値に置き換える。
+#   ファイルデータは deflate / bzip2 / Zstandard を展開して表示する（暗号化されていないとき）。
+# 対応していないもの: 分割・複数ディスクのアーカイブ、先頭に別のデータが付いた自己解凍形式（オフセットが補正されていない場合）、
+#   Central Directory の暗号化（汎用フラグ bit 13。Archive Extra Data Record と Digital Signature）、
+#   コメント付きで先頭側に別の End of Central Directory 署名（入れ子の無圧縮 ZIP など）を含むファイル、
+#   暗号化データ・Deflate64・LZMA・XZ・PPMd などの展開、CRC-32 の検証（展開後のデータに対する値のため）、
+#   CP437 のファイル名（UTF-8 として表示）、主要なもの以外の拡張フィールドの中身（バイト列として表示）
 name: ZIP
 endianness: little
 root: zip
@@ -6,188 +19,920 @@ enums:
   compression_method:
     - value: 0
       label: stored
+      description: "無圧縮"
+    - value: 1
+      label: shrunk
+      description: "Shrink（LZW。古い PKZIP）"
+    - value: 2
+      label: reduced_1
+      description: "Reduce（圧縮係数 1。古い PKZIP）"
+    - value: 3
+      label: reduced_2
+      description: "Reduce（圧縮係数 2）"
+    - value: 4
+      label: reduced_3
+      description: "Reduce（圧縮係数 3）"
+    - value: 5
+      label: reduced_4
+      description: "Reduce（圧縮係数 4）"
+    - value: 6
+      label: imploded
+      description: "Implode（古い PKZIP）"
+    - value: 7
+      label: tokenized
+      description: "Tokenizing（予約）"
     - value: 8
       label: deflated
+      description: "Deflate（RFC 1951。最も一般的）"
     - value: 9
       label: Deflate64
+      description: "Deflate64（Enhanced Deflating。窓 64 KiB）"
+    - value: 10
+      label: PKWARE_DCL_imploded
+      description: "PKWARE Data Compression Library の Implode（旧 TERSE）"
     - value: 12
       label: BZIP2
+      description: "bzip2"
     - value: 14
       label: LZMA
+      description: "LZMA（EFS）"
+    - value: 16
+      label: IBM_zOS_CMPSC
+      description: "IBM z/OS CMPSC 圧縮"
+    - value: 18
+      label: IBM_TERSE
+      description: "IBM TERSE（新方式）"
+    - value: 19
+      label: IBM_LZ77_z
+      description: "IBM LZ77 z Architecture"
+    - value: 20
+      label: ZSTD_deprecated
+      description: "Zstandard（廃止された番号。93 を使う）"
     - value: 93
       label: ZSTD
+      description: "Zstandard"
+    - value: 94
+      label: MP3
+      description: "MP3 圧縮"
     - value: 95
       label: XZ
+      description: "XZ"
+    - value: 96
+      label: JPEG
+      description: "JPEG の可逆な再圧縮"
+    - value: 97
+      label: WavPack
+      description: "WavPack（音声）"
+    - value: 98
+      label: PPMd
+      description: "PPMd 版 I rev 1"
+    - value: 99
+      label: AE-x
+      description: "AES 暗号化（WinZip。本来の圧縮方式は拡張フィールド 0x9901 にある）"
 
   host_os:
     - value: 0
       label: MS-DOS
+      description: "MS-DOS と OS/2（FAT / VFAT / FAT32）"
+    - value: 1
+      label: Amiga
+    - value: 2
+      label: OpenVMS
     - value: 3
-      label: Unix
+      label: UNIX
+      description: "UNIX（外部属性の上位 16 ビットが st_mode）"
+    - value: 4
+      label: VM/CMS
+    - value: 5
+      label: Atari_ST
     - value: 6
-      label: OS/2
+      label: OS/2_HPFS
+    - value: 7
+      label: Macintosh
+      description: "旧 Mac OS"
+    - value: 8
+      label: Z-System
+    - value: 9
+      label: CP/M
+    - value: 10
+      label: Windows_NTFS
+    - value: 11
+      label: MVS
+      description: "MVS（OS/390・z/OS）"
+    - value: 12
+      label: VSE
+    - value: 13
+      label: Acorn_Risc
+    - value: 14
+      label: VFAT
+    - value: 15
+      label: alternate_MVS
+    - value: 16
+      label: BeOS
+    - value: 17
+      label: Tandem
+    - value: 18
+      label: OS/400
     - value: 19
-      label: macOS
+      label: OS_X
+      description: "OS X（Darwin）"
+
+  extra_field_id:
+    - value: 0x0001
+      label: Zip64
+      description: "Zip64 拡張情報（4 GiB を超えるサイズ・オフセット）"
+    - value: 0x0007
+      label: AV_Info
+    - value: 0x0008
+      label: language_encoding
+      description: "言語エンコーディング（予約）"
+    - value: 0x0009
+      label: OS/2
+      description: "OS/2 の拡張属性"
+    - value: 0x000A
+      label: NTFS
+      description: "NTFS の時刻（FILETIME）"
+    - value: 0x000C
+      label: OpenVMS
+    - value: 0x000D
+      label: UNIX
+      description: "PKWARE の UNIX 情報（時刻・UID / GID）"
+    - value: 0x000E
+      label: file_stream
+      description: "ファイルストリームとフォークの記述子（予約）"
+    - value: 0x000F
+      label: patch_descriptor
+    - value: 0x0014
+      label: PKCS7_store
+      description: "X.509 証明書の PKCS#7 ストア"
+    - value: 0x0015
+      label: X509_file
+      description: "個々のファイルの X.509 証明書 ID と署名"
+    - value: 0x0016
+      label: X509_central_directory
+      description: "Central Directory の X.509 証明書 ID"
+    - value: 0x0017
+      label: strong_encryption
+      description: "強力な暗号化のヘッダ"
+    - value: 0x0018
+      label: record_management
+    - value: 0x0019
+      label: PKCS7_recipients
+      description: "暗号化の受信者の証明書リスト"
+    - value: 0x0020
+      label: timestamp_record
+      description: "タイムスタンプ（予約）"
+    - value: 0x0021
+      label: policy_decryption_key
+    - value: 0x0022
+      label: smartcrypt_key_provider
+    - value: 0x0023
+      label: smartcrypt_policy_key
+    - value: 0x0065
+      label: IBM_S390_attributes
+      description: "IBM S/390（Z390）・AS/400（I400）の属性（非圧縮）"
+    - value: 0x0066
+      label: IBM_S390_attributes_compressed
+      description: "IBM S/390・AS/400 の属性（圧縮）"
+    - value: 0x4690
+      label: POSZIP_4690
+      description: "POSZIP 4690（予約）"
+    - value: 0x07C8
+      label: Macintosh
+    - value: 0x2605
+      label: ZipIt_Macintosh
+    - value: 0x334D
+      label: InfoZIP_Macintosh
+    - value: 0x4341
+      label: Acorn_SparkFS
+    - value: 0x4453
+      label: Windows_NT_security
+      description: "Windows NT のセキュリティ記述子"
+    - value: 0x4B46
+      label: FWKCS_MD5
+    - value: 0x5455
+      label: extended_timestamp
+      description: "Info-ZIP の拡張タイムスタンプ（UNIX 時刻の更新・アクセス・作成日時。'UT'）"
+    - value: 0x5855
+      label: InfoZIP_UNIX_original
+      description: "Info-ZIP の UNIX 情報（旧形式。時刻と UID / GID）"
+    - value: 0x6375
+      label: InfoZIP_Unicode_comment
+      description: "Info-ZIP の UTF-8 コメント"
+    - value: 0x7075
+      label: InfoZIP_Unicode_path
+      description: "Info-ZIP の UTF-8 ファイル名（'up'）"
+    - value: 0x7855
+      label: InfoZIP_UNIX_new
+      description: "Info-ZIP の UNIX 情報（新形式。'Ux'）"
+    - value: 0x7875
+      label: InfoZIP_UNIX_UID_GID
+      description: "Info-ZIP の UNIX の UID / GID（可変長。'ux'）"
+    - value: 0x9901
+      label: AE-x
+      description: "WinZip の AES 暗号化情報"
+    - value: 0xA11E
+      label: data_stream_alignment
+      description: "データの位置合わせ（Apache Commons Compress）"
+    - value: 0xA220
+      label: growth_hint
+      description: "Microsoft Open Packaging の拡張余地"
+    - value: 0xCAFE
+      label: Java_JAR
+      description: "Java の JAR であることを示す印（データなし）"
+    - value: 0xD935
+      label: Android_alignment
+      description: "Android の zipalign による位置合わせ"
+    - value: 0xE57A
+      label: Korean_code_page
+      description: "韓国語のコードページ情報（ALZip）"
+
+  aes_strength:
+    - value: 1
+      label: AES-128
+    - value: 2
+      label: AES-192
+    - value: 3
+      label: AES-256
 
 structs:
   zip:
-    - name: records
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      description: "ファイル全体のバイト数（末尾の End of Central Directory を探すのに使う）"
+    - name: eocd_probe
+      type: uint32
+      seek: "{file_size - 22}"
+      seek_restore: true
+      if: "{file_size >= 22}"
+      description: "末尾 22 バイトの先頭 4 バイト（コメントが無ければ End of Central Directory の署名 0x06054B50）"
+    - name: eocd_offset
+      type: virtual
+      value: "{file_size < 22 ? 0 : (eocd_probe == 0x06054B50 ? file_size - 22 : until_marker(0x50, 0x4B, 0x05, 0x06))}"
+      description: "End of Central Directory の位置（コメントがあるときは先頭から署名を探した位置）"
+    - name: end_of_central_directory
       type: struct
-      struct: pk_record
-      repeat: eof
+      struct: end_of_central_directory
+      seek: "{eocd_offset}"
+      seek_restore: true
+      description: "End of Central Directory（ファイル末尾。Central Directory の位置と件数）。先に読んで Central Directory を探す"
+    - name: zip64_locator_probe
+      type: uint32
+      seek: "{eocd_offset - 20}"
+      seek_restore: true
+      if: "{eocd_offset >= 20}"
+      description: "End of Central Directory の 20 バイト前の 4 バイト（Zip64 なら Locator の署名 0x07064B50）"
+    - name: is_zip64
+      type: virtual
+      value: "{eocd_offset < 20 ? 0 : (zip64_locator_probe == 0x07064B50 ? 1 : 0)}"
+      description: "Zip64 形式か（1 = Zip64 End of Central Directory Locator がある）"
+    - name: zip64_end_of_central_directory_locator
+      type: struct
+      struct: zip64_end_of_central_directory_locator
+      seek: "{eocd_offset - 20}"
+      seek_restore: true
+      if: "{is_zip64 == 1}"
+      description: "Zip64 End of Central Directory Locator（Zip64 の End of Central Directory Record の位置）"
+    - name: zip64_end_of_central_directory
+      type: struct
+      struct: zip64_end_of_central_directory
+      seek: "{zip64_end_of_central_directory_locator.zip64_eocd_offset}"
+      seek_restore: true
+      if: "{is_zip64 == 1}"
+      description: "Zip64 End of Central Directory Record（64 ビットの件数・サイズ・位置）"
+    - name: entry_count
+      type: virtual
+      value: "{is_zip64 == 1 ? zip64_end_of_central_directory.total_entries : end_of_central_directory.total_entries}"
+      description: "アーカイブ内のエントリ数（Zip64 なら Zip64 の値）"
+    - name: central_directory_offset
+      type: virtual
+      value: "{is_zip64 == 1 ? zip64_end_of_central_directory.directory_offset : end_of_central_directory.directory_offset}"
+      description: "Central Directory の位置（ファイル先頭から。Zip64 なら Zip64 の値）"
+    - name: central_directory_size
+      type: virtual
+      value: "{is_zip64 == 1 ? zip64_end_of_central_directory.directory_size : end_of_central_directory.directory_size}"
+      description: "Central Directory のバイト数（Zip64 なら Zip64 の値）"
+    - name: central_directory
+      type: struct
+      struct: central_directory
+      seek: "{central_directory_offset}"
+      seek_restore: true
+      description: "Central Directory（エントリごとの属性・サイズ・Local File Header の位置）。先に読んで各ファイルの位置とサイズを求める"
+    - name: local_files
+      type: struct
+      struct: local_file
+      repeat_count: "{entry_count}"
+      seek: "{central_directory.entries[_index].local_header_offset_actual}"
+      seek_restore: true
+      description: "ファイル本体（Local File Header + データ + Data Descriptor）。Central Directory の順に、その位置へ seek して読む"
 
-  pk_record:
+  central_directory:
+    - name: entries
+      type: struct
+      struct: central_directory_header
+      repeat_count: "{entry_count}"
+      description: "Central Directory File Header（entry_count 個。Local File Header と同じ順とは限らない）"
+
+  end_of_central_directory:
     - name: signature
       type: uint32
-    - name: body
-      type: switch
-      switch_on: "{signature}"
-      cases:
-        "0x04034B50": local_file_header
-        "0x02014B50": central_directory_entry
-        "0x06054B50": end_of_central_dir
-      default: raw_data
+      validate: "{signature == 0x06054B50}"
+      description: "End of Central Directory の署名（'PK' 05 06 = 0x06054B50）"
+    - name: disk_number
+      type: uint16
+      description: "このディスクの番号（分割でなければ 0。Zip64 なら 0xFFFF のことがある）"
+    - name: start_disk
+      type: uint16
+      description: "Central Directory が始まるディスクの番号（分割でなければ 0）"
+    - name: entries_on_disk
+      type: uint16
+      description: "このディスクにある Central Directory のエントリ数（0xFFFF なら Zip64 の値を使う）"
+    - name: total_entries
+      type: uint16
+      description: "Central Directory のエントリの総数（0xFFFF なら Zip64 の値を使う）"
+    - name: directory_size
+      type: uint32
+      description: "Central Directory のバイト数（0xFFFFFFFF なら Zip64 の値を使う）"
+    - name: directory_offset
+      type: uint32
+      description: "Central Directory の開始位置（開始ディスクの先頭から。0xFFFFFFFF なら Zip64 の値を使う）"
+    - name: comment_length
+      type: uint16
+      description: "アーカイブのコメントのバイト数"
+    - name: comment
+      type: utf8
+      size: "{comment_length}"
+      description: "アーカイブのコメント（本来は CP437。UTF-8 として表示）"
 
-  local_file_header:
-    - name: version_needed
-      type: uint16
-      description: "展開に必要なバージョン（下位バイト=バージョン、上位バイト=OS）"
-    - name: version_needed_os
-      type: virtual
-      value: "{version_needed >> 8}"
-      enum: host_os
-      description: "展開に必要なバージョンのOS情報（上位バイト）"
-    - name: flags
-      type: uint16
-      description: "汎用ビットフラグ"
-    - name: encrypted
-      type: virtual
-      value: "{flags & 1}"
-      description: "暗号化フラグ（bit 0: 1=暗号化されている）"
-    - name: has_data_descriptor
-      type: virtual
-      value: "{(flags >> 3) & 1}"
-      description: "データディスクリプタフラグ（bit 3: 1=compressed_dataの後にcrc32(4bytes)/compressed_size(4bytes)/uncompressed_size(4bytes)のData Descriptorが配置される。この場合ヘッダ内のcrc32/compressed_size/uncompressed_sizeは0となる）"
-    - name: utf8_encoding
-      type: virtual
-      value: "{(flags >> 11) & 1}"
-      description: "UTF-8エンコーディングフラグ（bit 11: 1=ファイル名とコメントがUTF-8でエンコードされている）"
-    - name: compression
-      type: uint16
-      enum: compression_method
-    - name: mod_time
-      type: uint16
-    - name: mod_date
-      type: uint16
-    - name: crc32
+  zip64_end_of_central_directory_locator:
+    - name: signature
       type: uint32
-    - name: compressed_size
+      validate: "{signature == 0x07064B50}"
+      description: "Zip64 End of Central Directory Locator の署名（'PK' 06 07 = 0x07064B50）"
+    - name: zip64_eocd_disk
       type: uint32
-    - name: uncompressed_size
+      description: "Zip64 End of Central Directory Record があるディスクの番号"
+    - name: zip64_eocd_offset
+      type: uint64
+      description: "Zip64 End of Central Directory Record の位置（ファイル先頭から）"
+    - name: total_disks
       type: uint32
-    - name: filename_length
-      type: uint16
-    - name: extra_length
-      type: uint16
-    - name: filename
-      type: ascii
-      size: "{filename_length}"
-    - name: extra
-      type: bytes
-      size: "{extra_length}"
-    - name: data
-      type: bytes
-      size: "{compressed_size}"
+      description: "ディスクの総数（分割でなければ 1）"
 
-  central_directory_entry:
+  zip64_end_of_central_directory:
+    - name: signature
+      type: uint32
+      validate: "{signature == 0x06064B50}"
+      description: "Zip64 End of Central Directory Record の署名（'PK' 06 06 = 0x06064B50）"
+    - name: record_size
+      type: uint64
+      description: "このレコードの残りのバイト数（署名とこのフィールドの 12 バイトを除く。拡張データが無ければ 44）"
     - name: version_made_by
       type: uint16
-      description: "アーカイブ作成バージョン（下位バイト=バージョン、上位バイト=OS）"
+      description: "作成したソフトの版（下位バイト = 仕様の版 × 10、上位バイト = OS）"
+    - name: version_needed
+      type: uint16
+      description: "展開に必要な仕様の版 × 10（Zip64 は 45 以上）"
+    - name: disk_number
+      type: uint32
+      description: "このディスクの番号"
+    - name: start_disk
+      type: uint32
+      description: "Central Directory が始まるディスクの番号"
+    - name: entries_on_disk
+      type: uint64
+      description: "このディスクにある Central Directory のエントリ数"
+    - name: total_entries
+      type: uint64
+      description: "Central Directory のエントリの総数"
+    - name: directory_size
+      type: uint64
+      description: "Central Directory のバイト数"
+    - name: directory_offset
+      type: uint64
+      description: "Central Directory の開始位置（ファイル先頭から）"
+    - name: extensible_data
+      type: bytes
+      size: "{record_size - 44}"
+      description: "拡張データ（record_size − 44 バイト。通常は無い）"
+
+  central_directory_header:
+    - name: signature
+      type: uint32
+      validate: "{signature == 0x02014B50}"
+      description: "Central Directory File Header の署名（'PK' 01 02 = 0x02014B50）"
+    - name: version_made_by
+      type: uint16
+      description: "作成したソフトの版（下位バイト = 仕様の版 × 10、上位バイト = 属性の OS）"
     - name: version_made_by_os
       type: virtual
       value: "{version_made_by >> 8}"
       enum: host_os
-      description: "アーカイブ作成OS情報（上位バイト）"
+      description: "作成した OS（version_made_by の上位バイト。external_attributes の解釈が決まる）"
+    - name: version_made_by_spec
+      type: virtual
+      value: "{version_made_by & 0xFF}"
+      description: "作成したソフトが準拠する仕様の版 × 10（version_made_by の下位バイト。63 = 6.3）"
     - name: version_needed
       type: uint16
-      description: "展開に必要なバージョン（下位バイト=バージョン、上位バイト=OS）"
-    - name: version_needed_os
-      type: virtual
-      value: "{version_needed >> 8}"
-      enum: host_os
-      description: "展開に必要なバージョンのOS情報（上位バイト）"
+      description: "展開に必要な仕様の版 × 10（10 = 無圧縮、20 = Deflate・フォルダ・PKWARE 暗号化、45 = Zip64、51 = AES、63 = LZMA 等）"
     - name: flags
-      type: uint16
-      description: "汎用ビットフラグ"
-    - name: encrypted
-      type: virtual
-      value: "{flags & 1}"
-      description: "暗号化フラグ（bit 0: 1=暗号化されている）"
-    - name: has_data_descriptor
-      type: virtual
-      value: "{(flags >> 3) & 1}"
-      description: "データディスクリプタフラグ（bit 3: 1=compressed_dataの後にcrc32(4bytes)/compressed_size(4bytes)/uncompressed_size(4bytes)のData Descriptorが配置される。この場合ヘッダ内のcrc32/compressed_size/uncompressed_sizeは0となる）"
-    - name: utf8_encoding
-      type: virtual
-      value: "{(flags >> 11) & 1}"
-      description: "UTF-8エンコーディングフラグ（bit 11: 1=ファイル名とコメントがUTF-8でエンコードされている）"
+      type: bitfield
+      size: "2"
+      description: "汎用ビットフラグ（General Purpose Bit Flag）"
+      fields:
+        - name: encrypted
+          bits: "0"
+          description: "1 なら暗号化されている"
+        - name: compression_option
+          bits: "2:1"
+          description: "圧縮方式ごとのオプション（Deflate: 0 = 標準、1 = 最高、2 = 高速、3 = 超高速。Implode・LZMA も別の意味で使う）"
+        - name: has_data_descriptor
+          bits: "3"
+          description: "1 ならデータの後ろに Data Descriptor があり、Local File Header の CRC-32 とサイズは 0"
+        - name: enhanced_deflation
+          bits: "4"
+          description: "Deflate64 用に予約"
+        - name: compressed_patched
+          bits: "5"
+          description: "1 ならパッチデータ（PKWARE の独自機能）"
+        - name: strong_encryption
+          bits: "6"
+          description: "1 なら強力な暗号化（bit 0 と組み合わせる）"
+        - name: reserved_7_10
+          bits: "10:7"
+          description: "未使用（0）"
+        - name: utf8_encoding
+          bits: "11"
+          description: "言語エンコーディングフラグ（EFS）。1 ならファイル名とコメントが UTF-8"
+        - name: reserved_12
+          bits: "12"
+          description: "PKWARE の拡張圧縮用に予約"
+        - name: masked_local_header
+          bits: "13"
+          description: "1 なら Central Directory の暗号化で Local File Header の値が隠されている"
+        - name: reserved_14_15
+          bits: "15:14"
+          description: "PKWARE 用に予約"
     - name: compression
       type: uint16
       enum: compression_method
+      description: "圧縮方式"
     - name: mod_time
-      type: uint16
+      type: bitfield
+      size: "2"
+      description: "最終更新時刻（MS-DOS 形式、ローカル時刻）"
+      fields:
+        - name: second_half
+          bits: "4:0"
+          description: "秒 ÷ 2（0〜29。2 秒単位）"
+        - name: minute
+          bits: "10:5"
+          description: "分（0〜59）"
+        - name: hour
+          bits: "15:11"
+          description: "時（0〜23）"
     - name: mod_date
-      type: uint16
+      type: bitfield
+      size: "2"
+      description: "最終更新日（MS-DOS 形式）"
+      fields:
+        - name: day
+          bits: "4:0"
+          description: "日（1〜31）"
+        - name: month
+          bits: "8:5"
+          description: "月（1〜12）"
+        - name: year_from_1980
+          bits: "15:9"
+          description: "1980 年からの年数（0〜127）"
     - name: crc32
       type: uint32
+      description: "展開後のデータの CRC-32（展開が必要なため検証しない）"
     - name: compressed_size
       type: uint32
+      description: "圧縮後のバイト数（暗号化ヘッダを含む。0xFFFFFFFF なら Zip64 拡張フィールドの値を使う）"
     - name: uncompressed_size
       type: uint32
+      description: "展開後のバイト数（0xFFFFFFFF なら Zip64 拡張フィールドの値を使う）"
     - name: filename_length
       type: uint16
+      description: "ファイル名のバイト数"
     - name: extra_length
       type: uint16
+      description: "拡張フィールドのバイト数"
     - name: comment_length
       type: uint16
+      description: "ファイルのコメントのバイト数"
     - name: disk_number_start
       type: uint16
+      description: "ファイルが始まるディスクの番号（分割でなければ 0。0xFFFF なら Zip64 の値を使う）"
     - name: internal_attributes
       type: uint16
+      description: "内部属性（bit 0: 1 ならテキストファイルらしい、bit 1: メインフレーム用のレコード長制御あり）"
     - name: external_attributes
       type: uint32
+      description: "外部属性（OS 依存。MS-DOS なら下位バイトが FAT の属性、UNIX なら上位 16 ビットが st_mode）"
+    - name: unix_mode
+      type: virtual
+      value: "{external_attributes >> 16}"
+      if: "{version_made_by_os == 3 or version_made_by_os == 19}"
+      description: "UNIX のファイルモード st_mode（external_attributes の上位 16 ビット。0x81A4 = 通常ファイル 0644、0x41ED = ディレクトリ 0755）"
     - name: local_header_offset
       type: uint32
+      description: "Local File Header の位置（開始ディスクの先頭から。0xFFFFFFFF なら Zip64 の値を使う）"
     - name: filename
-      type: ascii
+      type: utf8
       size: "{filename_length}"
+      description: "ファイル名（区切りは '/'、末尾が '/' ならフォルダ。utf8_encoding が 0 なら本来は CP437）"
     - name: extra
-      type: bytes
+      type: struct
+      struct: central_extra_fields
       size: "{extra_length}"
+      description: "拡張フィールド（ID 2 バイト + 長さ 2 バイト + データの並び）と、Zip64 拡張フィールドを反映したサイズ・位置"
     - name: comment
-      type: ascii
+      type: utf8
       size: "{comment_length}"
+      description: "ファイルのコメント（utf8_encoding が 0 なら本来は CP437）"
+    - name: compressed_size_actual
+      type: virtual
+      value: "{extra.compressed_size_actual}"
+      description: "圧縮後のバイト数（0xFFFFFFFF なら Zip64 拡張フィールドの値）。Local File Header の後ろのデータの大きさ"
+    - name: uncompressed_size_actual
+      type: virtual
+      value: "{extra.uncompressed_size_actual}"
+      description: "展開後のバイト数（0xFFFFFFFF なら Zip64 拡張フィールドの値）"
+    - name: local_header_offset_actual
+      type: virtual
+      value: "{extra.local_header_offset_actual}"
+      description: "Local File Header の位置（0xFFFFFFFF なら Zip64 拡張フィールドの値）"
+    - name: uses_zip64_sizes
+      type: virtual
+      value: "{compressed_size == 0xFFFFFFFF or uncompressed_size == 0xFFFFFFFF ? 1 : 0}"
+      description: "サイズを Zip64 拡張フィールドで持つか（1 なら Data Descriptor のサイズも 8 バイト）"
 
-  end_of_central_dir:
-    - name: disk_number
-      type: uint16
-    - name: start_disk
-      type: uint16
-    - name: entries_on_disk
-      type: uint16
-    - name: total_entries
-      type: uint16
-    - name: directory_size
+  local_file:
+    - name: header
+      type: struct
+      struct: local_file_header
+      description: "Local File Header（ファイルの直前にあるヘッダ）"
+    - name: data
+      type: switch
+      switch_on: "{central_directory.entries[_index].encrypted == 1 ? -1 : central_directory.entries[_index].compression}"
+      size: "{central_directory.entries[_index].compressed_size_actual}"
+      cases:
+        "8": deflated_data
+        "12": bzip2_data
+        "93": zstd_data
+      default: raw_data
+      description: "ファイルデータ（Central Directory の compressed_size_actual バイト）。暗号化されていない deflate / bzip2 / Zstandard は展開して表示"
+    - name: data_descriptor
+      type: struct
+      struct: data_descriptor
+      if: "{central_directory.entries[_index].has_data_descriptor == 1}"
+      description: "Data Descriptor（汎用フラグ bit 3 のとき、データの後ろにある CRC-32 とサイズ）"
+
+  local_file_header:
+    - name: signature
       type: uint32
-    - name: directory_offset
-      type: uint32
-    - name: comment_length
+      validate: "{signature == 0x04034B50}"
+      description: "Local File Header の署名（'PK' 03 04 = 0x04034B50）"
+    - name: version_needed
       type: uint16
-    - name: comment
-      type: ascii
-      size: "{comment_length}"
+      description: "展開に必要な仕様の版 × 10（Central Directory と同じ値）"
+    - name: flags
+      type: bitfield
+      size: "2"
+      description: "汎用ビットフラグ（Central Directory と同じ値。各ビットの意味は Central Directory 側の説明を参照）"
+      fields:
+        - name: encrypted
+          bits: "0"
+          description: "1 なら暗号化されている"
+        - name: compression_option
+          bits: "2:1"
+          description: "圧縮方式ごとのオプション（Deflate: 0 = 標準、1 = 最高、2 = 高速、3 = 超高速）"
+        - name: has_data_descriptor
+          bits: "3"
+          description: "1 ならデータの後ろに Data Descriptor があり、このヘッダの CRC-32 とサイズは 0"
+        - name: other_flags
+          bits: "10:4"
+          description: "bit 4〜10（Deflate64 用・パッチ・強力な暗号化・未使用）"
+        - name: utf8_encoding
+          bits: "11"
+          description: "言語エンコーディングフラグ（EFS）。1 ならファイル名が UTF-8"
+        - name: reserved_high
+          bits: "15:12"
+          description: "bit 12〜15（bit 13 は Central Directory の暗号化で値を隠している印）"
+    - name: compression
+      type: uint16
+      enum: compression_method
+      description: "圧縮方式"
+    - name: mod_time
+      type: bitfield
+      size: "2"
+      description: "最終更新時刻（MS-DOS 形式、ローカル時刻）"
+      fields:
+        - name: second_half
+          bits: "4:0"
+          description: "秒 ÷ 2（0〜29。2 秒単位）"
+        - name: minute
+          bits: "10:5"
+          description: "分（0〜59）"
+        - name: hour
+          bits: "15:11"
+          description: "時（0〜23）"
+    - name: mod_date
+      type: bitfield
+      size: "2"
+      description: "最終更新日（MS-DOS 形式）"
+      fields:
+        - name: day
+          bits: "4:0"
+          description: "日（1〜31）"
+        - name: month
+          bits: "8:5"
+          description: "月（1〜12）"
+        - name: year_from_1980
+          bits: "15:9"
+          description: "1980 年からの年数（0〜127）"
+    - name: crc32
+      type: uint32
+      description: "展開後のデータの CRC-32（has_data_descriptor が 1 なら 0 で、Data Descriptor にある）"
+    - name: compressed_size
+      type: uint32
+      description: "圧縮後のバイト数（has_data_descriptor が 1 なら 0。Zip64 なら 0xFFFFFFFF）。データの大きさには Central Directory の値を使う"
+    - name: uncompressed_size
+      type: uint32
+      description: "展開後のバイト数（has_data_descriptor が 1 なら 0。Zip64 なら 0xFFFFFFFF）"
+    - name: filename_length
+      type: uint16
+      description: "ファイル名のバイト数"
+    - name: extra_length
+      type: uint16
+      description: "拡張フィールドのバイト数（Central Directory 側と異なることがある）"
+    - name: filename
+      type: utf8
+      size: "{filename_length}"
+      description: "ファイル名（utf8_encoding が 0 なら本来は CP437）"
+    - name: extra
+      type: struct
+      struct: local_extra_field
+      size: "{extra_length}"
+      repeat: eof
+      description: "拡張フィールド（ID 2 バイト + 長さ 2 バイト + データの並び）"
+
+  data_descriptor:
+    - name: first_word
+      type: uint32
+      description: "先頭の 4 バイト。署名（'PK' 07 08 = 0x08074B50）は省略できるので、署名でなければこれが CRC-32"
+    - name: crc32
+      type: uint32
+      if: "{first_word == 0x08074B50}"
+      description: "展開後のデータの CRC-32（署名の後ろにあるとき）"
+    - name: compressed_size
+      type: uint32
+      if: "{central_directory.entries[_index].uses_zip64_sizes == 0}"
+      description: "圧縮後のバイト数（4 バイト）"
+    - name: uncompressed_size
+      type: uint32
+      if: "{central_directory.entries[_index].uses_zip64_sizes == 0}"
+      description: "展開後のバイト数（4 バイト）"
+    - name: compressed_size_64
+      type: uint64
+      if: "{central_directory.entries[_index].uses_zip64_sizes == 1}"
+      description: "圧縮後のバイト数（Zip64 のエントリは 8 バイト）"
+    - name: uncompressed_size_64
+      type: uint64
+      if: "{central_directory.entries[_index].uses_zip64_sizes == 1}"
+      description: "展開後のバイト数（Zip64 のエントリは 8 バイト）"
+
+  deflated_data:
+    - name: content
+      type: deflate
+      size: remaining
+      description: "Deflate（RFC 1951）で圧縮されたデータ。展開した内容を表示する"
+
+  bzip2_data:
+    - name: content
+      type: bzip2
+      size: remaining
+      description: "bzip2 で圧縮されたデータ。展開した内容を表示する"
+
+  zstd_data:
+    - name: content
+      type: zstd
+      size: remaining
+      description: "Zstandard で圧縮されたデータ。展開した内容を表示する"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "データ（無圧縮、暗号化済み、または展開に対応していない圧縮方式のバイト列）"
+
+  # --- 拡張フィールド ---
+  central_extra_fields:
+    - name: fields
+      type: struct
+      struct: central_extra_field
+      repeat: eof
+      description: "拡張フィールドの並び"
+    - name: compressed_size_actual
+      type: virtual
+      value: "{compressed_size == 0xFFFFFFFF ? zip64_compressed_size : compressed_size}"
+      description: "圧縮後のバイト数（ヘッダの値が 0xFFFFFFFF なら Zip64 拡張フィールドの値）"
+    - name: uncompressed_size_actual
+      type: virtual
+      value: "{uncompressed_size == 0xFFFFFFFF ? zip64_uncompressed_size : uncompressed_size}"
+      description: "展開後のバイト数（ヘッダの値が 0xFFFFFFFF なら Zip64 拡張フィールドの値）"
+    - name: local_header_offset_actual
+      type: virtual
+      value: "{local_header_offset == 0xFFFFFFFF ? zip64_local_header_offset : local_header_offset}"
+      description: "Local File Header の位置（ヘッダの値が 0xFFFFFFFF なら Zip64 拡張フィールドの値）"
+
+  central_extra_field:
+    - name: header_id
+      type: uint16
+      enum: extra_field_id
+      description: "拡張フィールドの ID（0x0000〜0x7FFF は PKWARE、それ以外は第三者の定義）"
+    - name: data_size
+      type: uint16
+      description: "データのバイト数"
+    - name: data
+      type: switch
+      switch_on: "{header_id}"
+      size: "{data_size}"
+      cases:
+        "0x0001": zip64_central_extra
+        "0x000A": ntfs_extra
+        "0x5455": extended_timestamp_extra
+        "0x7075": unicode_path_extra
+        "0x7875": unix_uid_gid_extra
+        "0x9901": aes_extra
+      default: raw_data
+      description: "拡張フィールドのデータ（header_id で振り分ける。それ以外はバイト列）"
+
+  local_extra_field:
+    - name: header_id
+      type: uint16
+      enum: extra_field_id
+      description: "拡張フィールドの ID（0x0000〜0x7FFF は PKWARE、それ以外は第三者の定義）"
+    - name: data_size
+      type: uint16
+      description: "データのバイト数"
+    - name: data
+      type: switch
+      switch_on: "{header_id}"
+      size: "{data_size}"
+      cases:
+        "0x0001": zip64_local_extra
+        "0x000A": ntfs_extra
+        "0x5455": extended_timestamp_extra
+        "0x7075": unicode_path_extra
+        "0x7875": unix_uid_gid_extra
+        "0x9901": aes_extra
+      default: raw_data
+      description: "拡張フィールドのデータ（header_id で振り分ける。それ以外はバイト列）"
+
+  zip64_local_extra:
+    - name: zip64_uncompressed_size
+      type: uint64
+      if: "{remaining >= 8}"
+      description: "展開後のバイト数（Local File Header では、あれば両方のサイズを必ず置く。ストリーム出力では 0）"
+    - name: zip64_compressed_size
+      type: uint64
+      if: "{remaining >= 8}"
+      description: "圧縮後のバイト数（ストリーム出力では 0 で、Data Descriptor に 8 バイトで置く）"
+    - name: unparsed
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "残りのデータ"
+
+  zip64_central_extra:
+    - name: zip64_uncompressed_size
+      type: uint64
+      if: "{uncompressed_size == 0xFFFFFFFF}"
+      description: "展開後のバイト数（ヘッダの値が 0xFFFFFFFF のときだけある）"
+    - name: zip64_compressed_size
+      type: uint64
+      if: "{compressed_size == 0xFFFFFFFF}"
+      description: "圧縮後のバイト数（ヘッダの値が 0xFFFFFFFF のときだけある）"
+    - name: zip64_local_header_offset
+      type: uint64
+      if: "{local_header_offset == 0xFFFFFFFF}"
+      description: "Local File Header の位置（Central Directory の値が 0xFFFFFFFF のときだけある）"
+    - name: zip64_disk_number
+      type: uint32
+      if: "{disk_number_start == 0xFFFF}"
+      description: "ファイルが始まるディスクの番号（Central Directory の値が 0xFFFF のときだけある）"
+    - name: unparsed
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "残りのデータ（通常は無い）"
+
+  ntfs_extra:
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: attribute_tag
+      type: uint16
+      description: "属性のタグ（1 = 時刻）"
+    - name: attribute_size
+      type: uint16
+      description: "属性のバイト数（時刻なら 24）"
+    - name: mtime
+      type: uint64
+      if: "{attribute_tag == 1}"
+      description: "更新日時（FILETIME: 1601-01-01 UTC からの 100 ナノ秒単位）"
+    - name: atime
+      type: uint64
+      if: "{attribute_tag == 1}"
+      description: "アクセス日時（FILETIME）"
+    - name: ctime
+      type: uint64
+      if: "{attribute_tag == 1}"
+      description: "作成日時（FILETIME）"
+    - name: other_attributes
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "時刻以外の属性（タグ + 長さ + データ）"
+
+  extended_timestamp_extra:
+    - name: timestamp_flags
+      type: bitfield
+      size: "1"
+      description: "どの時刻があるか（Central Directory 側は更新日時だけを置き、フラグは Local File Header と同じ値）"
+      fields:
+        - name: has_mtime
+          bits: "0"
+          description: "1 なら更新日時がある"
+        - name: has_atime
+          bits: "1"
+          description: "1 ならアクセス日時がある（Local File Header のみ）"
+        - name: has_ctime
+          bits: "2"
+          description: "1 なら作成日時がある（Local File Header のみ）"
+    - name: mtime
+      type: uint32
+      if: "{has_mtime == 1 ? remaining >= 4 : 0}"
+      description: "更新日時（UNIX 時刻、UTC の秒）"
+    - name: atime
+      type: uint32
+      if: "{has_atime == 1 ? remaining >= 4 : 0}"
+      description: "アクセス日時（UNIX 時刻）"
+    - name: ctime
+      type: uint32
+      if: "{has_ctime == 1 ? remaining >= 4 : 0}"
+      description: "作成日時（UNIX 時刻）"
+
+  unicode_path_extra:
+    - name: version
+      type: uint8
+      description: "この拡張フィールドの版（1）"
+    - name: name_crc32
+      type: uint32
+      description: "ヘッダのファイル名（filename）の CRC-32。一致しなければこの UTF-8 名は古いので使わない"
+    - name: unicode_name
+      type: utf8
+      size: remaining
+      description: "UTF-8 のファイル名"
+
+  unix_uid_gid_extra:
+    - name: version
+      type: uint8
+      description: "この拡張フィールドの版（1）"
+    - name: uid_size
+      type: uint8
+      description: "UID のバイト数（通常 4）"
+    - name: uid
+      type: bytes
+      size: "{uid_size}"
+      description: "ユーザ ID（uid_size バイトのリトルエンディアン整数）"
+    - name: gid_size
+      type: uint8
+      description: "GID のバイト数（通常 4）"
+    - name: gid
+      type: bytes
+      size: "{gid_size}"
+      description: "グループ ID（gid_size バイトのリトルエンディアン整数）"
+
+  aes_extra:
+    - name: vendor_version
+      type: uint16
+      description: "AES 暗号化の版（1 = AE-1: CRC-32 あり、2 = AE-2: CRC-32 は 0）"
+    - name: vendor_id
+      type: ascii
+      size: "2"
+      description: "ベンダー ID（'AE'）"
+    - name: strength
+      type: uint8
+      enum: aes_strength
+      description: "鍵の長さ"
+    - name: actual_compression
+      type: uint16
+      enum: compression_method
+      description: "暗号化の前に使った本来の圧縮方式（ヘッダの compression は 99）"
