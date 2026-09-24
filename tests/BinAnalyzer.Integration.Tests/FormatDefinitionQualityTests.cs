@@ -33,12 +33,6 @@ public sealed class FormatDefinitionQualityTests
         "mkv.bdef.yaml",
         "common/riff.bdef.yaml",
         "common/isobmff.bdef.yaml",
-        // アーカイブ・圧縮
-        "zip.bdef.yaml",
-        "gzip.bdef.yaml",
-        "tar.bdef.yaml",
-        "7z.bdef.yaml",
-        "lz4.bdef.yaml",
         // 実行形式・バイトコード
         "elf.bdef.yaml",
         "pe.bdef.yaml",

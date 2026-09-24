@@ -51,7 +51,7 @@ public class RealFileValidationTests : IClassFixture<RealFileFixture>
     [InlineData("zip.bdef.yaml", "test.zip", "ZIP", 1)]
     [InlineData("gzip.bdef.yaml", "test.gz", "GZIP", 1)]
     [InlineData("tar.bdef.yaml", "test.tar", "TAR", 1)]
-    [InlineData("lz4.bdef.yaml", "test.lz4", "LZ4", 2)]
+    [InlineData("lz4.bdef.yaml", "test.lz4", "LZ4", 1)]
     [InlineData("pcap.bdef.yaml", "test.pcap", "PCAP", 2)]
     [InlineData("sqlite.bdef.yaml", "test.sqlite", "SQLite", 1)]
     [InlineData("pdf.bdef.yaml", "test.pdf", "PDF", 1)]

@@ -93,4 +93,26 @@ public class GzipParsingTests
         output.Should().Contain("deflate");
         output.Should().Contain("Unix");
     }
+
+    [Fact]
+    public void OptionalFields_AreReadInOrder()
+    {
+        // 以前は FHCRC のヘッダ CRC16 を読まず、圧縮データが 2 バイトずれていた
+        var data = GzipTestDataGenerator.CreateGzipWithOptionalFields();
+        var decoded = new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(GzipFormatPath));
+
+        decoded.Children.Select(c => c.Name).Should().Equal(
+            "magic", "compression_method", "flags", "mtime", "xfl", "os", "extra_length", "extra",
+            "original_name", "comment", "header_crc16", "compressed_data", "crc32", "isize");
+
+        var subfield = ((DecodedArray)decoded.Children.First(c => c.Name == "extra")).Elements.Single();
+        ((DecodedString)((DecodedStruct)subfield).Children[0]).Value.Should().Be("BC");
+        var bsize = ((DecodedBytes)((DecodedStruct)subfield).Children[2]).RawBytes.ToArray();
+        (bsize[0] | bsize[1] << 8).Should().Be(data.Length - 1);
+
+        decoded.Children.OfType<DecodedString>().Select(s => s.Value).Should().Equal("hello.txt", "note");
+        var compressed = decoded.Children.OfType<DecodedCompressed>().Single();
+        compressed.DecompressedSize.Should().Be(33);
+        ((DecodedInteger)decoded.Children.First(c => c.Name == "isize")).Value.Should().Be(33);
+    }
 }
