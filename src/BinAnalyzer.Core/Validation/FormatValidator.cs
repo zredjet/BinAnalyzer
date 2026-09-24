@@ -1,3 +1,4 @@
+using BinAnalyzer.Core.Expressions;
 using BinAnalyzer.Core.Models;
 
 namespace BinAnalyzer.Core.Validation;
@@ -42,6 +43,7 @@ public static class FormatValidator
         ValidateUnusedFlags(format, diagnostics);
         ValidateUnreachableStructs(format, diagnostics);
         ValidateUnknownKeys(format, diagnostics);
+        ValidateExpressionNames(format, diagnostics);
 
         return new ValidationResult(diagnostics.Select(d => WithLocation(d, format)).ToList());
     }
@@ -695,6 +697,56 @@ public static class FormatValidator
                 key.StructName, key.FieldName) with { SourceFile = key.SourceFile, SourceLine = key.SourceLine });
         }
     }
+
+    /// <summary>VAL124: 式が定義のどこにも無い名前を参照している（定義全体の名前で近似。<see cref="ExpressionReferences"/>）</summary>
+    /// <summary>VAL125: 式が組み込み関数に無い関数を呼んでいる</summary>
+    private static void ValidateExpressionNames(FormatDefinition format, List<ValidationDiagnostic> diagnostics)
+    {
+        var names = ExpressionReferences.CollectNames(format);
+        var nameSet = new HashSet<string>(names, StringComparer.Ordinal);
+
+        foreach (var (structName, structDef) in format.Structs)
+        {
+            if (structDef.EndiannessExpression is { } endianness)
+                Check(endianness, $"構造体 '{structName}' の endianness", structName, null);
+
+            foreach (var field in structDef.Fields)
+            {
+                foreach (var (key, expr) in ExpressionReferences.ExpressionsOf(field))
+                    Check(expr, $"フィールド '{field.Name}' の {key}", structName, field.Name);
+            }
+        }
+
+        // 1 つの式の同じ名前は 1 件にまとめる
+        void Check(Expression expr, string where, string structName, string? fieldName)
+        {
+            var reported = new HashSet<(string, bool)>();
+            foreach (var (name, isFunction) in ExpressionReferences.References(expr.Root))
+            {
+                if ((isFunction ? BuiltinFunctions.IsBuiltin(name) : nameSet.Contains(name)) || !reported.Add((name, isFunction)))
+                    continue;
+                if (isFunction)
+                {
+                    diagnostics.Add(Warning("VAL125",
+                        $"{where} の式 '{expr.OriginalText}' が組み込み関数に無い関数 '{name}' を呼んでいます" +
+                        SuggestionHint(name, BuiltinFunctions.Names),
+                        structName, fieldName));
+                }
+                else
+                {
+                    var reason = name.Equals("true", StringComparison.OrdinalIgnoreCase) || name.Equals("false", StringComparison.OrdinalIgnoreCase)
+                        ? "DSL に真偽値のリテラルはありません。1（真）/ 0（偽）を使ってください"
+                        : "定義中のどのフィールド・bitfield のエントリ・テンプレートのパラメータにもありません" + SuggestionHint(name, names);
+                    diagnostics.Add(Warning("VAL124",
+                        $"{where} の式 '{expr.OriginalText}' が未定義の名前 '{name}' を参照しています。{reason}",
+                        structName, fieldName));
+                }
+            }
+        }
+    }
+
+    private static string SuggestionHint(string name, IEnumerable<string> candidates) =>
+        NameSuggestion.Suggest(name, candidates) is { } s ? $"（もしかして '{s}'?）" : "";
 
     /// <summary>VAL122: 非ビットストリーム構造体にBitOrderが指定されている</summary>
     private static void ValidateBitOrderOnNonBitstream(
