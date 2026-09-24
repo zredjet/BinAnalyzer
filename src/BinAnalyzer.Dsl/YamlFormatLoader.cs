@@ -54,10 +54,12 @@ public sealed class YamlFormatLoader : IFormatLoader
         return YamlToIrMapper.Map(model);
     }
 
-    /// <summary>YAML を読み、struct とフィールドに定義元の識別子（<paramref name="sourceFile"/>）を記録する（REQ-172）。</summary>
+    /// <summary>YAML を読み、struct とフィールドに定義元の識別子（<paramref name="sourceFile"/>）を記録する（REQ-172）。未知キーも集める（REQ-184）。</summary>
     private static YamlFormatModel Deserialize(string yaml, string? sourceFile)
     {
         var model = Deserializer.Deserialize<YamlFormatModel>(yaml);
+        // 読み飛ばしたキーを検証器（VAL123）に渡す。デシリアライザは未知キーを捨てるので YAML を別に走査する（REQ-184）
+        model.UnknownKeys.AddRange(UnknownKeyScanner.Scan(yaml, sourceFile));
         if (sourceFile is not null)
         {
             foreach (var structModel in model.Structs.Values)
@@ -97,6 +99,8 @@ public sealed class YamlFormatLoader : IFormatLoader
     private static void MergeDefinitions(
         YamlFormatModel target, YamlFormatModel source, string sourcePath)
     {
+        target.UnknownKeys.AddRange(source.UnknownKeys);
+
         // Structs マージ
         if (source.Structs is { Count: > 0 })
         {

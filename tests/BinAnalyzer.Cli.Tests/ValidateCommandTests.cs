@@ -30,7 +30,8 @@ public class ValidateCommandTests : IDisposable
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"run --no-build --project \"{CliProject}\" -- {args}",
+            // --no-build は付けない: 同じコレクションの他クラスが先に Debug ビルドしている前提になり、実行順で CI が落ちうる
+            Arguments = $"run --project \"{CliProject}\" -- {args}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -221,5 +222,60 @@ public class ValidateCommandTests : IDisposable
 
         exitCode.Should().Be(1);
         stdout.Should().Contain("NG");
+    }
+
+    // DSL の未知キー（REQ-184）: 書き間違いは VAL123 の警告になる
+    private const string TypoFormat = """
+        name: t
+        root: s
+        structs:
+          s:
+            fields:
+              - name: magic
+                type: bytes
+                size: "4"
+                expect: [0x4D]
+                repeat_cout: 3
+        """;
+
+    [Fact]
+    public async Task UnknownKeys_ReportVAL123WithLineAndSuggestion()
+    {
+        var file = CreateTempFormatFile(TypoFormat);
+        var name = Path.GetFileName(file);
+
+        var (exitCode, stdout, _) = await RunCli($"validate \"{file}\"");
+
+        exitCode.Should().Be(0);
+        stdout.Should().Contain("警告 2 件");
+        stdout.Should().Contain($"警告 [VAL123]: struct 's' のフィールド 'magic' の未知のキー 'expect' は無視されます（もしかして 'expected'?） ({name}:9)");
+        stdout.Should().Contain($"警告 [VAL123]: struct 's' のフィールド 'magic' の未知のキー 'repeat_cout' は無視されます（もしかして 'repeat_count'?） ({name}:10)");
+    }
+
+    [Fact]
+    public async Task UnknownKeys_WarningsAsErrors_ExitCode1()
+    {
+        var file = CreateTempFormatFile(TypoFormat);
+
+        var (exitCode, _, _) = await RunCli($"validate \"{file}\" --warnings-as-errors");
+
+        exitCode.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UnknownKeys_JsonHasFileAndLine()
+    {
+        var file = CreateTempFormatFile(TypoFormat);
+
+        var (_, stdout, _) = await RunCli($"validate \"{file}\" --format json");
+
+        var warnings = JsonDocument.Parse(stdout).RootElement[0].GetProperty("warnings");
+        warnings.GetArrayLength().Should().Be(2);
+        var first = warnings[0];
+        first.GetProperty("code").GetString().Should().Be("VAL123");
+        first.GetProperty("struct").GetString().Should().Be("s");
+        first.GetProperty("field").GetString().Should().Be("magic");
+        first.GetProperty("file").GetString().Should().Be(file);
+        first.GetProperty("line").GetInt32().Should().Be(9);
     }
 }

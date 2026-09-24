@@ -31,6 +31,7 @@ public static class YamlToIrMapper
             Flags = flags,
             Structs = structs,
             RootStruct = yaml.Root,
+            UnknownKeys = yaml.UnknownKeys,
         };
     }
 

@@ -156,9 +156,9 @@ public sealed class DocumentationConsistencyTests
     public void ParserDesign_ValidationCodes_DetectsCodeAddedWithoutDocUpdate()
     {
         var codes = ValidatorCodes();
-        codes["VAL123"] = DiagnosticSeverity.Warning;
+        codes["VAL999"] = DiagnosticSeverity.Warning;
 
-        DocConsistency.CheckValidationCodes(ParserDesign, codes).Should().ContainSingle(p => p.Contains("VAL123"));
+        DocConsistency.CheckValidationCodes(ParserDesign, codes).Should().ContainSingle(p => p.Contains("VAL999"));
     }
 
     [Fact]

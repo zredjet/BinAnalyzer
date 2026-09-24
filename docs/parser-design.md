@@ -328,6 +328,7 @@ default: raw_data
 - VAL120: `repeat_max` が繰り返しフィールド以外に指定されている
 - VAL121: `repeat_error_limit` が繰り返しフィールド以外に指定されている
 - VAL122: `bit_order` が `mode: bitstream` でない構造体に指定されている
+- VAL123: DSL に無いキーが書かれている（読み込み時に無視される。位置はキーの行、近いキーがあれば候補を示す）
 <!-- /doc-sync -->
 
 012 番と 016 番は欠番。VAL114 / VAL115 は 1xx 番台だがエラーである。
