@@ -195,12 +195,14 @@ public sealed class BinaryDecoder : IBinaryDecoder
                         && UsesIterationContext(field.SeekBaseExpression.Root)));
 
             int? savedPosition = null;
+            int? scopeDepthBeforeSeek = null;
             if (field.SeekExpression is not null && !perElementSeek)
             {
                 var seekOffset = ResolveSeekOffset(field, context);
                 if (field.SeekRestore)
                     savedPosition = context.SavePosition();
                 context.Seek(seekOffset);
+                scopeDepthBeforeSeek = EnterSeekBoundary(context, seekOffset);
             }
             try
             {
@@ -236,6 +238,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
             }
             finally
             {
+                // 境界の外への seek で広げたスコープを戻す（REQ-191）
+                if (scopeDepthBeforeSeek is { } depth)
+                    context.PopScopesTo(depth);
                 if (savedPosition is { } pos)
                     context.RestorePosition(pos);
             }
@@ -948,56 +953,67 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     context.SetVariable("_index", (long)i);
 
                     int? elementSavedPos = null;
+                    int? elementScopeDepth = null;
                     if (perElementSeek && field.SeekExpression is not null)
                     {
                         var seekOffset = ResolveSeekOffset(field, context);
                         if (field.SeekRestore)
                             elementSavedPos = context.SavePosition();
                         context.Seek(seekOffset);
+                        elementScopeDepth = EnterSeekBoundary(context, seekOffset);
                     }
 
-                    if (structAlign is { } sa && i > 0 && !perElementSeek)
-                        context.AlignTo(sa);
-
-                    if (elementResyncMarker is not null)
+                    try
                     {
-                        if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
-                            break;
-                        // 連続エラーカウンタ: DecodedError が追加された場合はインクリメント
-                        if (elements.Count > 0 && elements[^1] is DecodedError)
+                        if (structAlign is { } sa && i > 0 && !perElementSeek)
+                            context.AlignTo(sa);
+
+                        if (elementResyncMarker is not null)
                         {
-                            consecutiveErrors++;
-                            if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
-                            {
-                                truncated = true;
-                                truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                            if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
                                 break;
+                            // 連続エラーカウンタ: DecodedError が追加された場合はインクリメント
+                            if (elements.Count > 0 && elements[^1] is DecodedError)
+                            {
+                                consecutiveErrors++;
+                                if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                consecutiveErrors = 0;
                             }
                         }
                         else
                         {
+                            var posBeforeElement = context.Position;
+                            var element = DecodeElementWithScope(singleField, format, context, elementSize);
+                            elements.Add(element);
                             consecutiveErrors = 0;
+
+                            if (element is DecodedStruct)
+                                PromoteDecodedValues(element, context);
+                            SetPrevVariable(element, context);
+
+                            // エラー継続モードで要素が 1 バイトも消費できなかった場合、count が壊れた値（数十億）だと
+                            // 同じエラー要素を count 回積むだけで終わらない。位置が進まないエラー要素で打ち切る
+                            if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                            {
+                                truncated = true;
+                                truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                                break;
+                            }
                         }
                     }
-                    else
+                    finally
                     {
-                        var posBeforeElement = context.Position;
-                        var element = DecodeElementWithScope(singleField, format, context, elementSize);
-                        elements.Add(element);
-                        consecutiveErrors = 0;
-
-                        if (element is DecodedStruct)
-                            PromoteDecodedValues(element, context);
-                        SetPrevVariable(element, context);
-
-                        // エラー継続モードで要素が 1 バイトも消費できなかった場合、count が壊れた値（数十億）だと
-                        // 同じエラー要素を count 回積むだけで終わらない。位置が進まないエラー要素で打ち切る
-                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
-                        {
-                            truncated = true;
-                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
-                            break;
-                        }
+                        // 境界の外への seek で広げたスコープを戻す（REQ-191）
+                        if (elementScopeDepth is { } depth)
+                            context.PopScopesTo(depth);
                     }
 
                     if (elementSavedPos is { } epos)
@@ -1022,58 +1038,69 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     context.SetVariable("_index", (long)idx);
 
                     int? elementSavedPos = null;
+                    int? elementScopeDepth = null;
                     if (perElementSeek && field.SeekExpression is not null)
                     {
                         var seekOffset = ResolveSeekOffset(field, context);
                         if (field.SeekRestore)
                             elementSavedPos = context.SavePosition();
                         context.Seek(seekOffset);
+                        elementScopeDepth = EnterSeekBoundary(context, seekOffset);
                     }
 
-                    if (structAlign is { } sa && idx > 0 && !perElementSeek)
+                    try
                     {
-                        context.AlignTo(sa);
-                        if (context.IsEof) break;
-                    }
-
-                    if (elementResyncMarker is not null)
-                    {
-                        if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
-                            break;
-                        if (elements.Count > 0 && elements[^1] is DecodedError)
+                        if (structAlign is { } sa && idx > 0 && !perElementSeek)
                         {
-                            consecutiveErrors++;
-                            if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
-                            {
-                                truncated = true;
-                                truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                            context.AlignTo(sa);
+                            if (context.IsEof) break;
+                        }
+
+                        if (elementResyncMarker is not null)
+                        {
+                            if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
                                 break;
+                            if (elements.Count > 0 && elements[^1] is DecodedError)
+                            {
+                                consecutiveErrors++;
+                                if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                consecutiveErrors = 0;
                             }
                         }
                         else
                         {
+                            var posBeforeElement = context.Position;
+                            var element = DecodeElementWithScope(singleField, format, context, elementSize);
+                            elements.Add(element);
                             consecutiveErrors = 0;
+
+                            if (element is DecodedStruct)
+                                PromoteDecodedValues(element, context);
+                            SetPrevVariable(element, context);
+
+                            // エラー継続モードで要素が 1 バイトも消費できなかった場合（末尾の端数バイト等）、
+                            // 位置が進まず無限ループになるため打ち切る。
+                            if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                            {
+                                truncated = true;
+                                truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                                break;
+                            }
                         }
                     }
-                    else
+                    finally
                     {
-                        var posBeforeElement = context.Position;
-                        var element = DecodeElementWithScope(singleField, format, context, elementSize);
-                        elements.Add(element);
-                        consecutiveErrors = 0;
-
-                        if (element is DecodedStruct)
-                            PromoteDecodedValues(element, context);
-                        SetPrevVariable(element, context);
-
-                        // エラー継続モードで要素が 1 バイトも消費できなかった場合（末尾の端数バイト等）、
-                        // 位置が進まず無限ループになるため打ち切る。
-                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
-                        {
-                            truncated = true;
-                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
-                            break;
-                        }
+                        // 境界の外への seek で広げたスコープを戻す（REQ-191）
+                        if (elementScopeDepth is { } depth)
+                            context.PopScopesTo(depth);
                     }
 
                     if (elementSavedPos is { } epos)
@@ -1100,62 +1127,73 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     context.SetVariable("_index", (long)idx);
 
                     int? elementSavedPos = null;
+                    int? elementScopeDepth = null;
                     if (perElementSeek && field.SeekExpression is not null)
                     {
                         var seekOffset = ResolveSeekOffset(field, context);
                         if (field.SeekRestore)
                             elementSavedPos = context.SavePosition();
                         context.Seek(seekOffset);
+                        elementScopeDepth = EnterSeekBoundary(context, seekOffset);
                     }
 
-                    if (structAlign is { } sa && idx > 0 && !perElementSeek)
-                        context.AlignTo(sa);
-
-                    if (elementResyncMarker is not null)
+                    try
                     {
-                        if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
-                            break;
-                        if (elements.Count > 0 && elements[^1] is DecodedError)
+                        if (structAlign is { } sa && idx > 0 && !perElementSeek)
+                            context.AlignTo(sa);
+
+                        if (elementResyncMarker is not null)
                         {
-                            consecutiveErrors++;
-                            if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
-                            {
-                                truncated = true;
-                                truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                            if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
                                 break;
+                            if (elements.Count > 0 && elements[^1] is DecodedError)
+                            {
+                                consecutiveErrors++;
+                                if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                                    break;
+                                }
                             }
+                            else
+                            {
+                                consecutiveErrors = 0;
+                            }
+                            // UntilValue条件はエラー回復時にはスキップ（条件評価できないため）
                         }
                         else
                         {
+                            var posBeforeElement = context.Position;
+                            var (element, conditionMet) = DecodeElementWithScopeAndCondition(
+                                singleField, format, context, elementSize, untilMode.Condition);
+                            elements.Add(element);
                             consecutiveErrors = 0;
+
+                            if (element is DecodedStruct)
+                                PromoteDecodedValues(element, context);
+                            SetPrevVariable(element, context);
+
+                            if (elementSavedPos is { } epos)
+                                context.RestorePosition(epos);
+
+                            if (conditionMet)
+                                break;
+
+                            // エラー継続モードで位置が進まないエラー要素は打ち切る（条件も評価できないので無限ループになる）
+                            if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                            {
+                                truncated = true;
+                                truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                                break;
+                            }
                         }
-                        // UntilValue条件はエラー回復時にはスキップ（条件評価できないため）
                     }
-                    else
+                    finally
                     {
-                        var posBeforeElement = context.Position;
-                        var (element, conditionMet) = DecodeElementWithScopeAndCondition(
-                            singleField, format, context, elementSize, untilMode.Condition);
-                        elements.Add(element);
-                        consecutiveErrors = 0;
-
-                        if (element is DecodedStruct)
-                            PromoteDecodedValues(element, context);
-                        SetPrevVariable(element, context);
-
-                        if (elementSavedPos is { } epos)
-                            context.RestorePosition(epos);
-
-                        if (conditionMet)
-                            break;
-
-                        // エラー継続モードで位置が進まないエラー要素は打ち切る（条件も評価できないので無限ループになる）
-                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
-                        {
-                            truncated = true;
-                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
-                            break;
-                        }
+                        // 境界の外への seek で広げたスコープを戻す（REQ-191）
+                        if (elementScopeDepth is { } depth)
+                            context.PopScopesTo(depth);
                     }
 
                     if (context.IsEof)
@@ -1181,54 +1219,65 @@ public sealed class BinaryDecoder : IBinaryDecoder
                     context.SetVariable("_index", (long)idx);
 
                     int? elementSavedPos = null;
+                    int? elementScopeDepth = null;
                     if (perElementSeek && field.SeekExpression is not null)
                     {
                         var seekOffset = ResolveSeekOffset(field, context);
                         if (field.SeekRestore)
                             elementSavedPos = context.SavePosition();
                         context.Seek(seekOffset);
+                        elementScopeDepth = EnterSeekBoundary(context, seekOffset);
                     }
 
-                    if (structAlign is { } sa && idx > 0 && !perElementSeek)
-                        context.AlignTo(sa);
-
-                    if (elementResyncMarker is not null)
+                    try
                     {
-                        if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
-                            break;
-                        if (elements.Count > 0 && elements[^1] is DecodedError)
+                        if (structAlign is { } sa && idx > 0 && !perElementSeek)
+                            context.AlignTo(sa);
+
+                        if (elementResyncMarker is not null)
                         {
-                            consecutiveErrors++;
-                            if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
-                            {
-                                truncated = true;
-                                truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                            if (!TryDecodeElementWithRecovery(singleField, format, context, elements, elementSize, elementResyncMarker, field.Type.ToString()))
                                 break;
+                            if (elements.Count > 0 && elements[^1] is DecodedError)
+                            {
+                                consecutiveErrors++;
+                                if (repeatErrorLimit.HasValue && consecutiveErrors >= repeatErrorLimit.Value)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"repeat_error_limit ({repeatErrorLimit.Value}) consecutive errors";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                consecutiveErrors = 0;
                             }
                         }
                         else
                         {
+                            var posBeforeElement = context.Position;
+                            var element = DecodeElementWithScope(singleField, format, context, elementSize);
+                            elements.Add(element);
                             consecutiveErrors = 0;
+
+                            if (element is DecodedStruct)
+                                PromoteDecodedValues(element, context);
+                            SetPrevVariable(element, context);
+
+                            // エラー継続モードで位置が進まないエラー要素は打ち切る（while 条件が真のままだと無限ループになる）
+                            if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
+                            {
+                                truncated = true;
+                                truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
+                                break;
+                            }
                         }
                     }
-                    else
+                    finally
                     {
-                        var posBeforeElement = context.Position;
-                        var element = DecodeElementWithScope(singleField, format, context, elementSize);
-                        elements.Add(element);
-                        consecutiveErrors = 0;
-
-                        if (element is DecodedStruct)
-                            PromoteDecodedValues(element, context);
-                        SetPrevVariable(element, context);
-
-                        // エラー継続モードで位置が進まないエラー要素は打ち切る（while 条件が真のままだと無限ループになる）
-                        if (!perElementSeek && context.Position == posBeforeElement && ContainsError(element))
-                        {
-                            truncated = true;
-                            truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
-                            break;
-                        }
+                        // 境界の外への seek で広げたスコープを戻す（REQ-191）
+                        if (elementScopeDepth is { } depth)
+                            context.PopScopesTo(depth);
                     }
 
                     if (elementSavedPos is { } epos)
@@ -1669,6 +1718,16 @@ public sealed class BinaryDecoder : IBinaryDecoder
             throw new InvalidOperationException(
                 $"{what} of field '{fieldName}' evaluated to {value}, which is outside the supported range 0..{int.MaxValue}");
         return (int)value;
+    }
+
+    /// <summary>
+    /// seek の行き先が今の境界（最も内側の size 付きのスコープ）の外なら、行き先を含む外側の境界までスコープを広げる（REQ-191）。
+    /// 広げたときは、戻すための push 前のスコープの深さを返す（<see cref="DecodeContext.PopScopesTo"/> に渡す）。
+    /// </summary>
+    private static int? EnterSeekBoundary(DecodeContext context, int target)
+    {
+        var depth = context.ScopeDepth;
+        return context.PushSeekBoundary(target) ? depth : null;
     }
 
     private static int ResolveSeekOffset(FieldDefinition field, DecodeContext context)

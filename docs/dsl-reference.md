@@ -1694,6 +1694,34 @@ structs:
 - `seek_base` なしの場合は既存動作（`seek` が絶対オフセット）を維持
 - 繰り返しフィールドで `_index` と組み合わせて使用可能
 
+### size 付きのスコープの外への seek
+
+size 付きのスコープ（`size:` を持つ struct / switch、`size:` 付きの繰り返し）の中から、その範囲の外へ seek したフィールドは、**行き先を含む最も内側の外側の境界**（size 付きのスコープ。無ければファイル全体）の中で読みます（REQ-191）。別の領域にある名前の表などを、ポインタで引けます。
+
+```yaml
+# ELF のシンボル表: セクションの中身（size 付きの switch）の中から、別のセクション（文字列表）の名前を引く
+- name: contents
+  type: switch
+  switch_on: "{sh_type}"
+  seek: "{sh_offset}"
+  seek_restore: true
+  size: "{sh_size}"
+  cases:
+    "2": symbol_table
+# symbol_table の各シンボル（contents の size のスコープの中）
+- name: name
+  type: asciiz
+  seek: "{string_table_offset + st_name}"   # contents の範囲の外でも読める
+  seek_restore: true
+```
+
+- 境界を広げるのは、seek したフィールド（要素ごとの seek では各要素）のデコードの間だけ。フィールドの後ろでは元の境界に戻る
+- 広げた境界の中では、`remaining`・`size: remaining`・`repeat: eof`・NUL 終端の文字列が、広げた境界の終わりまでを使う
+- 境界は [先頭, 終わり) で判定する。終わりちょうどの位置は境界の外（次の領域の先頭）。行き先が今の境界の中なら従来どおり今の境界の中で読む
+- size 付きのスコープが入れ子のときは、行き先を含む最も内側の境界までしか広げない（ユニバーサルバイナリのスライスの中からは、スライスの外を読まない）
+- seek したフィールドの値の束縛とエンディアンは変わらない
+- `seek_restore` が無いと、位置は元の境界の外のままになるので、元の境界の続きは読めない
+
 ## エンディアン切り替え
 
 構造体レベルまたはフィールドレベルでエンディアンを上書きできます。優先順位: フィールド > 構造体 > トップレベル。
