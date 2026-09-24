@@ -70,4 +70,36 @@ public class MemberAccessExpressionTests
         var act = () => ExpressionParser.Parse("{parent.}");
         act.Should().Throw<FormatException>();
     }
+
+    // --- REQ-147: メンバーをたどった先の配列への添字 ---
+
+    [Fact]
+    public void IndexAfterMemberChain_ParsesElementAccess()
+    {
+        var expr = ExpressionParser.Parse("{index.body.records[_index].unpadded_size}");
+
+        var ma = expr.Root.Should().BeOfType<ExpressionNode.MemberAccess>().Subject;
+        ma.MemberName.Should().Be("unpadded_size");
+        var ea = ma.Object.Should().BeOfType<ExpressionNode.ElementAccess>().Subject;
+        ea.Index.Should().BeOfType<ExpressionNode.FieldReference>().Which.FieldName.Should().Be("_index");
+        var records = ea.Array.Should().BeOfType<ExpressionNode.MemberAccess>().Subject;
+        records.MemberName.Should().Be("records");
+    }
+
+    [Fact]
+    public void ConsecutiveIndexes_Parse()
+    {
+        var expr = ExpressionParser.Parse("{grid[1][2]}");
+
+        var outer = expr.Root.Should().BeOfType<ExpressionNode.ElementAccess>().Subject;
+        outer.Array.Should().BeOfType<ExpressionNode.IndexAccess>().Which.ArrayName.Should().Be("grid");
+    }
+
+    [Fact]
+    public void UnclosedIndexAfterMember_Throws()
+    {
+        var act = () => ExpressionParser.Parse("{a.b[1}");
+
+        act.Should().Throw<FormatException>();
+    }
 }

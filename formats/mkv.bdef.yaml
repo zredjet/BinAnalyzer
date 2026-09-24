@@ -1,0 +1,590 @@
+# Matroska / WebM（.mkv / .webm / .mka）— EBML（RFC 8794）+ Matroska 要素（RFC 9559）
+# 要素 = ID（VINT、1〜4 バイト、長さを示すビットを含めて ID とする）+ サイズ（VINT、1〜8 バイト、長さのビットを除いた値）+ データ。
+# VINT の長さは先頭バイトの上位にある 0 の数 + 1。サイズの値ビットがすべて 1 のときは「サイズ不定」（ライブ配信の Segment / Cluster）で、
+# スコープの残りすべてをデータとして扱う。
+# データの型は ID で決まる: 子要素を持つ要素（master）/ 符号なし整数 / 符号付き整数 / 浮動小数点 / 文字列（ASCII・UTF-8）/ 日付 / バイナリ。
+# 表に無い ID はバイナリとして表示する。
+name: Matroska
+endianness: big
+root: mkv
+
+enums:
+  ebml_id:
+    - value: 0x1A45DFA3
+      label: EBML
+    - value: 0x18538067
+      label: Segment
+    - value: 0x114D9B74
+      label: SeekHead
+    - value: 0x4DBB
+      label: Seek
+    - value: 0x1549A966
+      label: Info
+    - value: 0x1654AE6B
+      label: Tracks
+    - value: 0xAE
+      label: TrackEntry
+    - value: 0xE0
+      label: Video
+    - value: 0xE1
+      label: Audio
+    - value: 0x55B0
+      label: Colour
+    - value: 0x6D80
+      label: ContentEncodings
+    - value: 0x6240
+      label: ContentEncoding
+    - value: 0x1F43B675
+      label: Cluster
+    - value: 0xA0
+      label: BlockGroup
+    - value: 0x75A1
+      label: BlockAdditions
+    - value: 0x1C53BB6B
+      label: Cues
+    - value: 0xBB
+      label: CuePoint
+    - value: 0xB7
+      label: CueTrackPositions
+    - value: 0x1043A770
+      label: Chapters
+    - value: 0x45B9
+      label: EditionEntry
+    - value: 0xB6
+      label: ChapterAtom
+    - value: 0x80
+      label: ChapterDisplay
+    - value: 0x1254C367
+      label: Tags
+    - value: 0x7373
+      label: Tag
+    - value: 0x63C0
+      label: Targets
+    - value: 0x67C8
+      label: SimpleTag
+    - value: 0x1941A469
+      label: Attachments
+    - value: 0x61A7
+      label: AttachedFile
+    - value: 0x4286
+      label: EBMLVersion
+    - value: 0x42F7
+      label: EBMLReadVersion
+    - value: 0x42F2
+      label: EBMLMaxIDLength
+    - value: 0x42F3
+      label: EBMLMaxSizeLength
+    - value: 0x4287
+      label: DocTypeVersion
+    - value: 0x4285
+      label: DocTypeReadVersion
+    - value: 0x53AC
+      label: SeekPosition
+    - value: 0x2AD7B1
+      label: TimestampScale
+    - value: 0xD7
+      label: TrackNumber
+    - value: 0x73C5
+      label: TrackUID
+    - value: 0x83
+      label: TrackType
+    - value: 0xB9
+      label: FlagEnabled
+    - value: 0x88
+      label: FlagDefault
+    - value: 0x55AA
+      label: FlagForced
+    - value: 0x9C
+      label: FlagLacing
+    - value: 0x23E383
+      label: DefaultDuration
+    - value: 0x56AA
+      label: CodecDelay
+    - value: 0x56BB
+      label: SeekPreRoll
+    - value: 0xB0
+      label: PixelWidth
+    - value: 0xBA
+      label: PixelHeight
+    - value: 0x54B0
+      label: DisplayWidth
+    - value: 0x54BA
+      label: DisplayHeight
+    - value: 0x9A
+      label: FlagInterlaced
+    - value: 0x9F
+      label: Channels
+    - value: 0x6264
+      label: BitDepth
+    - value: 0xE7
+      label: Timestamp
+    - value: 0xAB
+      label: PrevSize
+    - value: 0xA7
+      label: Position
+    - value: 0x9B
+      label: BlockDuration
+    - value: 0xB3
+      label: CueTime
+    - value: 0xF7
+      label: CueTrack
+    - value: 0xF1
+      label: CueClusterPosition
+    - value: 0xF0
+      label: CueRelativePosition
+    - value: 0xB2
+      label: CueDuration
+    - value: 0x73C4
+      label: ChapterUID
+    - value: 0x91
+      label: ChapterTimeStart
+    - value: 0x92
+      label: ChapterTimeEnd
+    - value: 0x45BC
+      label: EditionUID
+    - value: 0x68CA
+      label: TargetTypeValue
+    - value: 0x63C5
+      label: TagTrackUID
+    - value: 0x46AE
+      label: FileUID
+    - value: 0xFB
+      label: ReferenceBlock
+    - value: 0x4489
+      label: Duration
+    - value: 0xB5
+      label: SamplingFrequency
+    - value: 0x78B5
+      label: OutputSamplingFrequency
+    - value: 0x4282
+      label: DocType
+    - value: 0x86
+      label: CodecID
+    - value: 0x22B59C
+      label: Language
+    - value: 0x437C
+      label: ChapLanguage
+    - value: 0x63CA
+      label: TargetType
+    - value: 0x4660
+      label: FileMimeType
+    - value: 0x447A
+      label: TagLanguage
+    - value: 0x536E
+      label: Name
+    - value: 0x7BA9
+      label: Title
+    - value: 0x4D80
+      label: MuxingApp
+    - value: 0x5741
+      label: WritingApp
+    - value: 0x258688
+      label: CodecName
+    - value: 0x85
+      label: ChapString
+    - value: 0x45A3
+      label: TagName
+    - value: 0x4487
+      label: TagString
+    - value: 0x466E
+      label: FileName
+    - value: 0x467E
+      label: FileDescription
+    - value: 0x4461
+      label: DateUTC
+    - value: 0x53AB
+      label: SeekID
+    - value: 0x73A4
+      label: SegmentUUID
+    - value: 0x63A2
+      label: CodecPrivate
+    - value: 0xA1
+      label: Block
+    - value: 0xEC
+      label: Void
+    - value: 0xBF
+      label: CRC-32
+    - value: 0x465C
+      label: FileData
+    - value: 0x4485
+      label: TagBinary
+    - value: 0xA3
+      label: SimpleBlock
+
+  track_type:
+    - value: 1
+      label: video
+    - value: 2
+      label: audio
+    - value: 3
+      label: complex
+    - value: 0x10
+      label: logo
+    - value: 0x11
+      label: subtitle
+    - value: 0x12
+      label: buttons
+    - value: 0x20
+      label: control
+    - value: 0x21
+      label: metadata
+
+  block_lacing:
+    - value: 0
+      label: none
+    - value: 1
+      label: Xiph
+    - value: 2
+      label: fixed
+    - value: 3
+      label: EBML
+
+structs:
+  mkv:
+    - name: elements
+      type: struct
+      struct: ebml_element
+      repeat: eof
+
+  ebml_element:
+    # --- ID（VINT、長さのビットを含めた値） ---
+    - name: id_first
+      type: uint8
+      description: "ID の先頭バイト（上位の 0 の数 + 1 が ID のバイト数。4 バイトまで）"
+    - name: id_length
+      type: virtual
+      value: "{id_first >= 0x80 ? 1 : id_first >= 0x40 ? 2 : id_first >= 0x20 ? 3 : 4}"
+    - name: id_rest
+      type: switch
+      if: "{id_length > 1}"
+      switch_on: "{id_length - 1}"
+      cases:
+        "0": be0
+        "1": be1
+        "2": be2
+        "3": be3
+      default: be0  # id_length は 1〜4 なので到達しない
+    - name: id
+      type: virtual
+      value: "{id_length == 1 ? id_first : (id_first << (8 * (id_length - 1))) | id_rest.value}"
+      enum: ebml_id
+    # --- サイズ（VINT、長さのビットを除いた値） ---
+    - name: size_first
+      type: uint8
+      description: "サイズの先頭バイト（上位の 0 の数 + 1 がサイズのバイト数。8 バイトまで）"
+    - name: size_length
+      type: virtual
+      value: "{size_first >= 0x80 ? 1 : size_first >= 0x40 ? 2 : size_first >= 0x20 ? 3 : size_first >= 0x10 ? 4 : size_first >= 0x08 ? 5 : size_first >= 0x04 ? 6 : size_first >= 0x02 ? 7 : 8}"
+    - name: size_rest
+      type: switch
+      if: "{size_length > 1}"
+      switch_on: "{size_length - 1}"
+      cases:
+        "0": be0
+        "1": be1
+        "2": be2
+        "3": be3
+        "4": be4
+        "5": be5
+        "6": be6
+        "7": be7
+      default: be0  # size_length は 1〜8 なので到達しない
+    - name: data_size
+      type: virtual
+      value: "{size_length == 1 ? size_first & 0x7F : ((size_first & (0xFF >> size_length)) << (8 * (size_length - 1))) | size_rest.value}"
+      description: "データのバイト数。値ビットがすべて 1 ならサイズ不定（スコープの残りすべてをデータとする）"
+    # --- データ（ID で型を決める） ---
+    - name: data
+      type: switch
+      switch_on: "{id}"
+      size: "{data_size == (1 << (7 * size_length)) - 1 ? remaining : data_size}"
+      cases:
+        "0x1A45DFA3": ebml_master  # EBML
+        "0x18538067": ebml_master  # Segment
+        "0x114D9B74": ebml_master  # SeekHead
+        "0x4DBB": ebml_master  # Seek
+        "0x1549A966": ebml_master  # Info
+        "0x1654AE6B": ebml_master  # Tracks
+        "0xAE": ebml_master  # TrackEntry
+        "0xE0": ebml_master  # Video
+        "0xE1": ebml_master  # Audio
+        "0x55B0": ebml_master  # Colour
+        "0x6D80": ebml_master  # ContentEncodings
+        "0x6240": ebml_master  # ContentEncoding
+        "0x1F43B675": ebml_master  # Cluster
+        "0xA0": ebml_master  # BlockGroup
+        "0x75A1": ebml_master  # BlockAdditions
+        "0x1C53BB6B": ebml_master  # Cues
+        "0xBB": ebml_master  # CuePoint
+        "0xB7": ebml_master  # CueTrackPositions
+        "0x1043A770": ebml_master  # Chapters
+        "0x45B9": ebml_master  # EditionEntry
+        "0xB6": ebml_master  # ChapterAtom
+        "0x80": ebml_master  # ChapterDisplay
+        "0x1254C367": ebml_master  # Tags
+        "0x7373": ebml_master  # Tag
+        "0x63C0": ebml_master  # Targets
+        "0x67C8": ebml_master  # SimpleTag
+        "0x1941A469": ebml_master  # Attachments
+        "0x61A7": ebml_master  # AttachedFile
+        "0x4286": ebml_uint  # EBMLVersion
+        "0x42F7": ebml_uint  # EBMLReadVersion
+        "0x42F2": ebml_uint  # EBMLMaxIDLength
+        "0x42F3": ebml_uint  # EBMLMaxSizeLength
+        "0x4287": ebml_uint  # DocTypeVersion
+        "0x4285": ebml_uint  # DocTypeReadVersion
+        "0x53AC": ebml_uint  # SeekPosition
+        "0x2AD7B1": ebml_uint  # TimestampScale
+        "0xD7": ebml_uint  # TrackNumber
+        "0x73C5": ebml_uint  # TrackUID
+        "0x83": ebml_track_type  # TrackType
+        "0xB9": ebml_uint  # FlagEnabled
+        "0x88": ebml_uint  # FlagDefault
+        "0x55AA": ebml_uint  # FlagForced
+        "0x9C": ebml_uint  # FlagLacing
+        "0x23E383": ebml_uint  # DefaultDuration
+        "0x56AA": ebml_uint  # CodecDelay
+        "0x56BB": ebml_uint  # SeekPreRoll
+        "0xB0": ebml_uint  # PixelWidth
+        "0xBA": ebml_uint  # PixelHeight
+        "0x54B0": ebml_uint  # DisplayWidth
+        "0x54BA": ebml_uint  # DisplayHeight
+        "0x9A": ebml_uint  # FlagInterlaced
+        "0x9F": ebml_uint  # Channels
+        "0x6264": ebml_uint  # BitDepth
+        "0xE7": ebml_uint  # Timestamp
+        "0xAB": ebml_uint  # PrevSize
+        "0xA7": ebml_uint  # Position
+        "0x9B": ebml_uint  # BlockDuration
+        "0xB3": ebml_uint  # CueTime
+        "0xF7": ebml_uint  # CueTrack
+        "0xF1": ebml_uint  # CueClusterPosition
+        "0xF0": ebml_uint  # CueRelativePosition
+        "0xB2": ebml_uint  # CueDuration
+        "0x73C4": ebml_uint  # ChapterUID
+        "0x91": ebml_uint  # ChapterTimeStart
+        "0x92": ebml_uint  # ChapterTimeEnd
+        "0x45BC": ebml_uint  # EditionUID
+        "0x68CA": ebml_uint  # TargetTypeValue
+        "0x63C5": ebml_uint  # TagTrackUID
+        "0x46AE": ebml_uint  # FileUID
+        "0xFB": ebml_int  # ReferenceBlock
+        "0x4489": ebml_float  # Duration
+        "0xB5": ebml_float  # SamplingFrequency
+        "0x78B5": ebml_float  # OutputSamplingFrequency
+        "0x4282": ebml_ascii  # DocType
+        "0x86": ebml_ascii  # CodecID
+        "0x22B59C": ebml_ascii  # Language
+        "0x437C": ebml_ascii  # ChapLanguage
+        "0x63CA": ebml_ascii  # TargetType
+        "0x4660": ebml_ascii  # FileMimeType
+        "0x447A": ebml_ascii  # TagLanguage
+        "0x536E": ebml_utf8  # Name
+        "0x7BA9": ebml_utf8  # Title
+        "0x4D80": ebml_utf8  # MuxingApp
+        "0x5741": ebml_utf8  # WritingApp
+        "0x258688": ebml_utf8  # CodecName
+        "0x85": ebml_utf8  # ChapString
+        "0x45A3": ebml_utf8  # TagName
+        "0x4487": ebml_utf8  # TagString
+        "0x466E": ebml_utf8  # FileName
+        "0x467E": ebml_utf8  # FileDescription
+        "0x4461": ebml_date  # DateUTC
+        "0xA3": simple_block  # SimpleBlock
+      default: ebml_binary
+
+  # --- 子要素を持つ要素 ---
+  ebml_master:
+    - name: children
+      type: struct
+      struct: ebml_element
+      repeat: eof
+
+  # --- 値の型 ---
+  ebml_uint:
+    - name: value
+      type: switch
+      switch_on: "{data_size}"
+      cases:
+        "0": be0
+        "1": be1
+        "2": be2
+        "3": be3
+        "4": be4
+        "5": be5
+        "6": be6
+        "7": be7
+        "8": be8
+      default: ebml_binary
+      description: "符号なし整数（ビッグエンディアン、0〜8 バイト。それより長ければバイト列）"
+
+  ebml_track_type:
+    - name: value
+      type: switch
+      switch_on: "{data_size}"
+      cases:
+        "1": track_type_u8
+      default: ebml_uint
+
+  track_type_u8:
+    - name: value
+      type: uint8
+      enum: track_type
+
+  ebml_int:
+    - name: value
+      type: switch
+      switch_on: "{data_size}"
+      cases:
+        "1": be1_signed
+        "2": be2_signed
+        "4": be4_signed
+        "8": be8_signed
+      default: ebml_binary
+      description: "符号付き整数（ビッグエンディアン。1 / 2 / 4 / 8 バイト以外はバイト列）"
+
+  ebml_float:
+    - name: value
+      type: switch
+      switch_on: "{data_size}"
+      cases:
+        "4": float4
+        "8": float8
+      default: ebml_binary
+
+  ebml_ascii:
+    - name: value
+      type: ascii
+      size: remaining
+
+  ebml_utf8:
+    - name: value
+      type: utf8
+      size: remaining
+
+  ebml_date:
+    - name: value
+      type: int64
+      description: "2001-01-01T00:00:00 UTC からのナノ秒"
+
+  ebml_binary:
+    - name: value
+      type: bytes
+      size: remaining
+
+  # --- SimpleBlock（Cluster 内の 1 フレーム） ---
+  simple_block:
+    - name: track_first
+      type: uint8
+      description: "トラック番号（VINT）の先頭バイト"
+    - name: track_length
+      type: virtual
+      value: "{track_first >= 0x80 ? 1 : track_first >= 0x40 ? 2 : track_first >= 0x20 ? 3 : track_first >= 0x10 ? 4 : track_first >= 0x08 ? 5 : track_first >= 0x04 ? 6 : track_first >= 0x02 ? 7 : 8}"
+    - name: track_rest
+      type: switch
+      if: "{track_length > 1}"
+      switch_on: "{track_length - 1}"
+      cases:
+        "0": be0
+        "1": be1
+        "2": be2
+        "3": be3
+        "4": be4
+        "5": be5
+        "6": be6
+        "7": be7
+      default: be0  # track_length は 1〜8 なので到達しない
+    - name: track_number
+      type: virtual
+      value: "{track_length == 1 ? track_first & 0x7F : ((track_first & (0xFF >> track_length)) << (8 * (track_length - 1))) | track_rest.value}"
+    - name: timecode
+      type: int16
+      description: "Cluster の Timestamp からの相対時刻"
+    - name: flags
+      type: bitfield
+      size: "1"
+      fields:
+        - name: keyframe
+          bits: "7"
+        - name: reserved
+          bits: "6:4"
+        - name: invisible
+          bits: "3"
+        - name: lacing
+          bits: "2:1"
+          enum: block_lacing
+        - name: discardable
+          bits: "0"
+    - name: frame_data
+      type: bytes
+      size: remaining
+
+  # --- ビッグエンディアン整数（VINT の残りバイト・可変長の値） ---
+  be0:
+    - name: value
+      type: virtual
+      value: "0"
+  be1:
+    - name: value
+      type: uint8
+  be2:
+    - name: value
+      type: uint16
+  be3:
+    - name: hi
+      type: uint8
+    - name: lo
+      type: uint16
+    - name: value
+      type: virtual
+      value: "{(hi << 16) | lo}"
+  be4:
+    - name: value
+      type: uint32
+  be5:
+    - name: hi
+      type: uint8
+    - name: lo
+      type: uint32
+    - name: value
+      type: virtual
+      value: "{(hi << 32) | lo}"
+  be6:
+    - name: hi
+      type: uint16
+    - name: lo
+      type: uint32
+    - name: value
+      type: virtual
+      value: "{(hi << 32) | lo}"
+  be7:
+    - name: hi
+      type: uint8
+    - name: mid
+      type: uint16
+    - name: lo
+      type: uint32
+    - name: value
+      type: virtual
+      value: "{(hi << 48) | (mid << 32) | lo}"
+  be8:
+    - name: value
+      type: uint64
+  be1_signed:
+    - name: value
+      type: int8
+  be2_signed:
+    - name: value
+      type: int16
+  be4_signed:
+    - name: value
+      type: int32
+  be8_signed:
+    - name: value
+      type: int64
+  float4:
+    - name: value
+      type: float32
+  float8:
+    - name: value
+      type: float64

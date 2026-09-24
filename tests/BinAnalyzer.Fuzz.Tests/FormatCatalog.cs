@@ -47,6 +47,7 @@ public static class FormatCatalog
         ["lz4.bdef.yaml"] = [Lz4TestDataGenerator.CreateMinimalLz4],
         ["macho.bdef.yaml"] = [MachoTestDataGenerator.CreateMinimalMacho64],
         ["midi.bdef.yaml"] = [MidiTestDataGenerator.CreateMinimalMidi],
+        ["mkv.bdef.yaml"] = [MkvTestDataGenerator.CreateMinimalWebm],
         ["mp3.bdef.yaml"] = [Mp3TestDataGenerator.CreateMinimalMp3],
         ["mp4.bdef.yaml"] = [Mp4TestDataGenerator.CreateMinimalMp4],
         ["msgpack.bdef.yaml"] = [MsgpackTestDataGenerator.CreateMinimalMsgpack],
@@ -65,6 +66,7 @@ public static class FormatCatalog
         ["wav.bdef.yaml"] = [WavTestDataGenerator.CreateMinimalWav, WavTestDataGenerator.CreateWavWithListInfo],
         ["webp.bdef.yaml"] = [WebpTestDataGenerator.CreateMinimalWebp],
         ["x509.bdef.yaml"] = [X509TestDataGenerator.CreateMinimalCertificate],
+        ["xz.bdef.yaml"] = [XzTestDataGenerator.CreateMinimalXz, XzTestDataGenerator.CreateTwoBlockXz],
         ["zip.bdef.yaml"] = [ZipTestDataGenerator.CreateMinimalZip],
     };
 

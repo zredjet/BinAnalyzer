@@ -36,6 +36,8 @@ public sealed class RealFileFixture : IDisposable
         EnsureFile("test.heif", HeifTestDataGenerator.CreateMinimalHeif);
         EnsureFile("test.msgpack", MsgpackTestDataGenerator.CreateMinimalMsgpack);
         EnsureFile("test.cbor", CborTestDataGenerator.CreateMinimalCbor);
+        EnsureFile("test.xz", XzTestDataGenerator.CreateTwoBlockXz);
+        EnsureFile("test.webm", MkvTestDataGenerator.CreateMinimalWebm);
 
         // シェルスクリプトが未実行の場合のフォールバック
         EnsureFile("test.png", PngTestDataGenerator.CreateMinimalPng);

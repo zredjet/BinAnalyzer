@@ -114,7 +114,8 @@ DSL に無いキー（`expected` を `expect` と書いた等）は読み込み�
 - **ビット演算**: `&`（AND）, `|`（OR）, `^`（XOR）, `<<`（左シフト）, `>>`（右シフト）
 - **三項演算子**: `{condition ? true_value : false_value}` — 条件分岐式
 - **配列インデックス**: `{array_field[index]}` — 配列要素へのアクセス
-- **メンバーアクセス**: `{struct.field}`, `{array[i].field}` — 構造体メンバーへのドットアクセス
+- **メンバーアクセス**: `{struct.field}`, `{array[i].field}`, `{a.b.items[i].size}` — 構造体メンバーへのドットアクセス。`.メンバー` と `[添字]` は任意の順で続けられる
+- **`remaining`**: `{remaining}` — 現在のスコープ内の残りバイト数。ルート構造体の先頭ではファイル全体のサイズになるので、末尾から読む形式（XZ の Stream Footer など）で `seek` の基準に使える
 - **括弧**: `{(a + b) * c}`
 - **関数呼び出し**: `{func_name(arg1, arg2, ...)}` — 組み込み関数の呼び出し
 
@@ -748,6 +749,7 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 - `{header.width}` — 構造体フィールドのメンバー
 - `{entries[_index].offset}` — 構造体配列の要素メンバー
 - `{parent.child.value}` — ネスト構造体のメンバー
+- `{index.body.records[_index].size}` — メンバーをたどった先の配列の要素（`.` と `[ ]` は任意の順で続けられる）
 
 ```yaml
 # 構造体テーブルのメンバー参照

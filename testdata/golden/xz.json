@@ -1,0 +1,680 @@
+{
+  "_type": "struct",
+  "offset": 0,
+  "size": 92,
+  "name": "XZ",
+  "struct_type": "xz",
+  "children": {
+    "file_size": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u5168\u4F53\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u672B\u5C3E\u304B\u3089 Stream Footer \u3092\u63A2\u3059\u306E\u306B\u4F7F\u3046\uFF09",
+      "name": "file_size",
+      "value": 116
+    },
+    "stream_header": {
+      "_type": "struct",
+      "type": "struct",
+      "offset": 0,
+      "size": 12,
+      "name": "stream_header",
+      "struct_type": "stream_header",
+      "children": {
+        "magic": {
+          "_type": "bytes",
+          "type": "bytes",
+          "offset": 0,
+          "size": 6,
+          "description": "\u30D8\u30C3\u30C0\u30DE\u30B8\u30C3\u30AF\uFF08FD \u00277zXZ\u0027 00\uFF09",
+          "name": "magic",
+          "hex": "FD 37 7A 58 5A 00",
+          "valid": true
+        },
+        "stream_flags": {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 6,
+          "size": 2,
+          "name": "stream_flags",
+          "struct_type": "stream_flags",
+          "children": {
+            "reserved": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 6,
+              "size": 1,
+              "_validation": {
+                "passed": true,
+                "expression": "{reserved == 0}"
+              },
+              "name": "reserved",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "check_type": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 7,
+              "size": 1,
+              "description": "\u6574\u5408\u6027\u30C1\u30A7\u30C3\u30AF\u306E\u7A2E\u985E\uFF08\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8\uFF09",
+              "name": "check_type",
+              "value": 1,
+              "hex": "0x1",
+              "enum_label": "CRC32"
+            },
+            "check_size": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 8,
+              "size": 0,
+              "description": "\u5404 Block \u672B\u5C3E\u306E Check \u306E\u30D0\u30A4\u30C8\u6570\uFF080 / 4 / 8 / 16 / 32 / 64\uFF09",
+              "name": "check_size",
+              "value": 4
+            }
+          }
+        },
+        "crc32": {
+          "_type": "integer",
+          "type": "uint32",
+          "offset": 8,
+          "size": 4,
+          "description": "Stream Flags \u306E CRC32",
+          "name": "crc32",
+          "value": 920527465,
+          "hex": "0x36DE2269",
+          "checksum_valid": true,
+          "checksum_algorithm": "crc32"
+        }
+      }
+    },
+    "stream_footer": {
+      "_type": "struct",
+      "type": "struct",
+      "offset": 104,
+      "size": 12,
+      "name": "stream_footer",
+      "struct_type": "stream_footer",
+      "children": {
+        "crc32": {
+          "_type": "integer",
+          "type": "uint32",
+          "offset": 104,
+          "size": 4,
+          "description": "Backward Size \u3068 Stream Flags \u306E CRC32",
+          "name": "crc32",
+          "value": 2332897342,
+          "hex": "0x8B0D303E",
+          "checksum_valid": true,
+          "checksum_algorithm": "crc32"
+        },
+        "backward_size": {
+          "_type": "integer",
+          "type": "uint32",
+          "offset": 108,
+          "size": 4,
+          "description": "Index \u306E\u30B5\u30A4\u30BA\uFF08(\u5024 \u002B 1) \u00D7 4 \u30D0\u30A4\u30C8\uFF09",
+          "name": "backward_size",
+          "value": 2,
+          "hex": "0x2"
+        },
+        "backward_size_bytes": {
+          "_type": "virtual",
+          "type": "virtual",
+          "offset": 112,
+          "size": 0,
+          "name": "backward_size_bytes",
+          "value": 12
+        },
+        "stream_flags": {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 112,
+          "size": 2,
+          "name": "stream_flags",
+          "struct_type": "stream_flags",
+          "children": {
+            "reserved": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 112,
+              "size": 1,
+              "_validation": {
+                "passed": true,
+                "expression": "{reserved == 0}"
+              },
+              "name": "reserved",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "check_type": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 113,
+              "size": 1,
+              "description": "\u6574\u5408\u6027\u30C1\u30A7\u30C3\u30AF\u306E\u7A2E\u985E\uFF08\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8\uFF09",
+              "name": "check_type",
+              "value": 1,
+              "hex": "0x1",
+              "enum_label": "CRC32"
+            },
+            "check_size": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 114,
+              "size": 0,
+              "description": "\u5404 Block \u672B\u5C3E\u306E Check \u306E\u30D0\u30A4\u30C8\u6570\uFF080 / 4 / 8 / 16 / 32 / 64\uFF09",
+              "name": "check_size",
+              "value": 4
+            }
+          }
+        },
+        "magic": {
+          "_type": "bytes",
+          "type": "bytes",
+          "offset": 114,
+          "size": 2,
+          "description": "\u30D5\u30C3\u30BF\u30DE\u30B8\u30C3\u30AF\uFF08\u0027YZ\u0027\uFF09",
+          "name": "magic",
+          "hex": "59 5A",
+          "valid": true
+        }
+      }
+    },
+    "index": {
+      "_type": "struct",
+      "type": "struct",
+      "offset": 92,
+      "size": 12,
+      "name": "index",
+      "struct_type": "index",
+      "children": {
+        "body": {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 92,
+          "size": 8,
+          "name": "body",
+          "struct_type": "index_body",
+          "children": {
+            "indicator": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 92,
+              "size": 1,
+              "description": "Index Indicator\uFF080x00\uFF09",
+              "_validation": {
+                "passed": true,
+                "expression": "{indicator == 0}"
+              },
+              "name": "indicator",
+              "value": 0,
+              "hex": "0x0"
+            },
+            "record_count": {
+              "_type": "integer",
+              "type": "uleb128",
+              "offset": 93,
+              "size": 1,
+              "description": "\u30EC\u30B3\u30FC\u30C9\u6570\uFF08= Block \u6570\uFF09",
+              "name": "record_count",
+              "value": 2,
+              "hex": "0x2"
+            },
+            "records": {
+              "_type": "array",
+              "type": "struct",
+              "offset": 94,
+              "size": 4,
+              "name": "records",
+              "count": 2,
+              "elements": [
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 94,
+                  "size": 2,
+                  "name": "records",
+                  "struct_type": "index_record",
+                  "children": {
+                    "unpadded_size": {
+                      "_type": "integer",
+                      "type": "uleb128",
+                      "offset": 94,
+                      "size": 1,
+                      "description": "Block Header \u002B \u5727\u7E2E\u30C7\u30FC\u30BF \u002B Check \u306E\u30D0\u30A4\u30C8\u6570\uFF08Block Padding \u3092\u542B\u307E\u306A\u3044\uFF09",
+                      "name": "unpadded_size",
+                      "value": 30,
+                      "hex": "0x1E"
+                    },
+                    "uncompressed_size": {
+                      "_type": "integer",
+                      "type": "uleb128",
+                      "offset": 95,
+                      "size": 1,
+                      "name": "uncompressed_size",
+                      "value": 10,
+                      "hex": "0xA"
+                    }
+                  }
+                },
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 96,
+                  "size": 2,
+                  "name": "records",
+                  "struct_type": "index_record",
+                  "children": {
+                    "unpadded_size": {
+                      "_type": "integer",
+                      "type": "uleb128",
+                      "offset": 96,
+                      "size": 1,
+                      "description": "Block Header \u002B \u5727\u7E2E\u30C7\u30FC\u30BF \u002B Check \u306E\u30D0\u30A4\u30C8\u6570\uFF08Block Padding \u3092\u542B\u307E\u306A\u3044\uFF09",
+                      "name": "unpadded_size",
+                      "value": 46,
+                      "hex": "0x2E"
+                    },
+                    "uncompressed_size": {
+                      "_type": "integer",
+                      "type": "uleb128",
+                      "offset": 97,
+                      "size": 1,
+                      "name": "uncompressed_size",
+                      "value": 26,
+                      "hex": "0x1A"
+                    }
+                  }
+                }
+              ]
+            },
+            "padding": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 98,
+              "size": 2,
+              "name": "padding",
+              "hex": "00 00"
+            }
+          }
+        },
+        "crc32": {
+          "_type": "integer",
+          "type": "uint32",
+          "offset": 100,
+          "size": 4,
+          "description": "Index\uFF08Indicator \u304B\u3089\u30D1\u30C7\u30A3\u30F3\u30B0\u307E\u3067\uFF09\u306E CRC32",
+          "name": "crc32",
+          "value": 3498920865,
+          "hex": "0xD08D4BA1",
+          "checksum_valid": true,
+          "checksum_algorithm": "crc32"
+        }
+      }
+    },
+    "blocks": {
+      "_type": "array",
+      "type": "struct",
+      "offset": 12,
+      "size": 80,
+      "name": "blocks",
+      "count": 2,
+      "elements": [
+        {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 12,
+          "size": 32,
+          "name": "blocks",
+          "struct_type": "block",
+          "children": {
+            "header": {
+              "_type": "struct",
+              "type": "struct",
+              "offset": 12,
+              "size": 12,
+              "name": "header",
+              "struct_type": "block_header",
+              "children": {
+                "header_size_raw": {
+                  "_type": "integer",
+                  "type": "uint8",
+                  "offset": 12,
+                  "size": 1,
+                  "description": "Block Header \u306E\u30B5\u30A4\u30BA\uFF08(\u5024 \u002B 1) \u00D7 4 \u30D0\u30A4\u30C8\uFF09",
+                  "name": "header_size_raw",
+                  "value": 2,
+                  "hex": "0x2"
+                },
+                "header_size_bytes": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 13,
+                  "size": 0,
+                  "name": "header_size_bytes",
+                  "value": 12
+                },
+                "body": {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 13,
+                  "size": 7,
+                  "name": "body",
+                  "struct_type": "block_header_body",
+                  "children": {
+                    "flags": {
+                      "_type": "bitfield",
+                      "type": "bitfield",
+                      "offset": 13,
+                      "size": 1,
+                      "name": "flags",
+                      "raw_value": "0x0",
+                      "fields": [
+                        {
+                          "name": "filter_count_minus1",
+                          "value": 0,
+                          "bit_high": 1,
+                          "bit_low": 0
+                        },
+                        {
+                          "name": "reserved",
+                          "value": 0,
+                          "bit_high": 5,
+                          "bit_low": 2
+                        },
+                        {
+                          "name": "has_compressed_size",
+                          "value": 0,
+                          "bit_high": 6,
+                          "bit_low": 6
+                        },
+                        {
+                          "name": "has_uncompressed_size",
+                          "value": 0,
+                          "bit_high": 7,
+                          "bit_low": 7
+                        }
+                      ]
+                    },
+                    "filters": {
+                      "_type": "array",
+                      "type": "struct",
+                      "offset": 14,
+                      "size": 3,
+                      "name": "filters",
+                      "count": 1,
+                      "elements": [
+                        {
+                          "_type": "struct",
+                          "type": "struct",
+                          "offset": 14,
+                          "size": 3,
+                          "name": "filters",
+                          "struct_type": "filter_flags",
+                          "children": {
+                            "filter_id": {
+                              "_type": "integer",
+                              "type": "uleb128",
+                              "offset": 14,
+                              "size": 1,
+                              "name": "filter_id",
+                              "value": 33,
+                              "hex": "0x21",
+                              "enum_label": "LZMA2"
+                            },
+                            "properties_size": {
+                              "_type": "integer",
+                              "type": "uleb128",
+                              "offset": 15,
+                              "size": 1,
+                              "name": "properties_size",
+                              "value": 1,
+                              "hex": "0x1"
+                            },
+                            "properties": {
+                              "_type": "bytes",
+                              "type": "bytes",
+                              "offset": 16,
+                              "size": 1,
+                              "description": "\u30D5\u30A3\u30EB\u30BF\u306E\u30D7\u30ED\u30D1\u30C6\u30A3\uFF08LZMA2 \u306F\u8F9E\u66F8\u30B5\u30A4\u30BA\u306E 1 \u30D0\u30A4\u30C8\uFF09",
+                              "name": "properties",
+                              "hex": "00"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "header_padding": {
+                      "_type": "bytes",
+                      "type": "bytes",
+                      "offset": 17,
+                      "size": 3,
+                      "name": "header_padding",
+                      "hex": "00 00 00"
+                    }
+                  }
+                },
+                "crc32": {
+                  "_type": "integer",
+                  "type": "uint32",
+                  "offset": 20,
+                  "size": 4,
+                  "description": "Block Header\uFF08\u30B5\u30A4\u30BA\u301C\u30D1\u30C7\u30A3\u30F3\u30B0\uFF09\u306E CRC32",
+                  "name": "crc32",
+                  "value": 3600230199,
+                  "hex": "0xD6972737",
+                  "checksum_valid": true,
+                  "checksum_algorithm": "crc32"
+                }
+              }
+            },
+            "compressed_data": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 24,
+              "size": 14,
+              "description": "\u5727\u7E2E\u30C7\u30FC\u30BF\uFF08\u30D5\u30A3\u30EB\u30BF\u30C1\u30A7\u30FC\u30F3\u306E\u51FA\u529B\u3002LZMA2 \u7B49\uFF09",
+              "name": "compressed_data",
+              "hex": "01 00 09 66 69 72 73 74 20 62 6C 6B 21 00"
+            },
+            "block_padding": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 38,
+              "size": 2,
+              "name": "block_padding",
+              "hex": "00 00"
+            },
+            "check": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 40,
+              "size": 4,
+              "description": "\u5C55\u958B\u5F8C\u30C7\u30FC\u30BF\u306E\u6574\u5408\u6027\u30C1\u30A7\u30C3\u30AF\uFF08Stream Flags \u306E\u7A2E\u985E\u3002\u691C\u8A3C\u306B\u306F\u5C55\u958B\u304C\u5FC5\u8981\u306A\u306E\u3067\u5024\u306E\u307F\u8868\u793A\uFF09",
+              "name": "check",
+              "hex": "C8 B8 B6 B7"
+            }
+          }
+        },
+        {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 44,
+          "size": 48,
+          "name": "blocks",
+          "struct_type": "block",
+          "children": {
+            "header": {
+              "_type": "struct",
+              "type": "struct",
+              "offset": 44,
+              "size": 12,
+              "name": "header",
+              "struct_type": "block_header",
+              "children": {
+                "header_size_raw": {
+                  "_type": "integer",
+                  "type": "uint8",
+                  "offset": 44,
+                  "size": 1,
+                  "description": "Block Header \u306E\u30B5\u30A4\u30BA\uFF08(\u5024 \u002B 1) \u00D7 4 \u30D0\u30A4\u30C8\uFF09",
+                  "name": "header_size_raw",
+                  "value": 2,
+                  "hex": "0x2"
+                },
+                "header_size_bytes": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 45,
+                  "size": 0,
+                  "name": "header_size_bytes",
+                  "value": 12
+                },
+                "body": {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 45,
+                  "size": 7,
+                  "name": "body",
+                  "struct_type": "block_header_body",
+                  "children": {
+                    "flags": {
+                      "_type": "bitfield",
+                      "type": "bitfield",
+                      "offset": 45,
+                      "size": 1,
+                      "name": "flags",
+                      "raw_value": "0x0",
+                      "fields": [
+                        {
+                          "name": "filter_count_minus1",
+                          "value": 0,
+                          "bit_high": 1,
+                          "bit_low": 0
+                        },
+                        {
+                          "name": "reserved",
+                          "value": 0,
+                          "bit_high": 5,
+                          "bit_low": 2
+                        },
+                        {
+                          "name": "has_compressed_size",
+                          "value": 0,
+                          "bit_high": 6,
+                          "bit_low": 6
+                        },
+                        {
+                          "name": "has_uncompressed_size",
+                          "value": 0,
+                          "bit_high": 7,
+                          "bit_low": 7
+                        }
+                      ]
+                    },
+                    "filters": {
+                      "_type": "array",
+                      "type": "struct",
+                      "offset": 46,
+                      "size": 3,
+                      "name": "filters",
+                      "count": 1,
+                      "elements": [
+                        {
+                          "_type": "struct",
+                          "type": "struct",
+                          "offset": 46,
+                          "size": 3,
+                          "name": "filters",
+                          "struct_type": "filter_flags",
+                          "children": {
+                            "filter_id": {
+                              "_type": "integer",
+                              "type": "uleb128",
+                              "offset": 46,
+                              "size": 1,
+                              "name": "filter_id",
+                              "value": 33,
+                              "hex": "0x21",
+                              "enum_label": "LZMA2"
+                            },
+                            "properties_size": {
+                              "_type": "integer",
+                              "type": "uleb128",
+                              "offset": 47,
+                              "size": 1,
+                              "name": "properties_size",
+                              "value": 1,
+                              "hex": "0x1"
+                            },
+                            "properties": {
+                              "_type": "bytes",
+                              "type": "bytes",
+                              "offset": 48,
+                              "size": 1,
+                              "description": "\u30D5\u30A3\u30EB\u30BF\u306E\u30D7\u30ED\u30D1\u30C6\u30A3\uFF08LZMA2 \u306F\u8F9E\u66F8\u30B5\u30A4\u30BA\u306E 1 \u30D0\u30A4\u30C8\uFF09",
+                              "name": "properties",
+                              "hex": "00"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "header_padding": {
+                      "_type": "bytes",
+                      "type": "bytes",
+                      "offset": 49,
+                      "size": 3,
+                      "name": "header_padding",
+                      "hex": "00 00 00"
+                    }
+                  }
+                },
+                "crc32": {
+                  "_type": "integer",
+                  "type": "uint32",
+                  "offset": 52,
+                  "size": 4,
+                  "description": "Block Header\uFF08\u30B5\u30A4\u30BA\u301C\u30D1\u30C7\u30A3\u30F3\u30B0\uFF09\u306E CRC32",
+                  "name": "crc32",
+                  "value": 3600230199,
+                  "hex": "0xD6972737",
+                  "checksum_valid": true,
+                  "checksum_algorithm": "crc32"
+                }
+              }
+            },
+            "compressed_data": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 56,
+              "size": 30,
+              "description": "\u5727\u7E2E\u30C7\u30FC\u30BF\uFF08\u30D5\u30A3\u30EB\u30BF\u30C1\u30A7\u30FC\u30F3\u306E\u51FA\u529B\u3002LZMA2 \u7B49\uFF09",
+              "name": "compressed_data",
+              "hex": "01 00 19 73 65 63 6F 6E 64 20 62 6C 6F 63 6B 2C 20 61 20 62 69 74 20 6C 6F 6E 67 65 72 00"
+            },
+            "block_padding": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 86,
+              "size": 2,
+              "name": "block_padding",
+              "hex": "00 00"
+            },
+            "check": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 88,
+              "size": 4,
+              "description": "\u5C55\u958B\u5F8C\u30C7\u30FC\u30BF\u306E\u6574\u5408\u6027\u30C1\u30A7\u30C3\u30AF\uFF08Stream Flags \u306E\u7A2E\u985E\u3002\u691C\u8A3C\u306B\u306F\u5C55\u958B\u304C\u5FC5\u8981\u306A\u306E\u3067\u5024\u306E\u307F\u8868\u793A\uFF09",
+              "name": "check",
+              "hex": "20 64 CC D0"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

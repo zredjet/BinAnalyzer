@@ -13,6 +13,11 @@ public abstract record ExpressionNode
     public sealed record FunctionCall(string Name, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
     public sealed record IndexAccess(string ArrayName, ExpressionNode Index) : ExpressionNode;
     public sealed record MemberAccess(ExpressionNode Object, string MemberName) : ExpressionNode;
+
+    /// <summary>
+    /// 式の結果（配列）への添字アクセス（<c>header.entries[i]</c>）。配列名に直接付く添字は <see cref="IndexAccess"/>。
+    /// </summary>
+    public sealed record ElementAccess(ExpressionNode Array, ExpressionNode Index) : ExpressionNode;
     public sealed record Conditional(
         ExpressionNode Condition, ExpressionNode TrueExpr, ExpressionNode FalseExpr) : ExpressionNode;
 }
