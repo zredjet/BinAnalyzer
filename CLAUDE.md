@@ -37,3 +37,7 @@ DSL(.bdef.yaml) → [DSLパーサー] → IR(中間表現) → [バイナリデ�
 - 式のAST定義はCore、評価はEngine — DSLも式を作成する必要があるため。
 - スコープスタックで変数バインディング — switchのバウンダリスコープ、ネスト構造体の変数解決。
 - `size: remaining` は現在のバウンダリスコープ内の残りバイト数を参照 — ファイル全体ではない。
+
+### フォーマット定義
+
+- `formats/` の定義を追加・変更するときは [docs/format-authoring.md](docs/format-authoring.md) の規約に従う（先頭コメントの `# 仕様:` / `# 対応していないもの:`、全フィールドの日本語の description、テストデータと登録先）。`FormatDefinitionQualityTests` が検査し、見直し前の定義は同テストの対応待ち一覧に載っている（REQ-188）。

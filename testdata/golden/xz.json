@@ -45,6 +45,7 @@
               "type": "uint8",
               "offset": 6,
               "size": 1,
+              "description": "\u4E88\u7D04\uFF080\uFF09",
               "_validation": {
                 "passed": true,
                 "expression": "{reserved == 0}"
@@ -58,11 +59,12 @@
               "type": "uint8",
               "offset": 7,
               "size": 1,
-              "description": "\u6574\u5408\u6027\u30C1\u30A7\u30C3\u30AF\u306E\u7A2E\u985E\uFF08\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8\uFF09",
+              "description": "Block \u672B\u5C3E\u306E Check \u306E\u7A2E\u985E\uFF08\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8\u3002\u4E0A\u4F4D 4 \u30D3\u30C3\u30C8\u306F\u4E88\u7D04\uFF09",
               "name": "check_type",
               "value": 1,
               "hex": "0x1",
-              "enum_label": "CRC32"
+              "enum_label": "CRC32",
+              "enum_description": "CRC32\uFF084 \u30D0\u30A4\u30C8\uFF09"
             },
             "check_size": {
               "_type": "virtual",
@@ -124,6 +126,7 @@
           "type": "virtual",
           "offset": 112,
           "size": 0,
+          "description": "Index \u306E\u30D0\u30A4\u30C8\u6570\uFF08CRC32 \u3092\u542B\u3080\uFF09",
           "name": "backward_size_bytes",
           "value": 12
         },
@@ -140,6 +143,7 @@
               "type": "uint8",
               "offset": 112,
               "size": 1,
+              "description": "\u4E88\u7D04\uFF080\uFF09",
               "_validation": {
                 "passed": true,
                 "expression": "{reserved == 0}"
@@ -153,11 +157,12 @@
               "type": "uint8",
               "offset": 113,
               "size": 1,
-              "description": "\u6574\u5408\u6027\u30C1\u30A7\u30C3\u30AF\u306E\u7A2E\u985E\uFF08\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8\uFF09",
+              "description": "Block \u672B\u5C3E\u306E Check \u306E\u7A2E\u985E\uFF08\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8\u3002\u4E0A\u4F4D 4 \u30D3\u30C3\u30C8\u306F\u4E88\u7D04\uFF09",
               "name": "check_type",
               "value": 1,
               "hex": "0x1",
-              "enum_label": "CRC32"
+              "enum_label": "CRC32",
+              "enum_description": "CRC32\uFF084 \u30D0\u30A4\u30C8\uFF09"
             },
             "check_size": {
               "_type": "virtual",
@@ -203,7 +208,7 @@
               "type": "uint8",
               "offset": 92,
               "size": 1,
-              "description": "Index Indicator\uFF080x00\uFF09",
+              "description": "Index \u306E\u958B\u59CB\u3092\u793A\u3059\u30D0\u30A4\u30C8\uFF08Index Indicator\u30010x00\uFF09\u3002Block Header \u306E\u5148\u982D\u30D0\u30A4\u30C8\u306F 0 \u4EE5\u5916\u306A\u306E\u3067\u533A\u5225\u3067\u304D\u308B",
               "_validation": {
                 "passed": true,
                 "expression": "{indicator == 0}"
@@ -253,6 +258,7 @@
                       "type": "uleb128",
                       "offset": 95,
                       "size": 1,
+                      "description": "Block \u3092\u5C55\u958B\u3057\u305F\u3042\u3068\u306E\u30D0\u30A4\u30C8\u6570",
                       "name": "uncompressed_size",
                       "value": 10,
                       "hex": "0xA"
@@ -282,6 +288,7 @@
                       "type": "uleb128",
                       "offset": 97,
                       "size": 1,
+                      "description": "Block \u3092\u5C55\u958B\u3057\u305F\u3042\u3068\u306E\u30D0\u30A4\u30C8\u6570",
                       "name": "uncompressed_size",
                       "value": 26,
                       "hex": "0x1A"
@@ -295,6 +302,7 @@
               "type": "bytes",
               "offset": 98,
               "size": 2,
+              "description": "Index Padding\uFF08CRC32 \u306E\u524D\u3092 4 \u30D0\u30A4\u30C8\u5883\u754C\u306B\u305D\u308D\u3048\u308B 0\uFF09",
               "name": "padding",
               "hex": "00 00"
             }
@@ -353,6 +361,7 @@
                   "type": "virtual",
                   "offset": 13,
                   "size": 0,
+                  "description": "Block Header \u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30B5\u30A4\u30BA\u306E\u30D0\u30A4\u30C8\u3068 CRC32 \u3092\u542B\u3080\uFF09",
                   "name": "header_size_bytes",
                   "value": 12
                 },
@@ -369,6 +378,7 @@
                       "type": "bitfield",
                       "offset": 13,
                       "size": 1,
+                      "description": "Block Flags\uFF08\u30D5\u30A3\u30EB\u30BF\u6570\u3068\u3001\u30B5\u30A4\u30BA\u306E\u6709\u7121\uFF09",
                       "name": "flags",
                       "raw_value": "0x0",
                       "fields": [
@@ -419,16 +429,19 @@
                               "type": "uleb128",
                               "offset": 14,
                               "size": 1,
+                              "description": "\u30D5\u30A3\u30EB\u30BF\u306E ID",
                               "name": "filter_id",
                               "value": 33,
                               "hex": "0x21",
-                              "enum_label": "LZMA2"
+                              "enum_label": "LZMA2",
+                              "enum_description": "LZMA2 \u5727\u7E2E\uFF08\u6700\u5F8C\u306E\u30D5\u30A3\u30EB\u30BF\u3068\u3057\u3066\u5FC5\u9808\uFF09"
                             },
                             "properties_size": {
                               "_type": "integer",
                               "type": "uleb128",
                               "offset": 15,
                               "size": 1,
+                              "description": "Filter Properties \u306E\u30D0\u30A4\u30C8\u6570",
                               "name": "properties_size",
                               "value": 1,
                               "hex": "0x1"
@@ -451,6 +464,7 @@
                       "type": "bytes",
                       "offset": 17,
                       "size": 3,
+                      "description": "Header Padding\uFF08CRC32 \u306E\u524D\u3092 4 \u30D0\u30A4\u30C8\u5883\u754C\u306B\u305D\u308D\u3048\u308B 0\uFF09",
                       "name": "header_padding",
                       "hex": "00 00 00"
                     }
@@ -484,6 +498,7 @@
               "type": "bytes",
               "offset": 38,
               "size": 2,
+              "description": "Block Padding\uFF08Check \u306E\u524D\u3092 4 \u30D0\u30A4\u30C8\u5883\u754C\u306B\u305D\u308D\u3048\u308B 0\uFF09",
               "name": "block_padding",
               "hex": "00 00"
             },
@@ -529,6 +544,7 @@
                   "type": "virtual",
                   "offset": 45,
                   "size": 0,
+                  "description": "Block Header \u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30B5\u30A4\u30BA\u306E\u30D0\u30A4\u30C8\u3068 CRC32 \u3092\u542B\u3080\uFF09",
                   "name": "header_size_bytes",
                   "value": 12
                 },
@@ -545,6 +561,7 @@
                       "type": "bitfield",
                       "offset": 45,
                       "size": 1,
+                      "description": "Block Flags\uFF08\u30D5\u30A3\u30EB\u30BF\u6570\u3068\u3001\u30B5\u30A4\u30BA\u306E\u6709\u7121\uFF09",
                       "name": "flags",
                       "raw_value": "0x0",
                       "fields": [
@@ -595,16 +612,19 @@
                               "type": "uleb128",
                               "offset": 46,
                               "size": 1,
+                              "description": "\u30D5\u30A3\u30EB\u30BF\u306E ID",
                               "name": "filter_id",
                               "value": 33,
                               "hex": "0x21",
-                              "enum_label": "LZMA2"
+                              "enum_label": "LZMA2",
+                              "enum_description": "LZMA2 \u5727\u7E2E\uFF08\u6700\u5F8C\u306E\u30D5\u30A3\u30EB\u30BF\u3068\u3057\u3066\u5FC5\u9808\uFF09"
                             },
                             "properties_size": {
                               "_type": "integer",
                               "type": "uleb128",
                               "offset": 47,
                               "size": 1,
+                              "description": "Filter Properties \u306E\u30D0\u30A4\u30C8\u6570",
                               "name": "properties_size",
                               "value": 1,
                               "hex": "0x1"
@@ -627,6 +647,7 @@
                       "type": "bytes",
                       "offset": 49,
                       "size": 3,
+                      "description": "Header Padding\uFF08CRC32 \u306E\u524D\u3092 4 \u30D0\u30A4\u30C8\u5883\u754C\u306B\u305D\u308D\u3048\u308B 0\uFF09",
                       "name": "header_padding",
                       "hex": "00 00 00"
                     }
@@ -660,6 +681,7 @@
               "type": "bytes",
               "offset": 86,
               "size": 2,
+              "description": "Block Padding\uFF08Check \u306E\u524D\u3092 4 \u30D0\u30A4\u30C8\u5883\u754C\u306B\u305D\u308D\u3048\u308B 0\uFF09",
               "name": "block_padding",
               "hex": "00 00"
             },

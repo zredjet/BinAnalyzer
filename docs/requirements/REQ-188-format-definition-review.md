@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | draft |
+| ステータス | implementing |
 | 優先度 | 中 |
 | 依存 | なし（REQ-183 のドキュメント整合性テスト、REQ-186 の「同梱定義の警告 0 件」テストの上で行う） |
 | 作成日 | 2026-09-24 |
@@ -138,9 +138,20 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 
 ### 設計方針
 
+- **規約は文書 1 つ（`docs/format-authoring.md`）にまとめ、機械的に確かめられる部分だけテストにする。** 先頭コメントの `# 仕様:` / `# 対応していないもの:` の 2 行と、全フィールドの description が日本語を含むことを `FormatDefinitionQualityTests` が検査する。説明の質（単位・計算方法を書いているか）や enum の説明の要否はレビューで見る
+- **対応待ち一覧で段階的に進める。** 最初は XZ 以外の 41 定義を一覧（`FormatDefinitionQualityTests.Pending`）に載せる。一覧に載っていない定義は規約を満たさないと失敗し、載っている定義が規約を満たすと「一覧から外す」よう失敗する。一覧は減る一方で、新しく追加する定義は最初から規約を満たす必要がある
+- **先頭コメントは YAML のコメントで書く。** DSL に `spec:` のようなキーを足す案もあるが、ツールの表示には使わず、定義を読む人のための情報なのでコメントで足りる（キーを足すと DSL・JSON Schema・DTO の変更になる）
+- **最初の PR で XZ をお手本にする。** 一番新しい定義で構造も把握済みのため。規約の文書の例も XZ の先頭コメントにする
+- **分類ごとの見直しの順番**: 利用者の多さと差分の大きさから、画像 → アーカイブ・圧縮 → 実行形式・バイトコード → 音声・映像 → データ・その他 を目安にする（着手時に決め直してよい）
+- **fields の検査は YAML の構文木で行う。** ローダーを通すと imports の解決が要り、`formats/common/` の単体読み込みは REQ-178 の課題がある。`structs:` の各値（旧形式のリストと新形式の `fields:` の両方）のフィールドを直接見る
+
 ### モデル変更
 
+- なし（定義ファイル・ドキュメント・テストのみ）
+
 ### インタフェース変更
+
+- なし
 
 ### 代替案
 
@@ -157,14 +168,29 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 
 ## 実装メモ
 
-> 実装Phase（Phase 3-4）で記入する。設計時点では空欄でよい。
+### 進捗
+
+| 段階 | 内容 | 状態 |
+|---|---|---|
+| 土台 | `docs/format-authoring.md`、`FormatDefinitionQualityTests`（対応待ち 41 定義）、XZ をお手本に（先頭コメント、全 40 フィールドと enum の説明）、README / architecture.md / CLAUDE.md からの参照 | 済 |
+| 画像 | png / jpeg / gif / bmp / tiff / webp / ico / heif / icc | 未着手 |
+| アーカイブ・圧縮 | zip / gzip / tar / 7z / lz4 | 未着手 |
+| 実行形式・バイトコード | elf / pe / macho / java-class / wasm | 未着手 |
+| 音声・映像 | mp3 / mp4 / wav / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff | 未着手 |
+| データ・その他 | sqlite / parquet / pdf / pcap / dns / protobuf / msgpack / cbor / x509 / fat / otf | 未着手 |
 
 ### 実装中の設計変更
+
+- 規約の「共通ライブラリの struct 名」は、既存の共通ライブラリ（`container_box`・`raw_data` など、接頭辞なし）に合わせて「役割の分かる名前にし、インポート側では同じ名前を使わない」とした。接頭辞を強制すると既存のインポート側が壊れる
 
 ### 追加したテスト
 
 | テストクラス | テスト名 | 対応する受入条件 |
 |---|---|---|
-| | | |
+| FormatDefinitionQualityTests | Definition_FollowsTheAuthoringGuide（全 42 定義。対応待ちは「まだ満たしていない」ことも確かめる） | 2, 3 |
+| FormatDefinitionQualityTests | Pending_ListsOnlyExistingDefinitions | 3 |
+| FormatDefinitionQualityTests | Check_AcceptsAConformingDefinition / Check_ReportsMissingHeaderLines / Check_ReportsMissingAndEnglishDescriptions | 2, 3 |
 
 ### 気づき・今後の課題
+
+- XZ の見直しで、description が英語のみ（`Index Indicator（0x00）`）のものも検査で見つかった。原語を括弧で添えるのはよいが、日本語の説明を必ず含める
