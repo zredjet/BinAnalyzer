@@ -1565,6 +1565,15 @@ structs:
 - 既存の式システム（フィールド参照、算術、比較等）をそのまま利用可能
 - ツリー出力では `= 値` 形式で表示され、計算値であることが視覚的に区別できる
 - `if` と組み合わせて条件付き計算フィールドを定義可能
+- `enum` を指定すると、評価結果が整数のとき整数フィールドと同じくラベルを表示する（真偽値・文字列の結果には付かない）
+
+```yaml
+# MP3 フレームヘッダ: ビットを切り出した値にラベルを付ける
+- name: mpeg_version
+  type: virtual
+  value: "{(raw >> 3) & 3}"
+  enum: mpeg_version        # = 3 "MPEG1"
+```
 
 ### 条件付き virtual フィールド
 
@@ -1576,9 +1585,9 @@ structs:
   description: "値がインラインかどうか"
 - name: inline_short_value
   type: virtual
-  value: "{value_offset & 0xFFFF}"
+  value: "{byte_order == 'MM' ? value_offset >> 16 : value_offset & 0xFFFF}"
   if: "{field_type == 3 and count == 1}"
-  description: "SHORT型のインライン値"
+  description: "SHORT型のインライン値（値フィールドの先頭2バイト）"
 ```
 
 **注意**: `or`/`and` を含む論理式は `bool` 型を返します（`long` ではない）。テスト等で評価結果を比較する際は型に注意してください。

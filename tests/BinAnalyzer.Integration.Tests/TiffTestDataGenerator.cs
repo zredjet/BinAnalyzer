@@ -69,7 +69,8 @@ public static class TiffTestDataGenerator
         BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 256); pos += 2;  // tag: ImageWidth
         BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 3);   pos += 2;  // field_type: SHORT
         BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 1);   pos += 4;  // count: 1
-        BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 64);  pos += 4;  // value: 64
+        // 4 バイトの値欄に収まる SHORT は先頭に詰める（TIFF 6.0: left-justified）。BE では 00 40 00 00
+        BinaryPrimitives.WriteUInt16BigEndian(span[pos..], 64);  pos += 4;  // value: 64
 
         // next_ifd_offset: 0 (no more IFDs)
         BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 0);

@@ -127,7 +127,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **DecodedBitfield** — ビットフィールドと抽出値
 - **DecodedFlags** — ビットレベルのフラグ状態
 - **DecodedCompressed** — 圧縮データ（zlib / deflate / gzip / bzip2 / lzma / zstd / lz4。型の一覧は [dsl-reference.md](dsl-reference.md) の「圧縮データ」節）。展開サイズ、アルゴリズム名、オプションのネスト解析結果を保持
-- **DecodedVirtual** — 計算フィールド（バイナリデータを消費しない、式の評価結果を保持）
+- **DecodedVirtual** — 計算フィールド（バイナリデータを消費しない、式の評価結果を保持）。`enum:` があり結果が整数なら、整数と同じくラベル・説明を持つ（REQ-186）
 - **DecodedError** — エラー回復モードでデコード失敗したフィールドのプレースホルダー（エラーメッセージ、フィールド型を保持）
 
 ### バイナリデコーダー — Engine/

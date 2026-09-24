@@ -310,13 +310,13 @@ default: raw_data
 **警告:**
 - VAL101: `EnumRef` が未定義のenumを参照
 - VAL102: `FlagsRef` が未定義のflagsを参照
-- VAL103: `EnumRef` が整数型以外に使用されている
+- VAL103: `EnumRef` が整数型・virtual 以外に使用されている
 - VAL104: `FlagsRef` がascii型・整数型以外に使用されている
 - VAL105: switchにdefaultがない
 - VAL106: `StructRef` がstruct/switch型以外に使用されている
-- VAL107: 未使用のenum定義
+- VAL107: 未使用のenum定義（フィールドと bitfield のエントリのどちらからも参照されていない）
 - VAL108: 未使用のflags定義
-- VAL109: ルートから到達不能なstruct定義
+- VAL109: ルートから到達不能なstruct定義（本ファイルで定義した struct のみ。インポート先の struct は対象外）
 - VAL110: `element_size` が繰り返しフィールド以外に指定されている
 - VAL111: LengthPrefixed が bytes 以外の型に指定されている
 - VAL112: `string_table` 参照が整数型以外のフィールドに指定されている

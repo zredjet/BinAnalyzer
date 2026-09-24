@@ -331,9 +331,16 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
 
     private static void WriteVirtualNode(StringBuilder sb, DecodedVirtual node)
     {
-        sb.Append("<div class=\"node virtual\"").Append(SearchAttr($"{node.Name} {node.Value}")).AppendLine(">");
+        var searchText = node.EnumLabel is not null ? $"{node.Name} {node.Value} {node.EnumLabel}" : $"{node.Name} {node.Value}";
+        sb.Append("<div class=\"node virtual\"").Append(SearchAttr(searchText)).AppendLine(">");
         sb.Append("  <span class=\"name\">").Append(E(node.Name)).Append("</span>: ");
         sb.Append("<span class=\"value int\">= ").Append(E(node.Value.ToString() ?? "")).Append("</span>");
+        if (node.EnumLabel is not null)
+        {
+            sb.Append(" <span class=\"value enum\">\"").Append(E(node.EnumLabel)).Append("\"</span>");
+            if (node.EnumDescription is not null)
+                sb.Append(" <span class=\"desc\">- ").Append(E(node.EnumDescription)).Append("</span>");
+        }
         sb.AppendLine();
         sb.AppendLine("</div>");
     }

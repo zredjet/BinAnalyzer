@@ -193,4 +193,21 @@ public sealed class NodeDisplayTextTests
         var node = new DecodedCompressed { Name = "d", Offset = 0, Size = 10, Algorithm = "zlib", CompressedSize = 10, DecompressedSize = 20 };
         NodeDisplayText.TypeLabel(node).Should().Be("bytes (zlib)");
     }
+
+    [Fact]
+    public void Virtual_WithEnum_IncludesLabel()
+    {
+        var node = new DecodedVirtual { Name = "os", Offset = 0, Size = 0, Value = 3L, EnumLabel = "unix" };
+
+        NodeDisplayText.For(node).Should().Be("os: = 3 \"unix\"");
+        NodeDisplayText.ValueOnly(node).Should().Be("= 3 \"unix\"");
+    }
+
+    [Fact]
+    public void Virtual_WithoutEnum_Unchanged()
+    {
+        var node = new DecodedVirtual { Name = "n", Offset = 0, Size = 0, Value = 7L };
+
+        NodeDisplayText.For(node).Should().Be("n: = 7");
+    }
 }

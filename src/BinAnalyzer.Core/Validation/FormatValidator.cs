@@ -233,7 +233,7 @@ public static class FormatValidator
     // --- 警告 VAL101-VAL109 ---
 
     /// <summary>VAL101: EnumRef が存在しないenum名を参照</summary>
-    /// <summary>VAL103: EnumRef が整数型以外のフィールドに指定されている</summary>
+    /// <summary>VAL103: EnumRef が整数型・virtual 以外のフィールドに指定されている（virtual は整数の結果にラベルが付く。REQ-186）</summary>
     private static void ValidateEnumRef(
         FieldDefinition field, string structName,
         FormatDefinition format, List<ValidationDiagnostic> diagnostics)
@@ -248,10 +248,10 @@ public static class FormatValidator
                 structName, field.Name));
         }
 
-        if (!IsIntegerType(field.Type))
+        if (!IsIntegerType(field.Type) && field.Type != FieldType.Virtual)
         {
             diagnostics.Add(Warning("VAL103",
-                $"フィールド '{field.Name}' ({field.Type}) にenum参照が指定されていますが、enum参照は整数型フィールドでのみ有効です",
+                $"フィールド '{field.Name}' ({field.Type}) にenum参照が指定されていますが、enum参照は整数型・virtual フィールドでのみ有効です",
                 structName, field.Name));
         }
     }
@@ -308,6 +308,15 @@ public static class FormatValidator
             {
                 if (field.EnumRef is not null)
                     usedEnums.Add(field.EnumRef);
+                // bitfield のエントリ（bits: + enum:）からの参照も使用に数える（REQ-186）
+                if (field.BitfieldEntries is not null)
+                {
+                    foreach (var entry in field.BitfieldEntries)
+                    {
+                        if (entry.EnumRef is not null)
+                            usedEnums.Add(entry.EnumRef);
+                    }
+                }
             }
         }
 
@@ -347,7 +356,10 @@ public static class FormatValidator
         }
     }
 
-    /// <summary>VAL109: rootから到達不可能なstruct定義</summary>
+    /// <summary>
+    /// VAL109: rootから到達不可能なstruct定義。本ファイルで定義した struct だけを対象にし、インポート先の struct
+    /// （共通ライブラリのダミーのルートや使わない部品）は警告しない（REQ-186）
+    /// </summary>
     private static void ValidateUnreachableStructs(
         FormatDefinition format, List<ValidationDiagnostic> diagnostics)
     {
@@ -384,9 +396,10 @@ public static class FormatValidator
             }
         }
 
-        foreach (var structName in format.Structs.Keys)
+        var mainFile = format.Structs.TryGetValue(format.RootStruct, out var rootDef) ? rootDef.SourceFile : null;
+        foreach (var (structName, structDef) in format.Structs)
         {
-            if (!reachable.Contains(structName))
+            if (!reachable.Contains(structName) && structDef.SourceFile == mainFile)
             {
                 diagnostics.Add(Warning("VAL109",
                     $"struct '{structName}' はルート '{format.RootStruct}' から到達できません",
