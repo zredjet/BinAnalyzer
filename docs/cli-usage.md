@@ -287,7 +287,7 @@ dotnet run --project src/BinAnalyzer.Cli -- image.png -f formats/png.bdef.yaml -
 2つのバイナリファイルを同じフォーマット定義で解析し、構造的な差分を表示します。
 
 ```
-binanalyzer diff <file1|dir1> <file2|dir2> -f <format> [--output <format>] [--color <mode>] [--summary] [--summary-only]
+binanalyzer diff <file1|dir1> <file2|dir2> -f <format> [--output <format>] [--color <mode>] [--summary] [--summary-only] [--only-diff]
 ```
 
 ### 引数
@@ -304,10 +304,11 @@ binanalyzer diff <file1|dir1> <file2|dir2> -f <format> [--output <format>] [--co
 | オプション | 説明 | デフォルト |
 |------------|------|-----------|
 | `-f, --format <file>` | フォーマット定義ファイル（`.bdef.yaml`）**必須** | — |
-| `--output <format>` | 出力形式（`flat`, `tree`） | `flat` |
+| `--output <format>` | 出力形式（`flat`, `tree`, `hexdump`） | `flat` |
 | `--color <mode>` | カラー出力（`auto`, `always`, `never`） | `auto` |
 | `--summary` | 詳細差分の末尾に統計サマリー（Changed/Added/Removed件数、一致率）を追加表示 | — |
 | `--summary-only` | 統計サマリーのみ表示（詳細差分を省略） | — |
+| `--only-diff` | `--output hexdump` で差分のある行だけを表示（飛ばした行は `...`） | — |
 
 ### 出力形式
 
@@ -315,6 +316,21 @@ binanalyzer diff <file1|dir1> <file2|dir2> -f <format> [--output <format>] [--co
 |------|------|
 | `flat` | 差分フィールドのパスと値の一覧をフラットに表示（デフォルト） |
 | `tree` | デコード済みツリー構造で差分を表示。同一ノードは `(同一)` と表示し、変更箇所をハイライト |
+| `hexdump` | バイト単位の差分を hexdump 形式で表示（同じオフセット同士を比較）。差分のある行は `-`（file1）/ `+`（file2）の 2 行で、差分バイトを赤 / 緑で強調（色が無効なときは `^^` の行を添える）。行の右端にその行の最初の差分バイトが属するフィールドのパス。長さが違う場合、短い側の末尾を越えるバイトは差分として扱う。デコードに失敗しても続ける（フィールド名にだけ使う） |
+
+`hexdump` の出力例（`--only-diff --color never`）:
+
+```
+  Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ASCII             Field
+  ────────  ─────────────────────────────────────────────────  ────────────────  ─────────────────────
+  ...
+- 00000010  00 00 00 01 00 00 00 01  08 02 00 00 00 90 77 53  ..............wS  chunks[0].data.width
++ 00000010  00 00 00 02 00 00 00 01  10 02 00 00 00 90 77 53  ..............wS
+                     ^^              ^^
+  ...
+
+差分: 2 バイト（1 行）  file1 45 バイト / file2 45 バイト
+```
 
 ### 終了コード
 
@@ -328,6 +344,9 @@ binanalyzer diff <file1|dir1> <file2|dir2> -f <format> [--output <format>] [--co
 ```bash
 # フラット形式（デフォルト）
 dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml
+
+# バイト単位の差分（差分のある行だけ）
+dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml --output hexdump --only-diff
 
 # ツリー形式
 dotnet run --project src/BinAnalyzer.Cli -- diff original.png modified.png -f formats/png.bdef.yaml --output tree

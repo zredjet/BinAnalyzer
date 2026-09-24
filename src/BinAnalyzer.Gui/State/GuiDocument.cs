@@ -26,6 +26,9 @@ public sealed class GuiDocument
     public int Revision { get; private set; }
 
     public FormatDocument Format { get; private set; }
+
+    /// <summary>差分表示中の相手ファイルのバイト列（REQ-156）。ヘックスで同じオフセットの異なるバイトを強調する。差分表示中でなければ null。</summary>
+    public byte[]? CompareData { get; private set; }
     public Endianness? EndianOverride { get; private set; }
 
     public DecodedStruct Root { get; private set; } = null!;
@@ -91,12 +94,29 @@ public sealed class GuiDocument
         var t0 = GuiTiming.Now;
         Index = NodeIndex.Build(Root);
         var t1 = GuiTiming.Now;
-        Hex = new HexRowBuilder(Data, Index);
+        Hex = NewHex();
         Map = StructureMapBuilder.Build(Index, Data.Length);
         var t2 = GuiTiming.Now;
         Summary = ChecksumSummary.Compute(Index);
         var t3 = GuiTiming.Now;
         GuiTiming.Log($"{DisplayName}: decode {DecodeTime.TotalMilliseconds:F1} ms, index {t1 - t0:F1} ms ({Index.Count} nodes), map {t2 - t1:F1} ms, summary {t3 - t2:F1} ms, {Data.Length} bytes");
+    }
+
+    /// <summary>
+    /// ヘックスの行生成器。比較相手が無ければ null を明示的に渡す（<c>byte[]</c> の null をそのまま渡すと
+    /// 空の <see cref="ReadOnlyMemory{T}"/> に変換され、全バイトが「相手に無い＝差分」になる）。
+    /// </summary>
+    private HexRowBuilder NewHex() => CompareData is { } other
+        ? new HexRowBuilder(Data, Index, other)
+        : new HexRowBuilder(Data, Index);
+
+    /// <summary>差分の相手のバイト列を設定する（null で解除）。ヘックスの行を作り直すだけで再デコードはしない。</summary>
+    public void SetCompareData(byte[]? other)
+    {
+        if (ReferenceEquals(CompareData, other)) return;
+        CompareData = other;
+        Hex = NewHex();
+        Changed?.Invoke();
     }
 
     /// <summary>フォーマット / エンディアンを変えて再デコードする。選択はパスで復元する。</summary>

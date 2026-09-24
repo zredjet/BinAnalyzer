@@ -7,7 +7,8 @@ namespace BinAnalyzer.Gui.State;
 
 public enum PaneKind { Structure, Definition, Diff }
 
-public sealed record DiffState(GuiDocument Left, GuiDocument Right, DiffResult Result);
+/// <summary>2 タブの差分。<see cref="DifferentBytes"/> は同じオフセットで異なるバイトの数（長さの差を含む。REQ-156）。</summary>
+public sealed record DiffState(GuiDocument Left, GuiDocument Right, DiffResult Result, long DifferentBytes);
 
 /// <summary>大きさの確認待ちのファイル（REQ-177）。「開く」で <see cref="GuiSession.ConfirmLargeFileAsync"/>。</summary>
 public sealed record PendingLargeFile(OpenedFile File, string? FormatFile, Endianness? Endian);
@@ -260,8 +261,21 @@ public sealed class GuiSession
 
     private void ClearDiffCore()
     {
+        if (Diff is { } old)
+        {
+            old.Left.SetCompareData(null);
+            old.Right.SetCompareData(null);
+        }
         Diff = null;
         if (Pane == PaneKind.Diff) Pane = PaneKind.Structure;
+    }
+
+    /// <summary>差分を作り、左右のヘックスに相手のバイト列を渡す（変わったバイトの強調。REQ-156）。</summary>
+    private void SetDiff(GuiDocument left, GuiDocument right)
+    {
+        Diff = new DiffState(left, right, DiffEngine.Compare(left.Root, right.Root), ByteDiff.CountDifferences(left.Data, right.Data));
+        left.SetCompareData(right.Data);
+        right.SetCompareData(left.Data);
     }
 
     public void ClearDiff()
@@ -280,7 +294,7 @@ public sealed class GuiSession
     public void Compare(GuiDocument other)
     {
         if (Active is null || other == Active) return;
-        Diff = new DiffState(Active, other, DiffEngine.Compare(Active.Root, other.Root));
+        SetDiff(Active, other);
         Pane = PaneKind.Diff;
         ShowComparePicker = false;
         Raise();
@@ -289,7 +303,7 @@ public sealed class GuiSession
     public void SwapDiff()
     {
         if (Diff is null) return;
-        Diff = new DiffState(Diff.Right, Diff.Left, DiffEngine.Compare(Diff.Right.Root, Diff.Left.Root));
+        SetDiff(Diff.Right, Diff.Left);
         Raise();
     }
 

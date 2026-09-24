@@ -104,4 +104,36 @@ public sealed class HexRowBuilderTests
         row.Ghosts[0].ValueText.Should().HaveLength(40).And.EndWith("…");
         row.Cells[0]!.Value.NodeId.Should().Be(-1, "padding は索引に含まれず隙間になる");
     }
+
+    // --- REQ-156: 差分表示中の相手と異なるバイト ---
+
+    [Fact]
+    public void WithoutCompare_NoCellDiffers()
+    {
+        Builder.IsComparing.Should().BeFalse();
+        Builder.Build(1).Cells.Should().AllSatisfy(c => c!.Value.Differs.Should().BeFalse());
+    }
+
+    [Fact]
+    public void WithCompare_MarksDifferingCells_Only()
+    {
+        var other = (byte[])PngLikeTree.Data.Clone();
+        other[0x13] ^= 0xFF;
+        var b = new HexRowBuilder(PngLikeTree.Data, _index, other);
+
+        b.IsComparing.Should().BeTrue();
+        var row1 = b.Build(1);
+        row1.Cells.Select((c, i) => (c!.Value.Differs, i)).Where(x => x.Differs).Select(x => x.i).Should().Equal(3);
+        b.Build(0).Cells.Should().AllSatisfy(c => c!.Value.Differs.Should().BeFalse());
+    }
+
+    [Fact]
+    public void WithShorterCompare_BytesBeyondItsEnd_Differ()
+    {
+        var shorter = PngLikeTree.Data[..40];
+        var last = new HexRowBuilder(PngLikeTree.Data, _index, shorter).Build(2);
+
+        last.Cells.Take(8).Should().AllSatisfy(c => c!.Value.Differs.Should().BeFalse());
+        last.Cells.Skip(8).Take(5).Should().AllSatisfy(c => c!.Value.Differs.Should().BeTrue());
+    }
 }

@@ -110,6 +110,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### 差分データ構造 — Core/Diff/
 
+- **ByteDiff** — 2 つのバイト列の同じオフセット同士の比較（行ごとのマスク・差分バイト数）。差分範囲は事前に列挙せず、表示・出力する行ごとにその場で比べる（REQ-156）
 - **DiffResult** — 差分結果コンテナ（Entries, HasDifferences）
 - **DiffEntry** — 個別差分（Kind, FieldPath, OldValue, NewValue）
 - **DiffKind** — 変更種別: Changed, Added, Removed
@@ -159,6 +160,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **MapOutputFormatter** — バイナリフィールドレイアウトのビジュアルマップ
 - **CsvOutputFormatter** — CSV / TSV形式（フラットなフィールド一覧、RFC 4180準拠エスケープ）
 - **DiffOutputFormatter** — 2つのバイナリの構造的差分表示
+- **HexDiffOutputFormatter** — バイト単位の差分の hexdump 表示（`diff --output hexdump`、REQ-156）。比較は Core の `ByteDiff`、フィールド名は `HexDumpOutputFormatter` の葉の収集を共有
 
 各フォーマッターはANSIカラー出力に対応（ColorMode: Auto / Always / Never）。
 
@@ -201,7 +203,7 @@ Terminal.Gui v2 ベースの対話型ターミナルUI。`--output tui` で起�
 - **Abstractions/** — ホスト差分の抽象。`IFormatCatalog`（フォーマット定義の一覧・読込・拡張子検出）、`IFileSource`（ネイティブダイアログの有無とファイル取得）
 - **State/** — Blazor 非依存の状態。`GuiDocument`（タブ 1 枚: データ・フォーマット・エンディアン上書き・デコード結果・`NodeIndex`・選択/ホバー/展開/検索・編集履歴）、`GuiSession`（タブ集合・アクティブ・右ペイン種別・差分・保存・大容量ファイルの確認）、`DecodeService`（エラー継続モードで所要時間計測）、`GuiTiming`（`BINANALYZER_GUI_TIMING=1` で性能ログ）
 - **編集・書き戻し（REQ-169）** — `GuiDocument.Data` は「現在デコード・表示しているバイト列」で copy-on-write（編集のたびに新しい配列に差し替え、`Revision` が進む）。原本は `OriginalData`。`PreviewEdit` は Engine の `FieldEncoder` で入力をバイト列にし、Presentation の `ChecksumDependencies` で再計算対象を求める。`ApplyEdit` / `RevertField` は Engine の `BinaryPatcher` に委譲し、本体書き込み＋チェックサム再計算を 1 つの `EditRecord`（`ByteWrite` の束）として Undo / Redo スタックに積む。保存は `IFileSource.SaveAsync`（デスクトップ: `ShowSaveFileAsync`、Web: `downloadFile` でダウンロード）
-- **Components/** — `GuiShell`（全体レイアウト）、`HexView` / `HexRowView`（`<Virtualize>`、512 行以下は非仮想化。セルにハンドラは無く、gui.js が登録するカスタムイベント `nodehover` / `nodeclick` で `data-n` のノード ID をコンテナ 1 つで受ける — REQ-177）、`HighlightStyle`（ホバーは `<style>` 1 ルールの再描画のみ）、`StructTree` / `StructTreeRow`（`TreeRowBuilder` で可視行を平坦化し、512 行超は `<Virtualize>`）/ `Inspector`、`DefinitionView`（`YamlFieldLocator` で選択フィールド行を強調）、`DiffView`（`DiffEngine` の `DiffResult` に直接バインド）、`StructureMapView`、`CommandBar`、`FilePicker` ほか
+- **Components/** — `GuiShell`（全体レイアウト）、`HexView` / `HexRowView`（`<Virtualize>`、512 行以下は非仮想化。セルにハンドラは無く、gui.js が登録するカスタムイベント `nodehover` / `nodeclick` で `data-n` のノード ID をコンテナ 1 つで受ける — REQ-177）、`HighlightStyle`（ホバーは `<style>` 1 ルールの再描画のみ）、`StructTree` / `StructTreeRow`（`TreeRowBuilder` で可視行を平坦化し、512 行超は `<Virtualize>`）/ `Inspector`、`DefinitionView`（`YamlFieldLocator` で選択フィールド行を強調）、`DiffView`（`DiffEngine` の `DiffResult` に直接バインド。差分を開いている間は左右の `GuiDocument.CompareData` に相手のバイト列を渡し、`HexRowBuilder` が行ごとに Core の `ByteDiff` で比べて異なるバイトを `dx` で強調する — REQ-156）、`StructureMapView`、`CommandBar`、`FilePicker` ほか
 - **定義の診断（REQ-185）** — `FormatDocument.Validation` が読み込み時に `FormatValidator` を 1 回実行する（カタログがキャッシュした定義を複数タブで共有）。診断があればステータスバーに「定義: エラー n・警告 m」を出し、押すと右ペインを定義にして `DefinitionDiagnostics`（一覧）を開く。一覧の項目を選ぶと `DefinitionView` がその `SourceFile` / `SourceLine` を表示・強調し（インポート先は `ReadSourceAsync`）、表示中のファイルの診断行には印を付ける。ノードを選び直すと選択ノードの定義行に戻る。定義にエラーがあってもデコードは続ける
 - **wwwroot/** — `gui.css` / `gui.js`。デスクトップ配信用に `_content/BinAnalyzer.Gui/...` の論理名で埋め込みリソースにも含める
 

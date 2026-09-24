@@ -8,6 +8,7 @@
             <span class="mono">@diff.Left.DisplayName ⇄ @diff.Right.DisplayName</span>
             <button class="mini" title="左右を入れ替え" @onclick="Session.SwapDiff">⇄</button>
             <span>変更 @(st?.ChangedCount ?? 0)</span><span>追加 @(st?.AddedCount ?? 0)</span><span>削除 @(st?.RemovedCount ?? 0)</span>
+            <span class="bytediff" title="同じオフセットで異なるバイトの数（長さの差を含む）。ヘックスで強調表示">バイト差分 @FilePicker.FormatSize(diff.DifferentBytes)</span>
             <span class="grow"></span>
             <button class="mini" title="差分を閉じる" @onclick="Session.ClearDiff">×</button>
         </div>

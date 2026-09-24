@@ -1,4 +1,5 @@
 using BinAnalyzer.Core.Decoded;
+using BinAnalyzer.Core.Diff;
 
 namespace BinAnalyzer.Presentation;
 
@@ -7,8 +8,11 @@ public enum GhostStyle { Value, Ok, Ng }
 /// <summary>ヘックス行の右側に出す「この行で決まる値」の注釈。</summary>
 public sealed record GhostAnnotation(int NodeId, string Name, string ValueText, GhostStyle Style);
 
-/// <summary>ヘックス 1 セル。<see cref="NodeId"/> が -1 ならどのフィールドにも属さない隙間バイト。</summary>
-public readonly record struct HexCell(byte Value, int NodeId, FieldKind Kind, bool FieldStart, bool FieldEnd, string AncestorPath);
+/// <summary>
+/// ヘックス 1 セル。<see cref="NodeId"/> が -1 ならどのフィールドにも属さない隙間バイト。
+/// <see cref="Differs"/> は比較相手（差分表示中の相手ファイル）と同じオフセットのバイトが異なるとき true（REQ-156）。
+/// </summary>
+public readonly record struct HexCell(byte Value, int NodeId, FieldKind Kind, bool FieldStart, bool FieldEnd, string AncestorPath, bool Differs = false);
 
 /// <summary>ヘックス 1 行（16 バイト）。ファイル末尾を超えるセルは null。</summary>
 public sealed record HexRow(long Offset, HexCell?[] Cells, string Ascii, IReadOnlyList<GhostAnnotation> Ghosts);
@@ -21,12 +25,18 @@ public sealed class HexRowBuilder
 
     private readonly ReadOnlyMemory<byte> _data;
     private readonly NodeIndex _index;
+    private readonly ReadOnlyMemory<byte>? _compareTo;
 
-    public HexRowBuilder(ReadOnlyMemory<byte> data, NodeIndex index)
+    /// <param name="compareTo">差分表示中の相手ファイルのバイト列。指定すると同じオフセットで異なるセルに <see cref="HexCell.Differs"/> を立てる（REQ-156）。</param>
+    public HexRowBuilder(ReadOnlyMemory<byte> data, NodeIndex index, ReadOnlyMemory<byte>? compareTo = null)
     {
         _data = data;
         _index = index;
+        _compareTo = compareTo;
     }
+
+    /// <summary>比較相手があるか（差分表示中か）。</summary>
+    public bool IsComparing => _compareTo is not null;
 
     public long Length => _data.Length;
     public int RowCount => (int)((_data.Length + BytesPerRow - 1) / BytesPerRow);
@@ -39,6 +49,10 @@ public sealed class HexRowBuilder
         var cells = new HexCell?[BytesPerRow];
         var ascii = new char[BytesPerRow];
         var span = _data.Span;
+        // 行ごとにその場で比べる（差分範囲を事前に列挙しない）
+        var diffMask = _compareTo is { } other
+            ? ByteDiff.RowMask(span, other.Span, rowStart, BytesPerRow)
+            : 0u;
 
         // 同じ葉が続く間は逆引きと祖先パス文字列を使い回す（1 行 16 回の二分探索と文字列生成を葉の数だけに減らす）。
         // 逆引き結果が変わり得るのは「今の葉が終わる」か「別の葉が始まる」オフセットだけなので、そこでだけ引き直す
@@ -63,9 +77,9 @@ public sealed class HexRowBuilder
                 nextStart = k < _index.Leaves.Count ? _index.Leaves[k].Offset : long.MaxValue;
             }
             if (current is { } leaf)
-                cells[i] = new HexCell(b, leaf.Id, leaf.Kind, off == leaf.Offset, off == leaf.End - 1, currentPath);
+                cells[i] = new HexCell(b, leaf.Id, leaf.Kind, off == leaf.Offset, off == leaf.End - 1, currentPath, (diffMask & (1u << i)) != 0);
             else
-                cells[i] = new HexCell(b, -1, FieldKind.Bytes, false, false, "/");
+                cells[i] = new HexCell(b, -1, FieldKind.Bytes, false, false, "/", (diffMask & (1u << i)) != 0);
         }
 
         var ghosts = new List<GhostAnnotation>();
