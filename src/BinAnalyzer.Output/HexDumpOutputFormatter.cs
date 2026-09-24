@@ -120,7 +120,8 @@ public sealed class HexDumpOutputFormatter
         sb.AppendLine();
     }
 
-    private static void CollectLeafFields(DecodedNode node, string parentPath, List<FieldRegion> fields)
+    /// <summary>葉フィールドのバイト範囲とパス（HexDiffOutputFormatter と共有）。</summary>
+    internal static void CollectLeafFields(DecodedNode node, string parentPath, List<FieldRegion> fields)
     {
         switch (node)
         {
@@ -152,5 +153,5 @@ public sealed class HexDumpOutputFormatter
         }
     }
 
-    private readonly record struct FieldRegion(long Offset, long Size, string Path);
+    internal readonly record struct FieldRegion(long Offset, long Size, string Path);
 }

@@ -306,8 +306,13 @@ var diffColorOption = new Option<string>("--color")
 
 var diffOutputOption = new Option<string>("--output")
 {
-    Description = "出力形式 (flat, tree)",
+    Description = "出力形式 (flat, tree, hexdump)",
     DefaultValueFactory = _ => "flat",
+};
+
+var onlyDiffOption = new Option<bool>("--only-diff")
+{
+    Description = "--output hexdump で差分のある行だけを表示",
 };
 
 var summaryOption = new Option<bool>("--summary")
@@ -329,6 +334,7 @@ var diffCommand = new Command("diff", "2つのバイナリファイルの構造�
     diffOutputOption,
     summaryOption,
     summaryOnlyOption,
+    onlyDiffOption,
 };
 
 diffCommand.SetAction((parseResult) =>
@@ -431,10 +437,23 @@ diffCommand.SetAction((parseResult) =>
             }
 
             var decoder = new BinaryDecoder();
+            var outputFormat = parseResult.GetValue(diffOutputOption)!;
+
+            if (outputFormat == "hexdump")
+            {
+                // バイト単位の差分（REQ-156）。デコードはフィールド名の表示にだけ使うので、壊れていても続ける
+                var bytes1 = File.ReadAllBytes(f1);
+                var bytes2 = File.ReadAllBytes(f2);
+                var root1 = decoder.DecodeWithRecovery(bytes1, format, ErrorMode.Continue).Root;
+                var root2 = decoder.DecodeWithRecovery(bytes2, format, ErrorMode.Continue).Root;
+                var hexFormatter = new HexDiffOutputFormatter(diffColorMode);
+                Console.Write(hexFormatter.Format(bytes1, root1, bytes2, root2, parseResult.GetValue(onlyDiffOption)));
+                return hexFormatter.HasDifferences ? 1 : 0;
+            }
+
             var decoded1 = decoder.Decode(File.ReadAllBytes(f1), format);
             var decoded2 = decoder.Decode(File.ReadAllBytes(f2), format);
 
-            var outputFormat = parseResult.GetValue(diffOutputOption)!;
             var showSummary = parseResult.GetValue(summaryOption);
             var showSummaryOnly = parseResult.GetValue(summaryOnlyOption);
 

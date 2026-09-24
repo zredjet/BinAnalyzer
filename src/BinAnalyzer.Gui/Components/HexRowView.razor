@@ -16,7 +16,7 @@
             var c = cell.Value;
             var off = Row.Offset + i;
             var sel = off >= selStart && off < selEnd;
-            <span class="b @FieldKindMapper.CssClass(c.Kind) @(c.FieldStart ? "fs" : "") @(c.FieldEnd ? "fe" : "") @(sel ? "sel" : "")"
+            <span class="b @FieldKindMapper.CssClass(c.Kind) @(c.FieldStart ? "fs" : "") @(c.FieldEnd ? "fe" : "") @(sel ? "sel" : "") @(c.Differs ? "dx" : "")"
                   data-n="@c.NodeId" data-p="@c.AncestorPath">@c.Value.ToString("X2")</span>
         }
     </span>
@@ -32,7 +32,7 @@
             var c = cell.Value;
             var off = Row.Offset + i;
             var sel = off >= selStart && off < selEnd;
-            <span class="a @FieldKindMapper.CssClass(c.Kind) @(sel ? "sel" : "")" data-n="@c.NodeId" data-p="@c.AncestorPath">@Row.Ascii[i]</span>
+            <span class="a @FieldKindMapper.CssClass(c.Kind) @(sel ? "sel" : "") @(c.Differs ? "dx" : "")" data-n="@c.NodeId" data-p="@c.AncestorPath">@Row.Ascii[i]</span>
         }
     </span>
     <span class="ghost">

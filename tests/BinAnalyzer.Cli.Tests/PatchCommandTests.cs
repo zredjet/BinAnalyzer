@@ -209,4 +209,21 @@ public class PatchCommandTests : IDisposable
         var ihdr = await DecodeIhdrAsync(output);
         ihdr.GetProperty("crc").GetProperty("checksum_valid").GetBoolean().Should().BeFalse();
     }
+
+    [Fact]
+    public async Task DiffHexdump_ShowsPatchedBytes_AndExitCodes()
+    {
+        // REQ-156: patch で書き換えた結果を diff --output hexdump で確認する
+        var output = Path.Combine(_dir, "out.png");
+        (await RunCli("patch", _input, "-f", PngFormat, "--set", "chunks[0].data.width=2", "-o", output)).ExitCode.Should().Be(0);
+
+        var (exit, stdout, _) = await RunCli("diff", _input, output, "-f", PngFormat, "--output", "hexdump", "--only-diff", "--color", "never");
+
+        exit.Should().Be(1, "差分あり");
+        stdout.Should().Contain("- 00000010").And.Contain("+ 00000010").And.Contain("chunks[0].data.width");
+        stdout.Should().Contain("差分: 5 バイト", "width の 1 バイトと再計算された CRC の 4 バイト");
+
+        var (same, _, _) = await RunCli("diff", _input, _input, "-f", PngFormat, "--output", "hexdump", "--color", "never");
+        same.Should().Be(0);
+    }
 }
