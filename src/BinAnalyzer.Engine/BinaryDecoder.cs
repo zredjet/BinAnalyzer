@@ -318,9 +318,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.AsciiZ => DecodeNullTerminatedStringField(field, context, Encoding.ASCII, "asciiz"),
             FieldType.Utf8Z => DecodeNullTerminatedStringField(field, context, Encoding.UTF8, "utf8z"),
             FieldType.Float32 or FieldType.Float64 => DecodeFloatField(field, context),
-            FieldType.Zlib or FieldType.Deflate or FieldType.Gzip
-                or FieldType.Bzip2 or FieldType.Lzma or FieldType.Zstd or FieldType.Lz4
-                => DecodeCompressedField(field, format, context),
+            var t when FieldTypeCategories.IsCompressed(t) => DecodeCompressedField(field, format, context),
             FieldType.Struct => DecodeStructField(field, format, context),
             FieldType.Switch => DecodeSwitchField(field, format, context),
             FieldType.Bitfield => DecodeBitfieldField(field, format, context),

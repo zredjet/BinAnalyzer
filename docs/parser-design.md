@@ -285,7 +285,8 @@ default: raw_data
 
 `FormatValidator`（`BinAnalyzer.Core.Validation` 名前空間）がIR変換後に静的検証を実行する。CLIでは `--no-validate` オプションでスキップ可能。
 
-**エラー（VAL001〜VAL014, VAL114〜VAL115）:**
+<!-- doc-sync: validation-codes -->
+**エラー:**
 - VAL001: struct型フィールドに `StructRef` がない
 - VAL002: `StructRef` が未定義のstructを参照
 - VAL003: switchのcaseが未定義のstructを参照
@@ -297,15 +298,20 @@ default: raw_data
 - VAL009: 構造体の `align` 値が正の整数ではない
 - VAL010: virtual型フィールドに `value` が未指定
 - VAL011: `seek_restore` が `seek` なしで指定されている
+- VAL013: bitfield型フィールドのサイズが1〜8バイトの範囲外
 - VAL014: LengthPrefixed の PrefixSize が範囲外（1〜4）
+- VAL015: `seek_base` が `seek` なしで指定されている
+- VAL017: `state_if` が `state` なしで指定されている
+- VAL018: チェックサムに `fields` と `range`/`ranges` が同時に指定されている
+- VAL019: チェックサムに `range` と `ranges` が同時に指定されている
 - VAL114: 整数系チェックサムアルゴリズムが非整数フィールド（bytes）に指定されている
 - VAL115: ハッシュ系チェックサムアルゴリズムが非bytesフィールドに指定されている
 
-**警告（VAL101〜VAL113）:**
+**警告:**
 - VAL101: `EnumRef` が未定義のenumを参照
 - VAL102: `FlagsRef` が未定義のflagsを参照
 - VAL103: `EnumRef` が整数型以外に使用されている
-- VAL104: `FlagsRef` がascii型以外に使用されている
+- VAL104: `FlagsRef` がascii型・整数型以外に使用されている
 - VAL105: switchにdefaultがない
 - VAL106: `StructRef` がstruct/switch型以外に使用されている
 - VAL107: 未使用のenum定義
@@ -315,6 +321,16 @@ default: raw_data
 - VAL111: LengthPrefixed が bytes 以外の型に指定されている
 - VAL112: `string_table` 参照が整数型以外のフィールドに指定されている
 - VAL113: 未知のチェックサムアルゴリズムが指定されている
+- VAL116: テンプレートstructの必須パラメータが引数なしで参照されている
+- VAL117: `state_default` が `state` なしで指定されている
+- VAL118: ビットストリーム構造体から非ビットストリーム構造体を参照している
+- VAL119: チェックサムの `exclude_self` が `range`/`ranges` なしで指定されている（無視される）
+- VAL120: `repeat_max` が繰り返しフィールド以外に指定されている
+- VAL121: `repeat_error_limit` が繰り返しフィールド以外に指定されている
+- VAL122: `bit_order` が `mode: bitstream` でない構造体に指定されている
+<!-- /doc-sync -->
+
+012 番と 016 番は欠番。VAL114 / VAL115 は 1xx 番台だがエラーである。
 
 現時点で実行されない検証（将来拡張候補）:
 - 循環参照の検出

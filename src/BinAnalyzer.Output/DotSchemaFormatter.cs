@@ -86,7 +86,7 @@ public class DotSchemaFormatter : ISchemaFormatter
         else if (field.StructRef is { } structRef)
         {
             var targetNode = Sanitize(structRef);
-            var compression = IsCompression(field.Type) ? " (圧縮)" : "";
+            var compression = FieldTypeCategories.IsCompressed(field.Type) ? " (圧縮)" : "";
             var label = EscapeDot($"{field.Name}{compression}{multiplicity}");
             edges.Add($"    {fromNode} -> {targetNode} [label=\"{label}\"];");
         }
@@ -154,10 +154,6 @@ public class DotSchemaFormatter : ISchemaFormatter
 
     private static bool IsRepeat(FieldDefinition field) =>
         field.Repeat is not RepeatMode.None;
-
-    private static bool IsCompression(FieldType type) =>
-        type is FieldType.Zlib or FieldType.Deflate or FieldType.Gzip
-            or FieldType.Bzip2 or FieldType.Lzma or FieldType.Zstd or FieldType.Lz4;
 
     private static string Sanitize(string name) =>
         System.Text.RegularExpressions.Regex.Replace(name, @"[^a-zA-Z0-9_]", "_");

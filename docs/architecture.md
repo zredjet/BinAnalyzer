@@ -9,12 +9,14 @@ DSL(.bdef.yaml) → [DSLパーサー] → IR(中間表現) → [バイナリデ�
 
 ## プロジェクト構成
 
+<!-- doc-sync: project-tree -->
 ```
 BinAnalyzer/
 ├── src/
 │   ├── BinAnalyzer.Core/          # ドメインモデル、式、インタフェース
 │   ├── BinAnalyzer.Dsl/           # YAML → IR変換（YamlDotNet）
-│   ├── BinAnalyzer.Engine/        # バイナリデコーダーエンジン（BCLのみ）
+│   ├── BinAnalyzer.Compression/   # bzip2 / lzma / zstd / lz4 の展開（SharpCompress, ZstdSharp.Port, K4os.Compression.LZ4）
+│   ├── BinAnalyzer.Engine/        # バイナリデコーダーエンジン（Compression, System.IO.Hashing）
 │   ├── BinAnalyzer.Output/        # 出力フォーマッター（BCLのみ）
 │   ├── BinAnalyzer.Presentation/  # 表示用ViewModel・純関数（Coreのみ、UI非依存）
 │   ├── BinAnalyzer.Tui/            # 対話型ターミナルUI（Terminal.Gui）
@@ -26,50 +28,39 @@ BinAnalyzer/
 │   ├── BinAnalyzer.Core.Tests/
 │   ├── BinAnalyzer.Dsl.Tests/
 │   ├── BinAnalyzer.Engine.Tests/
+│   ├── BinAnalyzer.Compression.Tests/
 │   ├── BinAnalyzer.Presentation.Tests/
 │   ├── BinAnalyzer.Tui.Tests/
 │   ├── BinAnalyzer.Gui.Tests/     # bUnit コンポーネントテスト
-│   ├── BinAnalyzer.Integration.Tests/
+│   ├── BinAnalyzer.Web.Tests/     # bUnit / FormatService / HttpImportResolver
+│   ├── BinAnalyzer.Cli.Tests/     # CLI をプロセスとして起動するテスト（validate / patch / パイプライン）
+│   ├── BinAnalyzer.Integration.Tests/  # フォーマット別の解析・出力・ゴールデン・実ファイル・ドキュメント整合性
 │   └── BinAnalyzer.Fuzz.Tests/    # ファズ・プロパティベーステスト（全フォーマット定義 × ランダム / 切り詰め / 変異入力）
 ├── benchmarks/
 │   └── BinAnalyzer.Benchmarks/    # BenchmarkDotNetによるパフォーマンス計測
-└── formats/
-    ├── png.bdef.yaml
-    ├── bmp.bdef.yaml
-    ├── wav.bdef.yaml
-    ├── zip.bdef.yaml
-    ├── elf.bdef.yaml
-    ├── pdf.bdef.yaml
-    ├── jpeg.bdef.yaml
-    ├── ico.bdef.yaml
-    ├── midi.bdef.yaml
-    ├── pcap.bdef.yaml
-    ├── webp.bdef.yaml
-    ├── mp3.bdef.yaml
-    ├── tar.bdef.yaml
-    ├── flac.bdef.yaml
-    ├── java-class.bdef.yaml
-    ├── gif.bdef.yaml
-    ├── pe.bdef.yaml
-    ├── macho.bdef.yaml
-    ├── sqlite.bdef.yaml
-    └── tiff.bdef.yaml
+└── formats/                       # フォーマット定義（*.bdef.yaml。一覧は README の「フォーマット定義」節）
+    └── common/                    # 共通型ライブラリ（riff / isobmff、imports で利用）
 ```
-
+<!-- /doc-sync -->
 ## 依存関係
 
+<!-- doc-sync: project-dependencies -->
 ```
-Cli → Dsl, Engine, Output, Presentation, Tui, Gui.Desktop
+Cli → Dsl, Engine, Output, Presentation, Tui, Gui.Desktop（+ System.CommandLine）
 Gui.Desktop → Gui, Dsl（+ Photino.Blazor）
-Gui → Presentation, Dsl, Engine, Output, Compression（+ Microsoft.AspNetCore.Components.Web）
-Web → Gui, Dsl, Engine, Output, Compression（+ Blazor WASM）
+Gui → Core, Presentation, Dsl, Engine, Output, Compression（+ Microsoft.AspNetCore.Components.Web）
+Web → Core, Gui, Dsl, Engine, Output, Compression（+ Blazor WASM）
 Dsl → Core（+ YamlDotNet）
-Engine → Core
+Engine → Core, Compression（+ System.IO.Hashing）
+Compression → Core（+ SharpCompress, ZstdSharp.Port, K4os.Compression.LZ4）
 Output → Core
 Tui → Core, Presentation（+ Terminal.Gui）
 Presentation → Core
 Core → （なし）
 ```
+<!-- /doc-sync -->
+
+プロジェクト参照（`ProjectReference`）は直接参照のみを書く。
 
 ## 主要コンポーネント
 
@@ -100,7 +91,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 フォーマット定義の静的検証。デコード前にエラーと警告を検出。
 
-- **FormatValidator** — 全フィールド・struct定義の整合性チェック（VAL001〜VAL011: エラー、VAL101〜VAL116: 警告）
+- **FormatValidator** — 全フィールド・struct定義の整合性チェック。検証コード（エラー / 警告）の一覧は [parser-design.md](parser-design.md) の「FormatValidator の検証」節
 - **ValidationResult** — 診断結果コレクション（IsValid, Errors, Warnings）
 - **ValidationDiagnostic** — 個別診断: 重大度、コード、メッセージ、struct名、フィールド名
 
@@ -135,7 +126,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **DecodedString** — オプションのフラグ付き
 - **DecodedBitfield** — ビットフィールドと抽出値
 - **DecodedFlags** — ビットレベルのフラグ状態
-- **DecodedCompressed** — 圧縮データ（zlib/deflate）。展開サイズ、アルゴリズム名、オプションのネスト解析結果を保持
+- **DecodedCompressed** — 圧縮データ（zlib / deflate / gzip / bzip2 / lzma / zstd / lz4。型の一覧は [dsl-reference.md](dsl-reference.md) の「圧縮データ」節）。展開サイズ、アルゴリズム名、オプションのネスト解析結果を保持
 - **DecodedVirtual** — 計算フィールド（バイナリデータを消費しない、式の評価結果を保持）
 - **DecodedError** — エラー回復モードでデコード失敗したフィールドのプレースホルダー（エラーメッセージ、フィールド型を保持）
 
@@ -146,7 +137,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価。`@state_name` による状態変数の参照にも対応
 - **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決、テンプレート引数の解決・バインドのオーケストレーター
 - **壊れた入力への防御（REQ-160）** — 式の評価結果をバイト数・オフセットにするときは 0..int.MaxValue に収まることを検査する（`ToByteCount`）。スコープの境界は long で計算し負のサイズを拒否する。struct / switch の入れ子は `DecodeOptions.MaxDepth`（既定 64）で打ち切り、スタックオーバーフロー（プロセスごと落ちる）を `DecodeException` に変える。エラー継続モードでは、失敗したフィールド名を「未定義」として束縛し外側の同名変数へフォールバックさせない（再帰フォーマットの無限再帰防止）。位置が進まないエラー要素は `repeat_count` / `until` / `while` でも打ち切る。フィールド単位の `endianness:` は変数を捕捉しないオーバーレイスコープ（値は外側に残る）
-- **Crc32Calculator** — ISO 3309準拠のCRC-32計算器（PNG/ZIP互換）
+- **チェックサム計算器** — `Crc8Calculator` / `Crc16Calculator` / `Crc32Calculator`（ISO 3309、PNG/ZIP互換）/ `Crc64Calculator` / `Adler32Calculator` / `FletcherCalculator` / `XxHashCalculator`（整数系）、`HashCalculator`（MD5 / SHA 系）。アルゴリズム名と計算器の対応は `BinaryDecoder` の `VerifyChecksum` / `VerifyHashChecksum`、名前と分類は Core の `ChecksumAlgorithms`
 - **EncodingHelper** — Shift-JISエンコーディング登録・キャッシュヘルパー
 - **DiffEngine** — 2つのDecodedStructを再帰比較し、変更・追加・削除の差分リストを生成
 

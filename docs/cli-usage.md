@@ -73,7 +73,7 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 
 ### バリデーション
 
-デフォルトではデコード前にフォーマット定義の静的検証が実行されます。エラー（VAL001〜VAL011）が検出された場合、解析は中断されます。警告（VAL101〜VAL112）はstderrに表示されますが解析は継続します。
+デフォルトではデコード前にフォーマット定義の静的検証が実行されます。エラーが検出された場合、解析は中断されます。警告はstderrに表示されますが解析は継続します。
 
 `--no-validate` を指定するとバリデーションをスキップします。
 
@@ -86,6 +86,8 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 - seek_restoreがseekなしで指定されている
 - string_tableが整数型以外に指定されている（警告）
 - 未使用のenum/flags/struct定義（警告）
+
+検証コード（`VAL001` 等）の全件と重大度は [parser-design.md](parser-design.md) の「FormatValidator の検証」節を参照してください。
 
 ## 出力形式
 
