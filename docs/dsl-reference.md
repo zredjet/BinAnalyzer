@@ -35,6 +35,8 @@ structs:
       type: uint32
 ```
 
+DSL に無いキー（`expected` を `expect` と書いた等）は読み込み時に無視され、検証で警告 VAL123 になります。近いキーがあれば候補を示します（例: `struct 's' のフィールド 'magic' の未知のキー 'expect' は無視されます（もしかして 'expected'?）`）。CI で止めるには `binanalyzer validate --warnings-as-errors` を使います。
+
 ## フィールド型
 
 | 型 | サイズ | 説明 |

@@ -24,6 +24,10 @@ public sealed class YamlFormatModel
 
     [YamlMember(Alias = "root")]
     public string Root { get; set; } = "";
+
+    /// <summary>このファイル（とマージ済みのインポート先）の未知キー。ローダーが走査して入れる（REQ-184）。</summary>
+    [YamlIgnore]
+    public List<Core.Models.DslUnknownKey> UnknownKeys { get; set; } = new();
 }
 
 public sealed class YamlImportModel

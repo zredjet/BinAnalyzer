@@ -662,6 +662,10 @@ validateCommand.SetAction((parseResult) =>
                         writer.WriteString("struct", error.StructName);
                     if (error.FieldName is not null)
                         writer.WriteString("field", error.FieldName);
+                    if (error.SourceFile is not null)
+                        writer.WriteString("file", error.SourceFile);
+                    if (error.SourceLine is { } errorLine)
+                        writer.WriteNumber("line", errorLine);
                     writer.WriteEndObject();
                 }
                 writer.WriteEndArray();
@@ -676,6 +680,10 @@ validateCommand.SetAction((parseResult) =>
                         writer.WriteString("struct", warning.StructName);
                     if (warning.FieldName is not null)
                         writer.WriteString("field", warning.FieldName);
+                    if (warning.SourceFile is not null)
+                        writer.WriteString("file", warning.SourceFile);
+                    if (warning.SourceLine is { } warningLine)
+                        writer.WriteNumber("line", warningLine);
                     writer.WriteEndObject();
                 }
                 writer.WriteEndArray();

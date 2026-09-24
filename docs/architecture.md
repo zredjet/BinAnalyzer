@@ -145,7 +145,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 - **YamlModels/** — YamlDotNetデシリアライズ用DTO（IRとは別クラス）
 - **YamlToIrMapper** — YAML DTOをIRに変換、式のパース、参照の検証、テンプレートstructキー・参照のパース
-- **YamlFormatLoader** — IFormatLoader実装。インポートの再帰解決（循環検出）と定義マージを担当。取得手段は `IImportResolver`（Core）に委ね、`Load(path)` は `FileImportResolver`、`LoadAsync(yaml, basePath, resolver)` は任意のリゾルバで解決する
+- **YamlFormatLoader** — IFormatLoader実装。インポートの再帰解決（循環検出）と定義マージを担当。デシリアライザは DSL に無いキーを捨てるので、`UnknownKeyScanner` が同じ YAML を表現モデルで読み、DTO の型（`[YamlMember(Alias)]`）に沿って未知キーを集めて `FormatDefinition.UnknownKeys` に載せる（検証器が VAL123 の警告にする。REQ-184）。取得手段は `IImportResolver`（Core）に委ね、`Load(path)` は `FileImportResolver`、`LoadAsync(yaml, basePath, resolver)` は任意のリゾルバで解決する
 - **FileImportResolver / ImportPath** — 既定のファイルシステムリゾルバと、URL 系リゾルバ向けの字句的な相対パス結合（`.` / `..` の正規化）
 
 ### 出力フォーマッター — Output/

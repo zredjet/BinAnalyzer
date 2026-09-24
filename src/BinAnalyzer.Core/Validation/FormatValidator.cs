@@ -41,6 +41,7 @@ public static class FormatValidator
         ValidateUnusedEnums(format, diagnostics);
         ValidateUnusedFlags(format, diagnostics);
         ValidateUnreachableStructs(format, diagnostics);
+        ValidateUnknownKeys(format, diagnostics);
 
         return new ValidationResult(diagnostics.Select(d => WithLocation(d, format)).ToList());
     }
@@ -48,6 +49,8 @@ public static class FormatValidator
     /// <summary>診断に定義元の位置（フィールド行、無ければ struct 行）を付ける（REQ-172）。</summary>
     private static ValidationDiagnostic WithLocation(ValidationDiagnostic d, FormatDefinition format)
     {
+        if (d.SourceLine is not null)
+            return d;
         if (d.StructName is null || !format.Structs.TryGetValue(d.StructName, out var structDef))
             return d;
         FieldDefinition? field = null;
@@ -663,6 +666,20 @@ public static class FormatValidator
                     $"ビットストリーム内ではビットストリーム構造体のみ参照することを推奨します",
                     structName, field.Name));
             }
+        }
+    }
+
+    /// <summary>VAL123: YAML に DSL の未知キーがある（ローダーが読み飛ばした）。位置はキーの行</summary>
+    private static void ValidateUnknownKeys(FormatDefinition format, List<ValidationDiagnostic> diagnostics)
+    {
+        foreach (var key in format.UnknownKeys)
+        {
+            var hint = key.Suggestion is null ? "" : $"（もしかして '{key.Suggestion}'?）";
+            // 「struct 's' の…」「トップレベルの…」: 英字・記号で終わる場所の後だけ空白を入れる
+            var of = key.Context.Length > 0 && char.IsAscii(key.Context[^1]) ? " の" : "の";
+            diagnostics.Add(Warning("VAL123",
+                $"{key.Context}{of}未知のキー '{key.Key}' は無視されます{hint}",
+                key.StructName, key.FieldName) with { SourceFile = key.SourceFile, SourceLine = key.SourceLine });
         }
     }
 
