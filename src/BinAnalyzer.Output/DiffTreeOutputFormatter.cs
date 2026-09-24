@@ -469,7 +469,7 @@ public sealed class DiffTreeOutputFormatter
             DecodedFloat f => f.Value.ToString("G"),
             DecodedBitfield bf => $"0x{bf.RawValue:X}",
             DecodedFlags fl => $"0x{fl.RawValue:X}",
-            DecodedVirtual v => v.Value?.ToString() ?? "",
+            DecodedVirtual v => v.EnumLabel is null ? v.Value?.ToString() ?? "" : $"{v.Value} \"{v.EnumLabel}\"",
             DecodedStruct st => $"({st.StructType})",
             DecodedArray a => $"[{a.Elements.Count} items]",
             DecodedCompressed c => $"[{c.Algorithm}: {c.CompressedSize}→{c.DecompressedSize} bytes]",

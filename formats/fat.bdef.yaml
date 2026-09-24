@@ -103,6 +103,7 @@ structs:
       cases:
         "0": fat16_extended_bpb
         "1": fat32_extended_bpb
+      default: fat16_extended_bpb  # fat_type_hint は 0 / 1 しか取らないので到達しない
 
   # ============================================================
   # FAT12/16 Extended BPB (476 bytes)

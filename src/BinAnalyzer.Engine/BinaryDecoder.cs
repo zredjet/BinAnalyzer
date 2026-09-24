@@ -322,7 +322,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.Struct => DecodeStructField(field, format, context),
             FieldType.Switch => DecodeSwitchField(field, format, context),
             FieldType.Bitfield => DecodeBitfieldField(field, format, context),
-            FieldType.Virtual => DecodeVirtualField(field, context),
+            FieldType.Virtual => DecodeVirtualField(field, format, context),
             FieldType.ULeb128 or FieldType.SLeb128 or FieldType.Vlq
                 => DecodeVariableLengthIntegerField(field, format, context),
             _ => throw new InvalidOperationException($"Unknown field type: {field.Type}"),
@@ -1806,6 +1806,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
 
     private DecodedVirtual DecodeVirtualField(
         FieldDefinition field,
+        FormatDefinition format,
         DecodeContext context)
     {
         if (field.ValueExpression is null)
@@ -1814,12 +1815,20 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var value = ExpressionEvaluator.Evaluate(field.ValueExpression, context);
         context.SetVariable(field.Name, value);
 
+        // 整数の結果にだけ enum のラベルを付ける（真偽値・文字列には付けない。REQ-186）
+        EnumEntry? enumEntry = null;
+        if (field.EnumRef is not null && value is long or int
+            && format.Enums.TryGetValue(field.EnumRef, out var enumDef))
+            enumEntry = enumDef.FindByValue(Convert.ToInt64(value));
+
         return new DecodedVirtual
         {
             Name = field.Name,
             Offset = context.Position,
             Size = 0,
             Value = value,
+            EnumLabel = enumEntry?.Label,
+            EnumDescription = enumEntry?.Description,
             Description = field.Description,
             BitOffset = context.IsBitstreamMode ? context.CurrentBitOffset : null,
             DslType = field.Type,

@@ -185,14 +185,20 @@ structs:
       description: "値がインラインかどうか（type_size * count <= 4）"
     - name: inline_short_value
       type: virtual
-      value: "{value_offset & 0xFFFF}"
+      value: "{byte_order == 'MM' ? value_offset >> 16 : value_offset & 0xFFFF}"
       if: "{field_type == 3 and count == 1}"
-      description: "SHORT型のインライン値（リトルエンディアン下位16ビット）"
+      description: "SHORT型のインライン値（値フィールドの先頭2バイト。LEは下位16ビット、BEは上位16ビット）"
     - name: inline_long_value
       type: virtual
       value: "{value_offset}"
       if: "{field_type == 4 and count == 1}"
       description: "LONG型のインライン値"
+    - name: compression
+      type: virtual
+      value: "{byte_order == 'MM' ? value_offset >> 16 : value_offset & 0xFFFF}"
+      if: "{tag == 259 and field_type == 3 and count == 1}"
+      enum: tiff_compression
+      description: "圧縮方式（Compression タグのインライン SHORT 値）"
     - name: rational_value
       type: struct
       struct: rational_data

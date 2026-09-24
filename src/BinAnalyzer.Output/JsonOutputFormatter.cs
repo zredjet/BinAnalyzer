@@ -301,6 +301,12 @@ public sealed class JsonOutputFormatter : IOutputFormatter
                 writer.WriteString("value", node.Value.ToString());
                 break;
         }
+        if (node.EnumLabel is not null)
+        {
+            writer.WriteString("enum_label", node.EnumLabel);
+            if (node.EnumDescription is not null)
+                writer.WriteString("enum_description", node.EnumDescription);
+        }
         writer.WriteEndObject();
     }
 

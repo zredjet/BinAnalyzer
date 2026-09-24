@@ -104,6 +104,10 @@ public static class NodeDetailFormatter
             case DecodedVirtual virtualNode:
                 details.Add(new("Type", "virtual"));
                 details.Add(new("Value", virtualNode.Value?.ToString() ?? "", DetailRowKind.Mono));
+                if (virtualNode.EnumLabel is not null)
+                    details.Add(new("Enum", virtualNode.EnumLabel));
+                if (virtualNode.EnumDescription is not null)
+                    details.Add(new("Description", virtualNode.EnumDescription));
                 break;
 
             case DecodedError errorNode:

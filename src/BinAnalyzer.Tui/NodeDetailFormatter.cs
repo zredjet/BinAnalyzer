@@ -88,6 +88,10 @@ internal static class NodeDetailFormatter
             case DecodedVirtual virtualNode:
                 details.Add(("Type", "virtual"));
                 details.Add(("Value", virtualNode.Value?.ToString() ?? ""));
+                if (virtualNode.EnumLabel is not null)
+                    details.Add(("Enum", virtualNode.EnumLabel));
+                if (virtualNode.EnumDescription is not null)
+                    details.Add(("Description", virtualNode.EnumDescription));
                 break;
 
             case DecodedError errorNode:

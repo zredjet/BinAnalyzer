@@ -123,8 +123,3 @@ structs:
     - name: data
       type: bytes
       size: remaining
-
-  raw_data:
-    - name: data
-      type: bytes
-      size: remaining

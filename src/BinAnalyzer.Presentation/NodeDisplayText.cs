@@ -21,7 +21,7 @@ public static class NodeDisplayText
             DecodedFlags f => $"{f.Name}: 0x{f.RawValue:X}",
             DecodedBitfield b => $"{b.Name}: 0x{b.RawValue:X}",
             DecodedCompressed c => $"{c.Name} [{c.Algorithm}] ({c.CompressedSize} → {c.DecompressedSize} bytes)",
-            DecodedVirtual v => $"{v.Name}: = {v.Value}",
+            DecodedVirtual v => $"{v.Name}: {VirtualValue(v)}",
             DecodedError e => $"✗ {e.Name}: {e.ErrorMessage}",
             _ => node.Name,
         };
@@ -38,7 +38,7 @@ public static class NodeDisplayText
             DecodedFlags f => $"0x{f.RawValue:X}",
             DecodedBitfield b => $"0x{b.RawValue:X}",
             DecodedCompressed c => $"{c.Algorithm} {c.CompressedSize} B → {c.DecompressedSize} B",
-            DecodedVirtual v => $"= {v.Value}",
+            DecodedVirtual v => VirtualValue(v),
             DecodedError e => e.ErrorMessage,
             DecodedArray a => $"[{a.Elements.Count} items]",
             _ => "",
@@ -78,6 +78,10 @@ public static class NodeDisplayText
 
     private static string FormatIntegerDisplay(DecodedInteger node)
         => $"{node.Name}: {FormatIntegerValue(node)}";
+
+    /// <summary>virtual の値（<c>= 3</c>）。enum が付いていればラベルを添える（REQ-186）。</summary>
+    private static string VirtualValue(DecodedVirtual v) =>
+        v.EnumLabel is null ? $"= {v.Value}" : $"= {v.Value} \"{v.EnumLabel}\"";
 
     private static string FormatIntegerValue(DecodedInteger node)
     {
