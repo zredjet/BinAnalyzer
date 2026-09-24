@@ -4,11 +4,11 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | approved |
+| ステータス | done |
 | 優先度 | 中 |
 | 依存 | なし（REQ-099 の兄弟スコープへの値の昇格の上で行う） |
 | 作成日 | 2026-09-24 |
-| 更新日 | 2026-09-24 |
+| 更新日 | 2026-09-25 |
 
 ## 背景・動機
 
@@ -42,10 +42,10 @@ PR #18 では、拡張フィールドの並びを `central_extra_fields` struct 
 
 ### 変更する既存機能
 
-- [ ] **size 付きの繰り返しの境界スコープを抜けるとき、その間に束縛された変数を外側のスコープに移す。** 対象は `size: N` / `size: "{式}"` / `size: remaining` のすべて。移すのは、昇格した要素の値、要素のフィールドの値（size の無い struct の要素は昇格ではなく直接束縛される）、エラー継続モードで失敗したフィールドの「未定義」の印。移し先は `SetVariable` と同じ（最も近い、変数を持つスコープ）で、size の無い繰り返しが直接書き込む先と一致する
-- [ ] **`_index` / `_prev` は移さない。** 繰り返しの後ろでは、外側の繰り返しの `_index` / `_prev`（あれば）がそのまま見える。今の size 付きの繰り返しの動作を保つ（設計メモ参照）
-- [ ] `DecodeContext` に、スコープを抜けて変数を外側に移すメソッドを足す
-- [ ] docs/dsl-reference.md の「配列全体のサイズ指定」「兄弟スコープ参照」、docs/parser-design.md の値の昇格の説明、docs/architecture.md の DecodeContext の説明に、size 付きの繰り返しの変数の扱いを書く
+- [x] **size 付きの繰り返しの境界スコープを抜けるとき、その間に束縛された変数を外側のスコープに移す。** 対象は `size: N` / `size: "{式}"` / `size: remaining` のすべて。移すのは、昇格した要素の値、要素のフィールドの値（size の無い struct の要素は昇格ではなく直接束縛される）、エラー継続モードで失敗したフィールドの「未定義」の印。移し先は `SetVariable` と同じ（最も近い、変数を持つスコープ）で、size の無い繰り返しが直接書き込む先と一致する
+- [x] **`_index` / `_prev` は移さない。** 繰り返しの後ろでは、外側の繰り返しの `_index` / `_prev`（あれば）がそのまま見える。今の size 付きの繰り返しの動作を保つ（設計メモ参照）
+- [x] `DecodeContext` に、スコープを抜けて変数を外側に移すメソッドを足す
+- [x] docs/dsl-reference.md の「配列全体のサイズ指定」「兄弟スコープ参照」、docs/parser-design.md の値の昇格の説明、docs/architecture.md の DecodeContext の説明に、size 付きの繰り返しの変数の扱いを書く
 
 ### 変更しないもの（スコープ外）
 
@@ -58,15 +58,15 @@ PR #18 では、拡張フィールドの並びを `central_extra_fields` struct 
 
 ## 受入条件
 
-1. [ ] size 付きの繰り返し（`repeat: eof` / `repeat_count` / `repeat_while` / `repeat_until`）の要素の中の値（要素の size 付きの switch の中の値を含む）を、繰り返しの後ろのフィールドが `{name}` で参照できること（背景の ZIP と同じ形の定義）
-2. [ ] 同じ定義から size を外した繰り返しと同じ値になること
-3. [ ] 外側に同名の変数があると、size の無い繰り返しと同じく最後の要素の値で上書きされること
-4. [ ] 外側の繰り返しの要素の中に size 付きの繰り返しがあっても、その後ろの `_index` / `_prev` が外側の繰り返しの値であること
-5. [ ] size 付きの繰り返しが入れ子になっていても、内側の値が外側の繰り返しを経て外に届くこと（要素の配列の中身は昇格しないため、昇格だけでは届かない形）
-6. [ ] 移った値は最も近い変数のスコープ（size 付きの struct など）までで、その外には出ないこと。外からはメンバーアクセスで引けること
-7. [ ] スカラー要素の size 付きの繰り返しの名前は、繰り返しの後も配列全体を指すこと（`{bytes[1]}`）
-8. [ ] 同梱定義のゴールデンファイルが変わらないこと
-9. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [x] size 付きの繰り返し（`repeat: eof` / `repeat_count` / `repeat_while` / `repeat_until`）の要素の中の値（要素の size 付きの switch の中の値を含む）を、繰り返しの後ろのフィールドが `{name}` で参照できること（背景の ZIP と同じ形の定義）
+2. [x] 同じ定義から size を外した繰り返しと同じ値になること
+3. [x] 外側に同名の変数があると、size の無い繰り返しと同じく最後の要素の値で上書きされること
+4. [x] 外側の繰り返しの要素の中に size 付きの繰り返しがあっても、その後ろの `_index` / `_prev` が外側の繰り返しの値であること
+5. [x] size 付きの繰り返しが入れ子になっていても、内側の値が外側の繰り返しを経て外に届くこと（要素の配列の中身は昇格しないため、昇格だけでは届かない形）
+6. [x] 移った値は最も近い変数のスコープ（size 付きの struct など）までで、その外には出ないこと。外からはメンバーアクセスで引けること
+7. [x] スカラー要素の size 付きの繰り返しの名前は、繰り返しの後も配列全体を指すこと（`{bytes[1]}`）
+8. [x] 同梱定義のゴールデンファイルが変わらないこと
+9. [x] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -83,9 +83,9 @@ PR #18 では、拡張フィールドの並びを `central_extra_fields` struct 
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/dsl-reference.md — 「配列全体のサイズ指定」「兄弟スコープ参照」
-- [ ] docs/parser-design.md — 兄弟スコープへの値の昇格、実装済みの拡張の表
-- [ ] docs/architecture.md — DecodeContext の説明
+- [x] docs/dsl-reference.md — 「配列全体のサイズ指定」「兄弟スコープ参照」
+- [x] docs/parser-design.md — 兄弟スコープへの値の昇格、実装済みの拡張の表
+- [x] docs/architecture.md — DecodeContext の説明
 - [ ] CLAUDE.md — 変更不要
 - [ ] README.md — 変更不要
 
@@ -134,14 +134,35 @@ PR #18 では、拡張フィールドの並びを `central_extra_fields` struct 
 
 ## 実装メモ
 
-> 実装Phase（Phase 3-4）で記入する。設計時点では空欄でよい。
-
 ### 実装中の設計変更
+
+- なし（設計どおり）。`PopScope` と `PopScopeCarryingVariables` の共通部分（Pop と位置を境界の終わりへ進める処理）を `PopWithoutRecycling` にまとめた
+
+### 確認したこと（2026-09-25）
+
+- **ゴールデンファイル**: main の同梱定義（midi / mp3 の size 付きの繰り返しを含む）で変化なし
+- **PR #18 の定義での確認**: `req-188-archives`（PR #18）に本要望の変更だけを当てると、Integration テスト 629 件が通り、gzip / zip のゴールデンは変わらない。Info-ZIP の zip 3.0 で作った 3 ファイルの ZIP（各 Local File Header に拡張タイムスタンプ 0x5455 と UNIX UID/GID 0x7875 の拡張フィールドがある）の JSON 出力は、変更前と同じ
+- **`_index` / `_prev` を移さない理由の実証**: 同じ条件で `_index` / `_prev` も移す（代替案の `capturesVariables: false` 相当）と、この ZIP の 3 つ目のファイルで `local_files.data` が失敗する（`Cannot push scope of size 3000 at position 3200`）。`_index` が拡張フィールドの番号（1）に変わり、2 つ目のエントリのサイズで読むため。PR #18 のテストデータの Local File Header には拡張フィールドが無く、テストでは表に出ない
+- **ZIP の書き直しの試作**: PR #18 の定義で `central_extra_fields` を削除し、`central_directory_header.extra` を `struct: central_extra_field` + `size: "{extra_length}"` + `repeat: eof` にして、3 つの `*_actual` の virtual に Zip64 の式を直接書く形（6 行追加・24 行削除）を試した。`ZipParsingTests` はすべて通り（Zip64 の Locator・拡張フィールド・Data Descriptor のテストを含む）、上の Info-ZIP の ZIP の `*_actual` の値も同じ。ゴールデン（zip.json）は `extra` が struct から配列に変わり、`extra` の中の `*_actual` の重複が無くなる分だけ変わる。PR #18 と本要望のマージ後に、懸念事項の「前の要素の値が残る」をどう扱うか決めて別の PR で行う
 
 ### 追加したテスト
 
 | テストクラス | テスト名 | 対応する受入条件 |
 |---|---|---|
-| | | |
+| SizedRepeatScopeTests | SizedRepeat_ElementValues_ReachTheEnclosingStruct（`repeat: eof` / `repeat_count` / `repeat_while` / `repeat_until` の 4 ケース。値は要素の size 付きの switch の中） | 1 |
+| SizedRepeatScopeTests | SizedRepeat_GivesTheSameValuesAsTheUnsizedRepeat | 2 |
+| SizedRepeatScopeTests | SameNameInTheEnclosingStruct_IsOverwrittenByTheLastElement_AsWithTheUnsizedRepeat | 3 |
+| SizedRepeatScopeTests | OuterRepeat_IndexAndPrev_AreNotOverwrittenByAnInnerSizedRepeat | 4 |
+| SizedRepeatScopeTests | NestedSizedRepeats_CarryValuesOutwardLevelByLevel | 5 |
+| SizedRepeatScopeTests | CarriedValues_ReachTheEnclosingSizedStruct_AndAreReadFromOutsideByMemberAccess / CarriedValues_DoNotLeakOutOfTheEnclosingSizedStruct | 6 |
+| SizedRepeatScopeTests | SizedScalarRepeat_NameStillRefersToTheWholeArray | 7 |
+| DecodeContextTests | PopScopeCarryingVariables_MovesVariablesOutExceptLocalNames / PopScopeCarryingVariables_SkipsNonCapturingOverlay | 1, 4 |
+| GoldenFileTests（既存） | DecodeResult_MatchesGoldenFile | 8 |
+
+`SizedRepeatScopeTests` の 11 件のうち、変更前は 9 件が失敗する（`CarriedValues_DoNotLeakOutOfTheEnclosingSizedStruct` は、期待する `leaked` より前の `wrapper.last` で失敗する）。`OuterRepeat_IndexAndPrev_…` と `SizedScalarRepeat_…` は今の動作を保つことを確かめるテストで、変更前から通る。
 
 ### 気づき・今後の課題
+
+- **size の無い繰り返しは `_index` / `_prev` を外側に漏らす。** 外側の繰り返しの要素の中に size の無い繰り返しがあると、その後ろの `_index` は内側の最後の番号になる（record の中に `repeat_count: "{n}"` の items を置くと、record の後ろの `{_index}` が 0, 1 ではなく 1, 2 になることを確かめた）。`_index` を使う要素ごとの seek や `entries[_index]` の参照が黙って別の要素を指すので、別要望の候補。ただし `PrevVariableTests.RepeatCount_ScalarPrev` は繰り返しの後の `_prev` を最後の要素として使っているので、互換性の扱いを決める必要がある
+- **値の有無を確かめる手段が無い。** 懸念事項の「前の要素の値が残る」を定義側で防ぐには、変数が今の要素で束縛されたかを確かめる関数（`defined(name)` など）か、繰り返しの要素ごとに値を消す仕組みが要る。ZIP の書き直しで必要になれば別要望にする
+- REQ-188 の実装メモ（PR #18）の「`size` と `repeat` を一緒に指定したフィールドは、要素の値の昇格が親のスコープに届かない」には、本要望で解消したことを追記する
