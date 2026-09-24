@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl;
@@ -159,6 +160,45 @@ public class TiffParsingTests
         var tag = entry.Children[0].Should().BeOfType<DecodedInteger>().Subject;
         tag.Value.Should().Be(256);
         tag.EnumLabel.Should().Be("ImageWidth");
+
+        // BE の SHORT は値欄の上位 16 ビット（REQ-186 で修正。以前は下位 16 ビットを読んで 0 になっていた）
+        var inline = entry.Children.OfType<DecodedVirtual>().Single(c => c.Name == "inline_short_value");
+        inline.Value.Should().Be(64L);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TiffFormat_CompressionTag_HasEnumLabel(bool bigEndian)
+    {
+        // IFD: ImageWidth=64, Compression=5 (LZW)。SHORT は値欄の先頭に詰める
+        var entries = new (ushort Tag, ushort Value)[] { (256, 64), (259, 5) };
+        var data = new byte[8 + 2 + entries.Length * 12 + 4];
+        void U16(int at, ushort v) { if (bigEndian) BinaryPrimitives.WriteUInt16BigEndian(data.AsSpan(at), v); else BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(at), v); }
+        void U32(int at, uint v) { if (bigEndian) BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(at), v); else BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(at), v); }
+        data[0] = data[1] = (byte)(bigEndian ? 'M' : 'I');
+        U16(2, 42);
+        U32(4, 8);
+        U16(8, (ushort)entries.Length);
+        for (var i = 0; i < entries.Length; i++)
+        {
+            var at = 10 + i * 12;
+            U16(at, entries[i].Tag);
+            U16(at + 2, 3);   // SHORT
+            U32(at + 4, 1);   // count
+            U16(at + 8, entries[i].Value);
+        }
+
+        var format = new YamlFormatLoader().Load(TiffFormatPath);
+        var decoded = new BinaryDecoder().Decode(data, format);
+
+        var body = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var ifd = body.Children[2].Should().BeOfType<DecodedStruct>().Subject;
+        var array = ifd.Children[1].Should().BeOfType<DecodedArray>().Subject;
+        var compression = ((DecodedStruct)array.Elements[1]).Children.OfType<DecodedVirtual>().Single(c => c.Name == "compression");
+        compression.Value.Should().Be(5L);
+        compression.EnumLabel.Should().Be("LZW");
+        ((DecodedStruct)array.Elements[0]).Children.OfType<DecodedVirtual>().Should().NotContain(c => c.Name == "compression");
     }
 
     [Fact]

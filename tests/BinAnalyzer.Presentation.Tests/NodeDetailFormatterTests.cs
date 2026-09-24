@@ -270,6 +270,25 @@ public sealed class NodeDetailFormatterTests
         details.Should().ContainRow("Type", "virtual");
         details.Should().ContainRow("Value", "42");
     }
+
+    [Fact]
+    public void Format_VirtualWithEnum_IncludesEnumAndDescription()
+    {
+        var node = new DecodedVirtual
+        {
+            Name = "os",
+            Offset = 0,
+            Size = 0,
+            Value = 3L,
+            EnumLabel = "unix",
+            EnumDescription = "UNIX 系",
+        };
+
+        var details = NodeDetailFormatter.Format(node);
+
+        details.Should().ContainRow("Enum", "unix");
+        details.Should().ContainRow("Description", "UNIX 系");
+    }
 }
 
 internal static class DetailRowAssertions

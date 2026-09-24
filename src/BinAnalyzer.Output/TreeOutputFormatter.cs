@@ -324,6 +324,13 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         sb.Append(node.Name);
         sb.Append(": ");
         sb.Append(C($"= {node.Value}", AnsiColors.Cyan));
+        if (node.EnumLabel is not null)
+        {
+            sb.Append(' ');
+            sb.Append(C($"\"{node.EnumLabel}\"", AnsiColors.Magenta));
+            if (node.EnumDescription is not null)
+                sb.Append($" - {node.EnumDescription}");
+        }
         sb.AppendLine();
     }
 

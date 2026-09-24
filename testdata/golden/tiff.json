@@ -140,7 +140,7 @@
                       "type": "virtual",
                       "offset": 22,
                       "size": 0,
-                      "description": "SHORT\u578B\u306E\u30A4\u30F3\u30E9\u30A4\u30F3\u5024\uFF08\u30EA\u30C8\u30EB\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3\u4E0B\u4F4D16\u30D3\u30C3\u30C8\uFF09",
+                      "description": "SHORT\u578B\u306E\u30A4\u30F3\u30E9\u30A4\u30F3\u5024\uFF08\u5024\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u5148\u982D2\u30D0\u30A4\u30C8\u3002LE\u306F\u4E0B\u4F4D16\u30D3\u30C3\u30C8\u3001BE\u306F\u4E0A\u4F4D16\u30D3\u30C3\u30C8\uFF09",
                       "name": "inline_short_value",
                       "value": 64
                     }

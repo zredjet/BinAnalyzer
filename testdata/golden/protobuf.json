@@ -44,7 +44,8 @@
               "offset": 1,
               "size": 0,
               "name": "wire_type",
-              "value": 0
+              "value": 0,
+              "enum_label": "varint"
             },
             "varint_value": {
               "_type": "integer",
@@ -88,7 +89,8 @@
               "offset": 4,
               "size": 0,
               "name": "wire_type",
-              "value": 2
+              "value": 2,
+              "enum_label": "length_delimited"
             },
             "length": {
               "_type": "integer",
@@ -140,7 +142,8 @@
               "offset": 11,
               "size": 0,
               "name": "wire_type",
-              "value": 5
+              "value": 5,
+              "enum_label": "fixed32"
             },
             "fixed32_value": {
               "_type": "integer",

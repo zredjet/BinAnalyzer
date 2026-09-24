@@ -315,8 +315,8 @@ public static class DiffEngine
     private static void CompareVirtual(DecodedVirtual left, DecodedVirtual right, string path, CompareContext context)
     {
         context.TotalLeafFields++;
-        var leftStr = left.Value?.ToString() ?? "";
-        var rightStr = right.Value?.ToString() ?? "";
+        var leftStr = FormatVirtualValue(left);
+        var rightStr = FormatVirtualValue(right);
         if (leftStr != rightStr)
         {
             context.Entries.Add(new DiffEntry(DiffKind.Changed, path, leftStr, rightStr));
@@ -361,6 +361,15 @@ public static class DiffEngine
         return result;
     }
 
+    /// <summary>virtual の値。enum が付いていれば整数と同じくラベルを添える（REQ-186）。</summary>
+    private static string FormatVirtualValue(DecodedVirtual node)
+    {
+        var result = node.Value?.ToString() ?? "";
+        if (node.EnumLabel is not null)
+            result += $" \"{node.EnumLabel}\"";
+        return result;
+    }
+
     private static string FormatBytesValue(ReadOnlyMemory<byte> bytes)
     {
         var span = bytes.Span;
@@ -384,7 +393,7 @@ public static class DiffEngine
             DecodedFloat f => f.Value.ToString("G"),
             DecodedBitfield bf => $"0x{bf.RawValue:X}",
             DecodedFlags fl => $"0x{fl.RawValue:X}",
-            DecodedVirtual v => v.Value?.ToString() ?? "",
+            DecodedVirtual v => FormatVirtualValue(v),
             DecodedStruct st => $"({st.StructType})",
             DecodedArray a => $"[{a.Elements.Count} items]",
             DecodedCompressed c => $"[{c.Algorithm}: {c.CompressedSize}→{c.DecompressedSize} bytes]",

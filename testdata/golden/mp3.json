@@ -216,7 +216,8 @@
           "size": 0,
           "description": "MPEG\u30D0\u30FC\u30B8\u30E7\u30F3\uFF080=MPEG2.5, 2=MPEG2, 3=MPEG1\uFF09",
           "name": "mpeg_version",
-          "value": 3
+          "value": 3,
+          "enum_label": "MPEG1"
         },
         "layer": {
           "_type": "virtual",
@@ -225,7 +226,8 @@
           "size": 0,
           "description": "\u30EC\u30A4\u30E4\u30FC\uFF081=Layer III, 2=Layer II, 3=Layer I\uFF09",
           "name": "layer",
-          "value": 1
+          "value": 1,
+          "enum_label": "Layer_III"
         },
         "protection": {
           "_type": "virtual",
@@ -261,18 +263,20 @@
           "type": "virtual",
           "offset": 25,
           "size": 0,
-          "description": "\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+          "description": "\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08\u30E9\u30D9\u30EB\u306F MPEG-1 Layer III \u306E\u5024\uFF09",
           "name": "bitrate_index",
-          "value": 9
+          "value": 9,
+          "enum_label": "128kbps"
         },
         "sample_rate_index": {
           "_type": "virtual",
           "type": "virtual",
           "offset": 25,
           "size": 0,
-          "description": "\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+          "description": "\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08\u30E9\u30D9\u30EB\u306F MPEG-1 \u306E\u5024\uFF09",
           "name": "sample_rate_index",
-          "value": 0
+          "value": 0,
+          "enum_label": "44100Hz"
         },
         "padding": {
           "_type": "virtual",
@@ -319,7 +323,8 @@
           "size": 0,
           "description": "\u30C1\u30E3\u30F3\u30CD\u30EB\u30E2\u30FC\u30C9\uFF080=\u30B9\u30C6\u30EC\u30AA, 1=\u30B8\u30E7\u30A4\u30F3\u30C8\u30B9\u30C6\u30EC\u30AA, 2=\u30C7\u30E5\u30A2\u30EB\u30C1\u30E3\u30F3\u30CD\u30EB, 3=\u30E2\u30CE\u30E9\u30EB\uFF09",
           "name": "channel_mode",
-          "value": 0
+          "value": 0,
+          "enum_label": "stereo"
         },
         "mode_extension": {
           "_type": "virtual",
