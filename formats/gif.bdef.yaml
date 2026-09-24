@@ -1,3 +1,11 @@
+# GIF 画像（.gif）
+# 仕様: Graphics Interchange Format Version 89a（CompuServe, 1990） https://www.w3.org/Graphics/GIF/spec-gif89a.txt
+# 構造: Header（'GIF' + 版）→ Logical Screen Descriptor → Global Color Table（フラグがあるとき）→ ブロック*（先頭 1 バイトの Introducer で
+#   Image Descriptor / Extension / Trailer を switch。Extension はさらに Label で switch）。
+#   画像データと可変長の拡張データは「長さ 1 バイト + データ」のサブブロックが長さ 0 の Block Terminator まで続く形で、repeat: length_prefixed で読む。
+#   Application Extension は識別子が 'NETSCAPE' のときだけループ回数として分解する。
+# 対応していないもの: LZW 圧縮画像データの展開（サブブロックをバイト列として表示）、NETSCAPE 以外のアプリケーション拡張の中身
+#   （ANIMEXTS1.0・XMP DataXMP・ICC プロファイルなど。サブブロックとして表示）、NETSCAPE のバッファリング指定（サブブロック ID 2）
 name: GIF
 endianness: little
 root: gif
@@ -6,30 +14,41 @@ enums:
   block_introducer:
     - value: 0x2C
       label: Image
+      description: "Image Separator（','）。画像記述子（Image Descriptor）が続く"
     - value: 0x21
       label: Extension
+      description: "Extension Introducer（'!'）。拡張ブロックが続く"
     - value: 0x3B
       label: Trailer
+      description: "Trailer（';'）。データストリームの終端"
 
   extension_label:
     - value: 0xF9
       label: Graphic_Control
+      description: "Graphic Control Extension。直後の画像の表示時間・透過色・処分方法"
     - value: 0xFE
       label: Comment
+      description: "Comment Extension。表示されないテキストの注釈"
     - value: 0xFF
       label: Application
+      description: "Application Extension。アプリケーション固有のデータ（NETSCAPE のループ回数など）"
     - value: 0x01
       label: Plain_Text
+      description: "Plain Text Extension。画面にテキストを描画する（対応するデコーダはほとんどない）"
 
   disposal_method:
     - value: 0
       label: None
+      description: "処分方法を指定しない（デコーダは何もしなくてよい）"
     - value: 1
       label: Do_Not_Dispose
+      description: "画像をそのまま残し、次の画像を上に重ねる"
     - value: 2
       label: Restore_to_Background
+      description: "画像の領域を背景色で塗りつぶす"
     - value: 3
       label: Restore_to_Previous
+      description: "画像の領域をこの画像を描く前の状態に戻す"
 
 structs:
   gif:
@@ -37,51 +56,62 @@ structs:
       type: ascii
       size: "3"
       expected: [0x47, 0x49, 0x46]
-      description: "GIFシグネチャ（'GIF'）"
+      description: "シグネチャ（'GIF'）"
     - name: version
       type: ascii
       size: "3"
-      description: "バージョン（'87a'または'89a'）"
+      description: "バージョン（'87a' または '89a'）。拡張ブロックは 89a で定義された"
     - name: logical_screen_desc
       type: struct
       struct: logical_screen_desc
+      description: "論理画面記述子（Logical Screen Descriptor、7 バイト）。画面の大きさとグローバルカラーテーブルの有無・大きさ"
     - name: global_color_table
       type: bytes
       size: "{3 * (1 << (size_of_global_color_table + 1))}"
       if: "{global_color_table_flag == 1}"
-      description: "グローバルカラーテーブル（1エントリ3バイト）"
+      description: "グローバルカラーテーブル。RGB 各 1 バイトのエントリが 2^(size_of_global_color_table + 1) 個（3 × 2^(N + 1) バイト）。global_color_table_flag が 1 のときだけある"
     - name: blocks
       type: struct
       struct: gif_block
       repeat: eof
+      description: "画像・拡張・Trailer のブロックの並び（ファイル末尾まで）"
 
   logical_screen_desc:
     - name: width
       type: uint16
+      description: "論理画面の幅（ピクセル）。各画像はこの範囲内に配置される"
     - name: height
       type: uint16
+      description: "論理画面の高さ（ピクセル）"
     - name: packed
       type: bitfield
       size: "1"
       fields:
         - name: global_color_table_flag
           bits: "7"
+          description: "1 のとき論理画面記述子の直後にグローバルカラーテーブルがある"
         - name: color_resolution
           bits: "6:4"
+          description: "元画像の原色 1 つあたりのビット数 − 1（値 + 1 ビット）"
         - name: sort_flag
           bits: "3"
+          description: "1 のときグローバルカラーテーブルが重要度（使用頻度）の降順に並んでいる"
         - name: size_of_global_color_table
           bits: "2:0"
+          description: "グローバルカラーテーブルの大きさ N。エントリ数は 2^(N + 1)（2〜256）"
+      description: "フラグのまとめ（Packed Fields）。グローバルカラーテーブルの有無・大きさと色解像度"
     - name: bg_color_index
       type: uint8
-      description: "背景色インデックス"
+      description: "背景色のインデックス（グローバルカラーテーブル内）。画像で覆われない部分の色。グローバルカラーテーブルが無いときは意味を持たない"
     - name: pixel_aspect_ratio
       type: uint8
+      description: "ピクセルの縦横比の係数。0 なら情報なし、1〜255 なら (値 + 15) ÷ 64 = ピクセルの幅 ÷ 高さ"
 
   gif_block:
     - name: introducer
       type: uint8
       enum: block_introducer
+      description: "ブロックの種類を示す先頭 1 バイト（0x2C=画像、0x21=拡張、0x3B=Trailer）"
     - name: body
       type: switch
       switch_on: "{introducer}"
@@ -90,49 +120,61 @@ structs:
         "0x2C": image_block
         "0x21": extension_block
       default: raw_data
+      description: "introducer に応じたブロック本体（Trailer は本体なし、未知の値は残り全部）"
 
   trailer: []
 
   image_block:
     - name: left
       type: uint16
+      description: "論理画面の左端から画像の左端までの距離（ピクセル）"
     - name: top
       type: uint16
+      description: "論理画面の上端から画像の上端までの距離（ピクセル）"
     - name: width
       type: uint16
+      description: "画像の幅（ピクセル）"
     - name: height
       type: uint16
+      description: "画像の高さ（ピクセル）"
     - name: packed
       type: bitfield
       size: "1"
       fields:
         - name: local_color_table_flag
           bits: "7"
+          description: "1 のとき直後にローカルカラーテーブルがあり、この画像ではグローバルカラーテーブルの代わりに使う"
         - name: interlace_flag
           bits: "6"
+          description: "1 のとき画像データがインターレース順の 4 パス（0 行目から 8 行ごと → 4 行目から 8 行ごと → 2 行目から 4 行ごと → 1 行目から 2 行ごと。行は 0 から数える）で並ぶ"
         - name: sort_flag
           bits: "5"
+          description: "1 のときローカルカラーテーブルが重要度（使用頻度）の降順に並んでいる"
         - name: reserved
           bits: "4:3"
+          description: "予約（0）"
         - name: size_of_local_color_table
           bits: "2:0"
+          description: "ローカルカラーテーブルの大きさ N。エントリ数は 2^(N + 1)（2〜256）"
+      description: "フラグのまとめ（Packed Fields）。ローカルカラーテーブルの有無・大きさとインターレース"
     - name: local_color_table
       type: bytes
       size: "{3 * (1 << (size_of_local_color_table + 1))}"
       if: "{local_color_table_flag == 1}"
-      description: "ローカルカラーテーブル"
+      description: "ローカルカラーテーブル。RGB 各 1 バイトのエントリが 2^(size_of_local_color_table + 1) 個。local_color_table_flag が 1 のときだけある"
     - name: lzw_min_code_size
       type: uint8
-      description: "LZW最小符号サイズ"
+      description: "LZW の最小符号サイズ（ビット、通常は色のビット数で 2〜8）。最初の符号長はこの値 + 1 ビット"
     - name: sub_blocks
       type: bytes
       repeat: length_prefixed
-      description: "LZW圧縮サブブロック"
+      description: "LZW 圧縮された画像データ（Table Based Image Data）。長さ 1 バイト + データ 1〜255 バイトのサブブロックが長さ 0 の Block Terminator まで続く（終端は含まない）"
 
   extension_block:
     - name: label
       type: uint8
       enum: extension_label
+      description: "拡張の種類（Extension Label）。この値で body の構造を振り分ける"
     - name: body
       type: switch
       switch_on: "{label}"
@@ -142,118 +184,127 @@ structs:
         "0xFF": application_ext
         "0x01": plain_text_ext
       default: generic_ext
+      description: "label に応じた拡張ブロックの本体（未知の拡張はサブブロックとして読む）"
 
   graphic_control_ext:
     - name: block_size
       type: uint8
-      description: "ブロックサイズ（常に4）"
+      description: "ブロックサイズ（常に 4。packed から transparent_color_index までのバイト数）"
     - name: packed
       type: bitfield
       size: "1"
       fields:
         - name: reserved
           bits: "7:5"
+          description: "予約（0）"
         - name: disposal_method
           bits: "4:2"
           enum: disposal_method
+          description: "表示し終えた画像の処分方法（Disposal Method）。0〜3 が定義済み、4〜7 は未定義"
         - name: user_input_flag
           bits: "1"
+          description: "1 のとき、ユーザー入力（キーやクリック）を待ってから次へ進む。delay_time も指定されていれば先に来た方で進む"
         - name: transparent_color_flag
           bits: "0"
+          description: "1 のとき transparent_color_index の色を透過として扱う"
+      description: "フラグのまとめ（Packed Fields）。処分方法・ユーザー入力待ち・透過色の有無"
     - name: delay_time
       type: uint16
-      description: "遅延時間（1/100秒単位）"
+      description: "次の画像へ進むまでの待ち時間（1/100 秒単位）。0 なら待たない"
     - name: transparent_color_index
       type: uint8
+      description: "透過色のインデックス（transparent_color_flag が 1 のときだけ有効）"
     - name: terminator
       type: uint8
-      description: "ブロックターミネータ（常に0x00）"
+      description: "ブロックターミネータ（Block Terminator、常に 0x00）"
 
   comment_ext:
     - name: sub_blocks
       type: bytes
       repeat: length_prefixed
-      description: "コメントサブブロック"
+      description: "コメントのテキスト（7 ビット ASCII 推奨）。長さ 1 バイト + データのサブブロックが長さ 0 まで続く"
 
   application_ext:
     - name: block_size
       type: uint8
-      description: "ブロックサイズ（常に11）"
+      description: "ブロックサイズ（常に 11。app_identifier 8 バイト + auth_code 3 バイト）"
     - name: app_identifier
       type: ascii
       size: "8"
-      description: "アプリケーション識別子"
+      description: "アプリケーション識別子（ASCII 8 文字。例: 'NETSCAPE'、'XMP Data'）。この値で app_data の構造を振り分ける"
     - name: auth_code
       type: bytes
       size: "3"
-      description: "アプリケーション認証コード"
+      description: "アプリケーション認証コード（3 バイト。NETSCAPE なら '2.0'）"
     - name: app_data
       type: switch
       switch_on: "{app_identifier}"
       cases:
         "'NETSCAPE'": netscape_ext_data
       default: generic_app_ext_data
+      description: "識別子に応じたアプリケーションデータ（NETSCAPE はループ回数、それ以外はサブブロック）"
 
   netscape_ext_data:
     - name: sub_block_size
       type: uint8
-      description: "サブブロックサイズ（通常3）"
+      description: "サブブロックのサイズ（ループ指定では 3。sub_block_id と loop_count のバイト数）"
     - name: sub_block_id
       type: uint8
-      description: "サブブロックID（通常1）"
+      description: "サブブロックの種類（1 = ループ回数）"
     - name: loop_count
       type: uint16
-      description: "ループ回数（0 = 無限ループ）"
+      description: "アニメーションの繰り返し回数（0 = 無限ループ）"
     - name: terminator
       type: uint8
-      description: "ブロックターミネータ（常に0x00）"
+      description: "ブロックターミネータ（Block Terminator、常に 0x00）"
 
   generic_app_ext_data:
     - name: sub_blocks
       type: bytes
       repeat: length_prefixed
-      description: "アプリケーションサブブロックデータ"
+      description: "アプリケーション固有のデータ。長さ 1 バイト + データのサブブロックが長さ 0 まで続く"
 
   plain_text_ext:
     - name: block_size
       type: uint8
-      description: "ブロックサイズ（常に12）"
+      description: "ブロックサイズ（常に 12。text_grid_left から bg_color_index までのバイト数）"
     - name: text_grid_left
       type: uint16
-      description: "テキストグリッド左位置"
+      description: "テキスト領域の左端の位置（論理画面の左端からのピクセル数）"
     - name: text_grid_top
       type: uint16
-      description: "テキストグリッド上位置"
+      description: "テキスト領域の上端の位置（論理画面の上端からのピクセル数）"
     - name: text_grid_width
       type: uint16
-      description: "テキストグリッド幅"
+      description: "テキスト領域の幅（ピクセル）"
     - name: text_grid_height
       type: uint16
-      description: "テキストグリッド高さ"
+      description: "テキスト領域の高さ（ピクセル）"
     - name: cell_width
       type: uint8
-      description: "文字セル幅"
+      description: "1 文字分のセルの幅（ピクセル）"
     - name: cell_height
       type: uint8
-      description: "文字セル高さ"
+      description: "1 文字分のセルの高さ（ピクセル）"
     - name: fg_color_index
       type: uint8
-      description: "テキスト前景色インデックス"
+      description: "文字の前景色のインデックス（グローバルカラーテーブル内）"
     - name: bg_color_index
       type: uint8
-      description: "テキスト背景色インデックス"
+      description: "文字の背景色のインデックス（グローバルカラーテーブル内）"
     - name: sub_blocks
       type: bytes
       repeat: length_prefixed
-      description: "プレーンテキストデータサブブロック"
+      description: "描画するテキスト（7 ビット ASCII）。長さ 1 バイト + データのサブブロックが長さ 0 まで続く"
 
   generic_ext:
     - name: sub_blocks
       type: bytes
       repeat: length_prefixed
-      description: "拡張サブブロック"
+      description: "未知の拡張のデータ。長さ 1 バイト + データのサブブロックが長さ 0 まで続く"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "未知の introducer の後ろ、ファイル末尾までのバイト列（仕様外のデータ）"

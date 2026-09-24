@@ -42,4 +42,36 @@ public static class BmpTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// BITMAPINFOHEADER + 任意の追加データで BMP を組み立てる。<paramref name="extra"/> はヘッダとピクセルデータの間（マスク・パレット）。
+    /// </summary>
+    private static byte[] Build(int width, int height, ushort bpp, uint compression, uint colorsUsed, byte[] extra, byte[] pixels)
+    {
+        var offset = 14 + 40 + extra.Length;
+        var data = new byte[offset + pixels.Length];
+        var s = data.AsSpan();
+        s[0] = (byte)'B'; s[1] = (byte)'M';
+        BinaryPrimitives.WriteUInt32LittleEndian(s[2..], (uint)data.Length);
+        BinaryPrimitives.WriteUInt32LittleEndian(s[10..], (uint)offset);
+        BinaryPrimitives.WriteUInt32LittleEndian(s[14..], 40);
+        BinaryPrimitives.WriteInt32LittleEndian(s[18..], width);
+        BinaryPrimitives.WriteInt32LittleEndian(s[22..], height);
+        BinaryPrimitives.WriteUInt16LittleEndian(s[26..], 1);
+        BinaryPrimitives.WriteUInt16LittleEndian(s[28..], bpp);
+        BinaryPrimitives.WriteUInt32LittleEndian(s[30..], compression);
+        BinaryPrimitives.WriteUInt32LittleEndian(s[34..], (uint)pixels.Length);
+        BinaryPrimitives.WriteUInt32LittleEndian(s[46..], colorsUsed);
+        extra.CopyTo(data, 54);
+        pixels.CopyTo(data, offset);
+        return data;
+    }
+
+    /// <summary>1 ビット・colors_used = 0（パレットは 2^1 = 2 色）の 8x1 画像（REQ-188）。</summary>
+    public static byte[] CreateMonochromeWithImplicitPalette() =>
+        Build(8, 1, 1, 0, 0, [0, 0, 0, 0, 255, 255, 255, 0], [0b1010_0000, 0, 0, 0]);
+
+    /// <summary>16 ビット BI_BITFIELDS（RGB565 のマスク 12 バイト）の 2x1 画像（REQ-188）。</summary>
+    public static byte[] CreateRgb565Bitfields() =>
+        Build(2, 1, 16, 3, 0, [0x00, 0xF8, 0, 0, 0xE0, 0x07, 0, 0, 0x1F, 0, 0, 0], [0x00, 0xF8, 0x1F, 0x00]);
 }

@@ -18,7 +18,7 @@
           "type": "uint32",
           "offset": 0,
           "size": 4,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u5168\u4F53\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30D8\u30C3\u30C0\u30FB\u30BF\u30B0\u30C6\u30FC\u30D6\u30EB\u30FB\u30BF\u30B0\u30C7\u30FC\u30BF\u3092\u542B\u3080\uFF09",
           "name": "profile_size",
           "value": 132,
           "hex": "0x84"
@@ -28,7 +28,7 @@
           "type": "uint32",
           "offset": 4,
           "size": 4,
-          "description": "\u512A\u5148CMM\u30BF\u30A4\u30D7",
+          "description": "\u512A\u5148\u3059\u308B CMM\uFF08\u8272\u7BA1\u7406\u30E2\u30B8\u30E5\u30FC\u30EB\uFF09\u306E 4 \u6587\u5B57\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08ICC \u767B\u9332\u3002\u4F8B \u0027appl\u0027\u30FB\u0027lcms\u0027\uFF09\u30020 \u306A\u3089\u6307\u5B9A\u306A\u3057",
           "name": "preferred_cmm",
           "value": 0,
           "hex": "0x0"
@@ -38,7 +38,7 @@
           "type": "bytes",
           "offset": 8,
           "size": 4,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08major.minor.bugfix\uFF09",
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u306E\u7248\u30021 \u30D0\u30A4\u30C8\u76EE\u304C\u30E1\u30B8\u30E3\u30FC\u7248\u30012 \u30D0\u30A4\u30C8\u76EE\u306E\u4E0A\u4F4D 4 \u30D3\u30C3\u30C8\u304C\u30DE\u30A4\u30CA\u30FC\u7248\u30FB\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8\u304C\u30D0\u30B0\u4FEE\u6B63\u7248\u3001\u6B8B\u308A 2 \u30D0\u30A4\u30C8\u306F\u4E88\u7D04\uFF080\uFF09\u3002\u4F8B: 04 40 00 00 = 4.4.0",
           "name": "version",
           "hex": "04 00 00 00"
         },
@@ -47,28 +47,31 @@
           "type": "uint32",
           "offset": 12,
           "size": 4,
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB / \u30C7\u30D0\u30A4\u30B9\u30AF\u30E9\u30B9\uFF08\u5165\u529B\u30FB\u8868\u793A\u30FB\u51FA\u529B\u30FB\u30C7\u30D0\u30A4\u30B9\u30EA\u30F3\u30AF\u7B49\uFF09\u3002\u5FC5\u9808\u306E\u30BF\u30B0\u306E\u7D44\u307F\u5408\u308F\u305B\u304C\u3053\u308C\u3067\u6C7A\u307E\u308B",
           "name": "device_class",
           "value": 1835955314,
           "hex": "0x6D6E7472",
           "enum_label": "Monitor",
-          "enum_description": "mntr"
+          "enum_description": "\u0027mntr\u0027: \u8868\u793A\u30C7\u30D0\u30A4\u30B9\uFF08\u30C7\u30A3\u30B9\u30D7\u30EC\u30A4\uFF09\u306E\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB"
         },
         "color_space": {
           "_type": "integer",
           "type": "uint32",
           "offset": 16,
           "size": 4,
+          "description": "\u30C7\u30FC\u30BF\u8272\u7A7A\u9593\uFF08\u30C7\u30D0\u30A4\u30B9\u5074\u306E\u8272\u7A7A\u9593\u3002\u30C7\u30D0\u30A4\u30B9\u30EA\u30F3\u30AF\u3067\u306F\u5165\u529B\u5074\u306E\u8272\u7A7A\u9593\uFF09",
           "name": "color_space",
           "value": 1380401696,
           "hex": "0x52474220",
-          "enum_label": "RGB"
+          "enum_label": "RGB",
+          "enum_description": "\u0027RGB \u0027: RGB\uFF083 \u30C1\u30E3\u30F3\u30CD\u30EB\uFF09"
         },
         "pcs": {
           "_type": "string",
           "type": "ascii",
           "offset": 20,
           "size": 4,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u63A5\u7D9A\u7A7A\u9593\uFF08XYZ\u307E\u305F\u306FLab\uFF09",
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u63A5\u7D9A\u7A7A\u9593\uFF08PCS\uFF09\u306E 4 \u6587\u5B57\u30B7\u30B0\u30CD\u30C1\u30E3\u3002\u0027XYZ \u0027 \u307E\u305F\u306F \u0027Lab \u0027\u3002\u30C7\u30D0\u30A4\u30B9\u30EA\u30F3\u30AF\u3067\u306F\u51FA\u529B\u5074\u306E\u8272\u7A7A\u9593",
           "name": "pcs",
           "value": "XYZ ",
           "encoding": "ascii"
@@ -78,7 +81,7 @@
           "type": "bytes",
           "offset": 24,
           "size": 12,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u4F5C\u6210\u65E5\u6642",
+          "description": "\u4F5C\u6210\u65E5\u6642\uFF08dateTimeNumber: \u5E74\u30FB\u6708\u30FB\u65E5\u30FB\u6642\u30FB\u5206\u30FB\u79D2\u306E uint16 \u00D7 6\u3001UTC\uFF09",
           "name": "creation_date",
           "hex": "00 00 00 00 00 00 00 00 00 00 00 00"
         },
@@ -87,7 +90,7 @@
           "type": "ascii",
           "offset": 36,
           "size": 4,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D5\u30A1\u30A4\u30EB\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027acsp\u0027\uFF09",
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D5\u30A1\u30A4\u30EB\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027acsp\u0027\uFF09\u3002ICC \u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u3067\u3042\u308B\u3053\u3068\u3092\u691C\u8A3C\u3059\u308B",
           "name": "signature",
           "value": "acsp",
           "encoding": "ascii"
@@ -97,18 +100,19 @@
           "type": "uint32",
           "offset": 40,
           "size": 4,
+          "description": "\u4E3B\u306B\u60F3\u5B9A\u3059\u308B\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306E 4 \u6587\u5B57\u30B7\u30B0\u30CD\u30C1\u30E3\u30020 \u306A\u3089\u6307\u5B9A\u306A\u3057",
           "name": "primary_platform",
           "value": 1297303124,
           "hex": "0x4D534654",
           "enum_label": "Microsoft",
-          "enum_description": "MSFT"
+          "enum_description": "\u0027MSFT\u0027: Microsoft"
         },
         "flags": {
           "_type": "integer",
           "type": "uint32",
           "offset": 44,
           "size": 4,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D5\u30E9\u30B0",
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u30D5\u30E9\u30B0\u3002\u30D3\u30C3\u30C8 0 = 1 \u306A\u3089\u753B\u50CF\u306A\u3069\u306B\u57CB\u3081\u8FBC\u307E\u308C\u305F\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u3001\u30D3\u30C3\u30C8 1 = 1 \u306A\u3089\u57CB\u3081\u8FBC\u307F\u5148\u306E\u8272\u30C7\u30FC\u30BF\u3068\u5207\u308A\u96E2\u3057\u3066\u4F7F\u3048\u306A\u3044\u3002\u4E0B\u4F4D 16 \u30D3\u30C3\u30C8\u306F ICC\u3001\u4E0A\u4F4D 16 \u30D3\u30C3\u30C8\u306F CMM \u304C\u5B9A\u3081\u308B",
           "name": "flags",
           "value": 0,
           "hex": "0x0"
@@ -118,7 +122,7 @@
           "type": "uint32",
           "offset": 48,
           "size": 4,
-          "description": "\u30C7\u30D0\u30A4\u30B9\u88FD\u9020\u8005\u30B7\u30B0\u30CD\u30C1\u30E3",
+          "description": "\u30C7\u30D0\u30A4\u30B9\u88FD\u9020\u8005\u306E 4 \u6587\u5B57\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08ICC \u767B\u9332\uFF09\u30020 \u306A\u3089\u6307\u5B9A\u306A\u3057",
           "name": "device_manufacturer",
           "value": 0,
           "hex": "0x0"
@@ -128,7 +132,7 @@
           "type": "uint32",
           "offset": 52,
           "size": 4,
-          "description": "\u30C7\u30D0\u30A4\u30B9\u30E2\u30C7\u30EB\u30B7\u30B0\u30CD\u30C1\u30E3",
+          "description": "\u30C7\u30D0\u30A4\u30B9\u30E2\u30C7\u30EB\u306E 4 \u6587\u5B57\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u88FD\u9020\u8005\u304C\u5B9A\u3081\u308B\uFF09\u30020 \u306A\u3089\u6307\u5B9A\u306A\u3057",
           "name": "device_model",
           "value": 0,
           "hex": "0x0"
@@ -138,7 +142,7 @@
           "type": "uint64",
           "offset": 56,
           "size": 8,
-          "description": "\u30C7\u30D0\u30A4\u30B9\u5C5E\u6027",
+          "description": "\u30C7\u30D0\u30A4\u30B9\u5C5E\u6027\uFF08\u5A92\u4F53\u306E\u6027\u8CEA\uFF09\u3002\u30D3\u30C3\u30C8 0: \u53CD\u5C04\uFF080\uFF09/ \u900F\u904E\uFF081\uFF09\u3001\u30D3\u30C3\u30C8 1: \u5149\u6CA2\uFF080\uFF09/ \u3064\u3084\u6D88\u3057\uFF081\uFF09\u3001\u30D3\u30C3\u30C8 2: \u30DD\u30B8\uFF080\uFF09/ \u30CD\u30AC\uFF081\uFF09\u3001\u30D3\u30C3\u30C8 3: \u30AB\u30E9\u30FC\uFF080\uFF09/ \u30E2\u30CE\u30AF\u30ED\uFF081\uFF09\u3002\u4E0B\u4F4D 32 \u30D3\u30C3\u30C8\u306F ICC\u3001\u4E0A\u4F4D 32 \u30D3\u30C3\u30C8\u306F\u88FD\u9020\u8005\u304C\u5B9A\u3081\u308B",
           "name": "attributes",
           "value": 0,
           "hex": "0x0"
@@ -148,17 +152,19 @@
           "type": "uint32",
           "offset": 64,
           "size": 4,
+          "description": "\u3053\u306E\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u3092\u57CB\u3081\u8FBC\u3093\u3067\u4F7F\u3046\u3068\u304D\u306E\u65E2\u5B9A\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30A4\u30F3\u30C6\u30F3\u30C8\uFF08\u4E0B\u4F4D 16 \u30D3\u30C3\u30C8\u3002\u4E0A\u4F4D 16 \u30D3\u30C3\u30C8\u306F 0\uFF09",
           "name": "rendering_intent",
           "value": 0,
           "hex": "0x0",
-          "enum_label": "Perceptual"
+          "enum_label": "Perceptual",
+          "enum_description": "\u77E5\u899A\u7684\uFF08\u8272\u57DF\u5916\u306E\u8272\u3092\u542B\u3081\u3066\u5168\u4F53\u306E\u898B\u305F\u76EE\u306E\u95A2\u4FC2\u3092\u4FDD\u3064\u3088\u3046\u306B\u5727\u7E2E\u3059\u308B\uFF09"
         },
         "pcs_illuminant": {
           "_type": "bytes",
           "type": "bytes",
           "offset": 68,
           "size": 12,
-          "description": "PCS\u7167\u660E\u4F53\u306EXYZ\u5024\uFF08s15Fixed16Number x 3\uFF09",
+          "description": "PCS \u306E\u5149\u6E90\u306E XYZ \u5024\uFF08XYZNumber: s15Fixed16Number\uFF08\u5024 / 65536\uFF09\u306E X\u30FBY\u30FBZ\uFF09\u3002D50\uFF080.9642, 1.0, 0.8249 = 0000F6D6 00010000 0000D32D\uFF09\u3067\u306A\u3051\u308C\u3070\u306A\u3089\u306A\u3044",
           "name": "pcs_illuminant",
           "hex": "00 00 F6 D6 00 01 00 00 00 00 D3 2D"
         },
@@ -167,7 +173,7 @@
           "type": "uint32",
           "offset": 80,
           "size": 4,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u4F5C\u6210\u8005\u30B7\u30B0\u30CD\u30C1\u30E3",
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u4F5C\u6210\u8005\u306E 4 \u6587\u5B57\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08ICC \u767B\u9332\u306E\u88FD\u9020\u8005\u30B7\u30B0\u30CD\u30C1\u30E3\uFF09\u30020 \u306A\u3089\u6307\u5B9A\u306A\u3057",
           "name": "creator",
           "value": 0,
           "hex": "0x0"
@@ -177,7 +183,7 @@
           "type": "bytes",
           "offset": 84,
           "size": 16,
-          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EBID\uFF08MD5\u30D5\u30A3\u30F3\u30AC\u30FC\u30D7\u30EA\u30F3\u30C8\uFF09",
+          "description": "\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB ID\uFF08\u30D5\u30E9\u30B0\u30FB\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30A4\u30F3\u30C6\u30F3\u30C8\u30FB\u3053\u306E ID \u81EA\u8EAB\u3092 0 \u306B\u3057\u305F\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u5168\u4F53\u306E MD5\uFF09\u3002\u5168 0 \u306A\u3089\u672A\u8A08\u7B97\u3002v4.0 \u3067\u8FFD\u52A0\u3055\u308C\u3001v2 \u3067\u306F\u4E88\u7D04",
           "name": "id",
           "hex": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
         },
@@ -186,7 +192,7 @@
           "type": "bytes",
           "offset": 100,
           "size": 28,
-          "description": "\u4E88\u7D04\u9818\u57DF\uFF08\u30BC\u30ED\uFF09",
+          "description": "\u4E88\u7D04\uFF080\uFF09\u3002iccMAX\uFF08v5\uFF09\u3067\u306F\u30B9\u30DA\u30AF\u30C8\u30EB PCS\u30FBMCS\u30FB\u30D7\u30ED\u30D5\u30A1\u30A4\u30EB\u306E\u30B5\u30D6\u30AF\u30E9\u30B9\u306A\u3069\u304C\u5165\u308B",
           "name": "reserved",
           "hex": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
         }
@@ -205,7 +211,7 @@
           "type": "uint32",
           "offset": 128,
           "size": 4,
-          "description": "\u30BF\u30B0\u6570",
+          "description": "\u30BF\u30B0\u306E\u6570\u3002\u3053\u306E\u6570\u3060\u3051 12 \u30D0\u30A4\u30C8\u306E\u30BF\u30B0\u30A8\u30F3\u30C8\u30EA\u304C\u7D9A\u304F",
           "name": "tag_count",
           "value": 0,
           "hex": "0x0"

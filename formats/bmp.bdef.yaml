@@ -1,3 +1,11 @@
+# BMP 画像（.bmp / .dib）
+# 仕様: Microsoft Win32 API の BITMAPFILEHEADER / BITMAPINFOHEADER / BITMAPV4HEADER / BITMAPV5HEADER（wingdi.h） https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv5header 、
+#   圧縮形式の値は [MS-WMF] 2.1.1.7 Compression Enumeration https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-wmf/
+# 構造: BITMAPFILEHEADER（14 バイト）→ DIB ヘッダ（先頭 4 バイトのサイズ 40 / 108 / 124 で switch）
+#   →（40 バイトのヘッダで BI_BITFIELDS / BI_ALPHABITFIELDS なら）カラーマスク → カラーテーブル（bits_per_pixel が 8 以下のとき。
+#   colors_used が 0 なら 2^bits_per_pixel 色）→ ピクセルデータ（file_header.pixel_offset の位置からファイル末尾まで）。
+# 対応していないもの: BITMAPCOREHEADER（12 バイト、OS/2 1.x）・OS/2 2.x のヘッダ（16〜64 バイト）・BITMAPV2INFOHEADER / BITMAPV3INFOHEADER（52 / 56 バイト）
+#   （いずれもヘッダのサイズ分をバイト列として読む）、ピクセルデータの分解と RLE / JPEG / PNG の展開、V5 の ICC プロファイル本体
 name: BMP
 endianness: little
 root: bmp
@@ -9,45 +17,72 @@ enums:
       description: "無圧縮"
     - value: 1
       label: BI_RLE8
-      description: "8bit RLE圧縮"
+      description: "8 ビット/ピクセルの RLE 圧縮（bits_per_pixel = 8、ボトムアップのみ）"
     - value: 2
       label: BI_RLE4
-      description: "4bit RLE圧縮"
+      description: "4 ビット/ピクセルの RLE 圧縮（bits_per_pixel = 4、ボトムアップのみ）"
     - value: 3
       label: BI_BITFIELDS
-      description: "ビットフィールドマスク"
+      description: "無圧縮。各色成分の位置をカラーマスクで指定する（bits_per_pixel = 16 / 32）"
     - value: 4
       label: BI_JPEG
-      description: "JPEG圧縮"
+      description: "ピクセルデータが JPEG 画像（主にプリンタ向け）"
     - value: 5
       label: BI_PNG
-      description: "PNG圧縮"
+      description: "ピクセルデータが PNG 画像（主にプリンタ向け）"
     - value: 6
       label: BI_ALPHABITFIELDS
-      description: "アルファ付きビットフィールドマスク"
+      description: "BI_BITFIELDS にアルファのマスクを加えたもの（Windows CE）"
+    - value: 11
+      label: BI_CMYK
+      description: "無圧縮の CMYK（メタファイル内でのみ使う）"
+    - value: 12
+      label: BI_CMYKRLE8
+      description: "8 ビット/ピクセルの RLE 圧縮 CMYK（メタファイル内でのみ使う）"
+    - value: 13
+      label: BI_CMYKRLE4
+      description: "4 ビット/ピクセルの RLE 圧縮 CMYK（メタファイル内でのみ使う）"
+
+  color_space_type:
+    - value: 0
+      label: LCS_CALIBRATED_RGB
+      description: "端点（endpoints）とガンマ（gamma_*）で色空間を定義する"
+    - value: 0x73524742
+      label: LCS_sRGB
+      description: "sRGB 色空間（'sRGB'）"
+    - value: 0x57696E20
+      label: LCS_WINDOWS_COLOR_SPACE
+      description: "システムの既定の色空間（'Win '。sRGB）"
+    - value: 0x4C494E4B
+      label: PROFILE_LINKED
+      description: "外部の ICC プロファイルファイルを参照する（'LINK'。profile_data の位置にファイル名。V5 のみ）"
+    - value: 0x4D424544
+      label: PROFILE_EMBEDDED
+      description: "ICC プロファイルを埋め込む（'MBED'。profile_data の位置にプロファイル本体。V5 のみ）"
 
   rendering_intent:
     - value: 1
       label: LCS_GM_BUSINESS
-      description: "彩度維持 (Saturation)"
+      description: "彩度を保つ（Saturation）。グラフやビジネス文書向け"
     - value: 2
       label: LCS_GM_GRAPHICS
-      description: "相対的な色域マッピング (Relative Colorimetric)"
+      description: "相対的な色域マッピング（Relative Colorimetric）。白色点を合わせる"
     - value: 4
       label: LCS_GM_IMAGES
-      description: "知覚的 (Perceptual)"
+      description: "知覚的（Perceptual）。写真向け"
     - value: 8
       label: LCS_GM_ABS_COLORIMETRIC
-      description: "絶対的な色域マッピング (Absolute Colorimetric)"
+      description: "絶対的な色域マッピング（Absolute Colorimetric）。白色点も合わせない"
 
 structs:
   bmp:
     - name: file_header
       type: struct
       struct: bmp_file_header
+      description: "ファイルヘッダ（BITMAPFILEHEADER、14 バイト）"
     - name: header_size
       type: uint32
-      description: "DIBヘッダサイズ (40=V1, 108=V4, 124=V5)"
+      description: "DIB ヘッダのサイズ（バイト、このフィールド自身を含む）。40=BITMAPINFOHEADER、108=BITMAPV4HEADER、124=BITMAPV5HEADER。この値で dib_header の構造を振り分ける"
     - name: dib_header
       type: switch
       switch_on: "{header_size}"
@@ -56,180 +91,244 @@ structs:
         "108": bitmapv4header
         "124": bitmapv5header
       default: unknown_dib_header
+      description: "DIB ヘッダの本体（header_size に応じた構造。header_size の 4 バイトを除く）"
+    - name: color_masks
+      type: struct
+      struct: color_masks
+      if: "{header_size == 40 ? compression == 3 or compression == 6 : false}"
+      description: "カラーマスク（BITMAPINFOHEADER で BI_BITFIELDS なら赤・緑・青の 12 バイト、BI_ALPHABITFIELDS ならアルファを加えた 16 バイト。V4 / V5 ではヘッダの中にある）"
     - name: color_table
       type: struct
       struct: color_table_entry
-      repeat_count: "{colors_used}"
-      if: "{bits_per_pixel <= 8}"
-      description: "カラーテーブル"
+      repeat_count: "{colors_used == 0 ? 1 << bits_per_pixel : colors_used}"
+      if: "{header_size >= 40 ? bits_per_pixel <= 8 : false}"
+      description: "カラーテーブル（パレット）。bits_per_pixel が 8 以下のとき、colors_used 個（0 なら 2^bits_per_pixel 個）の RGBQUAD（各 4 バイト）"
     - name: pixel_data
       type: bytes
       size: remaining
+      seek: "{file_header.pixel_offset}"
+      description: "ピクセルデータ（file_header.pixel_offset の位置からファイル末尾まで、未分解）。無圧縮なら 1 行が 4 バイト境界に揃えられ、height が正なら下の行から並ぶ"
 
   bmp_file_header:
     - name: signature
       type: bytes
       size: "2"
       expected: [0x42, 0x4D]
+      description: "ファイルシグネチャ（'BM'）"
     - name: file_size
       type: uint32
+      description: "ファイル全体のサイズ（バイト）"
     - name: reserved1
       type: uint16
+      description: "予約（0。作成したアプリケーションが使うことがある）"
     - name: reserved2
       type: uint16
+      description: "予約（0。作成したアプリケーションが使うことがある）"
     - name: pixel_offset
       type: uint32
+      description: "ファイル先頭からピクセルデータまでのオフセット（バイト）"
 
   bitmapinfoheader:
     - name: width
       type: int32
+      description: "画像の幅（ピクセル）"
     - name: height
       type: int32
+      description: "画像の高さ（ピクセル）。正ならボトムアップ（最初の行が一番下）、負ならトップダウン。負にできるのは BI_RGB / BI_BITFIELDS のときだけ"
     - name: planes
       type: uint16
+      description: "カラープレーン数（常に 1）"
     - name: bits_per_pixel
       type: uint16
+      description: "1 ピクセルのビット数（1 / 4 / 8 / 16 / 24 / 32。0 は JPEG / PNG 圧縮で画像側に任せる場合）。8 以下ならカラーテーブルを使う"
     - name: compression
       type: uint32
       enum: compression
+      description: "ピクセルデータの圧縮形式"
     - name: image_size
       type: uint32
+      description: "ピクセルデータのサイズ（バイト）。BI_RGB では 0 でもよい"
     - name: x_pixels_per_meter
       type: int32
+      description: "水平方向の解像度（ピクセル/メートル。2835 ≒ 72 dpi）"
     - name: y_pixels_per_meter
       type: int32
+      description: "垂直方向の解像度（ピクセル/メートル）"
     - name: colors_used
       type: uint32
+      description: "カラーテーブルの色数。0 なら bits_per_pixel で表せる最大数（2^bits_per_pixel）"
     - name: colors_important
       type: uint32
+      description: "表示に必要な色の数。0 ならすべての色が必要"
 
   bitmapv4header:
     - name: width
       type: int32
+      description: "画像の幅（ピクセル）"
     - name: height
       type: int32
+      description: "画像の高さ（ピクセル）。正ならボトムアップ（最初の行が一番下）、負ならトップダウン。負にできるのは BI_RGB / BI_BITFIELDS のときだけ"
     - name: planes
       type: uint16
+      description: "カラープレーン数（常に 1）"
     - name: bits_per_pixel
       type: uint16
+      description: "1 ピクセルのビット数（1 / 4 / 8 / 16 / 24 / 32。0 は JPEG / PNG 圧縮で画像側に任せる場合）。8 以下ならカラーテーブルを使う"
     - name: compression
       type: uint32
       enum: compression
+      description: "ピクセルデータの圧縮形式"
     - name: image_size
       type: uint32
+      description: "ピクセルデータのサイズ（バイト）。BI_RGB では 0 でもよい"
     - name: x_pixels_per_meter
       type: int32
+      description: "水平方向の解像度（ピクセル/メートル。2835 ≒ 72 dpi）"
     - name: y_pixels_per_meter
       type: int32
+      description: "垂直方向の解像度（ピクセル/メートル）"
     - name: colors_used
       type: uint32
+      description: "カラーテーブルの色数。0 なら bits_per_pixel で表せる最大数（2^bits_per_pixel）"
     - name: colors_important
       type: uint32
+      description: "表示に必要な色の数。0 ならすべての色が必要"
     - name: red_mask
       type: uint32
-      description: "赤チャンネルのビットマスク"
+      description: "ピクセル値のうち赤成分のビットマスク（compression が BI_BITFIELDS のときだけ有効）"
     - name: green_mask
       type: uint32
-      description: "緑チャンネルのビットマスク"
+      description: "ピクセル値のうち緑成分のビットマスク（compression が BI_BITFIELDS のときだけ有効）"
     - name: blue_mask
       type: uint32
-      description: "青チャンネルのビットマスク"
+      description: "ピクセル値のうち青成分のビットマスク（compression が BI_BITFIELDS のときだけ有効）"
     - name: alpha_mask
       type: uint32
-      description: "アルファチャンネルのビットマスク"
+      description: "ピクセル値のうちアルファ成分のビットマスク（0 ならアルファなし）"
     - name: cs_type
       type: uint32
-      description: "色空間タイプ"
+      enum: color_space_type
+      description: "色空間の種類（LCS_CALIBRATED_RGB=0、または 'sRGB' / 'Win ' などの 4 文字コード）"
     - name: endpoints
       type: bytes
       size: "36"
-      description: "CIEXYZTRIPLE構造体 (3x3座標)"
+      description: "赤・緑・青の端点の CIE XYZ 座標（CIEXYZTRIPLE。2.30 固定小数点 4 バイト × XYZ × 3 色 = 36 バイト）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
     - name: gamma_red
       type: uint32
-      description: "赤チャンネルのガンマ値"
+      description: "赤成分のトーンカーブのガンマ（符号なし 16.16 固定小数点）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
     - name: gamma_green
       type: uint32
-      description: "緑チャンネルのガンマ値"
+      description: "緑成分のトーンカーブのガンマ（符号なし 16.16 固定小数点）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
     - name: gamma_blue
       type: uint32
-      description: "青チャンネルのガンマ値"
+      description: "青成分のトーンカーブのガンマ（符号なし 16.16 固定小数点）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
 
   bitmapv5header:
     - name: width
       type: int32
+      description: "画像の幅（ピクセル）"
     - name: height
       type: int32
+      description: "画像の高さ（ピクセル）。正ならボトムアップ（最初の行が一番下）、負ならトップダウン。負にできるのは BI_RGB / BI_BITFIELDS のときだけ"
     - name: planes
       type: uint16
+      description: "カラープレーン数（常に 1）"
     - name: bits_per_pixel
       type: uint16
+      description: "1 ピクセルのビット数（1 / 4 / 8 / 16 / 24 / 32。0 は JPEG / PNG 圧縮で画像側に任せる場合）。8 以下ならカラーテーブルを使う"
     - name: compression
       type: uint32
       enum: compression
+      description: "ピクセルデータの圧縮形式"
     - name: image_size
       type: uint32
+      description: "ピクセルデータのサイズ（バイト）。BI_RGB では 0 でもよい"
     - name: x_pixels_per_meter
       type: int32
+      description: "水平方向の解像度（ピクセル/メートル。2835 ≒ 72 dpi）"
     - name: y_pixels_per_meter
       type: int32
+      description: "垂直方向の解像度（ピクセル/メートル）"
     - name: colors_used
       type: uint32
+      description: "カラーテーブルの色数。0 なら bits_per_pixel で表せる最大数（2^bits_per_pixel）"
     - name: colors_important
       type: uint32
+      description: "表示に必要な色の数。0 ならすべての色が必要"
     - name: red_mask
       type: uint32
-      description: "赤チャンネルのビットマスク"
+      description: "ピクセル値のうち赤成分のビットマスク（compression が BI_BITFIELDS のときだけ有効）"
     - name: green_mask
       type: uint32
-      description: "緑チャンネルのビットマスク"
+      description: "ピクセル値のうち緑成分のビットマスク（compression が BI_BITFIELDS のときだけ有効）"
     - name: blue_mask
       type: uint32
-      description: "青チャンネルのビットマスク"
+      description: "ピクセル値のうち青成分のビットマスク（compression が BI_BITFIELDS のときだけ有効）"
     - name: alpha_mask
       type: uint32
-      description: "アルファチャンネルのビットマスク"
+      description: "ピクセル値のうちアルファ成分のビットマスク（0 ならアルファなし）"
     - name: cs_type
       type: uint32
-      description: "色空間タイプ"
+      enum: color_space_type
+      description: "色空間の種類（LCS_CALIBRATED_RGB=0、または 'sRGB' / 'Win ' / 'LINK' / 'MBED' などの 4 文字コード）"
     - name: endpoints
       type: bytes
       size: "36"
-      description: "CIEXYZTRIPLE構造体 (3x3座標)"
+      description: "赤・緑・青の端点の CIE XYZ 座標（CIEXYZTRIPLE。2.30 固定小数点 4 バイト × XYZ × 3 色 = 36 バイト）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
     - name: gamma_red
       type: uint32
-      description: "赤チャンネルのガンマ値"
+      description: "赤成分のトーンカーブのガンマ（符号なし 16.16 固定小数点）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
     - name: gamma_green
       type: uint32
-      description: "緑チャンネルのガンマ値"
+      description: "緑成分のトーンカーブのガンマ（符号なし 16.16 固定小数点）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
     - name: gamma_blue
       type: uint32
-      description: "青チャンネルのガンマ値"
+      description: "青成分のトーンカーブのガンマ（符号なし 16.16 固定小数点）。cs_type が LCS_CALIBRATED_RGB のときだけ有効"
     - name: intent
       type: uint32
       enum: rendering_intent
-      description: "レンダリングインテント"
+      description: "レンダリングインテント（色域外の色の変換方法）"
     - name: profile_data
       type: uint32
-      description: "ICCプロファイルデータのオフセット"
+      description: "ICC プロファイルデータの位置（DIB ヘッダの先頭 = header_size の位置からのオフセット、バイト）。cs_type が PROFILE_LINKED / PROFILE_EMBEDDED のときだけ有効"
     - name: profile_size
       type: uint32
-      description: "ICCプロファイルデータのサイズ"
+      description: "ICC プロファイルデータのサイズ（バイト。PROFILE_LINKED ならファイル名の長さ）"
     - name: reserved
       type: uint32
-      description: "予約領域"
+      description: "予約（0）"
+
+  color_masks:
+    - name: red_mask
+      type: uint32
+      description: "ピクセル値のうち赤成分のビットマスク"
+    - name: green_mask
+      type: uint32
+      description: "ピクセル値のうち緑成分のビットマスク"
+    - name: blue_mask
+      type: uint32
+      description: "ピクセル値のうち青成分のビットマスク"
+    - name: alpha_mask
+      type: uint32
+      if: "{compression == 6}"
+      description: "ピクセル値のうちアルファ成分のビットマスク（BI_ALPHABITFIELDS のときだけ）"
 
   color_table_entry:
     - name: blue
       type: uint8
+      description: "青の強さ（0〜255）"
     - name: green
       type: uint8
+      description: "緑の強さ（0〜255）"
     - name: red
       type: uint8
+      description: "赤の強さ（0〜255）"
     - name: reserved
       type: uint8
+      description: "予約（0）"
 
   unknown_dib_header:
     - name: data
       type: bytes
-      size: remaining
-      description: "未対応のDIBヘッダ"
+      size: "{header_size - 4}"
+      description: "未対応のサイズの DIB ヘッダ（12 / 52 / 56 / 64 バイトなど）の残り（header_size - 4 バイト。先頭のサイズの 4 バイトは読み済み）"

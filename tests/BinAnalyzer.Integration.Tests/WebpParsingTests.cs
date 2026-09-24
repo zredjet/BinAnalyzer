@@ -80,4 +80,56 @@ public class WebpParsingTests
         output.Should().Contain("riff_magic");
         output.Should().Contain("webp_magic");
     }
+
+    // --- REQ-188: RFC 9649 との照合（VP8X のビット位置、VP8L のヘッダ、ANMF のサブチャンク、XMP） ---
+
+    private static IEnumerable<DecodedStruct> Chunks(DecodedStruct root) =>
+        ((DecodedArray)root.Children.Single(c => c.Name == "chunks")).Elements.Cast<DecodedStruct>();
+
+    private static DecodedStruct Data(DecodedStruct chunk) => (DecodedStruct)chunk.Children.Single(c => c.Name == "data");
+
+    private static string Id(DecodedStruct chunk) => ((DecodedString)chunk.Children[0]).Value;
+
+    private static long Bit(DecodedStruct data, string field, string bit) =>
+        ((DecodedBitfield)data.Children.Single(c => c.Name == field)).Fields.Single(f => f.Name == bit).Value;
+
+    [Fact]
+    public void AnimatedWebp_Vp8xFlagsFollowRfc9649()
+    {
+        var root = new BinaryDecoder().Decode(WebpTestDataGenerator.CreateAnimatedWebp(), new YamlFormatLoader().Load(WebpFormatPath));
+        var vp8x = Data(Chunks(root).Single(c => Id(c) == "VP8X"));
+
+        // 0x16 = アルファ（ビット 4）| XMP（ビット 2）| アニメーション（ビット 1）
+        Bit(vp8x, "flags", "alpha_channel").Should().Be(1);
+        Bit(vp8x, "flags", "xmp_metadata").Should().Be(1);
+        Bit(vp8x, "flags", "animation").Should().Be(1);
+        Bit(vp8x, "flags", "icc_profile").Should().Be(0);
+        Bit(vp8x, "flags", "exif_metadata").Should().Be(0);
+        ((DecodedVirtual)vp8x.Children.Single(c => c.Name == "canvas_width")).Value.Should().Be(4L);
+    }
+
+    [Fact]
+    public void AnimatedWebp_FramesContainVp8lSubChunks()
+    {
+        var root = new BinaryDecoder().Decode(WebpTestDataGenerator.CreateAnimatedWebp(), new YamlFormatLoader().Load(WebpFormatPath));
+        var frames = Chunks(root).Where(c => Id(c) == "ANMF").Select(Data).ToList();
+
+        frames.Should().HaveCount(2);
+        ((DecodedVirtual)frames[1].Children.Single(c => c.Name == "duration")).Value.Should().Be(80L);
+        Bit(frames[0], "flags", "blending_method").Should().Be(1);
+        var sub = ((DecodedArray)frames[0].Children.Single(c => c.Name == "frame_chunks")).Elements.Cast<DecodedStruct>().Single();
+        Id(sub).Should().Be("VP8L");
+        var vp8l = Data(sub);
+        ((DecodedVirtual)vp8l.Children.Single(c => c.Name == "width")).Value.Should().Be(2L);
+        ((DecodedVirtual)vp8l.Children.Single(c => c.Name == "height")).Value.Should().Be(3L);
+        Bit(vp8l, "header", "alpha_is_used").Should().Be(1);
+    }
+
+    [Fact]
+    public void AnimatedWebp_XmpChunkIsText()
+    {
+        var root = new BinaryDecoder().Decode(WebpTestDataGenerator.CreateAnimatedWebp(), new YamlFormatLoader().Load(WebpFormatPath));
+
+        ((DecodedString)Data(Chunks(root).Single(c => Id(c) == "XMP ")).Children[0]).Value.Should().Be("<x:xmpmeta/>");
+    }
 }

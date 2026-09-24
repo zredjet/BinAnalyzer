@@ -21,16 +21,6 @@ public sealed class FormatDefinitionQualityTests
     /// </summary>
     private static readonly HashSet<string> Pending = new(StringComparer.Ordinal)
     {
-        // 画像
-        "png.bdef.yaml",
-        "jpeg.bdef.yaml",
-        "gif.bdef.yaml",
-        "bmp.bdef.yaml",
-        "tiff.bdef.yaml",
-        "webp.bdef.yaml",
-        "ico.bdef.yaml",
-        "heif.bdef.yaml",
-        "icc.bdef.yaml",
         // 音声・映像
         "mp3.bdef.yaml",
         "mp4.bdef.yaml",

@@ -136,6 +136,50 @@ public static class JpegTestDataGenerator
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// 1 つの DQT セグメントに量子化テーブル 2 個（8 ビット ID 0、16 ビット ID 1）、
+    /// 1 つの DHT セグメントにハフマンテーブル 2 個（DC ID 0 の符号 2 個、AC ID 1 の符号 3 個）を入れた JPEG（ffmpeg の出力と同じまとめ方）。
+    /// </summary>
+    public static byte[] CreateJpegWithMergedTables()
+    {
+        using var ms = new MemoryStream();
+
+        // SOI
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xD8);
+
+        // === DQT: 2 + (1 + 64) + (1 + 128) = 196 ===
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xDB);
+        WriteBE16(ms, 196);
+        ms.WriteByte(0x00); // Pq=0, Tq=0
+        for (var i = 0; i < 64; i++) ms.WriteByte((byte)(i + 1));
+        ms.WriteByte(0x11); // Pq=1, Tq=1
+        for (var i = 0; i < 64; i++) WriteBE16(ms, (ushort)(0x100 + i));
+
+        // === DHT: 2 + (1 + 16 + 2) + (1 + 16 + 3) = 41 ===
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xC4);
+        WriteBE16(ms, 41);
+        ms.WriteByte(0x00); // Tc=0 (DC), Th=0
+        var dcCounts = new byte[16];
+        dcCounts[1] = 2; // 2 ビットの符号が 2 個
+        ms.Write(dcCounts);
+        ms.Write(new byte[] { 0x00, 0x01 });
+        ms.WriteByte(0x11); // Tc=1 (AC), Th=1
+        var acCounts = new byte[16];
+        acCounts[1] = 1; // 2 ビット 1 個
+        acCounts[2] = 2; // 3 ビット 2 個
+        ms.Write(acCounts);
+        ms.Write(new byte[] { 0x01, 0x00, 0xF0 });
+
+        // === EOI ===
+        ms.WriteByte(0xFF);
+        ms.WriteByte(0xD9);
+
+        return ms.ToArray();
+    }
+
     private static void WriteBE16(MemoryStream ms, ushort value)
     {
         ms.WriteByte((byte)(value >> 8));

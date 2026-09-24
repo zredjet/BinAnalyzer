@@ -1,89 +1,217 @@
+# JPEG 画像（.jpg / .jpeg / .jfif）
+# 仕様: ITU-T T.81 (09/1992) | ISO/IEC 10918-1:1994 https://www.w3.org/Graphics/JPEG/itu-t81.pdf、JFIF 1.02（ITU-T T.871 | ISO/IEC 10918-5:2013） https://www.w3.org/Graphics/JPEG/jfif3.pdf
+# 構造: SOI → マーカーセグメント*（0xFF + マーカー種別 + 長さ 2 バイト + 本体）。マーカー種別で switch し、SOF0 / DQT / DHT / DRI / APP0（JFIF）/ SOS の本体を読む。
+#   それ以外のセグメントは長さだけ読んで本体をバイト列として表示する。長さは長さフィールド自身の 2 バイトを含むので、本体は length − 2 バイト。
+#   SOS の後のエントロピー符号化データは長さを持たないため、EOI（FF D9）の直前までを 1 つのバイト列として読む（RSTn や、プログレッシブの 2 つ目以降の DHT / SOS もここに含まれる）。
+# 対応していないもの: エントロピー符号化データの復号（ハフマン・算術符号）、SOF0 以外のフレームヘッダ（SOF1〜SOF15。拡張・プログレッシブ・ロスレス・階層型・算術符号化はバイト列として表示）、
+#   SOS ヘッダの各項目、DAC / DNL / DHP / EXP の本体、JFIF のサムネイル画像と JFXX 拡張、
+#   Exif（APP1）・XMP・ICC プロファイル（APP2）・Adobe（APP14）などの APPn の中身、マーカー前の詰め物（0xFF の連続）、EOI の後ろに続くデータ、予約マーカー RES（0x02〜0xBF）のラベル
 name: JPEG
 endianness: big
 root: jpeg
 
 enums:
   jpeg_marker:
+    - value: 0x01
+      label: TEM
+      description: "算術符号化の一時的な使用（長さを持たない単独マーカー）"
     - value: 0xC0
       label: SOF0
-      description: "ベースラインDCT"
+      description: "フレーム開始: ベースライン DCT（ハフマン符号）"
+    - value: 0xC1
+      label: SOF1
+      description: "フレーム開始: 拡張シーケンシャル DCT（ハフマン符号）"
     - value: 0xC2
       label: SOF2
-      description: "プログレッシブDCT"
+      description: "フレーム開始: プログレッシブ DCT（ハフマン符号）"
+    - value: 0xC3
+      label: SOF3
+      description: "フレーム開始: ロスレス（シーケンシャル、ハフマン符号）"
     - value: 0xC4
       label: DHT
-      description: "ハフマンテーブル定義"
+      description: "ハフマンテーブル定義（Define Huffman Table）"
+    - value: 0xC5
+      label: SOF5
+      description: "フレーム開始: 差分シーケンシャル DCT（階層型、ハフマン符号）"
+    - value: 0xC6
+      label: SOF6
+      description: "フレーム開始: 差分プログレッシブ DCT（階層型、ハフマン符号）"
+    - value: 0xC7
+      label: SOF7
+      description: "フレーム開始: 差分ロスレス（階層型、ハフマン符号）"
+    - value: 0xC8
+      label: JPG
+      description: "JPEG 拡張用の予約"
+    - value: 0xC9
+      label: SOF9
+      description: "フレーム開始: 拡張シーケンシャル DCT（算術符号）"
+    - value: 0xCA
+      label: SOF10
+      description: "フレーム開始: プログレッシブ DCT（算術符号）"
+    - value: 0xCB
+      label: SOF11
+      description: "フレーム開始: ロスレス（シーケンシャル、算術符号）"
+    - value: 0xCC
+      label: DAC
+      description: "算術符号化の条件付けの定義（Define Arithmetic Coding conditioning）"
+    - value: 0xCD
+      label: SOF13
+      description: "フレーム開始: 差分シーケンシャル DCT（階層型、算術符号）"
+    - value: 0xCE
+      label: SOF14
+      description: "フレーム開始: 差分プログレッシブ DCT（階層型、算術符号）"
+    - value: 0xCF
+      label: SOF15
+      description: "フレーム開始: 差分ロスレス（階層型、算術符号）"
+    - value: 0xD0
+      label: RST0
+      description: "リスタートマーカー 0（エントロピー符号化データ内に現れる単独マーカー。RST0〜RST7 を順に繰り返す）"
+    - value: 0xD1
+      label: RST1
+      description: "リスタートマーカー 1"
+    - value: 0xD2
+      label: RST2
+      description: "リスタートマーカー 2"
+    - value: 0xD3
+      label: RST3
+      description: "リスタートマーカー 3"
+    - value: 0xD4
+      label: RST4
+      description: "リスタートマーカー 4"
+    - value: 0xD5
+      label: RST5
+      description: "リスタートマーカー 5"
+    - value: 0xD6
+      label: RST6
+      description: "リスタートマーカー 6"
+    - value: 0xD7
+      label: RST7
+      description: "リスタートマーカー 7"
+    - value: 0xD8
+      label: SOI
+      description: "画像開始（Start Of Image、長さを持たない単独マーカー）"
     - value: 0xD9
       label: EOI
-      description: "画像終端"
+      description: "画像終端（End Of Image、長さを持たない単独マーカー）"
     - value: 0xDA
       label: SOS
-      description: "スキャン開始"
+      description: "スキャン開始（Start Of Scan）。直後にエントロピー符号化データが続く"
     - value: 0xDB
       label: DQT
-      description: "量子化テーブル定義"
+      description: "量子化テーブル定義（Define Quantization Table）"
+    - value: 0xDC
+      label: DNL
+      description: "ライン数の定義（Define Number of Lines）。SOF の高さが 0 のとき最初のスキャンの後で高さを与える"
     - value: 0xDD
       label: DRI
-      description: "リスタートインターバル定義"
+      description: "リスタートインターバル定義（Define Restart Interval）"
+    - value: 0xDE
+      label: DHP
+      description: "階層型の進行の定義（Define Hierarchical Progression）"
+    - value: 0xDF
+      label: EXP
+      description: "参照成分の拡大（Expand Reference Components、階層型）"
     - value: 0xE0
       label: APP0
-      description: "JFIF"
+      description: "アプリケーションセグメント 0（JFIF / JFXX）"
     - value: 0xE1
       label: APP1
-      description: "Exif"
+      description: "アプリケーションセグメント 1（Exif / XMP）"
     - value: 0xE2
       label: APP2
-      description: "アプリケーションセグメント2"
+      description: "アプリケーションセグメント 2（ICC プロファイル / FlashPix / MPF）"
     - value: 0xE3
       label: APP3
-      description: "アプリケーションセグメント3"
+      description: "アプリケーションセグメント 3（アプリケーション固有）"
     - value: 0xE4
       label: APP4
-      description: "アプリケーションセグメント4"
+      description: "アプリケーションセグメント 4（アプリケーション固有）"
     - value: 0xE5
       label: APP5
-      description: "アプリケーションセグメント5"
+      description: "アプリケーションセグメント 5（アプリケーション固有）"
     - value: 0xE6
       label: APP6
-      description: "アプリケーションセグメント6"
+      description: "アプリケーションセグメント 6（アプリケーション固有）"
     - value: 0xE7
       label: APP7
-      description: "アプリケーションセグメント7"
+      description: "アプリケーションセグメント 7（アプリケーション固有）"
     - value: 0xE8
       label: APP8
-      description: "アプリケーションセグメント8"
+      description: "アプリケーションセグメント 8（アプリケーション固有）"
     - value: 0xE9
       label: APP9
-      description: "アプリケーションセグメント9"
+      description: "アプリケーションセグメント 9（アプリケーション固有）"
     - value: 0xEA
       label: APP10
-      description: "アプリケーションセグメント10"
+      description: "アプリケーションセグメント 10（アプリケーション固有）"
     - value: 0xEB
       label: APP11
-      description: "アプリケーションセグメント11"
+      description: "アプリケーションセグメント 11（アプリケーション固有）"
     - value: 0xEC
       label: APP12
-      description: "アプリケーションセグメント12"
+      description: "アプリケーションセグメント 12（アプリケーション固有。Ducky など）"
     - value: 0xED
       label: APP13
-      description: "アプリケーションセグメント13"
+      description: "アプリケーションセグメント 13（Photoshop の画像リソース・IPTC）"
     - value: 0xEE
       label: APP14
-      description: "アプリケーションセグメント14"
+      description: "アプリケーションセグメント 14（Adobe。色変換の種類）"
     - value: 0xEF
       label: APP15
-      description: "アプリケーションセグメント15"
+      description: "アプリケーションセグメント 15（アプリケーション固有）"
+    - value: 0xF0
+      label: JPG0
+      description: "JPEG 拡張用の予約"
+    - value: 0xF1
+      label: JPG1
+      description: "JPEG 拡張用の予約"
+    - value: 0xF2
+      label: JPG2
+      description: "JPEG 拡張用の予約"
+    - value: 0xF3
+      label: JPG3
+      description: "JPEG 拡張用の予約"
+    - value: 0xF4
+      label: JPG4
+      description: "JPEG 拡張用の予約"
+    - value: 0xF5
+      label: JPG5
+      description: "JPEG 拡張用の予約"
+    - value: 0xF6
+      label: JPG6
+      description: "JPEG 拡張用の予約"
+    - value: 0xF7
+      label: JPG7
+      description: "JPEG 拡張用の予約（JPEG-LS では SOF55）"
+    - value: 0xF8
+      label: JPG8
+      description: "JPEG 拡張用の予約（JPEG-LS では LSE）"
+    - value: 0xF9
+      label: JPG9
+      description: "JPEG 拡張用の予約"
+    - value: 0xFA
+      label: JPG10
+      description: "JPEG 拡張用の予約"
+    - value: 0xFB
+      label: JPG11
+      description: "JPEG 拡張用の予約"
+    - value: 0xFC
+      label: JPG12
+      description: "JPEG 拡張用の予約"
+    - value: 0xFD
+      label: JPG13
+      description: "JPEG 拡張用の予約"
     - value: 0xFE
       label: COM
-      description: "コメント"
+      description: "コメント（Comment）"
 
   density_units:
     - value: 0
       label: no_units
-      description: "アスペクト比のみ"
+      description: "単位なし（x_density : y_density はピクセルの縦横比だけを表す）"
     - value: 1
       label: dots_per_inch
-      description: "ドット/インチ"
+      description: "ドット/インチ（dpi）"
     - value: 2
       label: dots_per_cm
       description: "ドット/センチメートル"
@@ -94,19 +222,22 @@ structs:
       type: bytes
       size: "2"
       expected: [0xFF, 0xD8]
-      description: "画像開始マーカー"
+      description: "画像開始マーカー（SOI、FF D8）"
     - name: segments
       type: struct
       struct: marker_segment
       repeat: eof
+      description: "SOI に続くマーカーセグメントの並び（ファイル末尾まで。最後は EOI）"
 
   marker_segment:
     - name: marker_prefix
       type: uint8
       expected: [0xFF]
+      description: "マーカーの先頭バイト（常に 0xFF）"
     - name: marker_type
       type: uint8
       enum: jpeg_marker
+      description: "マーカーの種類（2 バイト目）。この値で body の構造を振り分ける"
     - name: body
       type: switch
       switch_on: "{marker_type}"
@@ -119,156 +250,196 @@ structs:
         "0xDD": dri_segment
         "0xE0": app0_segment
       default: generic_segment
+      description: "marker_type に応じたセグメント本体（未対応のマーカーは長さとバイト列）"
 
   generic_segment:
     - name: length
       type: uint16
+      description: "セグメント長（バイト）。この長さフィールド自身の 2 バイトを含み、マーカーの 2 バイトは含まない"
     - name: data
       type: bytes
       size: "{length - 2}"
+      description: "セグメントの本体（length − 2 バイト、未分解）"
 
   # --- SOF0（フレーム開始、ベースラインDCT） ---
   sof0_segment:
     - name: length
       type: uint16
+      description: "セグメント長（バイト、長さフィールドを含む）。8 + 3 × num_components"
     - name: body
       type: struct
       struct: sof0_body
       size: "{length - 2}"
+      description: "フレームヘッダ（length − 2 バイト）"
 
   sof0_body:
     - name: precision
       type: uint8
+      description: "サンプル精度（P、1 成分あたりのビット数）。ベースラインは 8"
     - name: height
       type: uint16
+      description: "画像の高さ（Y、ライン数）。0 のときは最初のスキャンの後の DNL セグメントで与えられる"
     - name: width
       type: uint16
+      description: "画像の幅（X、1 ラインあたりのサンプル数、1〜65535）"
     - name: num_components
       type: uint8
+      description: "色成分の数（Nf）。1=グレースケール、3=YCbCr（JFIF）、4=CMYK など"
     - name: components
       type: struct
       struct: sof0_component
       repeat_count: "{num_components}"
+      description: "num_components 個の色成分の定義（各 3 バイト）"
 
   sof0_component:
     - name: id
       type: uint8
+      description: "成分 ID（Ci、0〜255）。SOS ヘッダからこの ID で参照される（JFIF では 1=Y、2=Cb、3=Cr）"
     - name: sampling
       type: uint8
+      description: "サンプリング係数。上位 4 ビット = 水平方向 H（1〜4）、下位 4 ビット = 垂直方向 V（1〜4）。0x22 の Y と 0x11 の Cb/Cr なら 4:2:0"
     - name: qt_id
       type: uint8
+      description: "この成分で使う量子化テーブルの ID（Tq、0〜3）。DQT の table_id に対応"
 
   # --- DQT（量子化テーブル定義） ---
   dqt_segment:
     - name: length
       type: uint16
+      description: "セグメント長（バイト、長さフィールドを含む）。2 + テーブルごとに 65（8 ビット）または 129（16 ビット）"
     - name: body
       type: struct
       struct: dqt_body
       size: "{length - 2}"
+      description: "量子化テーブルの並び（length − 2 バイト）"
 
   dqt_body:
+    - name: tables
+      type: struct
+      struct: dqt_table
+      repeat: eof
+      description: "量子化テーブル（1 つのセグメントに 1〜4 個。テーブルごとにセグメントを分ける実装と、まとめる実装がある）"
+
+  dqt_table:
     - name: precision_and_table_id
       type: uint8
-      description: "上位ニブル: 精度（0=8bit、1=16bit）、下位ニブル: テーブルID"
+      description: "上位 4 ビット: 精度 Pq（0=8 ビット、1=16 ビット）、下位 4 ビット: テーブル ID Tq（0〜3）"
     - name: precision
       type: virtual
       value: "{precision_and_table_id >> 4}"
-      description: "量子化精度（0=8bit、1=16bit）"
+      description: "量子化テーブルの精度 Pq（precision_and_table_id の上位 4 ビット。0=8 ビット、1=16 ビット。16 ビットはサンプル精度 12 のときだけ）"
     - name: table_id
       type: virtual
       value: "{precision_and_table_id & 0x0F}"
-      description: "量子化テーブルID（0-3）"
+      description: "量子化テーブルの ID Tq（precision_and_table_id の下位 4 ビット、0〜3）。SOF の qt_id から参照される"
     - name: table_data
       type: bytes
       size: "{64 + 64 * precision}"
-      description: "量子化テーブル値（8bitで64バイト、16bitで128バイト）"
+      description: "量子化値 64 個（ジグザグ順）。8 ビットなら 64 バイト、16 ビットなら 128 バイト（64 + 64 × precision）"
 
   # --- DHT（ハフマンテーブル定義） ---
   dht_segment:
     - name: length
       type: uint16
+      description: "セグメント長（バイト、長さフィールドを含む）。2 + テーブルごとに 17 + 符号の総数"
     - name: body
       type: struct
       struct: dht_body
       size: "{length - 2}"
+      description: "ハフマンテーブルの並び（length − 2 バイト）"
 
   dht_body:
+    - name: tables
+      type: struct
+      struct: dht_table
+      repeat: eof
+      description: "ハフマンテーブル（1 つのセグメントに複数入ることがある。libjpeg はテーブルごとに分け、ffmpeg は DC / AC の 4 個を 1 セグメントにまとめる）"
+
+  dht_table:
     - name: class_and_id
       type: uint8
-      description: "上位ニブル: テーブルクラス（0=DC、1=AC）、下位ニブル: テーブルID"
+      description: "上位 4 ビット: テーブルクラス Tc（0=DC またはロスレス、1=AC）、下位 4 ビット: テーブル ID Th（0〜3）"
     - name: table_class
       type: virtual
       value: "{class_and_id >> 4}"
-      description: "テーブルクラス（0=DC、1=AC）"
+      description: "テーブルクラス Tc（class_and_id の上位 4 ビット。0=DC またはロスレス、1=AC）"
     - name: table_id
       type: virtual
       value: "{class_and_id & 0x0F}"
-      description: "ハフマンテーブルID（0-3）"
+      description: "ハフマンテーブルの ID Th（class_and_id の下位 4 ビット、0〜3。ベースラインは 0〜1）"
     - name: num_codes
-      type: bytes
-      size: "16"
-      description: "各符号長（1-16）の符号数"
+      type: uint8
+      repeat_count: "16"
+      description: "符号長 1〜16 ビットそれぞれの符号の数（L1〜L16、各 1 バイト）。合計が values のバイト数になる"
+    - name: total_codes
+      type: virtual
+      value: "{num_codes[0] + num_codes[1] + num_codes[2] + num_codes[3] + num_codes[4] + num_codes[5] + num_codes[6] + num_codes[7] + num_codes[8] + num_codes[9] + num_codes[10] + num_codes[11] + num_codes[12] + num_codes[13] + num_codes[14] + num_codes[15]}"
+      description: "符号の総数（L1〜L16 の合計、最大 256）"
     - name: values
       type: bytes
-      size: remaining
-      description: "ハフマン値テーブル"
+      size: "{total_codes}"
+      description: "符号に割り当てる値（V、符号長の短い順に total_codes バイト）。DC は差分のビット数、AC は連続する 0 の数とビット数"
 
   # --- APP0（JFIF） ---
   app0_segment:
     - name: length
       type: uint16
+      description: "セグメント長（バイト、長さフィールドを含む）。16 + 3 × thumbnail_width × thumbnail_height"
     - name: body
       type: struct
       struct: app0_body
       size: "{length - 2}"
+      description: "JFIF APP0 の本体（length − 2 バイト）"
 
   app0_body:
     - name: identifier
       type: ascii
       size: "5"
-      description: "JFIF識別子（'JFIF\\0'）"
+      description: "識別子（'JFIF\\0'。JFXX 拡張では 'JFXX\\0'）"
     - name: version_major
       type: uint8
-      description: "JFIFメジャーバージョン"
+      description: "JFIF のメジャーバージョン（1）"
     - name: version_minor
       type: uint8
-      description: "JFIFマイナーバージョン"
+      description: "JFIF のマイナーバージョン（0〜2。1.02 なら 2）"
     - name: density_units
       type: uint8
       enum: density_units
-      description: "密度単位（0=単位なし、1=dpi、2=dpcm）"
+      description: "x_density / y_density の単位（0=単位なし・縦横比のみ、1=ドット/インチ、2=ドット/cm）"
     - name: x_density
       type: uint16
-      description: "水平ピクセル密度"
+      description: "水平方向の解像度（density_units の単位。0 は不可）"
     - name: y_density
       type: uint16
-      description: "垂直ピクセル密度"
+      description: "垂直方向の解像度（density_units の単位。0 は不可）"
     - name: thumbnail_width
       type: uint8
-      description: "サムネイル幅（ピクセル）"
+      description: "埋め込みサムネイルの幅（ピクセル、0 ならサムネイルなし）。サムネイル本体（RGB 3 バイト × 幅 × 高さ）はこの後に続くが読まない"
     - name: thumbnail_height
       type: uint8
-      description: "サムネイル高さ（ピクセル）"
+      description: "埋め込みサムネイルの高さ（ピクセル、0 ならサムネイルなし）"
 
   # --- DRI（リスタートインターバル定義） ---
   dri_segment:
     - name: length
       type: uint16
+      description: "セグメント長（バイト、長さフィールドを含む。常に 4）"
     - name: restart_interval
       type: uint16
-      description: "リスタートインターバル（リスタートマーカー間のMCU数）"
+      description: "リスタートインターバル（Ri）。RSTn マーカーを挟む間隔の MCU 数。0 ならリスタートマーカーを使わない"
 
   # --- SOS（スキャン開始） ---
   sos_segment:
     - name: length
       type: uint16
+      description: "スキャンヘッダの長さ（バイト、長さフィールドを含む）。6 + 2 × 成分数"
     - name: sos_header
       type: bytes
       size: "{length - 2}"
+      description: "スキャンヘッダ（未分解）。成分数 Ns、成分ごとの ID と DC/AC ハフマンテーブル ID、スペクトル選択 Ss / Se、逐次近似 Ah / Al"
     - name: compressed_data
       type: bytes
       size: "{until_marker(0xFF, 0xD9)}"
-      description: "エントロピー符号化データ"
+      description: "エントロピー符号化データ（EOI の直前まで、復号しない）。0xFF は 0xFF 0x00 に置き換えて格納される。RSTn や、プログレッシブの後続の DHT / SOS もここに含まれる"
 
   eoi_marker: []

@@ -10,7 +10,7 @@
       "type": "bytes",
       "offset": 0,
       "size": 4,
-      "description": "RIFF\u30B3\u30F3\u30C6\u30CA\u30DE\u30B8\u30C3\u30AF",
+      "description": "RIFF \u30B3\u30F3\u30C6\u30CA\u306E\u30DE\u30B8\u30C3\u30AF\uFF08\u0027RIFF\u0027\uFF09",
       "name": "riff_magic",
       "hex": "52 49 46 46",
       "valid": true
@@ -20,7 +20,7 @@
       "type": "uint32",
       "offset": 4,
       "size": 4,
-      "description": "\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA - 8\u30D0\u30A4\u30C8\uFF08RIFF\u30D8\u30C3\u30C0\u5206\uFF09",
+      "description": "\u0027WEBP\u0027 \u4EE5\u964D\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30D5\u30A1\u30A4\u30EB\u30B5\u30A4\u30BA - 8\uFF09",
       "name": "file_size",
       "value": 22,
       "hex": "0x16"
@@ -30,7 +30,7 @@
       "type": "bytes",
       "offset": 8,
       "size": 4,
-      "description": "WEBP\u30D5\u30A9\u30FC\u30E0\u30BF\u30A4\u30D7",
+      "description": "RIFF \u306E\u30D5\u30A9\u30FC\u30E0\u30BF\u30A4\u30D7\uFF08\u0027WEBP\u0027\uFF09",
       "name": "webp_magic",
       "hex": "57 45 42 50",
       "valid": true
@@ -56,6 +56,7 @@
               "type": "ascii",
               "offset": 12,
               "size": 4,
+              "description": "\u30C1\u30E3\u30F3\u30AF\u306E\u7A2E\u985E\uFF08FourCC\u3002\u0027VP8 \u0027 \u306F\u672B\u5C3E\u304C\u7A7A\u767D\uFF09",
               "name": "chunk_id",
               "value": "VP8 ",
               "encoding": "ascii"
@@ -65,6 +66,7 @@
               "type": "uint32",
               "offset": 16,
               "size": 4,
+              "description": "\u30C7\u30FC\u30BF\u306E\u30D0\u30A4\u30C8\u6570\uFF08ID\u30FB\u30B5\u30A4\u30BA\u30FB\u30D1\u30C7\u30A3\u30F3\u30B0\u3092\u542B\u307E\u306A\u3044\uFF09",
               "name": "chunk_size",
               "value": 10,
               "hex": "0xA"
@@ -82,6 +84,7 @@
                   "type": "bitfield",
                   "offset": 20,
                   "size": 3,
+                  "description": "VP8 \u306E\u30D5\u30EC\u30FC\u30E0\u30BF\u30B0\uFF0824 \u30D3\u30C3\u30C8 LE\u3002\u30D5\u30EC\u30FC\u30E0\u306E\u7A2E\u985E\u30FB\u30D0\u30FC\u30B8\u30E7\u30F3\u30FB\u6700\u521D\u306E\u30D1\u30FC\u30C6\u30A3\u30B7\u30E7\u30F3\u306E\u30B5\u30A4\u30BA\uFF09",
                   "name": "frame_tag",
                   "raw_value": "0x10",
                   "fields": [
@@ -126,20 +129,65 @@
                   "type": "uint16",
                   "offset": 26,
                   "size": 2,
-                  "description": "\u5E45\u3068\u6C34\u5E73\u30B9\u30B1\u30FC\u30EB\uFF08\u4E0B\u4F4D14\u30D3\u30C3\u30C8 = \u5E45\u3001\u4E0A\u4F4D2\u30D3\u30C3\u30C8 = \u30B9\u30B1\u30FC\u30EB\uFF09",
+                  "description": "\u5E45\u3068\u6C34\u5E73\u65B9\u5411\u306E\u62E1\u5927\u7387\uFF08\u4E0B\u4F4D 14 \u30D3\u30C3\u30C8 = \u5E45\u3001\u4E0A\u4F4D 2 \u30D3\u30C3\u30C8 = \u62E1\u5927\u7387\uFF09",
                   "name": "width_and_scale",
                   "value": 1,
                   "hex": "0x1"
+                },
+                "width": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 28,
+                  "size": 0,
+                  "description": "\u753B\u50CF\u306E\u5E45\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
+                  "name": "width",
+                  "value": 1
+                },
+                "horizontal_scale": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 28,
+                  "size": 0,
+                  "description": "\u6C34\u5E73\u65B9\u5411\u306E\u62E1\u5927\u7387\uFF080 = \u306A\u3057\u30011 = 5/4\u30012 = 5/3\u30013 = 2 \u500D\uFF09",
+                  "name": "horizontal_scale",
+                  "value": 0
                 },
                 "height_and_scale": {
                   "_type": "integer",
                   "type": "uint16",
                   "offset": 28,
                   "size": 2,
-                  "description": "\u9AD8\u3055\u3068\u5782\u76F4\u30B9\u30B1\u30FC\u30EB\uFF08\u4E0B\u4F4D14\u30D3\u30C3\u30C8 = \u9AD8\u3055\u3001\u4E0A\u4F4D2\u30D3\u30C3\u30C8 = \u30B9\u30B1\u30FC\u30EB\uFF09",
+                  "description": "\u9AD8\u3055\u3068\u5782\u76F4\u65B9\u5411\u306E\u62E1\u5927\u7387\uFF08\u4E0B\u4F4D 14 \u30D3\u30C3\u30C8 = \u9AD8\u3055\u3001\u4E0A\u4F4D 2 \u30D3\u30C3\u30C8 = \u62E1\u5927\u7387\uFF09",
                   "name": "height_and_scale",
                   "value": 1,
                   "hex": "0x1"
+                },
+                "height": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 30,
+                  "size": 0,
+                  "description": "\u753B\u50CF\u306E\u9AD8\u3055\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
+                  "name": "height",
+                  "value": 1
+                },
+                "vertical_scale": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 30,
+                  "size": 0,
+                  "description": "\u5782\u76F4\u65B9\u5411\u306E\u62E1\u5927\u7387\uFF080 = \u306A\u3057\u30011 = 5/4\u30012 = 5/3\u30013 = 2 \u500D\uFF09",
+                  "name": "vertical_scale",
+                  "value": 0
+                },
+                "remaining_data": {
+                  "_type": "bytes",
+                  "type": "bytes",
+                  "offset": 30,
+                  "size": 0,
+                  "description": "VP8 \u30D3\u30C3\u30C8\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u6B8B\u308A\uFF08\u30D5\u30EC\u30FC\u30E0\u30D8\u30C3\u30C0\u306E\u6B8B\u308A\u3068\u30D1\u30FC\u30C6\u30A3\u30B7\u30E7\u30F3\uFF09",
+                  "name": "remaining_data",
+                  "hex": ""
                 }
               }
             }

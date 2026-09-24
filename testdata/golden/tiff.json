@@ -10,7 +10,7 @@
       "type": "ascii",
       "offset": 0,
       "size": 2,
-      "description": "\u30D0\u30A4\u30C8\u30AA\u30FC\u30C0\u30FC\u30DE\u30FC\u30AF\uFF08II=LE, MM=BE\uFF09",
+      "description": "\u30D0\u30A4\u30C8\u30AA\u30FC\u30C0\u30FC\uFF08II = \u30EA\u30C8\u30EB\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3\u3001MM = \u30D3\u30C3\u30B0\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3\uFF09\u3002\u4EE5\u964D\u306E\u3059\u3079\u3066\u306E\u6570\u5024\u306B\u9069\u7528\u3059\u308B",
       "_validation": {
         "passed": true,
         "expression": "{byte_order == \u0027II\u0027 or byte_order == \u0027MM\u0027}"
@@ -32,10 +32,10 @@
           "type": "uint16",
           "offset": 2,
           "size": 2,
-          "description": "TIFF\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC\uFF0842\uFF09",
+          "description": "\u30DE\u30B8\u30C3\u30AF\uFF0842 = TIFF\u300143 = BigTIFF\uFF09",
           "_validation": {
             "passed": true,
-            "expression": "{magic == 42}"
+            "expression": "{magic == 42 or magic == 43}"
           },
           "name": "magic",
           "value": 42,
@@ -46,7 +46,7 @@
           "type": "uint32",
           "offset": 4,
           "size": 4,
-          "description": "\u6700\u521D\u306EIFD\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
+          "description": "\u6700\u521D\u306E IFD \u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF08\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u3002\u5076\u6570\uFF09",
           "name": "ifd_offset",
           "value": 8,
           "hex": "0x8"
@@ -64,7 +64,7 @@
               "type": "uint16",
               "offset": 8,
               "size": 2,
-              "description": "\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u30A8\u30F3\u30C8\u30EA\u6570",
+              "description": "\u30A8\u30F3\u30C8\u30EA\u306E\u6570",
               "name": "entry_count",
               "value": 1,
               "hex": "0x1"
@@ -90,6 +90,7 @@
                       "type": "uint16",
                       "offset": 10,
                       "size": 2,
+                      "description": "\u30BF\u30B0\u756A\u53F7",
                       "name": "tag",
                       "value": 256,
                       "hex": "0x100",
@@ -100,18 +101,19 @@
                       "type": "uint16",
                       "offset": 12,
                       "size": 2,
-                      "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u30BF\u30A4\u30D7\u3068\u30D0\u30A4\u30C8\u30B5\u30A4\u30BA: BYTE=1, ASCII=1, SHORT=2, LONG=4, RATIONAL=8, SBYTE=1, UNDEFINED=1, SSHORT=2, SLONG=4, SRATIONAL=8, FLOAT=4, DOUBLE=8",
+                      "description": "\u5024\u306E\u578B\uFF081 \u5024\u306E\u30D0\u30A4\u30C8\u6570: BYTE / ASCII / SBYTE / UNDEFINED = 1\u3001SHORT / SSHORT = 2\u3001LONG / SLONG / FLOAT = 4\u3001RATIONAL / SRATIONAL / DOUBLE = 8\uFF09",
                       "name": "field_type",
                       "value": 3,
                       "hex": "0x3",
-                      "enum_label": "SHORT"
+                      "enum_label": "SHORT",
+                      "enum_description": "\u7B26\u53F7\u306A\u3057 16 \u30D3\u30C3\u30C8\u6574\u6570\uFF082 \u30D0\u30A4\u30C8\uFF09"
                     },
                     "count": {
                       "_type": "integer",
                       "type": "uint32",
                       "offset": 14,
                       "size": 4,
-                      "description": "\u5024\u306E\u6570",
+                      "description": "\u5024\u306E\u500B\u6570\uFF08ASCII \u306F NUL \u3092\u542B\u3080\u6587\u5B57\u6570\uFF09",
                       "name": "count",
                       "value": 1,
                       "hex": "0x1"
@@ -121,7 +123,7 @@
                       "type": "uint32",
                       "offset": 18,
                       "size": 4,
-                      "description": "\u5408\u8A08\u30B5\u30A4\u30BA\uFF08type_size \u00D7 count\uFF09\u304C4\u30D0\u30A4\u30C8\u4EE5\u4E0B\u306E\u5834\u5408\u306F\u5024\u305D\u306E\u3082\u306E\u3001\u305D\u308C\u4EE5\u5916\u306F\u5024\u30C7\u30FC\u30BF\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
+                      "description": "\u5024\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u578B\u306E\u30D0\u30A4\u30C8\u6570 \u00D7 count\uFF09\u304C 4 \u4EE5\u4E0B\u306A\u3089\u5024\u305D\u306E\u3082\u306E\uFF08\u5148\u982D\u306B\u8A70\u3081\u308B\uFF09\u3001\u305D\u308C\u4EE5\u5916\u306F\u5024\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
                       "name": "value_offset",
                       "value": 64,
                       "hex": "0x40"
@@ -131,7 +133,7 @@
                       "type": "virtual",
                       "offset": 22,
                       "size": 0,
-                      "description": "\u5024\u304C\u30A4\u30F3\u30E9\u30A4\u30F3\u304B\u3069\u3046\u304B\uFF08type_size * count \u003C= 4\uFF09",
+                      "description": "\u5024\u304C value_offset \u306E\u4E2D\u306B\u3042\u308B\u304B\uFF08\u578B\u306E\u30D0\u30A4\u30C8\u6570 \u00D7 count \u304C 4 \u4EE5\u4E0B\uFF09",
                       "name": "is_inline",
                       "value": true
                     },
@@ -140,7 +142,7 @@
                       "type": "virtual",
                       "offset": 22,
                       "size": 0,
-                      "description": "SHORT\u578B\u306E\u30A4\u30F3\u30E9\u30A4\u30F3\u5024\uFF08\u5024\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u5148\u982D2\u30D0\u30A4\u30C8\u3002LE\u306F\u4E0B\u4F4D16\u30D3\u30C3\u30C8\u3001BE\u306F\u4E0A\u4F4D16\u30D3\u30C3\u30C8\uFF09",
+                      "description": "SHORT 1 \u500B\u306E\u5024\uFF08\u5024\u6B04\u306E\u5148\u982D 2 \u30D0\u30A4\u30C8\u3002LE \u306F\u4E0B\u4F4D 16 \u30D3\u30C3\u30C8\u3001BE \u306F\u4E0A\u4F4D 16 \u30D3\u30C3\u30C8\uFF09",
                       "name": "inline_short_value",
                       "value": 64
                     }
@@ -153,7 +155,7 @@
               "type": "uint32",
               "offset": 22,
               "size": 4,
-              "description": "\u6B21\u306EIFD\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF080\u306E\u5834\u5408\u306F\u306A\u3057\uFF09",
+              "description": "\u6B21\u306E IFD \u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF080 \u306A\u3089\u6700\u5F8C\u306E IFD\uFF09",
               "name": "next_ifd_offset",
               "value": 0,
               "hex": "0x0"

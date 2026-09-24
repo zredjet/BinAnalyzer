@@ -1,3 +1,10 @@
+# WebP 画像（.webp）
+# 仕様: RFC 9649 WebP Image Format（2024） https://www.rfc-editor.org/rfc/rfc9649
+# 構造: RIFF コンテナ（'RIFF' + サイズ + 'WEBP'）+ チャンクの並び（4 文字の ID + サイズ + データ + 偶数境界のパディング）。
+#   単純形式は VP8（非可逆）または VP8L（可逆）のチャンク 1 つ、拡張形式は VP8X の後に ICCP / ANIM / ANMF / ALPH / 画像 / EXIF / XMP が続く。
+#   アニメーションのフレーム（ANMF）の中のサブチャンク（ALPH・VP8・VP8L）も同じ形で読む。
+# 対応していないもの: VP8 / VP8L のビットストリームの展開（VP8 はフレームヘッダの先頭、VP8L はヘッダの 5 バイトまで）、
+#   ALPH の圧縮データの展開、ICCP / EXIF / XMP の中身の解析
 name: WebP
 endianness: little
 root: webp
@@ -10,26 +17,29 @@ structs:
       type: bytes
       size: "4"
       expected: [0x52, 0x49, 0x46, 0x46]
-      description: "RIFFコンテナマジック"
+      description: "RIFF コンテナのマジック（'RIFF'）"
     - name: file_size
       type: uint32
-      description: "ファイルサイズ - 8バイト（RIFFヘッダ分）"
+      description: "'WEBP' 以降のバイト数（ファイルサイズ - 8）"
     - name: webp_magic
       type: bytes
       size: "4"
       expected: [0x57, 0x45, 0x42, 0x50]
-      description: "WEBPフォームタイプ"
+      description: "RIFF のフォームタイプ（'WEBP'）"
     - name: chunks
       type: struct
       struct: webp_chunk
       repeat: eof
+      description: "チャンクの並び"
 
   webp_chunk:
     - name: chunk_id
       type: ascii
       size: "4"
+      description: "チャンクの種類（FourCC。'VP8 ' は末尾が空白）"
     - name: chunk_size
       type: uint32
+      description: "データのバイト数（ID・サイズ・パディングを含まない）"
     - name: data
       type: switch
       size: "{chunk_size}"
@@ -43,37 +53,48 @@ structs:
         "'ANMF'": anmf_data
         "'ICCP'": iccp_data
         "'EXIF'": exif_data
+        "'XMP '": xmp_data
       default: raw_data
+      description: "チャンクのデータ（種類ごとの構造。未知の種類はバイト列）"
     - name: padding
       type: bytes
       size: "{chunk_size % 2}"
       if: "{chunk_size % 2 != 0}"
       padding: true
-      description: "2バイトアライメント用パディング"
+      description: "データが奇数バイトのときの 1 バイトのパディング（0）"
 
   vp8x_data:
     - name: flags
       type: bitfield
       size: "1"
+      description: "拡張形式の機能フラグ（RFC 9649 の順: 予約 2 / ICC / アルファ / EXIF / XMP / アニメーション / 予約）"
       fields:
         - name: reserved_a
           bits: "7:6"
-        - name: animation
+          description: "予約（0）"
+        - name: icc_profile
           bits: "5"
-        - name: xmp_metadata
+          description: "1 = ICCP チャンクがある"
+        - name: alpha_channel
           bits: "4"
+          description: "1 = アルファがある（ALPH チャンク、または VP8L のアルファ）"
         - name: exif_metadata
           bits: "3"
-        - name: alpha_channel
+          description: "1 = EXIF チャンクがある"
+        - name: xmp_metadata
           bits: "2"
-        - name: icc_profile
+          description: "1 = XMP チャンクがある"
+        - name: animation
           bits: "1"
+          description: "1 = アニメーション（ANIM / ANMF チャンクがある）"
         - name: reserved_b
           bits: "0"
+          description: "予約（0）"
     - name: reserved
       type: bytes
       size: "3"
       padding: true
+      description: "予約（0）"
     - name: canvas_width_minus_one_b0
       type: uint8
       description: "キャンバス幅-1（バイト0、LSB）"
@@ -86,7 +107,7 @@ structs:
     - name: canvas_width
       type: virtual
       value: "{(canvas_width_minus_one_b0 | (canvas_width_minus_one_b1 << 8) | (canvas_width_minus_one_b2 << 16)) + 1}"
-      description: "キャンバス幅（24ビットLE値 + 1から算出）"
+      description: "キャンバスの幅（ピクセル。24 ビット LE の値 + 1）"
     - name: canvas_height_minus_one_b0
       type: uint8
       description: "キャンバス高さ-1（バイト0、LSB）"
@@ -99,12 +120,13 @@ structs:
     - name: canvas_height
       type: virtual
       value: "{(canvas_height_minus_one_b0 | (canvas_height_minus_one_b1 << 8) | (canvas_height_minus_one_b2 << 16)) + 1}"
-      description: "キャンバス高さ（24ビットLE値 + 1から算出）"
+      description: "キャンバスの高さ（ピクセル。24 ビット LE の値 + 1）"
 
   vp8_data:
     - name: frame_tag
       type: bitfield
       size: "3"
+      description: "VP8 のフレームタグ（24 ビット LE。フレームの種類・バージョン・最初のパーティションのサイズ）"
       fields:
         - name: frame_type
           bits: "0"
@@ -125,28 +147,75 @@ structs:
       description: "VP8スタートコード"
     - name: width_and_scale
       type: uint16
-      description: "幅と水平スケール（下位14ビット = 幅、上位2ビット = スケール）"
+      description: "幅と水平方向の拡大率（下位 14 ビット = 幅、上位 2 ビット = 拡大率）"
+    - name: width
+      type: virtual
+      value: "{width_and_scale & 0x3FFF}"
+      description: "画像の幅（ピクセル）"
+    - name: horizontal_scale
+      type: virtual
+      value: "{width_and_scale >> 14}"
+      description: "水平方向の拡大率（0 = なし、1 = 5/4、2 = 5/3、3 = 2 倍）"
     - name: height_and_scale
       type: uint16
-      description: "高さと垂直スケール（下位14ビット = 高さ、上位2ビット = スケール）"
+      description: "高さと垂直方向の拡大率（下位 14 ビット = 高さ、上位 2 ビット = 拡大率）"
+    - name: height
+      type: virtual
+      value: "{height_and_scale & 0x3FFF}"
+      description: "画像の高さ（ピクセル）"
+    - name: vertical_scale
+      type: virtual
+      value: "{height_and_scale >> 14}"
+      description: "垂直方向の拡大率（0 = なし、1 = 5/4、2 = 5/3、3 = 2 倍）"
+    - name: remaining_data
+      type: bytes
+      size: remaining
+      description: "VP8 ビットストリームの残り（フレームヘッダの残りとパーティション）"
 
   vp8l_data:
     - name: signature
       type: uint8
       expected: [0x2F]
-      description: "VP8Lシグネチャバイト（期待値0x2F）"
+      description: "VP8L のシグネチャ（0x2F）"
+    - name: header
+      type: bitfield
+      size: "4"
+      description: "画像の大きさとアルファの有無（リトルエンディアンの 32 ビット）"
+      fields:
+        - name: width_minus_one
+          bits: "13:0"
+          description: "画像の幅 - 1（ピクセル）"
+        - name: height_minus_one
+          bits: "27:14"
+          description: "画像の高さ - 1（ピクセル）"
+        - name: alpha_is_used
+          bits: "28"
+          description: "1 = アルファを使う（ヒント）"
+        - name: version
+          bits: "31:29"
+          description: "バージョン（0）"
+    - name: width
+      type: virtual
+      value: "{width_minus_one + 1}"
+      description: "画像の幅（ピクセル）"
+    - name: height
+      type: virtual
+      value: "{height_minus_one + 1}"
+      description: "画像の高さ（ピクセル）"
     - name: data
       type: bytes
       size: remaining
-      description: "VP8Lロスレスビットストリームデータ"
+      description: "VP8L ビットストリームの残り（変換・色キャッシュ・エントロピー符号化された画素）"
 
   alph_data:
     - name: flags
       type: bitfield
       size: "1"
+      description: "アルファの前処理・フィルタ・圧縮方式"
       fields:
         - name: reserved
           bits: "7:6"
+          description: "予約（0）"
         - name: preprocessing
           bits: "5:4"
           description: "0 = 前処理なし、1 = レベル削減"
@@ -155,19 +224,19 @@ structs:
           description: "0 = なし、1 = 水平、2 = 垂直、3 = グラデーション"
         - name: compression
           bits: "1:0"
-          description: "0 = 無圧縮、1 = WebPロスレス"
+          description: "0 = 無圧縮、1 = WebP ロスレス（VP8L の画素なしヘッダ形式）で圧縮"
     - name: data
       type: bytes
       size: remaining
-      description: "アルファチャンネルデータ"
+      description: "アルファのデータ（compression が 0 なら幅 × 高さバイトの生の値）"
 
   anim_data:
     - name: background_color
       type: uint32
-      description: "背景色（BGRA形式）"
+      description: "キャンバスの背景色（バイト順 B, G, R, A。表示側は無視してよい）"
     - name: loop_count
       type: uint16
-      description: "ループ回数（0 = 無限）"
+      description: "アニメーションの繰り返し回数（0 = 無限）"
 
   anmf_data:
     - name: frame_x_b0
@@ -182,7 +251,7 @@ structs:
     - name: frame_x
       type: virtual
       value: "{(frame_x_b0 | (frame_x_b1 << 8) | (frame_x_b2 << 16)) * 2}"
-      description: "フレームXオフセット（ピクセル、24ビット値 × 2）"
+      description: "フレームを置く位置の x（ピクセル。24 ビットの値 × 2）"
     - name: frame_y_b0
       type: uint8
       description: "フレームYオフセット（バイト0、LSB）"
@@ -195,7 +264,7 @@ structs:
     - name: frame_y
       type: virtual
       value: "{(frame_y_b0 | (frame_y_b1 << 8) | (frame_y_b2 << 16)) * 2}"
-      description: "フレームYオフセット（ピクセル、24ビット値 × 2）"
+      description: "フレームを置く位置の y（ピクセル。24 ビットの値 × 2）"
     - name: width_minus_one_b0
       type: uint8
       description: "フレーム幅-1（バイト0、LSB）"
@@ -238,28 +307,37 @@ structs:
     - name: flags
       type: bitfield
       size: "1"
+      description: "フレームの重ね方と、表示後の扱い"
       fields:
         - name: reserved
           bits: "7:2"
+          description: "予約（0）"
         - name: blending_method
           bits: "1"
           description: "0 = アルファブレンディング、1 = ブレンドなし"
         - name: disposal_method
           bits: "0"
           description: "0 = 破棄しない、1 = 背景に戻す"
-    - name: frame_data
-      type: bytes
-      size: remaining
-      description: "フレーム画像データ（VP8またはVP8Lビットストリーム）"
+    - name: frame_chunks
+      type: struct
+      struct: webp_chunk
+      repeat: eof
+      description: "フレームのサブチャンク（ALPH（任意）+ VP8、または VP8L。未知のチャンクも可）"
 
   iccp_data:
     - name: icc_data
       type: bytes
       size: remaining
-      description: "ICCカラープロファイルデータ"
+      description: "ICC プロファイル（中身は解析しない）"
 
   exif_data:
     - name: exif_data
       type: bytes
       size: remaining
-      description: "EXIFメタデータ"
+      description: "Exif メタデータ（TIFF 構造。中身は解析しない）"
+
+  xmp_data:
+    - name: xmp
+      type: utf8
+      size: remaining
+      description: "XMP メタデータ（UTF-8 の XML）"

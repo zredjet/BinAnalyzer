@@ -18,6 +18,7 @@
           "type": "bytes",
           "offset": 0,
           "size": 2,
+          "description": "\u30D5\u30A1\u30A4\u30EB\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027BM\u0027\uFF09",
           "name": "signature",
           "hex": "42 4D",
           "valid": true
@@ -27,6 +28,7 @@
           "type": "uint32",
           "offset": 2,
           "size": 4,
+          "description": "\u30D5\u30A1\u30A4\u30EB\u5168\u4F53\u306E\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09",
           "name": "file_size",
           "value": 58,
           "hex": "0x3A"
@@ -36,6 +38,7 @@
           "type": "uint16",
           "offset": 6,
           "size": 2,
+          "description": "\u4E88\u7D04\uFF080\u3002\u4F5C\u6210\u3057\u305F\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u304C\u4F7F\u3046\u3053\u3068\u304C\u3042\u308B\uFF09",
           "name": "reserved1",
           "value": 0,
           "hex": "0x0"
@@ -45,6 +48,7 @@
           "type": "uint16",
           "offset": 8,
           "size": 2,
+          "description": "\u4E88\u7D04\uFF080\u3002\u4F5C\u6210\u3057\u305F\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u304C\u4F7F\u3046\u3053\u3068\u304C\u3042\u308B\uFF09",
           "name": "reserved2",
           "value": 0,
           "hex": "0x0"
@@ -54,6 +58,7 @@
           "type": "uint32",
           "offset": 10,
           "size": 4,
+          "description": "\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u30D4\u30AF\u30BB\u30EB\u30C7\u30FC\u30BF\u307E\u3067\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF08\u30D0\u30A4\u30C8\uFF09",
           "name": "pixel_offset",
           "value": 54,
           "hex": "0x36"
@@ -65,7 +70,7 @@
       "type": "uint32",
       "offset": 14,
       "size": 4,
-      "description": "DIB\u30D8\u30C3\u30C0\u30B5\u30A4\u30BA (40=V1, 108=V4, 124=V5)",
+      "description": "DIB \u30D8\u30C3\u30C0\u306E\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\u3001\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u81EA\u8EAB\u3092\u542B\u3080\uFF09\u300240=BITMAPINFOHEADER\u3001108=BITMAPV4HEADER\u3001124=BITMAPV5HEADER\u3002\u3053\u306E\u5024\u3067 dib_header \u306E\u69CB\u9020\u3092\u632F\u308A\u5206\u3051\u308B",
       "name": "header_size",
       "value": 40,
       "hex": "0x28"
@@ -83,6 +88,7 @@
           "type": "int32",
           "offset": 18,
           "size": 4,
+          "description": "\u753B\u50CF\u306E\u5E45\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
           "name": "width",
           "value": 1,
           "hex": "0x1"
@@ -92,6 +98,7 @@
           "type": "int32",
           "offset": 22,
           "size": 4,
+          "description": "\u753B\u50CF\u306E\u9AD8\u3055\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09\u3002\u6B63\u306A\u3089\u30DC\u30C8\u30E0\u30A2\u30C3\u30D7\uFF08\u6700\u521D\u306E\u884C\u304C\u4E00\u756A\u4E0B\uFF09\u3001\u8CA0\u306A\u3089\u30C8\u30C3\u30D7\u30C0\u30A6\u30F3\u3002\u8CA0\u306B\u3067\u304D\u308B\u306E\u306F BI_RGB / BI_BITFIELDS \u306E\u3068\u304D\u3060\u3051",
           "name": "height",
           "value": 1,
           "hex": "0x1"
@@ -101,6 +108,7 @@
           "type": "uint16",
           "offset": 26,
           "size": 2,
+          "description": "\u30AB\u30E9\u30FC\u30D7\u30EC\u30FC\u30F3\u6570\uFF08\u5E38\u306B 1\uFF09",
           "name": "planes",
           "value": 1,
           "hex": "0x1"
@@ -110,6 +118,7 @@
           "type": "uint16",
           "offset": 28,
           "size": 2,
+          "description": "1 \u30D4\u30AF\u30BB\u30EB\u306E\u30D3\u30C3\u30C8\u6570\uFF081 / 4 / 8 / 16 / 24 / 32\u30020 \u306F JPEG / PNG \u5727\u7E2E\u3067\u753B\u50CF\u5074\u306B\u4EFB\u305B\u308B\u5834\u5408\uFF09\u30028 \u4EE5\u4E0B\u306A\u3089\u30AB\u30E9\u30FC\u30C6\u30FC\u30D6\u30EB\u3092\u4F7F\u3046",
           "name": "bits_per_pixel",
           "value": 24,
           "hex": "0x18"
@@ -119,6 +128,7 @@
           "type": "uint32",
           "offset": 30,
           "size": 4,
+          "description": "\u30D4\u30AF\u30BB\u30EB\u30C7\u30FC\u30BF\u306E\u5727\u7E2E\u5F62\u5F0F",
           "name": "compression",
           "value": 0,
           "hex": "0x0",
@@ -130,6 +140,7 @@
           "type": "uint32",
           "offset": 34,
           "size": 4,
+          "description": "\u30D4\u30AF\u30BB\u30EB\u30C7\u30FC\u30BF\u306E\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09\u3002BI_RGB \u3067\u306F 0 \u3067\u3082\u3088\u3044",
           "name": "image_size",
           "value": 4,
           "hex": "0x4"
@@ -139,6 +150,7 @@
           "type": "int32",
           "offset": 38,
           "size": 4,
+          "description": "\u6C34\u5E73\u65B9\u5411\u306E\u89E3\u50CF\u5EA6\uFF08\u30D4\u30AF\u30BB\u30EB/\u30E1\u30FC\u30C8\u30EB\u30022835 \u2252 72 dpi\uFF09",
           "name": "x_pixels_per_meter",
           "value": 2835,
           "hex": "0xB13"
@@ -148,6 +160,7 @@
           "type": "int32",
           "offset": 42,
           "size": 4,
+          "description": "\u5782\u76F4\u65B9\u5411\u306E\u89E3\u50CF\u5EA6\uFF08\u30D4\u30AF\u30BB\u30EB/\u30E1\u30FC\u30C8\u30EB\uFF09",
           "name": "y_pixels_per_meter",
           "value": 2835,
           "hex": "0xB13"
@@ -157,6 +170,7 @@
           "type": "uint32",
           "offset": 46,
           "size": 4,
+          "description": "\u30AB\u30E9\u30FC\u30C6\u30FC\u30D6\u30EB\u306E\u8272\u6570\u30020 \u306A\u3089 bits_per_pixel \u3067\u8868\u305B\u308B\u6700\u5927\u6570\uFF082^bits_per_pixel\uFF09",
           "name": "colors_used",
           "value": 0,
           "hex": "0x0"
@@ -166,6 +180,7 @@
           "type": "uint32",
           "offset": 50,
           "size": 4,
+          "description": "\u8868\u793A\u306B\u5FC5\u8981\u306A\u8272\u306E\u6570\u30020 \u306A\u3089\u3059\u3079\u3066\u306E\u8272\u304C\u5FC5\u8981",
           "name": "colors_important",
           "value": 0,
           "hex": "0x0"
@@ -177,6 +192,7 @@
       "type": "bytes",
       "offset": 54,
       "size": 4,
+      "description": "\u30D4\u30AF\u30BB\u30EB\u30C7\u30FC\u30BF\uFF08file_header.pixel_offset \u306E\u4F4D\u7F6E\u304B\u3089\u30D5\u30A1\u30A4\u30EB\u672B\u5C3E\u307E\u3067\u3001\u672A\u5206\u89E3\uFF09\u3002\u7121\u5727\u7E2E\u306A\u3089 1 \u884C\u304C 4 \u30D0\u30A4\u30C8\u5883\u754C\u306B\u63C3\u3048\u3089\u308C\u3001height \u304C\u6B63\u306A\u3089\u4E0B\u306E\u884C\u304B\u3089\u4E26\u3076",
       "name": "pixel_data",
       "hex": "FF 00 00 00"
     }

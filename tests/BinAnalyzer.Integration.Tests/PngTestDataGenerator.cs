@@ -63,6 +63,60 @@ public static class PngTestDataGenerator
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// PNG 第 3 版のチャンクと APNG を含む 2 フレームの RGB 画像（2x1）（REQ-188）。
+    /// IHDR, cICP, mDCV, cLLI, iCCP, sBIT, PLTE（推奨パレット）, bKGD, hIST, sPLT, eXIf, tIME, acTL, fcTL, IDAT, fcTL, fdAT, IEND。
+    /// </summary>
+    public static byte[] CreateThirdEditionApng()
+    {
+        var ms = new MemoryStream();
+        ms.Write(PngSignature);
+        WriteChunk(ms, "IHDR", [0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0, 0]);    // 2x1, 8 bit, RGB
+        WriteChunk(ms, "cICP", [9, 16, 0, 1]);                                // BT.2020, PQ, RGB, full range
+        WriteChunk(ms, "mDCV", Be(
+            (2, 35400), (2, 14600), (2, 8500), (2, 39850), (2, 6550), (2, 2300),  // 原色（0.00002 単位）
+            (2, 15635), (2, 16450),                                               // 白色点
+            (4, 10_000_000), (4, 1)));                                            // 輝度（0.0001 cd/m²）
+        WriteChunk(ms, "cLLI", Be((4, 10_000_000), (4, 4_000_000)));
+        WriteChunk(ms, "iCCP", [.. "icc"u8, 0, 0, .. Zlib("not a real ICC profile"u8.ToArray())]);
+        WriteChunk(ms, "sBIT", [5, 6, 5]);
+        WriteChunk(ms, "PLTE", [255, 0, 0, 0, 0, 255]);
+        WriteChunk(ms, "bKGD", Be((2, 1), (2, 2), (2, 3)));
+        WriteChunk(ms, "hIST", Be((2, 10), (2, 20)));
+        WriteChunk(ms, "sPLT", [.. "suggested"u8, 0, 8, 255, 0, 0, 255, 0, 5, 0, 0, 255, 128, 0, 1]);
+        WriteChunk(ms, "eXIf", [.. "MM"u8, 0, 42, 0, 0, 0, 8, 0, 0]);
+        WriteChunk(ms, "tIME", [0x07, 0xEA, 9, 24, 12, 34, 56]);             // 2026-09-24 12:34:56
+        WriteChunk(ms, "acTL", Be((4, 2), (4, 0)));                           // 2 フレーム、無限ループ
+        WriteChunk(ms, "fcTL", FrameControl(sequence: 0, delayNum: 1, delayDen: 10, dispose: 0, blend: 0));
+        var frame0 = Zlib([0, 255, 0, 0, 255, 0, 0]);                         // フィルタ 0 + 赤 2 画素
+        WriteChunk(ms, "IDAT", frame0);
+        WriteChunk(ms, "fcTL", FrameControl(sequence: 1, delayNum: 1, delayDen: 5, dispose: 1, blend: 1));
+        WriteChunk(ms, "fdAT", [.. Be((4, 2)), .. Zlib([0, 0, 0, 255, 0, 0, 255])]);  // 青 2 画素
+        WriteChunk(ms, "IEND", []);
+        return ms.ToArray();
+    }
+
+    private static byte[] FrameControl(uint sequence, ushort delayNum, ushort delayDen, byte dispose, byte blend) =>
+        [.. Be((4, sequence), (4, 2), (4, 1), (4, 0), (4, 0), (2, delayNum), (2, delayDen)), dispose, blend];
+
+    /// <summary>ビッグエンディアンの (バイト数, 値) の並び。</summary>
+    private static byte[] Be(params (int Size, long Value)[] values)
+    {
+        var result = new List<byte>();
+        foreach (var (size, value) in values)
+            for (var i = size - 1; i >= 0; i--)
+                result.Add((byte)(value >> (8 * i)));
+        return [.. result];
+    }
+
+    private static byte[] Zlib(byte[] data)
+    {
+        var output = new MemoryStream();
+        using (var z = new System.IO.Compression.ZLibStream(output, System.IO.Compression.CompressionLevel.Optimal, leaveOpen: true))
+            z.Write(data);
+        return output.ToArray();
+    }
+
     private static void WriteChunk(MemoryStream ms, string type, byte[] data)
     {
         var lengthBuf = new byte[4];

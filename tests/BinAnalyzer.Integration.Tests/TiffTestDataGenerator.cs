@@ -146,4 +146,67 @@ public static class TiffTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// 2 ページの TIFF（LE）。IFD0: ImageWidth=3、Compression=5（LZW）→ IFD1: ImageWidth=5（REQ-188: next_ifd の連なり）。
+    /// </summary>
+    public static byte[] CreateTwoPageTiff()
+    {
+        var data = new byte[8 + (2 + 2 * 12 + 4) + (2 + 12 + 4)];
+        var s = data.AsSpan();
+        "II"u8.CopyTo(s);
+        BinaryPrimitives.WriteUInt16LittleEndian(s[2..], 42);
+        BinaryPrimitives.WriteUInt32LittleEndian(s[4..], 8);
+        var ifd1 = 8 + 2 + 2 * 12 + 4;
+        WriteClassicIfd(s[8..], [(256, 3, 3), (259, 3, 5)], (uint)ifd1);
+        WriteClassicIfd(s[ifd1..], [(256, 3, 5)], 0);
+        return data;
+    }
+
+    private static void WriteClassicIfd(Span<byte> s, (ushort Tag, ushort Type, ushort Value)[] entries, uint next)
+    {
+        BinaryPrimitives.WriteUInt16LittleEndian(s, (ushort)entries.Length);
+        for (var i = 0; i < entries.Length; i++)
+        {
+            var e = s[(2 + i * 12)..];
+            BinaryPrimitives.WriteUInt16LittleEndian(e, entries[i].Tag);
+            BinaryPrimitives.WriteUInt16LittleEndian(e[2..], entries[i].Type);
+            BinaryPrimitives.WriteUInt32LittleEndian(e[4..], 1);
+            BinaryPrimitives.WriteUInt16LittleEndian(e[8..], entries[i].Value);   // SHORT は値欄の先頭 2 バイト
+        }
+        BinaryPrimitives.WriteUInt32LittleEndian(s[(2 + entries.Length * 12)..], next);
+    }
+
+    /// <summary>
+    /// BigTIFF（BE、2 ページ）。IFD0: ImageWidth=LONG 640、Compression=SHORT 8（Deflate）、StripOffsets=LONG8 → IFD1: ImageWidth=SHORT 7（REQ-188）。
+    /// </summary>
+    public static byte[] CreateBigTiff()
+    {
+        const int ifd0 = 16, entrySize = 20;
+        var ifd1 = ifd0 + 8 + 3 * entrySize + 8;
+        var data = new byte[ifd1 + 8 + entrySize + 8];
+        var s = data.AsSpan();
+        "MM"u8.CopyTo(s);
+        BinaryPrimitives.WriteUInt16BigEndian(s[2..], 43);
+        BinaryPrimitives.WriteUInt16BigEndian(s[4..], 8);
+        BinaryPrimitives.WriteUInt16BigEndian(s[6..], 0);
+        BinaryPrimitives.WriteUInt64BigEndian(s[8..], ifd0);
+
+        void Entry(int at, ushort tag, ushort type, ulong valueLeftJustified)
+        {
+            BinaryPrimitives.WriteUInt16BigEndian(data.AsSpan(at), tag);
+            BinaryPrimitives.WriteUInt16BigEndian(data.AsSpan(at + 2), type);
+            BinaryPrimitives.WriteUInt64BigEndian(data.AsSpan(at + 4), 1);
+            BinaryPrimitives.WriteUInt64BigEndian(data.AsSpan(at + 12), valueLeftJustified);
+        }
+        BinaryPrimitives.WriteUInt64BigEndian(s[ifd0..], 3);
+        Entry(ifd0 + 8, 256, 4, 640UL << 32);                     // LONG は値欄の先頭 4 バイト
+        Entry(ifd0 + 8 + entrySize, 259, 3, 8UL << 48);          // SHORT は値欄の先頭 2 バイト
+        Entry(ifd0 + 8 + 2 * entrySize, 273, 16, 0x1_0000_0000);  // LONG8（4 GiB を超えるオフセット）
+        BinaryPrimitives.WriteUInt64BigEndian(s[(ifd0 + 8 + 3 * entrySize)..], (ulong)ifd1);
+        BinaryPrimitives.WriteUInt64BigEndian(s[ifd1..], 1);
+        Entry(ifd1 + 8, 256, 3, 7UL << 48);
+        BinaryPrimitives.WriteUInt64BigEndian(s[(ifd1 + 8 + entrySize)..], 0);
+        return data;
+    }
 }

@@ -99,4 +99,33 @@ public class BmpParsingTests
         output.Should().Contain("BI_RGB");
         output.Should().Contain("pixel_data");
     }
+
+    // --- REQ-188: colors_used = 0 の既定パレット、BI_BITFIELDS のマスク、pixel_offset ---
+
+    [Fact]
+    public void ImplicitPalette_HasTwoToTheBppEntries()
+    {
+        var data = BmpTestDataGenerator.CreateMonochromeWithImplicitPalette();
+        var decoded = new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(BmpFormatPath));
+
+        ((DecodedArray)decoded.Children.Single(c => c.Name == "color_table")).Elements.Should().HaveCount(2);
+        var pixels = (DecodedBytes)decoded.Children.Single(c => c.Name == "pixel_data");
+        pixels.Offset.Should().Be(14 + 40 + 8, "pixel_offset の位置から");
+        pixels.Size.Should().Be(4);
+    }
+
+    [Fact]
+    public void Bitfields_MasksFollowTheInfoHeader()
+    {
+        var data = BmpTestDataGenerator.CreateRgb565Bitfields();
+        var decoded = new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(BmpFormatPath));
+
+        var masks = (DecodedStruct)decoded.Children.Single(c => c.Name == "color_masks");
+        ((DecodedInteger)masks.Children[0]).Value.Should().Be(0xF800);
+        ((DecodedInteger)masks.Children[1]).Value.Should().Be(0x07E0);
+        ((DecodedInteger)masks.Children[2]).Value.Should().Be(0x001F);
+        masks.Children.Should().NotContain(c => c.Name == "alpha_mask", "BI_BITFIELDS はアルファのマスクを持たない");
+        decoded.Children.Should().NotContain(c => c.Name == "color_table", "16 ビットはパレットを持たない");
+        ((DecodedBytes)decoded.Children.Single(c => c.Name == "pixel_data")).Size.Should().Be(4);
+    }
 }

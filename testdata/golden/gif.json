@@ -10,7 +10,7 @@
       "type": "ascii",
       "offset": 0,
       "size": 3,
-      "description": "GIF\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027GIF\u0027\uFF09",
+      "description": "\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027GIF\u0027\uFF09",
       "name": "signature",
       "value": "GIF",
       "encoding": "ascii"
@@ -20,7 +20,7 @@
       "type": "ascii",
       "offset": 3,
       "size": 3,
-      "description": "\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002787a\u0027\u307E\u305F\u306F\u002789a\u0027\uFF09",
+      "description": "\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u002787a\u0027 \u307E\u305F\u306F \u002789a\u0027\uFF09\u3002\u62E1\u5F35\u30D6\u30ED\u30C3\u30AF\u306F 89a \u3067\u5B9A\u7FA9\u3055\u308C\u305F",
       "name": "version",
       "value": "89a",
       "encoding": "ascii"
@@ -38,6 +38,7 @@
           "type": "uint16",
           "offset": 6,
           "size": 2,
+          "description": "\u8AD6\u7406\u753B\u9762\u306E\u5E45\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09\u3002\u5404\u753B\u50CF\u306F\u3053\u306E\u7BC4\u56F2\u5185\u306B\u914D\u7F6E\u3055\u308C\u308B",
           "name": "width",
           "value": 1,
           "hex": "0x1"
@@ -47,6 +48,7 @@
           "type": "uint16",
           "offset": 8,
           "size": 2,
+          "description": "\u8AD6\u7406\u753B\u9762\u306E\u9AD8\u3055\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
           "name": "height",
           "value": 1,
           "hex": "0x1"
@@ -56,6 +58,7 @@
           "type": "bitfield",
           "offset": 10,
           "size": 1,
+          "description": "\u30D5\u30E9\u30B0\u306E\u307E\u3068\u3081\uFF08Packed Fields\uFF09\u3002\u30B0\u30ED\u30FC\u30D0\u30EB\u30AB\u30E9\u30FC\u30C6\u30FC\u30D6\u30EB\u306E\u6709\u7121\u30FB\u5927\u304D\u3055\u3068\u8272\u89E3\u50CF\u5EA6",
           "name": "packed",
           "raw_value": "0x0",
           "fields": [
@@ -90,7 +93,7 @@
           "type": "uint8",
           "offset": 11,
           "size": 1,
-          "description": "\u80CC\u666F\u8272\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9",
+          "description": "\u80CC\u666F\u8272\u306E\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08\u30B0\u30ED\u30FC\u30D0\u30EB\u30AB\u30E9\u30FC\u30C6\u30FC\u30D6\u30EB\u5185\uFF09\u3002\u753B\u50CF\u3067\u8986\u308F\u308C\u306A\u3044\u90E8\u5206\u306E\u8272\u3002\u30B0\u30ED\u30FC\u30D0\u30EB\u30AB\u30E9\u30FC\u30C6\u30FC\u30D6\u30EB\u304C\u7121\u3044\u3068\u304D\u306F\u610F\u5473\u3092\u6301\u305F\u306A\u3044",
           "name": "bg_color_index",
           "value": 0,
           "hex": "0x0"
@@ -100,6 +103,7 @@
           "type": "uint8",
           "offset": 12,
           "size": 1,
+          "description": "\u30D4\u30AF\u30BB\u30EB\u306E\u7E26\u6A2A\u6BD4\u306E\u4FC2\u6570\u30020 \u306A\u3089\u60C5\u5831\u306A\u3057\u30011\u301C255 \u306A\u3089 (\u5024 \u002B 15) \u00F7 64 = \u30D4\u30AF\u30BB\u30EB\u306E\u5E45 \u00F7 \u9AD8\u3055",
           "name": "pixel_aspect_ratio",
           "value": 0,
           "hex": "0x0"
@@ -127,10 +131,12 @@
               "type": "uint8",
               "offset": 13,
               "size": 1,
+              "description": "\u30D6\u30ED\u30C3\u30AF\u306E\u7A2E\u985E\u3092\u793A\u3059\u5148\u982D 1 \u30D0\u30A4\u30C8\uFF080x2C=\u753B\u50CF\u30010x21=\u62E1\u5F35\u30010x3B=Trailer\uFF09",
               "name": "introducer",
               "value": 59,
               "hex": "0x3B",
-              "enum_label": "Trailer"
+              "enum_label": "Trailer",
+              "enum_description": "Trailer\uFF08\u0027;\u0027\uFF09\u3002\u30C7\u30FC\u30BF\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u7D42\u7AEF"
             },
             "body": {
               "_type": "struct",

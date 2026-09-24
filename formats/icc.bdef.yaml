@@ -1,3 +1,12 @@
+# ICC プロファイル（.icc / .icm）
+# 仕様: ICC.1:2022（プロファイル版 4.4.0.0）https://www.color.org/specification/ICC.1-2022-05.pdf
+# 構造: 128 バイトのプロファイルヘッダ → タグテーブル（タグ数 + 12 バイトのタグエントリ × タグ数）。
+#   各タグのデータはエントリのオフセット（プロファイル先頭から）へ seek して読み、タグシグネチャで switch で振り分ける
+#   （'desc' だけを v2 の textDescriptionType として読み、それ以外はバイト列）。
+#   v2（ICC.1:2001-04 など）もヘッダとタグテーブルの配置は同じなので読める（プロファイル ID は v2 では予約で 0）。
+# 対応していないもの: ほとんどのタグ型の中身（curv・para・mluc・mft1・mft2・mAB・mBA・sf32 等。バイト列として表示）、
+#   v4 の 'desc'（multiLocalizedUnicodeType）の解析、プロファイル ID（MD5）の検証、
+#   iccMAX（ICC.2、v5）固有のヘッダ項目（バイト 100〜127 のスペクトル PCS・MCS・サブクラス。予約として表示）と v5 のデバイスクラス
 name: ICC
 endianness: big
 root: icc
@@ -6,223 +15,453 @@ enums:
   device_class:
     - value: 0x73636E72
       label: Scanner
-      description: "scnr"
+      description: "'scnr': 入力デバイス（スキャナ・デジタルカメラ）のプロファイル"
     - value: 0x6D6E7472
       label: Monitor
-      description: "mntr"
+      description: "'mntr': 表示デバイス（ディスプレイ）のプロファイル"
     - value: 0x70727472
       label: Printer
-      description: "prtr"
+      description: "'prtr': 出力デバイス（プリンタ・印刷機）のプロファイル"
     - value: 0x6C696E6B
       label: DeviceLink
-      description: "link"
+      description: "'link': デバイスリンク（2 つのデバイスの色空間の間の変換を PCS を介さずに直接持つ）"
     - value: 0x73706163
       label: ColorSpace
-      description: "spac"
+      description: "'spac': 色空間変換プロファイル（sRGB などの色空間と PCS の間の変換）"
     - value: 0x61627374
       label: Abstract
-      description: "abst"
+      description: "'abst': 抽象プロファイル（PCS から PCS への変換。色の調整・効果など）"
     - value: 0x6E6D636C
       label: NamedColor
-      description: "nmcl"
+      description: "'nmcl': 名前付きカラープロファイル（特色の名前と PCS / デバイスの色値の一覧）"
 
   color_space:
     - value: 0x58595A20
       label: XYZ
+      description: "'XYZ ': CIE XYZ（nCIEXYZ。PCS としても使う）"
     - value: 0x4C616220
       label: Lab
+      description: "'Lab ': CIELAB（PCS としても使う）"
     - value: 0x4C757620
       label: Luv
+      description: "'Luv ': CIELUV"
     - value: 0x59436272
       label: YCbr
+      description: "'YCbr': YCbCr"
     - value: 0x59787920
       label: Yxy
+      description: "'Yxy ': CIE Yxy"
     - value: 0x52474220
       label: RGB
+      description: "'RGB ': RGB（3 チャンネル）"
     - value: 0x47524159
       label: GRAY
+      description: "'GRAY': グレースケール（1 チャンネル）"
     - value: 0x48535620
       label: HSV
+      description: "'HSV ': HSV"
     - value: 0x484C5320
       label: HLS
+      description: "'HLS ': HLS"
     - value: 0x434D594B
       label: CMYK
+      description: "'CMYK': CMYK（4 チャンネル）"
     - value: 0x434D5920
       label: CMY
+      description: "'CMY ': CMY（3 チャンネル）"
+    - value: 0x32434C52
+      label: 2CLR
+      description: "'2CLR': 2 色の汎用色空間（2 チャンネル）"
+    - value: 0x33434C52
+      label: 3CLR
+      description: "'3CLR': 3 色の汎用色空間（3 チャンネル）"
+    - value: 0x34434C52
+      label: 4CLR
+      description: "'4CLR': 4 色の汎用色空間（4 チャンネル）"
+    - value: 0x35434C52
+      label: 5CLR
+      description: "'5CLR': 5 色の汎用色空間（5 チャンネル）"
+    - value: 0x36434C52
+      label: 6CLR
+      description: "'6CLR': 6 色の汎用色空間（6 チャンネル）"
+    - value: 0x37434C52
+      label: 7CLR
+      description: "'7CLR': 7 色の汎用色空間（7 チャンネル）"
+    - value: 0x38434C52
+      label: 8CLR
+      description: "'8CLR': 8 色の汎用色空間（8 チャンネル）"
+    - value: 0x39434C52
+      label: 9CLR
+      description: "'9CLR': 9 色の汎用色空間（9 チャンネル）"
+    - value: 0x41434C52
+      label: ACLR
+      description: "'ACLR': 10 色の汎用色空間（10 チャンネル）"
+    - value: 0x42434C52
+      label: BCLR
+      description: "'BCLR': 11 色の汎用色空間（11 チャンネル）"
+    - value: 0x43434C52
+      label: CCLR
+      description: "'CCLR': 12 色の汎用色空間（12 チャンネル）"
+    - value: 0x44434C52
+      label: DCLR
+      description: "'DCLR': 13 色の汎用色空間（13 チャンネル）"
+    - value: 0x45434C52
+      label: ECLR
+      description: "'ECLR': 14 色の汎用色空間（14 チャンネル）"
+    - value: 0x46434C52
+      label: FCLR
+      description: "'FCLR': 15 色の汎用色空間（15 チャンネル）"
 
   primary_platform:
+    - value: 0
+      label: none
+      description: "主プラットフォームの指定なし"
     - value: 0x4150504C
       label: Apple
-      description: "APPL"
+      description: "'APPL': Apple"
     - value: 0x4D534654
       label: Microsoft
-      description: "MSFT"
+      description: "'MSFT': Microsoft"
     - value: 0x53474920
       label: SiliconGraphics
-      description: "SGI"
+      description: "'SGI ': Silicon Graphics"
     - value: 0x53554E57
       label: SunMicrosystems
-      description: "SUNW"
+      description: "'SUNW': Sun Microsystems"
+    - value: 0x54474E54
+      label: Taligent
+      description: "'TGNT': Taligent（v2 の仕様のみ。v4 で削除）"
 
   rendering_intent:
     - value: 0
       label: Perceptual
+      description: "知覚的（色域外の色を含めて全体の見た目の関係を保つように圧縮する）"
     - value: 1
       label: RelativeColorimetric
+      description: "メディア相対的な測色的一致（Media-relative colorimetric。白色点を媒体の白に合わせ、色域内の色を正確に再現する）"
     - value: 2
       label: Saturation
+      description: "彩度優先（グラフなど、鮮やかさを保つことを優先する）"
     - value: 3
       label: AbsoluteColorimetric
+      description: "ICC 絶対的な測色的一致（ICC-absolute colorimetric。白色点を合わせず、測色値をそのまま再現する。校正刷り向け）"
 
 structs:
   icc:
     - name: header
       type: struct
       struct: profile_header
+      description: "プロファイルヘッダ（先頭 128 バイト）"
     - name: tag_table
       type: struct
       struct: tag_table
+      description: "タグテーブル（ヘッダの直後、オフセット 128 から）"
 
   profile_header:
     - name: profile_size
       type: uint32
-      description: "プロファイルデータサイズ（バイト）"
+      description: "プロファイル全体のバイト数（ヘッダ・タグテーブル・タグデータを含む）"
     - name: preferred_cmm
       type: uint32
-      description: "優先CMMタイプ"
+      description: "優先する CMM（色管理モジュール）の 4 文字シグネチャ（ICC 登録。例 'appl'・'lcms'）。0 なら指定なし"
     - name: version
       type: bytes
       size: "4"
-      description: "プロファイルバージョン（major.minor.bugfix）"
+      description: "プロファイルの版。1 バイト目がメジャー版、2 バイト目の上位 4 ビットがマイナー版・下位 4 ビットがバグ修正版、残り 2 バイトは予約（0）。例: 04 40 00 00 = 4.4.0"
     - name: device_class
       type: uint32
       enum: device_class
+      description: "プロファイル / デバイスクラス（入力・表示・出力・デバイスリンク等）。必須のタグの組み合わせがこれで決まる"
     - name: color_space
       type: uint32
       enum: color_space
+      description: "データ色空間（デバイス側の色空間。デバイスリンクでは入力側の色空間）"
     - name: pcs
       type: ascii
       size: "4"
-      description: "プロファイル接続空間（XYZまたはLab）"
+      description: "プロファイル接続空間（PCS）の 4 文字シグネチャ。'XYZ ' または 'Lab '。デバイスリンクでは出力側の色空間"
     - name: creation_date
       type: bytes
       size: "12"
-      description: "プロファイル作成日時"
+      description: "作成日時（dateTimeNumber: 年・月・日・時・分・秒の uint16 × 6、UTC）"
     - name: signature
       type: ascii
       size: "4"
       expected: [0x61, 0x63, 0x73, 0x70]
-      description: "プロファイルファイルシグネチャ（'acsp'）"
+      description: "プロファイルファイルシグネチャ（'acsp'）。ICC プロファイルであることを検証する"
     - name: primary_platform
       type: uint32
       enum: primary_platform
+      description: "主に想定するプラットフォームの 4 文字シグネチャ。0 なら指定なし"
     - name: flags
       type: uint32
-      description: "プロファイルフラグ"
+      description: "プロファイルフラグ。ビット 0 = 1 なら画像などに埋め込まれたプロファイル、ビット 1 = 1 なら埋め込み先の色データと切り離して使えない。下位 16 ビットは ICC、上位 16 ビットは CMM が定める"
     - name: device_manufacturer
       type: uint32
-      description: "デバイス製造者シグネチャ"
+      description: "デバイス製造者の 4 文字シグネチャ（ICC 登録）。0 なら指定なし"
     - name: device_model
       type: uint32
-      description: "デバイスモデルシグネチャ"
+      description: "デバイスモデルの 4 文字シグネチャ（製造者が定める）。0 なら指定なし"
     - name: attributes
       type: uint64
-      description: "デバイス属性"
+      description: "デバイス属性（媒体の性質）。ビット 0: 反射（0）/ 透過（1）、ビット 1: 光沢（0）/ つや消し（1）、ビット 2: ポジ（0）/ ネガ（1）、ビット 3: カラー（0）/ モノクロ（1）。下位 32 ビットは ICC、上位 32 ビットは製造者が定める"
     - name: rendering_intent
       type: uint32
       enum: rendering_intent
+      description: "このプロファイルを埋め込んで使うときの既定のレンダリングインテント（下位 16 ビット。上位 16 ビットは 0）"
     - name: pcs_illuminant
       type: bytes
       size: "12"
-      description: "PCS照明体のXYZ値（s15Fixed16Number x 3）"
+      description: "PCS の光源の XYZ 値（XYZNumber: s15Fixed16Number（値 / 65536）の X・Y・Z）。D50（0.9642, 1.0, 0.8249 = 0000F6D6 00010000 0000D32D）でなければならない"
     - name: creator
       type: uint32
-      description: "プロファイル作成者シグネチャ"
+      description: "プロファイル作成者の 4 文字シグネチャ（ICC 登録の製造者シグネチャ）。0 なら指定なし"
     - name: id
       type: bytes
       size: "16"
-      description: "プロファイルID（MD5フィンガープリント）"
+      description: "プロファイル ID（フラグ・レンダリングインテント・この ID 自身を 0 にしたプロファイル全体の MD5）。全 0 なら未計算。v4.0 で追加され、v2 では予約"
     - name: reserved
       type: bytes
       size: "28"
-      description: "予約領域（ゼロ）"
+      description: "予約（0）。iccMAX（v5）ではスペクトル PCS・MCS・プロファイルのサブクラスなどが入る"
 
   tag_table:
     - name: tag_count
       type: uint32
-      description: "タグ数"
+      description: "タグの数。この数だけ 12 バイトのタグエントリが続く"
     - name: tags
       type: struct
       struct: tag_entry
       repeat_count: "{tag_count}"
+      description: "タグエントリ（シグネチャ・オフセット・サイズ）の一覧。tag_count 個"
 
   tag_entry:
     - name: signature
       type: ascii
       size: "4"
-      description: "タグシグネチャ"
+      description: "タグの 4 文字シグネチャ（例 'desc'・'wtpt'・'rXYZ'・'rTRC'・'cprt'）。データの型はタグデータ先頭の型シグネチャで決まる"
     - name: offset
       type: uint32
-      description: "プロファイル先頭からのタグデータオフセット"
+      description: "タグデータの位置（プロファイル先頭からのバイトオフセット、4 バイト境界）。複数のタグが同じデータを共有してよい"
     - name: size
       type: uint32
-      description: "タグデータサイズ（バイト）"
+      description: "タグデータのバイト数（次のタグとの間の 4 バイト境界へのパディングを含まない）"
+    - name: tag_type
+      type: ascii
+      size: "4"
+      seek: "{offset}"
+      seek_restore: true
+      description: "タグデータの型シグネチャ（データ先頭の 4 バイト。例 'XYZ '・'curv'・'para'・'mluc'・'desc'・'text'）。データはこの型で読み分ける"
     - name: data
       type: switch
       size: "{size}"
       seek: "{offset}"
       seek_restore: true
-      switch_on: "{signature}"
+      switch_on: "{tag_type}"
       cases:
         "'desc'": desc_tag_data
+        "'mluc'": mluc_tag_data
         "'XYZ '": xyz_tag_data
         "'text'": text_tag_data
+        "'curv'": curv_tag_data
+        "'para'": para_tag_data
+        "'sf32'": sf32_tag_data
+        "'sig '": sig_tag_data
+        "'chrm'": chrm_tag_data
       default: raw_data
+      description: "タグデータ（offset から size バイト）。型シグネチャで振り分け、表に無い型はバイト列"
 
   desc_tag_data:
     - name: type_signature
       type: ascii
       size: "4"
-      description: "タイプシグネチャ（'desc'）"
+      description: "型シグネチャ（'desc' = v2 の textDescriptionType）"
     - name: reserved
       type: uint32
+      description: "予約（0）"
     - name: ascii_length
       type: uint32
+      description: "ASCII の説明文のバイト数（終端の NUL を含む）"
     - name: ascii_description
       type: ascii
       size: "{ascii_length}"
+      description: "プロファイルの説明文（表示名。7 ビット ASCII、NUL 終端）。ascii_length バイト"
     - name: extra_data
       type: bytes
       size: remaining
+      description: "説明文の後ろの残り（Unicode の言語コード・文字数・UTF-16BE の説明文、ScriptCode のコード・文字数・67 バイト固定の説明文）。個別には読まない"
+
+  mluc_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "型シグネチャ（'mluc' = v4 の multiLocalizedUnicodeType。説明 'desc'・著作権 'cprt' などに使う）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: record_count
+      type: uint32
+      description: "言語ごとのレコードの数"
+    - name: record_size
+      type: uint32
+      description: "1 レコードのバイト数（12）"
+    - name: records
+      type: struct
+      struct: mluc_record
+      repeat_count: "{record_count}"
+      description: "言語ごとの文字列（言語・国・位置・長さ）"
+
+  mluc_record:
+    - name: language
+      type: ascii
+      size: "2"
+      description: "言語コード（ISO 639-1。例 en / ja）"
+    - name: country
+      type: ascii
+      size: "2"
+      description: "国コード（ISO 3166-1。例 US / JP）"
+    - name: string_length
+      type: uint32
+      description: "文字列のバイト数（UTF-16BE）"
+    - name: string_offset
+      type: uint32
+      description: "文字列の位置（タグデータの先頭から）"
+    - name: text
+      type: utf16be
+      size: "{string_length}"
+      seek: "{offset + string_offset}"
+      seek_restore: true
+      description: "文字列（UTF-16BE）"
 
   xyz_tag_data:
     - name: type_signature
       type: ascii
       size: "4"
-      description: "タイプシグネチャ（'XYZ '）"
+      description: "型シグネチャ（'XYZ ' = XYZType）"
     - name: reserved
       type: uint32
+      description: "予約（0）"
+    - name: values
+      type: struct
+      struct: xyz_number
+      repeat: eof
+      description: "XYZ 値の並び（白色点 'wtpt' や原色 'rXYZ' などでは 1 組）"
+
+  xyz_number:
     - name: x
       type: int32
-      description: "X値（s15Fixed16Number）"
+      description: "X 値（s15Fixed16Number: 値 / 65536。例 0x0000F6D6 = 0.9642）"
     - name: y
       type: int32
-      description: "Y値（s15Fixed16Number）"
+      description: "Y 値（s15Fixed16Number: 値 / 65536。例 0x00010000 = 1.0）"
     - name: z
       type: int32
-      description: "Z値（s15Fixed16Number）"
+      description: "Z 値（s15Fixed16Number: 値 / 65536。例 0x0000D32D = 0.8249）"
 
   text_tag_data:
     - name: type_signature
       type: ascii
       size: "4"
+      description: "型シグネチャ（'text' = textType）"
     - name: reserved
       type: uint32
+      description: "予約（0）"
     - name: text
       type: ascii
       size: remaining
+      description: "テキスト（7 ビット ASCII、NUL 終端。v2 の著作権表示 'cprt' などで使われる）"
+
+  curv_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "型シグネチャ（'curv' = curveType。トーンカーブ 'rTRC'・'gTRC'・'bTRC'・'kTRC' など）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: entry_count
+      type: uint32
+      description: "エントリの数（0 = 恒等、1 = ガンマ値のみ、2 以上 = 表）"
+    - name: entries
+      type: uint16
+      repeat_count: "{entry_count}"
+      description: "entry_count が 1 ならガンマ値（u8Fixed8Number: 値 / 256。例 0x0233 = 2.2）、2 以上なら入力 0〜1 を等間隔に分けた出力値（0〜65535）"
+
+  para_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "型シグネチャ（'para' = parametricCurveType）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: function_type
+      type: uint16
+      description: "関数の種類（0: Y = X^g、1〜4: 係数を増やした区分関数。パラメータ数は 1 / 3 / 4 / 5 / 7）"
+    - name: reserved2
+      type: uint16
+      description: "予約（0）"
+    - name: parameters
+      type: int32
+      repeat: eof
+      description: "パラメータ（s15Fixed16Number: 値 / 65536。g, a, b, c, d, e, f の順）"
+
+  sf32_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "型シグネチャ（'sf32' = s15Fixed16ArrayType。色順応行列 'chad' など）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: values
+      type: int32
+      repeat: eof
+      description: "値の並び（s15Fixed16Number: 値 / 65536。'chad' では 3x3 行列の行優先）"
+
+  sig_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "型シグネチャ（'sig ' = signatureType。技術 'tech' など）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: signature
+      type: ascii
+      size: "4"
+      description: "4 文字のシグネチャ（例 'CRT '、'dcam'）"
+
+  chrm_tag_data:
+    - name: type_signature
+      type: ascii
+      size: "4"
+      description: "型シグネチャ（'chrm' = chromaticityType。原色の色度 'chrm' タグ）"
+    - name: reserved
+      type: uint32
+      description: "予約（0）"
+    - name: channel_count
+      type: uint16
+      description: "チャンネル（原色）の数"
+    - name: colorant_type
+      type: uint16
+      description: "原色の組の種類（0 = 不明、1 = ITU-R BT.709、2 = SMPTE RP145、3 = EBU Tech.3213-E、4 = P22）"
+    - name: coordinates
+      type: struct
+      struct: chrm_xy
+      repeat_count: "{channel_count}"
+      description: "原色ごとの CIE xy 色度"
+
+  chrm_xy:
+    - name: x
+      type: uint32
+      description: "CIE x（u16Fixed16Number: 値 / 65536）"
+    - name: y
+      type: uint32
+      description: "CIE y（u16Fixed16Number: 値 / 65536）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "構造を読まないタグデータ（型シグネチャ 4 バイト + 予約 4 バイト + 型ごとの内容）"
