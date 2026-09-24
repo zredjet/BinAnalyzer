@@ -5,12 +5,14 @@
 | 項目 | 値 |
 |---|---|
 | ステータス | draft |
-| 優先度 | 中 |
+| 優先度 | 低 |
 | 依存 | なし |
 | 作成日 | 2026-02-23 |
-| 更新日 | 2026-02-23 |
+| 更新日 | 2026-09-24 |
 
 ## 背景・動機
+
+> **見直し（2026-09-24）**: GUI（REQ-168）のヘックスは Presentation の `FieldKind` でフィールドの種類ごとに色分けされ、フィールドの始点・終点も示す。CLI の `-o hexdump` もフィールド境界で行を分け、フィールドのパスを列に出している。残る差は CLI の色だけなので、範囲を「`-o hexdump` を `--color` に従って種類ごとに色分けする」に絞る。TUI のヘックスペインの色分けは取り下げる（対話的な閲覧は GUI で行う）。新しい `--overlay` オプションも作らない。優先度は中 → 低。
 
 現在の hexdump 出力はバイトを等幅に表示するだけであり、各バイトがどのフィールドに属するかは分からない。TUI のヘックスダンプペインも同様で、カーソルで選択した位置のフィールド情報はプロパティペインに表示されるが、全体の構造境界は可視化されていない。
 
@@ -20,29 +22,25 @@ hexdump 上にフィールド境界と色分けをオーバーレイ表示する
 
 ### 追加する機能
 
-- [ ] hexdump 出力にフィールド境界の色分け表示
-- [ ] 各フィールドを異なる背景色/前景色で区別
-- [ ] ASCII 列にもフィールド色分けを反映
-- [ ] フィールド名の凡例表示（オプション）
-- [ ] CLI: `binanalyzer hexdump --overlay` オプション
-- [ ] TUI: ヘックスダンプペインでの構造オーバーレイ表示切替
+- [ ] `-o hexdump` で色が有効なとき（`--color always`、または `auto` で端末出力のとき）、バイトと ASCII 列をフィールドの種類（GUI と同じ `FieldKind` の分類）ごとの色で表示する
+- [ ] フィールドの種類と色の凡例（任意）
 
 ### 変更する既存機能
 
-- [ ] `HexdumpOutputFormatter` — オーバーレイモード追加
-- [ ] TUI ヘックスダンプビュー — 色分け表示対応
+- [ ] `HexDumpOutputFormatter` — 種類ごとの色分け
 
 ### 変更しないもの（スコープ外）
 
+- TUI のヘックスペインの色分け（取り下げ）
+- `--overlay` などの新しいオプション（既存の `--color` に従う）
 - ネストした構造体の階層的な色分け（フラットなフィールド単位の色分けのみ）
 
 ## 受入条件
 
-1. [ ] `binanalyzer hexdump --overlay` でフィールドごとに色分けされた hexdump が出力されること
-2. [ ] フィールド境界が視覚的に区別できること
-3. [ ] 色分けなしの従来表示がデフォルトであること（後方互換）
-4. [ ] TUI でオーバーレイ表示を切り替えられること
-5. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [ ] `-o hexdump --color always` で、バイトと ASCII 列がフィールドの種類ごとに色分けされること
+2. [ ] `--color never` と、`auto` でリダイレクトしたときの出力が従来と完全に同じであること
+3. [ ] 同じ種類のフィールドは GUI のヘックスと同じ分類で色が付くこと
+4. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -50,18 +48,16 @@ hexdump 上にフィールド境界と色分けをオーバーレイ表示する
 
 | プロジェクト | 変更内容の概要 |
 |---|---|
-| BinAnalyzer.Core | デコード結果にオフセット範囲情報の付与（必要に応じて） |
-| BinAnalyzer.Dsl | 変更なし |
-| BinAnalyzer.Engine | 変更なし |
-| BinAnalyzer.Output | `HexdumpOutputFormatter` にオーバーレイモード追加 |
-| BinAnalyzer.Tui | ヘックスダンプビューの色分け対応 |
-| BinAnalyzer.Cli | `--overlay` オプション追加 |
+| BinAnalyzer.Core | 変更なし |
+| BinAnalyzer.Presentation | 変更なし（`FieldKind` を使う） |
+| BinAnalyzer.Output | `HexDumpOutputFormatter` の色分け。Output は現在 Core のみに依存するので、Presentation を参照するか、分類を Core に移すかは設計で決める |
+| BinAnalyzer.Cli | 変更なし |
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/cli-usage.md — overlay オプション説明追加
-- [ ] docs/architecture.md — 変更不要
-- [ ] CLAUDE.md — 変更不要
+- [ ] docs/cli-usage.md — hexdump の色分けの説明
+- [ ] docs/architecture.md — 依存関係を変える場合
+- [ ] CLAUDE.md — 依存関係を変える場合
 - [ ] README.md — 変更不要
 
 ---
