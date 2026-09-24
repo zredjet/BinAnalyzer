@@ -267,6 +267,9 @@
 .gui-root .status .grow{flex:1;border:0}
 .gui-root .status .mono{font-family:var(--mono)}
 .gui-root .status .sel-info{overflow:hidden;text-overflow:ellipsis;max-width:50%}
+.gui-root .status .diag{height:20px;margin-right:6px;padding:0 8px;border-radius:var(--r-ctl);font-size:12px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.gui-root .status .diag:hover{background:color-mix(in srgb,var(--c) 24%,transparent)}
+.gui-root .status .diag.warn{--c:var(--magic)} .gui-root .status .diag.err{--c:var(--bad)}
 
 @media (max-width:1180px){
   .gui-root{--pane-w:340px}
@@ -277,3 +280,21 @@
   .gui-root .ghost{display:none}
 }
 @media (prefers-reduced-motion:reduce){ .gui-root *{transition:none !important} }
+/* 定義の診断（REQ-185） */
+.gui-root .defdiag{border-bottom:1px solid var(--stroke);font-size:12px}
+.gui-root .defdiag-head{display:flex;align-items:center;gap:8px;width:100%;padding:6px 10px;color:var(--text-2);text-align:left}
+.gui-root .defdiag-head:hover{background:var(--layer)}
+.gui-root .defdiag-head .chev{width:10px;color:var(--text-3)}
+.gui-root .defdiag .cnt{padding:0 6px;border-radius:var(--r-ctl);color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.gui-root .defdiag .err{--c:var(--bad)} .gui-root .defdiag .warn{--c:var(--magic)}
+.gui-root .defdiag-list{list-style:none;margin:0;padding:0 0 6px;max-height:30vh;overflow:auto}
+.gui-root .defdiag-item{display:flex;align-items:baseline;gap:8px;width:100%;padding:3px 10px 3px 12px;border-left:3px solid var(--c);text-align:left;color:var(--text-2)}
+.gui-root .defdiag-item:hover:not(:disabled){background:var(--layer)}
+.gui-root .defdiag-item.cur{background:var(--layer-2);color:var(--text)}
+.gui-root .defdiag-item:disabled{cursor:default;opacity:.8}
+.gui-root .defdiag-item .code{font-family:var(--mono);color:var(--c);flex:none}
+.gui-root .defdiag-item .msg{flex:1;min-width:0;white-space:normal}
+.gui-root .defdiag-item .loc{font-family:var(--mono);color:var(--text-3);flex:none}
+.gui-root .yaml .diag-warn,.gui-root .yaml .diag-err{box-shadow:inset 3px 0 0 var(--c);background:color-mix(in srgb,var(--c) 8%,transparent)}
+.gui-root .yaml .diag-warn{--c:var(--magic)} .gui-root .yaml .diag-err{--c:var(--bad)}
+.gui-root .yaml .cur.diag-warn,.gui-root .yaml .cur.diag-err{background:color-mix(in srgb,var(--c) 16%,transparent)}

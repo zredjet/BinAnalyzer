@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | approved |
+| ステータス | done |
 | 優先度 | 中 |
 | 依存 | REQ-168（GUI モード）、REQ-184（未知キーの検出）。REQ-186（同梱定義の警告の解消）を先に行うのが望ましい |
 | 作成日 | 2026-09-24 |
@@ -26,17 +26,17 @@ GUI には定義ビュー（`DefinitionView`、REQ-172 で選択フィールド�
 
 ### 追加する機能
 
-- [ ] GUI でフォーマット定義を読み込んだとき（起動時・定義の切り替え時）に `FormatValidator` を実行し、結果を読み込んだ定義（`FormatDocument`）に保持する
-- [ ] ステータスバーに定義の診断の件数（エラー / 警告）を表示する。0 件なら表示しない、または目立たない表示にする
-- [ ] 件数をクリックすると診断の一覧（コード・メッセージ・`file:line`）を表示する
-- [ ] 一覧の項目を選ぶと、定義ビューで該当行を表示・強調する（インポート先の定義はそのファイルを表示。REQ-172 の仕組みを使う）
-- [ ] 定義にエラー（VAL0xx 等）がある場合も、現状どおりエラー継続モードでデコードを試み、エラーがあることを明示する
+- [x] GUI でフォーマット定義を読み込んだとき（起動時・定義の切り替え時）に `FormatValidator` を実行し、結果を読み込んだ定義（`FormatDocument`）に保持する
+- [x] ステータスバーに定義の診断の件数（エラー / 警告）を表示する。0 件なら表示しない、または目立たない表示にする
+- [x] 件数をクリックすると診断の一覧（コード・メッセージ・`file:line`）を表示する
+- [x] 一覧の項目を選ぶと、定義ビューで該当行を表示・強調する（インポート先の定義はそのファイルを表示。REQ-172 の仕組みを使う）
+- [x] 定義にエラー（VAL0xx 等）がある場合も、現状どおりエラー継続モードでデコードを試み、エラーがあることを明示する
 
 ### 変更する既存機能
 
-- [ ] `FormatDocument` / `GuiSession` — 定義の検証結果の保持、一覧の開閉
-- [ ] `StatusBar` — 件数の表示
-- [ ] `DefinitionView` — 診断の行の強調
+- [x] `FormatDocument` / `GuiSession` — 定義の検証結果の保持、一覧の開閉
+- [x] `StatusBar` — 件数の表示
+- [x] `DefinitionView` — 診断の行の強調
 
 ### 変更しないもの（スコープ外）
 
@@ -46,12 +46,12 @@ GUI には定義ビュー（`DefinitionView`、REQ-172 で選択フィールド�
 
 ## 受入条件
 
-1. [ ] 未知キーを含む定義を GUI で開くと、ステータスバーに警告の件数が表示されること
-2. [ ] 件数から一覧を開き、項目を選ぶと定義ビューで該当行が強調されること（インポート先の定義を含む）
-3. [ ] 診断の無い定義では、件数の表示が出ない（または 0 件として目立たない）こと
-4. [ ] 定義を切り替えると診断が切り替わること
-5. [ ] 同梱の全定義を GUI で開いたときの診断が CLI の `validate` と一致すること
-6. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [x] 未知キーを含む定義を GUI で開くと、ステータスバーに警告の件数が表示されること
+2. [x] 件数から一覧を開き、項目を選ぶと定義ビューで該当行が強調されること（インポート先の定義を含む）
+3. [x] 診断の無い定義では、件数の表示が出ない（または 0 件として目立たない）こと
+4. [x] 定義を切り替えると診断が切り替わること
+5. [x] 同梱の全定義を GUI で開いたときの診断が CLI の `validate` と一致すること
+6. [x] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -67,8 +67,8 @@ GUI には定義ビュー（`DefinitionView`、REQ-172 で選択フィールド�
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/architecture.md — GUI 節に定義の診断
-- [ ] README.md — GUI の機能一覧に追記
+- [x] docs/architecture.md — GUI 節に定義の診断
+- [x] README.md — GUI の機能一覧に追記
 - [ ] CLAUDE.md — 変更不要
 
 ---
@@ -125,14 +125,29 @@ GUI には定義ビュー（`DefinitionView`、REQ-172 で選択フィールド�
 
 ## 実装メモ
 
-> 実装Phase（Phase 3-4）で記入する。設計時点では空欄でよい。
-
 ### 実装中の設計変更
+
+- なし（設計どおり）。表示中のファイルの判定は、診断の `SourceFile` が null なら本ファイル（ルート struct の `SourceFile`）とみなす。`DefinitionView` の表示処理は `Show()` にまとめ、選択ノードの定義行と診断の行の両方から使う
+
+### 確認
+
+- デスクトップ GUI（`-o gui`）で、書き間違い 2 か所を入れた PNG 定義（`expect` / `descripton`）を開くと、ステータスバーに黄色の「定義: 警告 2」が出ることをスクリーンショットで確認した。同じ画面の「検証 0 / 0」は、`expect` の書き間違いでシグネチャの検証が無効になっていることを示しており、この要望で気づかせたかった状態そのもの
+- 定義ペイン（一覧を開き 1 件目を選んだ状態）は、bUnit の描画結果に `gui.css` を当ててヘッドレス Chrome で確認した（`expect:` の行が選択の強調と警告の印付きで表示される）。GUI のウィンドウは `dotnet` プロセスでアプリとして登録されていないため、画面操作のツールではクリックできなかった
 
 ### 追加したテスト
 
 | テストクラス | テスト名 | 対応する受入条件 |
 |---|---|---|
-| | | |
+| Gui.Tests / DefinitionDiagnosticsTests | StatusBar_ShowsWarningCount_AndOpensTheList | 1 |
+| Gui.Tests / DefinitionDiagnosticsTests | StatusBar_Errors_ShownInRedWithBothCounts（エラーがあってもデコードは続く） | 1 |
+| Gui.Tests / DefinitionDiagnosticsTests | DefinitionView_ListsDiagnostics_WhenOpen | 2 |
+| Gui.Tests / DefinitionDiagnosticsTests | SelectingDiagnostic_InMainFile_HighlightsItsLine / SelectingDiagnostic_InImportedFile_ShowsThatFile / SelectingANodeAgain_ReturnsToTheNodesDefinition | 2 |
+| Gui.Tests / DefinitionDiagnosticsTests | LinesWithDiagnostics_AreMarked_InTheShownFile | 2 |
+| Gui.Tests / DefinitionDiagnosticsTests | StatusBar_NoDiagnostics_ShowsNothing | 3 |
+| Gui.Tests / DefinitionDiagnosticsTests | ChangingFormat_SwitchesDiagnostics | 4 |
+| Gui.Tests / DefinitionDiagnosticsTests | BundledFormats_GuiDiagnosticsMatchCli（`DirectoryFormatCatalog` と CLI と同じ読み込み・検証の結果を比較） | 5 |
 
 ### 気づき・今後の課題
+
+- Web の旧ページ（`/classic`）は今もエラーのみ表示する（スコープ外）
+- GUI のスクリーンショットを自動で撮る仕組み（`GuiAutoClose` のような環境変数で、起動後に特定のペインを開いて撮る）があると、README の画像更新や見た目の確認が楽になる

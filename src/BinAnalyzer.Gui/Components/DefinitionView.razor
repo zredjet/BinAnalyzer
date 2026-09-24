@@ -8,15 +8,23 @@
         {
             <span class="hint">インポート定義: @Document.Format.File から参照</span>
         }
-        else if (_location is null && Document.Selected is not null)
+        else if (_location is null && _diagTarget is null && Document.Selected is not null)
         {
             <span class="hint">この構造体は本ファイル内に見つかりません（インポート定義の可能性）</span>
         }
     </div>
+    @if (Document.Format.Validation.Diagnostics.Count > 0)
+    {
+        <DefinitionDiagnostics Diagnostics="Document.Format.Validation.Diagnostics" Open="Session.DefinitionDiagnosticsOpen"
+                               OnToggle="Session.ToggleDefinitionDiagnostics" OnSelect="SelectDiagnosticAsync" Current="_diagTarget" />
+    }
     <pre class="yaml">@for (var i = 0; i < _lines.Length; i++)
     {
-        var cls = i == _location?.FieldLine ? "line cur" : i == _location?.StructLine ? "line cur-struct" : "line";
-        <span class="@cls" id="@(i == _location?.FieldLine ? "yaml-cur" : null)">@foreach (var t in YamlHighlighter.Tokenize(_lines[i]))
+        var current = i == _location?.FieldLine || i == _diagLine;
+        var cls = current ? "line cur" : i == _location?.StructLine ? "line cur-struct" : "line";
+        _markers.TryGetValue(i, out var marker);
+        if (marker is not null) cls += marker.IsError ? " diag-err" : " diag-warn";
+        <span class="@cls" id="@(current ? "yaml-cur" : null)" title="@marker?.Title">@foreach (var t in YamlHighlighter.Tokenize(_lines[i]))
             {<span class="@TokenClass(t.Kind)">@t.Text</span>}
 </span>
     }</pre>
@@ -35,12 +43,75 @@
     /// <summary>インポート先ファイルの YAML テキスト（SourceFile → テキスト）。取得できなかったものは null。</summary>
     private readonly Dictionary<string, string?> _sources = new(StringComparer.Ordinal);
 
+    /// <summary>診断の一覧から選んだ診断（REQ-185）。ノードを選び直すか定義が変わると null に戻り、選択ノードの定義行を表示する。</summary>
+    private ValidationDiagnostic? _diagTarget;
+    /// <summary>選んだ診断の行（0 始まり）。</summary>
+    private int? _diagLine;
+    /// <summary>表示中のファイルの識別子（本ファイルならルート struct の SourceFile。文字列から読んだ定義では null）。</summary>
+    private string? _shownSource;
+    /// <summary>表示中のファイルで診断がある行（0 始まり） → 印。</summary>
+    private Dictionary<int, LineMarker> _markers = [];
+
+    private sealed record LineMarker(bool IsError, string Title);
+
     protected override async Task OnParametersSetAsync()
     {
         if (_locatedFor == Document.SelectedId && ReferenceEquals(_locatedIn, Document.Format)) return;
         _locatedFor = Document.SelectedId;
         _locatedIn = Document.Format;
+        _diagTarget = null;
         await LocateAsync();
+    }
+
+    /// <summary>ルート struct の SourceFile。表示中のファイルが本ファイルかどうかの判定に使う。</summary>
+    private string? MainSourceFile =>
+        Document.Format.Definition.Structs.TryGetValue(Document.Format.Definition.RootStruct, out var rootDef) ? rootDef.SourceFile : null;
+
+    /// <summary>診断の一覧から選んだ診断の定義行を表示する（インポート先ならそのファイル）。</summary>
+    private async Task SelectDiagnosticAsync(ValidationDiagnostic diagnostic)
+    {
+        if (diagnostic.SourceLine is not { } line) return;
+        _diagTarget = diagnostic;
+        var mainFile = MainSourceFile;
+        var isImport = diagnostic.SourceFile is not null && mainFile is not null
+            && !string.Equals(diagnostic.SourceFile, mainFile, StringComparison.Ordinal);
+        var text = isImport ? await ReadSourceAsync(diagnostic.SourceFile!) : null;
+        if (isImport && text is not null)
+        {
+            Show(text, Path.GetFileName(diagnostic.SourceFile!), isImport: true, source: diagnostic.SourceFile);
+            _diagLine = line - 1;
+        }
+        else
+        {
+            Show(Document.Format.YamlText, Document.Format.File, isImport: false, source: mainFile);
+            _diagLine = isImport ? null : line - 1; // インポート先を取得できなければ行は示さない
+        }
+        _location = null;
+    }
+
+    private void Show(string yaml, string shownFile, bool isImport, string? source)
+    {
+        _lines = yaml.Replace("\r\n", "\n").Split('\n');
+        _shownFile = shownFile;
+        _shownIsImport = isImport;
+        _shownSource = source;
+        _markers = BuildMarkers(source);
+    }
+
+    /// <summary>表示中のファイル（<paramref name="source"/>）にある診断の行と印。SourceFile が null の診断は本ファイルとみなす。</summary>
+    private Dictionary<int, LineMarker> BuildMarkers(string? source)
+    {
+        var mainFile = MainSourceFile;
+        var markers = new Dictionary<int, LineMarker>();
+        foreach (var group in Document.Format.Validation.Diagnostics
+                     .Where(d => d.SourceLine is not null && string.Equals(d.SourceFile ?? mainFile, source, StringComparison.Ordinal))
+                     .GroupBy(d => d.SourceLine!.Value - 1))
+        {
+            markers[group.Key] = new LineMarker(
+                group.Any(d => d.Severity == DiagnosticSeverity.Error),
+                string.Join("\n", group.Select(d => $"{d.Code}: {d.Message}")));
+        }
+        return markers;
     }
 
     /// <summary>
@@ -53,9 +124,7 @@
         var (structDef, fieldDef, structName, fieldName) = ResolveDefinition();
 
         var sourceFile = fieldDef?.SourceFile ?? structDef?.SourceFile;
-        var mainFile = Document.Format.Definition.Structs.TryGetValue(Document.Format.Definition.RootStruct, out var rootDef)
-            ? rootDef.SourceFile
-            : null;
+        var mainFile = MainSourceFile;
         var isImport = sourceFile is not null && mainFile is not null && !string.Equals(sourceFile, mainFile, StringComparison.Ordinal);
 
         string yaml = Document.Format.YamlText;
@@ -73,9 +142,8 @@
                 isImport = false; // 取得できなければ本ファイルを表示（探索は失敗して null になる）
             }
         }
-        _lines = yaml.Replace("\r\n", "\n").Split('\n');
-        _shownFile = shownFile;
-        _shownIsImport = isImport;
+        Show(yaml, shownFile, isImport, isImport ? sourceFile : mainFile);
+        _diagLine = null;
 
         // パーサーの行番号（1 始まり）→ 0 始まり
         if (structDef?.SourceLine is { } structLine && (fieldDef is null || fieldDef.SourceLine is not null))
@@ -156,7 +224,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_location?.FieldLine is null) return;
+        if (_location?.FieldLine is null && _diagLine is null) return;
         try { await JS.InvokeVoidAsync("binGui.scrollIntoView", "yaml-cur"); }
         catch (JSException) { }
         catch (InvalidOperationException) { }
