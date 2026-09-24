@@ -136,4 +136,24 @@ public sealed class HexRowBuilderTests
         last.Cells.Take(8).Should().AllSatisfy(c => c!.Value.Differs.Should().BeFalse());
         last.Cells.Skip(8).Take(5).Should().AllSatisfy(c => c!.Value.Differs.Should().BeTrue());
     }
+
+    [Fact]
+    public void UnverifiedChecksum_GhostShowsValue_NotACheckmark()
+    {
+        // REQ-187: 計算できないアルゴリズムのチェックサム（ChecksumValid = null）を ✓ にしない
+        var root = new DecodedStruct
+        {
+            Name = "r", StructType = "r", Offset = 0, Size = 8,
+            Children =
+            [
+                new DecodedBytes { Name = "body", Offset = 0, Size = 4, RawBytes = new byte[4] },
+                new DecodedInteger { Name = "crc", Offset = 4, Size = 4, Value = 0xDEADBEEF, ChecksumAlgorithm = "crc32c", ChecksumValid = null },
+            ],
+        };
+        var row = new HexRowBuilder(new byte[8], NodeIndex.Build(root)).Build(0);
+
+        var ghost = row.Ghosts.Single(g => g.Name == "crc");
+        ghost.Style.Should().Be(GhostStyle.Value);
+        ghost.ValueText.Should().StartWith("3735928559");
+    }
 }
