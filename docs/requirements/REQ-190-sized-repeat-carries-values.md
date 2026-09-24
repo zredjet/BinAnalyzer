@@ -54,7 +54,7 @@ PR #18 では、拡張フィールドの並びを `central_extra_fields` struct 
 - `element_size` の要素ごとのスコープ。struct の要素は従来どおり昇格で値が出る
 - ビットストリームモードの繰り返し。size はビット幅で、境界スコープを作らないので変わらない
 - DSL の構文。新しいキーは足さない
-- `formats/zip.bdef.yaml` の書き直し。回避策は PR #18 にあり、main にはまだ無い。PR #18 のマージ後に別の PR で行う（実装メモ参照）
+- `formats/zip.bdef.yaml` の書き直し。回避策は PR #18（マージ済み）にある。懸念事項の「前の要素の値が残る」の扱いを決めてから別の PR で行う（実装メモ参照）
 
 ## 受入条件
 
@@ -143,7 +143,7 @@ PR #18 では、拡張フィールドの並びを `central_extra_fields` struct 
 - **ゴールデンファイル**: main の同梱定義（midi / mp3 の size 付きの繰り返しを含む）で変化なし
 - **PR #18 の定義での確認**: `req-188-archives`（PR #18）に本要望の変更だけを当てると、Integration テスト 629 件が通り、gzip / zip のゴールデンは変わらない。Info-ZIP の zip 3.0 で作った 3 ファイルの ZIP（各 Local File Header に拡張タイムスタンプ 0x5455 と UNIX UID/GID 0x7875 の拡張フィールドがある）の JSON 出力は、変更前と同じ
 - **`_index` / `_prev` を移さない理由の実証**: 同じ条件で `_index` / `_prev` も移す（代替案の `capturesVariables: false` 相当）と、この ZIP の 3 つ目のファイルで `local_files.data` が失敗する（`Cannot push scope of size 3000 at position 3200`）。`_index` が拡張フィールドの番号（1）に変わり、2 つ目のエントリのサイズで読むため。PR #18 のテストデータの Local File Header には拡張フィールドが無く、テストでは表に出ない
-- **ZIP の書き直しの試作**: PR #18 の定義で `central_extra_fields` を削除し、`central_directory_header.extra` を `struct: central_extra_field` + `size: "{extra_length}"` + `repeat: eof` にして、3 つの `*_actual` の virtual に Zip64 の式を直接書く形（6 行追加・24 行削除）を試した。`ZipParsingTests` はすべて通り（Zip64 の Locator・拡張フィールド・Data Descriptor のテストを含む）、上の Info-ZIP の ZIP の `*_actual` の値も同じ。ゴールデン（zip.json）は `extra` が struct から配列に変わり、`extra` の中の `*_actual` の重複が無くなる分だけ変わる。PR #18 と本要望のマージ後に、懸念事項の「前の要素の値が残る」をどう扱うか決めて別の PR で行う
+- **ZIP の書き直しの試作**: PR #18 の定義で `central_extra_fields` を削除し、`central_directory_header.extra` を `struct: central_extra_field` + `size: "{extra_length}"` + `repeat: eof` にして、3 つの `*_actual` の virtual に Zip64 の式を直接書く形（6 行追加・24 行削除）を試した。`ZipParsingTests` はすべて通り（Zip64 の Locator・拡張フィールド・Data Descriptor のテストを含む）、上の Info-ZIP の ZIP の `*_actual` の値も同じ。ゴールデン（zip.json）は `extra` が struct から配列に変わり、`extra` の中の `*_actual` の重複が無くなる分だけ変わる。本要望のマージ後に、懸念事項の「前の要素の値が残る」をどう扱うか決めて別の PR で行う
 
 ### 追加したテスト
 
@@ -165,4 +165,4 @@ PR #18 では、拡張フィールドの並びを `central_extra_fields` struct 
 
 - **size の無い繰り返しは `_index` / `_prev` を外側に漏らす。** 外側の繰り返しの要素の中に size の無い繰り返しがあると、その後ろの `_index` は内側の最後の番号になる（record の中に `repeat_count: "{n}"` の items を置くと、record の後ろの `{_index}` が 0, 1 ではなく 1, 2 になることを確かめた）。`_index` を使う要素ごとの seek や `entries[_index]` の参照が黙って別の要素を指すので、別要望の候補。ただし `PrevVariableTests.RepeatCount_ScalarPrev` は繰り返しの後の `_prev` を最後の要素として使っているので、互換性の扱いを決める必要がある
 - **値の有無を確かめる手段が無い。** 懸念事項の「前の要素の値が残る」を定義側で防ぐには、変数が今の要素で束縛されたかを確かめる関数（`defined(name)` など）か、繰り返しの要素ごとに値を消す仕組みが要る。ZIP の書き直しで必要になれば別要望にする
-- REQ-188 の実装メモ（PR #18）の「`size` と `repeat` を一緒に指定したフィールドは、要素の値の昇格が親のスコープに届かない」には、本要望で解消したことを追記する
+- REQ-188 の実装メモの「`size` と `repeat` を一緒に指定したフィールドは、要素の値の昇格が親のスコープに届かない」に、本要望で解消したことを追記した
