@@ -48,6 +48,7 @@ public static class ExpressionEvaluator
             ExpressionNode.FunctionCall func => EvaluateFunction(func, context),
             ExpressionNode.IndexAccess idx => ResolveIndexAccess(idx.ArrayName, idx.Index, context),
             ExpressionNode.MemberAccess ma => ResolveMemberAccess(ma, context),
+            ExpressionNode.ElementAccess ea => ElementAt(EvaluateNode(ea.Array, context), ea.Index, context, "expression"),
             ExpressionNode.Conditional cond =>
                 ConvertToBool(EvaluateNode(cond.Condition, context))
                     ? EvaluateNode(cond.TrueExpr, context)
@@ -75,8 +76,11 @@ public static class ExpressionEvaluator
     }
 
     private static object ResolveIndexAccess(string arrayName, ExpressionNode indexExpr, DecodeContext context)
+        => ElementAt(context.GetVariable(arrayName), indexExpr, context, arrayName);
+
+    /// <summary>配列（<see cref="DecodedArray"/> またはリスト）の要素。<paramref name="arrayName"/> はエラーメッセージ用。</summary>
+    private static object ElementAt(object? arrayValue, ExpressionNode indexExpr, DecodeContext context, string arrayName)
     {
-        var arrayValue = context.GetVariable(arrayName);
         var count = arrayValue switch
         {
             DecodedArray arr => arr.Elements.Count,
@@ -90,7 +94,7 @@ public static class ExpressionEvaluator
             throw new InvalidOperationException(
                 $"Array index {index} is out of range for '{arrayName}' (length: {count})");
 
-        return arrayValue is DecodedArray a ? NodeValues.Element(a, index) : ((List<object>)arrayValue)[index];
+        return arrayValue is DecodedArray a ? NodeValues.Element(a, index) : ((List<object>)arrayValue!)[index];
     }
 
     private static object ResolveMemberAccess(ExpressionNode.MemberAccess ma, DecodeContext context)

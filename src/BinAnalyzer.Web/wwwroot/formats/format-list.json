@@ -2,6 +2,7 @@
   { "name": "7z", "file": "7z.bdef.yaml", "extensions": [".7z"] },
   { "name": "AVI", "file": "avi.bdef.yaml", "extensions": [".avi"] },
   { "name": "BMP", "file": "bmp.bdef.yaml", "extensions": [".bmp"] },
+  { "name": "CBOR", "file": "cbor.bdef.yaml", "extensions": [".cbor"] },
   { "name": "DNS", "file": "dns.bdef.yaml", "extensions": [] },
   { "name": "ELF", "file": "elf.bdef.yaml", "extensions": [".elf", ".so", ".o"] },
   { "name": "FAT", "file": "fat.bdef.yaml", "extensions": [".img", ".fat"] },
@@ -17,8 +18,10 @@
   { "name": "LZ4", "file": "lz4.bdef.yaml", "extensions": [".lz4"] },
   { "name": "Mach-O", "file": "macho.bdef.yaml", "extensions": [".dylib", ".macho"] },
   { "name": "MIDI", "file": "midi.bdef.yaml", "extensions": [".mid", ".midi"] },
+  { "name": "Matroska / WebM", "file": "mkv.bdef.yaml", "extensions": [".mkv", ".webm", ".mka", ".mk3d"] },
   { "name": "MP3", "file": "mp3.bdef.yaml", "extensions": [".mp3"] },
   { "name": "MP4", "file": "mp4.bdef.yaml", "extensions": [".mp4", ".m4a", ".m4v"] },
+  { "name": "MessagePack", "file": "msgpack.bdef.yaml", "extensions": [".msgpack", ".mpk"] },
   { "name": "OGG", "file": "ogg.bdef.yaml", "extensions": [".ogg", ".oga", ".ogv"] },
   { "name": "OTF", "file": "otf.bdef.yaml", "extensions": [".otf", ".ttf"] },
   { "name": "Parquet", "file": "parquet.bdef.yaml", "extensions": [".parquet"] },
@@ -34,5 +37,6 @@
   { "name": "WAV", "file": "wav.bdef.yaml", "extensions": [".wav"] },
   { "name": "WebP", "file": "webp.bdef.yaml", "extensions": [".webp"] },
   { "name": "X.509", "file": "x509.bdef.yaml", "extensions": [".cer", ".crt", ".der"] },
+  { "name": "XZ", "file": "xz.bdef.yaml", "extensions": [".xz", ".txz"] },
   { "name": "ZIP", "file": "zip.bdef.yaml", "extensions": [".zip"] }
 ]

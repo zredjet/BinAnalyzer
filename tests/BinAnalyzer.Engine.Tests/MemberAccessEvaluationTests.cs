@@ -109,4 +109,37 @@ public class MemberAccessEvaluationTests
         var result = ExpressionEvaluator.EvaluateAsLong(expr, ctx);
         result.Should().Be(40);
     }
+
+    [Fact]
+    public void IndexAfterMemberChain_ResolvesElementMember()
+    {
+        // REQ-147: {index.body.records[_index].unpadded_size}
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("index", new Dictionary<string, object>
+        {
+            ["body"] = new Dictionary<string, object>
+            {
+                ["records"] = new List<object>
+                {
+                    new Dictionary<string, object> { ["unpadded_size"] = 30L },
+                    new Dictionary<string, object> { ["unpadded_size"] = 44L },
+                },
+            },
+        });
+        ctx.SetVariable("_index", 1L);
+
+        ExpressionEvaluator.EvaluateAsLong(ExpressionParser.Parse("{index.body.records[_index].unpadded_size}"), ctx)
+            .Should().Be(44);
+    }
+
+    [Fact]
+    public void IndexAfterMemberChain_OutOfRange_Throws()
+    {
+        var ctx = new DecodeContext(new byte[] { 0x00 }, Endianness.Big);
+        ctx.SetVariable("a", new Dictionary<string, object> { ["items"] = new List<object> { 1L } });
+
+        var act = () => ExpressionEvaluator.EvaluateAsLong(ExpressionParser.Parse("{a.items[3]}"), ctx);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*out of range*");
+    }
 }

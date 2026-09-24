@@ -65,6 +65,8 @@ public class GoldenFileTests : IClassFixture<RealFileFixture>
     [InlineData("heif", "heif.bdef.yaml", "test.heif")]
     [InlineData("msgpack", "msgpack.bdef.yaml", "test.msgpack")]
     [InlineData("cbor", "cbor.bdef.yaml", "test.cbor")]
+    [InlineData("xz", "xz.bdef.yaml", "test.xz")]
+    [InlineData("mkv", "mkv.bdef.yaml", "test.webm")]
     public void DecodeResult_MatchesGoldenFile(string name, string formatFile, string binaryFile)
     {
         // 1. フォーマット読込 + バイナリデコード

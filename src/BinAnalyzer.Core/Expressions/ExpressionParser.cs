@@ -287,9 +287,18 @@ public sealed class ExpressionParser
                     node = new ExpressionNode.FieldReference(token.Value);
                 }
 
-                // ドットチェーン（後置メンバーアクセス）
-                while (Current.Type == ExpressionTokenType.Dot)
+                // 後置のメンバーアクセスと添字（a.b[i].c のように任意の順で続けられる）
+                while (Current.Type is ExpressionTokenType.Dot or ExpressionTokenType.LeftBracket)
                 {
+                    if (Current.Type == ExpressionTokenType.LeftBracket)
+                    {
+                        Advance(); // consume '['
+                        var elementIndex = ParseTernaryExpr();
+                        if (!Match(ExpressionTokenType.RightBracket))
+                            throw new FormatException($"Expected ']' at position {Current.Position}");
+                        node = new ExpressionNode.ElementAccess(node, elementIndex);
+                        continue;
+                    }
                     Advance(); // consume '.'
                     if (Current.Type != ExpressionTokenType.Identifier)
                         throw new FormatException(

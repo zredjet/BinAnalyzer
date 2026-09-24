@@ -1468,6 +1468,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         ExpressionNode.FieldReference fr => fr.FieldName is "_index" or "_prev",
         ExpressionNode.IndexAccess => true,
         ExpressionNode.MemberAccess ma => UsesIterationContext(ma.Object),
+        ExpressionNode.ElementAccess => true,
         ExpressionNode.BinaryOp bo => UsesIterationContext(bo.Left) || UsesIterationContext(bo.Right),
         ExpressionNode.UnaryOp uo => UsesIterationContext(uo.Operand),
         ExpressionNode.FunctionCall fc => fc.Arguments.Any(UsesIterationContext),
