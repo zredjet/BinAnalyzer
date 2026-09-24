@@ -87,6 +87,27 @@ public class EditabilityTests
     }
 
     [Fact]
+    public void Covering_SkipsUnverifiedChecksums()
+    {
+        // REQ-187: 計算できないアルゴリズムのチェックサムは再計算されないので予告しない
+        var root = new DecodedStruct
+        {
+            Name = "r", StructType = "r", Offset = 0, Size = 8,
+            Children =
+            [
+                new DecodedBytes { Name = "body", Offset = 0, Size = 4, RawBytes = new byte[4] },
+                new DecodedInteger
+                {
+                    Name = "crc", Offset = 4, Size = 4, Value = 1, ChecksumAlgorithm = "crc32c", ChecksumValid = null,
+                    ChecksumCoverage = [new ByteRange(0, 4)],
+                },
+            ],
+        };
+
+        ChecksumDependencies.Covering(NodeIndex.Build(root), new ByteRange(0, 4)).Should().BeEmpty();
+    }
+
+    [Fact]
     public void Covering_ExcludesRequestedNode()
     {
         var index = NodeIndex.Build(Tree());

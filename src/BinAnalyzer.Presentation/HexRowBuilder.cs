@@ -117,7 +117,10 @@ public sealed class HexRowBuilder
                     DecodedBytes b => b.ChecksumValid,
                     _ => null,
                 };
-                return new GhostAnnotation(leaf.Id, node.Name, "", ok == false ? GhostStyle.Ng : GhostStyle.Ok);
+                // 計算できないアルゴリズム（未知の名前など）は未検証（null）。✓ にせず値だけを出す（REQ-187）
+                return ok is { } valid
+                    ? new GhostAnnotation(leaf.Id, node.Name, "", valid ? GhostStyle.Ok : GhostStyle.Ng)
+                    : new GhostAnnotation(leaf.Id, node.Name, NodeDisplayText.ValueOnly(node), GhostStyle.Value);
             }
             case FieldKind.Error:
                 return new GhostAnnotation(leaf.Id, node.Name, NodeDisplayText.ValueOnly(node), GhostStyle.Ng);

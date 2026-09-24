@@ -25,7 +25,8 @@ public static class ChecksumDependencies
                 DecodedBytes b => (b.ChecksumCoverage, b.ChecksumAlgorithm, b.ChecksumValid),
                 _ => (null, null, null),
             };
-            if (coverage is null || !coverage.Any(c => c.Overlaps(range)))
+            // 未検証（計算の実装が無いアルゴリズム）は再計算されないので予告しない（REQ-187）
+            if (coverage is null || valid is null || !coverage.Any(c => c.Overlaps(range)))
                 continue;
             result.Add(new ChecksumDependency(id, index.PathOf(id), algorithm ?? "", valid));
         }

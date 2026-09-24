@@ -1974,53 +1974,37 @@ public sealed class BinaryDecoder : IBinaryDecoder
         Array.Clear(slice, localStart, localEnd - localStart);
     }
 
-    private static (bool valid, long? expected, IReadOnlyList<ByteRange> coverage) VerifyChecksum(
+    /// <summary>
+    /// 整数系チェックサムを検証する。計算の実装が無いアルゴリズム（未知の名前や、整数フィールドに指定したハッシュ系）は
+    /// 検証しない（valid = null。以前は「常に一致」として ✓ を出していた。REQ-187）。
+    /// </summary>
+    private static (bool? valid, long? expected, IReadOnlyList<ByteRange> coverage) VerifyChecksum(
         ChecksumSpec spec, long actualValue,
         IReadOnlyList<DecodedNode> siblings, DecodeContext context,
         int checksumFieldOffset = 0, int checksumFieldSize = 0)
     {
         var (data, coverage) = CollectChecksumDataForSpec(spec, siblings, context,
             checksumFieldOffset, checksumFieldSize);
+        if (!ChecksumCalculators.Integer.TryGetValue(spec.Algorithm, out var compute))
+            return (null, null, coverage);
 
-        long computed = spec.Algorithm.ToLowerInvariant() switch
-        {
-            "crc32" => Crc32Calculator.Compute(data),
-            "crc16-ccitt" => Crc16Calculator.ComputeCcitt(data),
-            "crc16-ibm" => Crc16Calculator.ComputeIbm(data),
-            "adler32" => Adler32Calculator.Compute(data),
-            "crc8" => Crc8Calculator.ComputeSmbus(data),
-            "crc8-maxim" => Crc8Calculator.ComputeMaxim(data),
-            "crc8-cdma2000" => Crc8Calculator.ComputeCdma2000(data),
-            "crc64-ecma" => (long)Crc64Calculator.ComputeEcma(data),
-            "xxhash32" => XxHashCalculator.ComputeXxHash32(data),
-            "xxhash64" => (long)XxHashCalculator.ComputeXxHash64(data),
-            "fletcher16" => FletcherCalculator.ComputeFletcher16(data),
-            "fletcher32" => FletcherCalculator.ComputeFletcher32(data),
-            _ => actualValue, // 未知: 常にvalid
-        };
-
+        var computed = compute(data);
         var valid = actualValue == computed;
         return (valid, valid ? null : computed, coverage);
     }
 
-    private static (bool valid, string? expectedHex, IReadOnlyList<ByteRange> coverage) VerifyHashChecksum(
+    /// <summary>ハッシュ系チェックサムを検証する。計算の実装が無ければ検証しない（valid = null）。</summary>
+    private static (bool? valid, string? expectedHex, IReadOnlyList<ByteRange> coverage) VerifyHashChecksum(
         ChecksumSpec spec, ReadOnlyMemory<byte> actualBytes,
         IReadOnlyList<DecodedNode> siblings, DecodeContext context,
         int checksumFieldOffset = 0, int checksumFieldSize = 0)
     {
         var (data, coverage) = CollectChecksumDataForSpec(spec, siblings, context,
             checksumFieldOffset, checksumFieldSize);
+        if (!ChecksumCalculators.Hash.TryGetValue(spec.Algorithm, out var compute))
+            return (null, null, coverage);
 
-        byte[] computed = spec.Algorithm.ToLowerInvariant() switch
-        {
-            "md5" => HashCalculator.ComputeMd5(data),
-            "sha1" => HashCalculator.ComputeSha1(data),
-            "sha256" => HashCalculator.ComputeSha256(data),
-            "sha384" => HashCalculator.ComputeSha384(data),
-            "sha512" => HashCalculator.ComputeSha512(data),
-            _ => actualBytes.ToArray(), // 未知: 常にvalid
-        };
-
+        var computed = compute(data);
         var valid = actualBytes.Span.SequenceEqual(computed);
         return (valid, valid ? null : Convert.ToHexString(computed).ToLowerInvariant(), coverage);
     }

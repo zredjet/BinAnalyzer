@@ -138,7 +138,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 - **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価。`@state_name` による状態変数の参照にも対応
 - **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決、テンプレート引数の解決・バインドのオーケストレーター
 - **壊れた入力への防御（REQ-160）** — 式の評価結果をバイト数・オフセットにするときは 0..int.MaxValue に収まることを検査する（`ToByteCount`）。スコープの境界は long で計算し負のサイズを拒否する。struct / switch の入れ子は `DecodeOptions.MaxDepth`（既定 64）で打ち切り、スタックオーバーフロー（プロセスごと落ちる）を `DecodeException` に変える。エラー継続モードでは、失敗したフィールド名を「未定義」として束縛し外側の同名変数へフォールバックさせない（再帰フォーマットの無限再帰防止）。位置が進まないエラー要素は `repeat_count` / `until` / `while` でも打ち切る。フィールド単位の `endianness:` は変数を捕捉しないオーバーレイスコープ（値は外側に残る）
-- **チェックサム計算器** — `Crc8Calculator` / `Crc16Calculator` / `Crc32Calculator`（ISO 3309、PNG/ZIP互換）/ `Crc64Calculator` / `Adler32Calculator` / `FletcherCalculator` / `XxHashCalculator`（整数系）、`HashCalculator`（MD5 / SHA 系）。アルゴリズム名と計算器の対応は `BinaryDecoder` の `VerifyChecksum` / `VerifyHashChecksum`、名前と分類は Core の `ChecksumAlgorithms`
+- **チェックサム計算器** — `Crc8Calculator` / `Crc16Calculator` / `Crc32Calculator`（ISO 3309、PNG/ZIP互換）/ `Crc64Calculator` / `Adler32Calculator` / `FletcherCalculator` / `XxHashCalculator`（整数系）、`HashCalculator`（MD5 / SHA 系）。アルゴリズム名 → 計算器の対応は `ChecksumCalculators`（Engine）の辞書 1 か所、名前・種類・表示名は Core の `ChecksumAlgorithms` の表 1 か所で、両者の鍵の一致はテストで固定（REQ-187）。計算器の無いアルゴリズムは検証しない（`ChecksumValid` は null）
 - **EncodingHelper** — Shift-JISエンコーディング登録・キャッシュヘルパー
 - **DiffEngine** — 2つのDecodedStructを再帰比較し、変更・追加・削除の差分リストを生成
 
