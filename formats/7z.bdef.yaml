@@ -1,44 +1,904 @@
+# 7z アーカイブ（.7z）
+# 仕様: 7-Zip の DOC/7zFormat.txt（7z Format description 18.06）と DOC/Methods.txt https://github.com/ip7z/7zip/blob/main/DOC/7zFormat.txt
+# 構造: Signature Header（32 バイト）→ Packed Streams（圧縮データ）→ ヘッダ（位置とサイズは Signature Header にある）。
+#   ヘッダはプロパティ ID（1 バイト）で始まるブロックの並びで、kEnd（0x00）で終わる。ID ごとに switch で振り分け、repeat_until で kEnd まで読む。
+#   数値は 7z 独自の可変長整数（先頭バイトの上位の 1 のビット数が続くバイト数）で、先頭バイト + 最大 8 バイトの struct にして値を求める。
+#   ヘッダを圧縮したもの（kEncodedHeader。7-Zip の既定）は、圧縮ヘッダの位置と圧縮方式（StreamsInfo）までを分解する。
+#   各ストリームの個数は、前の要素で数えた値を親のスコープに引き継いで（値の昇格）求める。
+# 対応していないもの: 圧縮データと圧縮ヘッダの展開（そのため kEncodedHeader のファイル一覧は表示できない）、
+#   ファイル名の 1 件ずつの分解（UTF-16LE の NUL 区切りのまま 1 つの文字列として表示）、空ストリーム・空ファイルのビット列の分解、
+#   フォルダの CRC が一部のフォルダだけにある場合のサブストリームの CRC の個数（全フォルダにあるか無いかのどちらかとして数える）、
+#   外部参照（External = 1）のデータ、AES の暗号化パラメータの分解
 name: 7z
 endianness: little
 root: sevenz
+
+enums:
+  property_id:
+    - value: 0x00
+      label: kEnd
+      description: "ブロックの終わり"
+    - value: 0x01
+      label: kHeader
+      description: "ヘッダ（圧縮されていないヘッダの始まり）"
+    - value: 0x02
+      label: kArchiveProperties
+      description: "アーカイブのプロパティ"
+    - value: 0x03
+      label: kAdditionalStreamsInfo
+      description: "追加のストリーム情報"
+    - value: 0x04
+      label: kMainStreamsInfo
+      description: "ファイルの内容のストリーム情報"
+    - value: 0x05
+      label: kFilesInfo
+      description: "ファイルの一覧（名前・時刻・属性）"
+    - value: 0x06
+      label: kPackInfo
+      description: "Packed Streams の位置とサイズ"
+    - value: 0x07
+      label: kUnPackInfo
+      description: "フォルダ（圧縮方式の組み合わせ）と展開後のサイズ"
+    - value: 0x08
+      label: kSubStreamsInfo
+      description: "フォルダを展開したデータの中のファイルごとの区切り"
+    - value: 0x09
+      label: kSize
+      description: "サイズの並び"
+    - value: 0x0A
+      label: kCRC
+      description: "CRC32 の並び"
+    - value: 0x0B
+      label: kFolder
+      description: "フォルダの並び"
+    - value: 0x0C
+      label: kCodersUnPackSize
+      description: "各コーダーの展開後のサイズ"
+    - value: 0x0D
+      label: kNumUnPackStream
+      description: "フォルダごとのファイル（サブストリーム）数"
+    - value: 0x0E
+      label: kEmptyStream
+      description: "内容の無いエントリ（ディレクトリ・空ファイル）のビット列"
+    - value: 0x0F
+      label: kEmptyFile
+      description: "空ストリームのうちファイルであるもののビット列"
+    - value: 0x10
+      label: kAnti
+      description: "削除を表すエントリのビット列（更新用アーカイブ）"
+    - value: 0x11
+      label: kName
+      description: "ファイル名（UTF-16LE、NUL 区切り）"
+    - value: 0x12
+      label: kCTime
+      description: "作成日時（FILETIME）"
+    - value: 0x13
+      label: kATime
+      description: "アクセス日時（FILETIME）"
+    - value: 0x14
+      label: kMTime
+      description: "更新日時（FILETIME）"
+    - value: 0x15
+      label: kWinAttributes
+      description: "Windows のファイル属性（上位 16 ビットに UNIX のモードを入れる拡張あり）"
+    - value: 0x16
+      label: kComment
+      description: "コメント"
+    - value: 0x17
+      label: kEncodedHeader
+      description: "圧縮されたヘッダ（その位置と圧縮方式の StreamsInfo が続く）"
+    - value: 0x18
+      label: kStartPos
+      description: "開始位置"
+    - value: 0x19
+      label: kDummy
+      description: "位置合わせの詰め物"
+
+  sevenz_method:
+    - value: 0x00
+      label: Copy
+      description: "無圧縮"
+    - value: 0x03
+      label: Delta
+      description: "差分フィルタ"
+    - value: 0x04
+      label: BCJ_x86
+      description: "x86 の分岐命令変換フィルタ（新しい ID）"
+    - value: 0x05
+      label: PPC
+      description: "PowerPC の分岐命令変換フィルタ（ビッグエンディアン）"
+    - value: 0x06
+      label: IA64
+      description: "IA-64 の分岐命令変換フィルタ"
+    - value: 0x07
+      label: ARM
+      description: "ARM の分岐命令変換フィルタ（リトルエンディアン）"
+    - value: 0x08
+      label: ARMT
+      description: "ARM Thumb の分岐命令変換フィルタ"
+    - value: 0x09
+      label: SPARC
+      description: "SPARC の分岐命令変換フィルタ"
+    - value: 0x0A
+      label: ARM64
+      description: "ARM64 の分岐命令変換フィルタ"
+    - value: 0x0B
+      label: RISCV
+      description: "RISC-V の分岐命令変換フィルタ"
+    - value: 0x21
+      label: LZMA2
+      description: "LZMA2（7-Zip の既定）"
+    - value: 0x030101
+      label: LZMA
+      description: "LZMA"
+    - value: 0x03030103
+      label: BCJ
+      description: "x86 の分岐命令変換フィルタ（BCJ）"
+    - value: 0x0303011B
+      label: BCJ2
+      description: "x86 の分岐命令変換フィルタ（BCJ2。入力 4 ストリーム）"
+    - value: 0x03030205
+      label: PPC_old
+      description: "PowerPC の分岐命令変換フィルタ（古い ID）"
+    - value: 0x03030401
+      label: IA64_old
+      description: "IA-64 の分岐命令変換フィルタ（古い ID）"
+    - value: 0x03030501
+      label: ARM_old
+      description: "ARM の分岐命令変換フィルタ（古い ID）"
+    - value: 0x03030701
+      label: ARMT_old
+      description: "ARM Thumb の分岐命令変換フィルタ（古い ID）"
+    - value: 0x03030805
+      label: SPARC_old
+      description: "SPARC の分岐命令変換フィルタ（古い ID）"
+    - value: 0x030401
+      label: PPMD
+      description: "PPMd（版 H）"
+    - value: 0x040108
+      label: Deflate
+      description: "Deflate"
+    - value: 0x040109
+      label: Deflate64
+      description: "Deflate64"
+    - value: 0x040202
+      label: BZip2
+      description: "bzip2"
+    - value: 0x04F71101
+      label: ZSTD
+      description: "Zstandard（7-Zip-zstd などの拡張）"
+    - value: 0x04F71102
+      label: Brotli
+      description: "Brotli（7-Zip-zstd などの拡張）"
+    - value: 0x04F71104
+      label: LZ4
+      description: "LZ4（7-Zip-zstd などの拡張）"
+    - value: 0x06F10701
+      label: 7zAES
+      description: "AES-256 + SHA-256 による暗号化"
 
 structs:
   sevenz:
     - name: signature_header
       type: struct
       struct: signature_header
+      description: "Signature Header（ファイル先頭の 32 バイト。ヘッダの位置・サイズ・CRC）"
+    - name: packed_streams
+      type: bytes
+      size: "{signature_header.next_header_offset}"
+      description: "Packed Streams（ファイルの内容と圧縮ヘッダの圧縮データ。位置は PackInfo の pack_pos から）"
     - name: next_header
       type: struct
       struct: next_header
-      seek: "{next_header_offset + 32}"
+      size: "{signature_header.next_header_size}"
+      description: "ヘッダ（Signature Header の next_header_offset の位置にある next_header_size バイト）"
 
   signature_header:
     - name: signature
       type: bytes
       size: "6"
       expected: [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]
-      description: "7zシグネチャ"
+      description: "シグネチャ（'7z' BC AF 27 1C）"
     - name: major_version
       type: uint8
-      description: "メジャーバージョン（通常0）"
+      description: "形式のメジャーバージョン（0）"
     - name: minor_version
       type: uint8
-      description: "マイナーバージョン（通常4）"
+      description: "形式のマイナーバージョン（現在は 4。2〜4 がある）"
     - name: start_header_crc
       type: uint32
-      description: "StartHeaderのCRC32"
+      checksum:
+        algorithm: crc32
+        # 対象の next_header_offset / next_header_size / next_header_crc はこの後ろにある
+        range:
+          offset: "12"
+          size: "20"
+      description: "Start Header（後ろの 20 バイト: next_header_offset・next_header_size・next_header_crc）の CRC32"
     - name: next_header_offset
       type: uint64
-      description: "NextHeaderのオフセット（SignatureHeader末尾からの相対位置、バイト32基準）"
+      description: "ヘッダの位置（Signature Header の末尾 = ファイル先頭から 32 バイトの位置からのオフセット）"
     - name: next_header_size
       type: uint64
-      description: "NextHeaderのサイズ"
+      description: "ヘッダのバイト数"
     - name: next_header_crc
       type: uint32
-      description: "NextHeaderのCRC32"
+      checksum:
+        algorithm: crc32
+        range:
+          offset: "{32 + next_header_offset}"
+          size: "{next_header_size}"
+      description: "ヘッダ（next_header_size バイト）の CRC32"
 
   next_header:
-    - name: header_data
+    - name: header_type
+      type: uint8
+      enum: property_id
+      description: "ヘッダの種類（kHeader = 圧縮なし、kEncodedHeader = 圧縮ヘッダ）"
+    - name: body
+      type: switch
+      switch_on: "{header_type}"
+      size: remaining
+      cases:
+        "0x01": header
+        "0x17": streams_info
+      default: raw_data
+      description: "ヘッダの本体（kHeader はファイル一覧まで、kEncodedHeader は圧縮ヘッダの位置と圧縮方式）"
+
+  # --- 可変長整数 ---
+  sevenz_number:
+    - name: first_byte
+      type: uint8
+      description: "先頭バイト（上位から続く 1 のビットの数が、後ろに続くバイト数。残りのビットが値の最上位）"
+    - name: extra_bytes
+      type: virtual
+      value: "{first_byte < 0x80 ? 0 : first_byte < 0xC0 ? 1 : first_byte < 0xE0 ? 2 : first_byte < 0xF0 ? 3 : first_byte < 0xF8 ? 4 : first_byte < 0xFC ? 5 : first_byte < 0xFE ? 6 : first_byte < 0xFF ? 7 : 8}"
+      description: "後ろに続くバイト数（0〜8）"
+    - name: byte_1
+      type: uint8
+      if: "{extra_bytes >= 1}"
+      description: "値の下位から 1 バイト目"
+    - name: byte_2
+      type: uint8
+      if: "{extra_bytes >= 2}"
+      description: "値の下位から 2 バイト目"
+    - name: byte_3
+      type: uint8
+      if: "{extra_bytes >= 3}"
+      description: "値の下位から 3 バイト目"
+    - name: byte_4
+      type: uint8
+      if: "{extra_bytes >= 4}"
+      description: "値の下位から 4 バイト目"
+    - name: byte_5
+      type: uint8
+      if: "{extra_bytes >= 5}"
+      description: "値の下位から 5 バイト目"
+    - name: byte_6
+      type: uint8
+      if: "{extra_bytes >= 6}"
+      description: "値の下位から 6 バイト目"
+    - name: byte_7
+      type: uint8
+      if: "{extra_bytes >= 7}"
+      description: "値の下位から 7 バイト目"
+    - name: byte_8
+      type: uint8
+      if: "{extra_bytes >= 8}"
+      description: "値の下位から 8 バイト目"
+    - name: number
+      type: virtual
+      value: "{(extra_bytes >= 8 ? 0 : (first_byte & (0x7F >> extra_bytes)) << (8 * extra_bytes)) + (extra_bytes >= 1 ? byte_1 : 0) + (extra_bytes >= 2 ? byte_2 << 8 : 0) + (extra_bytes >= 3 ? byte_3 << 16 : 0) + (extra_bytes >= 4 ? byte_4 << 24 : 0) + (extra_bytes >= 5 ? byte_5 << 32 : 0) + (extra_bytes >= 6 ? byte_6 << 40 : 0) + (extra_bytes >= 7 ? byte_7 << 48 : 0) + (extra_bytes >= 8 ? byte_8 << 56 : 0)}"
+      description: "値（先頭バイトの残りのビットを最上位に、続くバイトをリトルエンディアンで並べたもの）"
+
+  # --- ヘッダ ---
+  header:
+    - name: sections
+      type: struct
+      struct: header_section
+      repeat_until: "{section_id == 0}"
+      description: "ヘッダのブロック（アーカイブのプロパティ・ストリーム情報・ファイル一覧）。kEnd まで"
+
+  header_section:
+    - name: section_id
+      type: uint8
+      enum: property_id
+      description: "ブロックの種類"
+    - name: body
+      type: switch
+      switch_on: "{section_id}"
+      if: "{section_id != 0}"
+      cases:
+        "0x02": archive_properties
+        "0x03": streams_info
+        "0x04": streams_info
+        "0x05": files_info
+      default: raw_data
+      description: "ブロックの本体（kEnd には無い）"
+
+  archive_properties:
+    - name: properties
+      type: struct
+      struct: archive_property
+      repeat_until: "{property_type == 0}"
+      description: "アーカイブのプロパティ（種類 + サイズ + データ）の並び。種類 0 まで"
+
+  archive_property:
+    - name: property_type
+      type: uint8
+      description: "プロパティの種類（0 = 終わり）"
+    - name: property_size
+      type: struct
+      struct: sevenz_number
+      if: "{property_type != 0}"
+      description: "データのバイト数"
+    - name: property_data
       type: bytes
-      size: "{next_header_size}"
-      description: "7zエンコード済みヘッダ。内部構造は可変長エンコーディングを使用しており、DSLの表現力を超えるため構造化不可"
+      size: "{property_size.number}"
+      if: "{property_type != 0}"
+      description: "プロパティのデータ"
+
+  # --- StreamsInfo ---
+  streams_info:
+    - name: items
+      type: struct
+      struct: streams_info_item
+      repeat_until: "{item_id == 0}"
+      description: "ストリーム情報のブロック（PackInfo → UnPackInfo → SubStreamsInfo の順）。kEnd まで"
+
+  streams_info_item:
+    - name: item_id
+      type: uint8
+      enum: property_id
+      description: "ブロックの種類"
+    - name: body
+      type: switch
+      switch_on: "{item_id}"
+      if: "{item_id != 0}"
+      cases:
+        "0x06": pack_info
+        "0x07": coders_info
+        "0x08": substreams_info
+      default: raw_data
+      description: "ブロックの本体（kEnd には無い）"
+
+  pack_info:
+    - name: pack_pos
+      type: struct
+      struct: sevenz_number
+      description: "最初の Packed Stream の位置（Signature Header の末尾 = ファイル先頭から 32 バイトの位置からのオフセット）"
+    - name: num_pack_streams
+      type: struct
+      struct: sevenz_number
+      description: "Packed Stream の数"
+    - name: pack_stream_count
+      type: virtual
+      value: "{num_pack_streams.number}"
+      description: "Packed Stream の数（num_pack_streams の値）"
+    - name: properties
+      type: struct
+      struct: pack_info_property
+      repeat_until: "{pack_property_id == 0}"
+      description: "Packed Stream のサイズと CRC。kEnd まで"
+
+  pack_info_property:
+    - name: pack_property_id
+      type: uint8
+      enum: property_id
+      description: "プロパティの種類（kSize / kCRC / kEnd）"
+    - name: body
+      type: switch
+      switch_on: "{pack_property_id}"
+      if: "{pack_property_id != 0}"
+      cases:
+        "0x09": pack_sizes
+        "0x0A": pack_digests
+      default: raw_data
+      description: "プロパティの本体"
+
+  pack_sizes:
+    - name: sizes
+      type: struct
+      struct: sevenz_number
+      repeat_count: "{pack_stream_count}"
+      description: "Packed Stream ごとのバイト数（pack_stream_count 個）"
+
+  pack_digests:
+    - name: digests
+      type: struct
+      struct: "digests(count={pack_stream_count})"
+      description: "Packed Stream ごとの CRC32"
+
+  coders_info:
+    - name: folder_marker
+      type: uint8
+      enum: property_id
+      validate: "{folder_marker == 0x0B}"
+      description: "フォルダの並びの始まりを示す kFolder（0x0B）"
+    - name: num_folders
+      type: struct
+      struct: sevenz_number
+      description: "フォルダ（圧縮方式の組み合わせと入出力のストリーム）の数"
+    - name: folder_count
+      type: virtual
+      value: "{num_folders.number}"
+      description: "フォルダの数（num_folders の値）"
+    - name: external
+      type: uint8
+      description: "1 ならフォルダの定義が別のストリームにある（通常は 0）"
+    - name: unpack_size_count
+      type: virtual
+      value: "0"
+      description: "展開後のサイズの数の初期値（各フォルダの出力ストリーム数が加算される）"
+    - name: folders
+      type: struct
+      struct: folder
+      repeat_count: "{folder_count}"
+      if: "{external == 0}"
+      description: "フォルダ（folder_count 個）"
+    - name: data_stream_index
+      type: struct
+      struct: sevenz_number
+      if: "{external != 0}"
+      description: "フォルダの定義があるストリームの番号（external が 1 のとき）"
+    - name: unpack_size_marker
+      type: uint8
+      enum: property_id
+      validate: "{unpack_size_marker == 0x0C}"
+      description: "展開後のサイズの並びの始まりを示す kCodersUnPackSize（0x0C）"
+    - name: unpack_sizes
+      type: struct
+      struct: sevenz_number
+      repeat_count: "{unpack_size_count}"
+      description: "各フォルダの各出力ストリームの展開後のバイト数（全フォルダの出力ストリーム数の合計だけある）"
+    - name: folder_crc_count
+      type: virtual
+      value: "0"
+      description: "CRC のあるフォルダの数の初期値（kCRC があれば置き換わる）"
+    - name: properties
+      type: struct
+      struct: coders_info_property
+      repeat_until: "{coders_property_id == 0}"
+      description: "フォルダの CRC（任意）。kEnd まで"
+    - name: folders_with_crc
+      type: virtual
+      value: "{folder_crc_count}"
+      description: "CRC のあるフォルダの数（kCRC が無ければ 0）"
+
+  coders_info_property:
+    - name: coders_property_id
+      type: uint8
+      enum: property_id
+      description: "プロパティの種類（kCRC / kEnd）"
+    - name: body
+      type: switch
+      switch_on: "{coders_property_id}"
+      if: "{coders_property_id != 0}"
+      cases:
+        "0x0A": folder_digests
+      default: raw_data
+      description: "プロパティの本体"
+
+  folder_digests:
+    - name: digests
+      type: struct
+      struct: "digests(count={folder_count})"
+      description: "フォルダごとの展開後のデータの CRC32"
+    - name: folder_crc_count
+      type: virtual
+      value: "{digests.crc_count}"
+      description: "CRC のあるフォルダの数"
+
+  folder:
+    - name: num_coders
+      type: struct
+      struct: sevenz_number
+      description: "コーダー（圧縮方式・フィルタ）の数"
+    - name: coder_count
+      type: virtual
+      value: "{num_coders.number}"
+      description: "コーダーの数（num_coders の値）"
+    - name: in_streams_total
+      type: virtual
+      value: "0"
+      description: "入力ストリーム数の初期値（各コーダーの分が加算される）"
+    - name: out_streams_total
+      type: virtual
+      value: "0"
+      description: "出力ストリーム数の初期値（各コーダーの分が加算される）"
+    - name: coders
+      type: struct
+      struct: coder
+      repeat_count: "{coder_count}"
+      description: "コーダー（coder_count 個）"
+    - name: bind_pair_count
+      type: virtual
+      value: "{out_streams_total - 1}"
+      description: "コーダー同士の接続の数（出力ストリームの総数 − 1）"
+    - name: bind_pairs
+      type: struct
+      struct: bind_pair
+      repeat_count: "{bind_pair_count}"
+      description: "コーダー同士の接続（bind_pair_count 個）"
+    - name: packed_stream_count
+      type: virtual
+      value: "{in_streams_total - bind_pair_count}"
+      description: "このフォルダが読む Packed Stream の数（入力ストリームの総数 − 接続の数）"
+    - name: packed_stream_indices
+      type: struct
+      struct: sevenz_number
+      repeat_count: "{packed_stream_count}"
+      if: "{packed_stream_count > 1}"
+      description: "Packed Stream に割り当てる入力ストリームの番号（2 個以上のときだけある）"
+    - name: unpack_size_count
+      type: virtual
+      value: "{unpack_size_count + out_streams_total}"
+      description: "ここまでのフォルダの出力ストリーム数の合計（kCodersUnPackSize のサイズの数になる）"
+
+  coder:
+    - name: flags
+      type: bitfield
+      size: "1"
+      description: "コーダーのフラグ"
+      fields:
+        - name: id_size
+          bits: "3:0"
+          description: "コーデック ID のバイト数"
+        - name: is_complex
+          bits: "4"
+          description: "1 なら入出力のストリーム数を持つ（BCJ2 など）。0 なら入力 1・出力 1"
+        - name: has_attributes
+          bits: "5"
+          description: "1 ならプロパティ（辞書サイズなど）を持つ"
+        - name: reserved
+          bits: "6"
+          description: "予約（0）"
+        - name: has_alternatives
+          bits: "7"
+          description: "代替の方式が続く（使われない。0）"
+    - name: method
+      type: struct
+      struct: coder_method_id
+      description: "コーデック ID（id_size バイトのビッグエンディアン）"
+    - name: num_in_streams
+      type: struct
+      struct: sevenz_number
+      if: "{is_complex == 1}"
+      description: "入力ストリームの数（is_complex のとき）"
+    - name: num_out_streams
+      type: struct
+      struct: sevenz_number
+      if: "{is_complex == 1}"
+      description: "出力ストリームの数（is_complex のとき）"
+    - name: properties_size
+      type: struct
+      struct: sevenz_number
+      if: "{has_attributes == 1}"
+      description: "プロパティのバイト数"
+    - name: properties
+      type: switch
+      switch_on: "{method.method_id}"
+      size: "{properties_size.number}"
+      if: "{has_attributes == 1}"
+      cases:
+        "0x030101": lzma_properties
+        "0x21": lzma2_properties
+      default: raw_data
+      description: "コーダーのプロパティ（LZMA / LZMA2 は辞書サイズなどを分解）"
+    - name: in_streams_total
+      type: virtual
+      value: "{in_streams_total + (is_complex == 1 ? num_in_streams.number : 1)}"
+      description: "ここまでのコーダーの入力ストリーム数の合計"
+    - name: out_streams_total
+      type: virtual
+      value: "{out_streams_total + (is_complex == 1 ? num_out_streams.number : 1)}"
+      description: "ここまでのコーダーの出力ストリーム数の合計"
+
+  coder_method_id:
+    endianness: big
+    fields:
+      - name: id_1
+        type: uint8
+        if: "{id_size == 1}"
+        description: "1 バイトのコーデック ID"
+      - name: id_2
+        type: uint16
+        if: "{id_size == 2}"
+        description: "2 バイトのコーデック ID"
+      - name: id_3_high
+        type: uint8
+        if: "{id_size == 3}"
+        description: "3 バイトのコーデック ID の先頭バイト"
+      - name: id_3_low
+        type: uint16
+        if: "{id_size == 3}"
+        description: "3 バイトのコーデック ID の後ろ 2 バイト"
+      - name: id_4
+        type: uint32
+        if: "{id_size == 4}"
+        description: "4 バイトのコーデック ID"
+      - name: id_long
+        type: bytes
+        size: "{id_size}"
+        if: "{id_size > 4}"
+        description: "5 バイト以上のコーデック ID"
+      - name: method_id
+        type: virtual
+        value: "{id_size == 1 ? id_1 : id_size == 2 ? id_2 : id_size == 3 ? (id_3_high << 16) + id_3_low : id_size == 4 ? id_4 : -1}"
+        enum: sevenz_method
+        description: "コーデック ID の値（5 バイト以上は -1）"
+
+  lzma_properties:
+    - name: lc_lp_pb
+      type: uint8
+      description: "lc・lp・pb をまとめた値（(pb × 5 + lp) × 9 + lc）"
+    - name: lc
+      type: virtual
+      value: "{lc_lp_pb % 9}"
+      description: "リテラルの文脈ビット数（lc。既定 3）"
+    - name: lp
+      type: virtual
+      value: "{(lc_lp_pb / 9) % 5}"
+      description: "リテラルの位置ビット数（lp。既定 0）"
+    - name: pb
+      type: virtual
+      value: "{lc_lp_pb / 45}"
+      description: "位置ビット数（pb。既定 2）"
+    - name: dictionary_size
+      type: uint32
+      description: "辞書サイズ（バイト）"
+
+  lzma2_properties:
+    - name: dictionary_size_code
+      type: uint8
+      description: "辞書サイズの符号（0〜40。40 = 4 GiB − 1）"
+    - name: dictionary_size
+      type: virtual
+      value: "{dictionary_size_code >= 40 ? 0xFFFFFFFF : (2 + (dictionary_size_code & 1)) << (dictionary_size_code / 2 + 11)}"
+      description: "辞書サイズ（バイト。(2 + 符号の最下位ビット) × 2^(符号 ÷ 2 + 11)）"
+
+  bind_pair:
+    - name: in_index
+      type: struct
+      struct: sevenz_number
+      description: "接続先の入力ストリームの番号"
+    - name: out_index
+      type: struct
+      struct: sevenz_number
+      description: "接続元の出力ストリームの番号"
+
+  substreams_info:
+    - name: total_substreams
+      type: virtual
+      value: "{folder_count}"
+      description: "サブストリーム（ファイル）の総数（kNumUnPackStream が無ければフォルダごとに 1 個。あれば置き換わる）"
+    - name: sizes_to_read
+      type: virtual
+      value: "0"
+      description: "サイズを明示するサブストリームの数（各フォルダの最後の 1 個は残りから求めるので明示しない。kNumUnPackStream があれば置き換わる）"
+    - name: crcs_to_read
+      type: virtual
+      value: "{folders_with_crc == folder_count ? 0 : folder_count}"
+      description: "CRC を持つサブストリームの数（フォルダの CRC で代用できるものを除く。kNumUnPackStream があれば置き換わる）"
+    - name: properties
+      type: struct
+      struct: substreams_property
+      repeat_until: "{substreams_property_id == 0}"
+      description: "サブストリームの数・サイズ・CRC。kEnd まで"
+
+  substreams_property:
+    - name: substreams_property_id
+      type: uint8
+      enum: property_id
+      description: "プロパティの種類（kNumUnPackStream / kSize / kCRC / kEnd）"
+    - name: body
+      type: switch
+      switch_on: "{substreams_property_id}"
+      if: "{substreams_property_id != 0}"
+      cases:
+        "0x0D": substream_counts
+        "0x09": substream_sizes
+        "0x0A": substream_digests
+      default: raw_data
+      description: "プロパティの本体"
+
+  substream_counts:
+    - name: substream_total
+      type: virtual
+      value: "0"
+      description: "サブストリームの総数の初期値（各フォルダの分が加算される）"
+    - name: explicit_size_count
+      type: virtual
+      value: "0"
+      description: "サイズを明示するサブストリームの数の初期値"
+    - name: crc_needed_count
+      type: virtual
+      value: "0"
+      description: "CRC を持つサブストリームの数の初期値"
+    - name: counts
+      type: struct
+      struct: substream_count
+      repeat_count: "{folder_count}"
+      description: "フォルダごとのサブストリーム（ファイル）の数（folder_count 個）"
+    - name: total_substreams
+      type: virtual
+      value: "{substream_total}"
+      description: "サブストリーム（ファイル）の総数"
+    - name: sizes_to_read
+      type: virtual
+      value: "{explicit_size_count}"
+      description: "サイズを明示するサブストリームの数（kSize の要素数）"
+    - name: crcs_to_read
+      type: virtual
+      value: "{crc_needed_count}"
+      description: "CRC を持つサブストリームの数（kCRC の要素数）"
+
+  substream_count:
+    - name: count
+      type: struct
+      struct: sevenz_number
+      description: "このフォルダのサブストリームの数"
+    - name: substream_total
+      type: virtual
+      value: "{substream_total + count.number}"
+      description: "ここまでのサブストリームの数の合計"
+    - name: explicit_size_count
+      type: virtual
+      value: "{explicit_size_count + (count.number > 0 ? count.number - 1 : 0)}"
+      description: "ここまでのサイズを明示するサブストリームの数（各フォルダの数 − 1 の合計）"
+    - name: crc_needed_count
+      type: virtual
+      value: "{crc_needed_count + (count.number == 1 ? (folders_with_crc == folder_count ? 0 : 1) : count.number)}"
+      description: "ここまでの CRC を持つサブストリームの数（1 個だけでフォルダの CRC があるものは除く）"
+
+  substream_sizes:
+    - name: sizes
+      type: struct
+      struct: sevenz_number
+      repeat_count: "{sizes_to_read}"
+      description: "サブストリームのバイト数（各フォルダの最後の 1 個を除く。sizes_to_read 個）"
+
+  substream_digests:
+    - name: digests
+      type: struct
+      struct: "digests(count={crcs_to_read})"
+      description: "サブストリームの CRC32（crcs_to_read 個）"
+
+  # --- CRC の並び ---
+  digests(count):
+    - name: all_defined
+      type: uint8
+      description: "1 ならすべての要素に CRC がある。0 なら次のビット列で有無を示す"
+    - name: defined_count
+      type: virtual
+      value: "0"
+      description: "CRC のある要素の数の初期値（ビット列の各バイトで加算される）"
+    - name: defined_bits
+      type: struct
+      struct: bit_vector_byte
+      repeat_count: "{(count + 7) / 8}"
+      if: "{all_defined == 0}"
+      description: "要素ごとの CRC の有無（最上位ビットから 1 要素 1 ビット）"
+    - name: crc_count
+      type: virtual
+      value: "{all_defined == 1 ? count : defined_count}"
+      description: "CRC の数"
+    - name: crcs
+      type: uint32
+      repeat_count: "{crc_count}"
+      description: "CRC32（crc_count 個）"
+
+  bit_vector_byte:
+    - name: bits
+      type: uint8
+      description: "8 要素分のビット（最上位ビットが先の要素）"
+    - name: defined_count
+      type: virtual
+      value: "{defined_count + popcount(bits)}"
+      description: "ここまでの 1 のビットの数"
+
+  # --- FilesInfo ---
+  files_info:
+    - name: num_files
+      type: struct
+      struct: sevenz_number
+      description: "エントリ（ファイル・ディレクトリ）の数"
+    - name: file_count
+      type: virtual
+      value: "{num_files.number}"
+      description: "エントリの数（num_files の値）"
+    - name: properties
+      type: struct
+      struct: file_property
+      repeat_until: "{file_property_id == 0}"
+      description: "エントリの属性（種類 + サイズ + データ）の並び。kEnd まで"
+
+  file_property:
+    - name: file_property_id
+      type: uint8
+      enum: property_id
+      description: "属性の種類"
+    - name: property_size
+      type: struct
+      struct: sevenz_number
+      if: "{file_property_id != 0}"
+      description: "データのバイト数"
+    - name: body
+      type: switch
+      switch_on: "{file_property_id}"
+      size: "{property_size.number}"
+      if: "{file_property_id != 0}"
+      cases:
+        "0x11": file_names
+        "0x12": file_times
+        "0x13": file_times
+        "0x14": file_times
+        "0x15": file_attributes
+        "0x18": file_start_positions
+      default: raw_data
+      description: "属性のデータ（kEmptyStream / kEmptyFile / kAnti のビット列と kDummy はバイト列）"
+
+  file_names:
+    - name: external
+      type: uint8
+      description: "1 なら名前が別のストリームにある（通常は 0）"
+    - name: names
+      type: utf16le
+      size: remaining
+      description: "ファイル名（UTF-16LE。file_count 個の名前が NUL で区切られて並ぶ。ディレクトリの区切りは '/'）"
+
+  file_times:
+    - name: all_defined
+      type: uint8
+      description: "1 ならすべてのエントリに時刻がある。0 なら次のビット列で有無を示す"
+    - name: defined_bits
+      type: bytes
+      size: "{(file_count + 7) / 8}"
+      if: "{all_defined == 0}"
+      description: "エントリごとの時刻の有無（最上位ビットから 1 エントリ 1 ビット）"
+    - name: external
+      type: uint8
+      description: "1 なら値が別のストリームにある（通常は 0）"
+    - name: times
+      type: uint64
+      repeat: eof
+      description: "時刻（FILETIME: 1601-01-01 UTC からの 100 ナノ秒単位）。時刻のあるエントリの分だけ並ぶ"
+
+  file_attributes:
+    - name: all_defined
+      type: uint8
+      description: "1 ならすべてのエントリに属性がある。0 なら次のビット列で有無を示す"
+    - name: defined_bits
+      type: bytes
+      size: "{(file_count + 7) / 8}"
+      if: "{all_defined == 0}"
+      description: "エントリごとの属性の有無（最上位ビットから 1 エントリ 1 ビット）"
+    - name: external
+      type: uint8
+      description: "1 なら値が別のストリームにある（通常は 0）"
+    - name: attributes
+      type: uint32
+      repeat: eof
+      description: "Windows のファイル属性（0x10 = ディレクトリ、0x20 = アーカイブ。0x8000 が立っていれば上位 16 ビットが UNIX のモード）"
+
+  file_start_positions:
+    - name: all_defined
+      type: uint8
+      description: "1 ならすべてのエントリに値がある。0 なら次のビット列で有無を示す"
+    - name: defined_bits
+      type: bytes
+      size: "{(file_count + 7) / 8}"
+      if: "{all_defined == 0}"
+      description: "エントリごとの値の有無（最上位ビットから 1 エントリ 1 ビット）"
+    - name: external
+      type: uint8
+      description: "1 なら値が別のストリームにある（通常は 0）"
+    - name: positions
+      type: uint64
+      repeat: eof
+      description: "開始位置"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "分解しないデータ（バイト列）"

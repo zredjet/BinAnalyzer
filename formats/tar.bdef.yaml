@@ -1,3 +1,12 @@
+# tar アーカイブ（.tar）
+# 仕様: POSIX.1-2017（IEEE Std 1003.1-2017）pax の ustar 交換形式と pax 交換形式 https://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html 、
+#   GNU tar 1.35 マニュアルの「Basic Tar Format」（GNU 形式の 'L' / 'K' などの拡張） https://www.gnu.org/software/tar/manual/html_node/Standard.html
+# 構造: エントリ（512 バイトのヘッダ + 512 バイト単位に切り上げたデータ）の並び → 0 で埋めた 512 バイトのブロック 2 個以上 → レコード（通常 10240 バイト）までの詰め物。
+#   長さの情報は 8 進数の ASCII 文字列なので parse_int で数値にする。終端は、次のヘッダの先頭バイトを先読みして 0 かどうかで判定する。
+#   pax 拡張ヘッダ（'x' / 'g'）のデータは「長さ キーワード=値\n」のレコードに分け、GNU の長い名前（'L' / 'K'）は文字列として表示する。
+# 対応していないもの: ヘッダのチェックサムの検証（バイトの単純な合計で、対応するアルゴリズムが無いため値のみ表示）、
+#   GNU 形式で prefix の位置にある atime・ctime・スパースファイルの情報（prefix として表示）、GNU の base-256 表現（8 GiB 以上のサイズなど。先頭バイトが 0x80）、
+#   pax 拡張ヘッダの値を後続のエントリに当てはめること（path・size の上書きなど）、スパースファイル（'S'）とマルチボリューム（'M'）のデータの分解
 name: TAR
 endianness: big
 root: tar
@@ -9,127 +18,253 @@ enums:
       description: "'0' - 通常ファイル"
     - value: 0x31
       label: hard_link
-      description: "'1' - ハードリンク"
+      description: "'1' - ハードリンク（linkname のファイルと同じ実体。データなし）"
     - value: 0x32
       label: symbolic_link
-      description: "'2' - シンボリックリンク"
+      description: "'2' - シンボリックリンク（リンク先は linkname）"
     - value: 0x33
       label: character_device
-      description: "'3' - キャラクタデバイス"
+      description: "'3' - キャラクタデバイス（devmajor / devminor）"
     - value: 0x34
       label: block_device
-      description: "'4' - ブロックデバイス"
+      description: "'4' - ブロックデバイス（devmajor / devminor）"
     - value: 0x35
       label: directory
       description: "'5' - ディレクトリ"
     - value: 0x36
       label: fifo
       description: "'6' - FIFO（名前付きパイプ）"
-    - value: 0x4C
-      label: gnu_longname
-      description: "'L' - GNU拡張: 長いファイル名"
-    - value: 0x4B
-      label: gnu_longlink
-      description: "'K' - GNU拡張: 長いリンク名"
+    - value: 0x37
+      label: contiguous_file
+      description: "'7' - 連続領域に置くファイル（多くの実装は通常ファイルとして扱う）"
     - value: 0x78
       label: pax_extended
-      description: "'x' - PAX拡張ヘッダ（次のエントリに適用）"
+      description: "'x' - pax 拡張ヘッダ（次のエントリだけに当てはまる属性。データは「長さ キーワード=値\\n」のレコード）"
     - value: 0x67
       label: pax_global
-      description: "'g' - PAXグローバル拡張ヘッダ（以降の全エントリに適用）"
+      description: "'g' - pax グローバル拡張ヘッダ（以降の全エントリに当てはまる属性）"
+    - value: 0x4C
+      label: gnu_longname
+      description: "'L' - GNU 拡張: 次のエントリの長いファイル名（データが名前）"
+    - value: 0x4B
+      label: gnu_longlink
+      description: "'K' - GNU 拡張: 次のエントリの長いリンク先（データがリンク先）"
+    - value: 0x44
+      label: gnu_dumpdir
+      description: "'D' - GNU 拡張: ディレクトリとその内容の一覧（増分バックアップ）"
+    - value: 0x4D
+      label: gnu_multivolume
+      description: "'M' - GNU 拡張: 前のボリュームから続くファイル"
+    - value: 0x4E
+      label: gnu_old_longname
+      description: "'N' - GNU の古い長いファイル名（廃止）"
+    - value: 0x53
+      label: gnu_sparse
+      description: "'S' - GNU 拡張: スパースファイル"
+    - value: 0x56
+      label: gnu_volume_header
+      description: "'V' - GNU 拡張: ボリュームラベル（name がラベル）"
+    - value: 0x41
+      label: solaris_acl
+      description: "'A' - Solaris の ACL"
+    - value: 0x45
+      label: solaris_extended_attribute
+      description: "'E' - Solaris の拡張属性"
+    - value: 0x58
+      label: solaris_pax_extended
+      description: "'X' - Solaris の古い pax 拡張ヘッダ（'x' と同じ）"
     - value: 0x00
       label: regular_file_legacy
-      description: "レガシー通常ファイル（NULLバイト）"
+      description: "NUL - 通常ファイル（古い v7 形式）"
 
 structs:
   tar:
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      description: "ファイル全体のバイト数（終端の判定に使う）"
     - name: entries
       type: struct
       struct: tar_entry
-      repeat: eof
-      description: "TARエントリ（ヘッダ + データブロック）"
+      repeat_until: "{is_last == 1}"
+      if: "{file_size >= 512}"
+      description: "エントリ（ヘッダ + データブロック）。次のヘッダの先頭バイトが 0（終端のブロック）になるまで並ぶ"
+    - name: end_of_archive
+      type: bytes
+      size: remaining
+      padding: true
+      description: "終端（0 で埋めた 512 バイトのブロック 2 個以上と、レコード単位（通常 10240 バイト）までの 0 の詰め物）"
 
   tar_entry:
     - name: name
       type: ascii
       size: "100"
-      description: "ファイル名"
+      description: "ファイル名（NUL 終端。ustar では prefix + '/' + name が完全なパス）"
     - name: mode
       type: ascii
       size: "8"
-      description: "ファイルモード（8進ASCII）"
+      description: "ファイルモード（8 進数の ASCII。例: '0000644'）"
     - name: uid
       type: ascii
       size: "8"
-      description: "所有者ユーザID（8進ASCII）"
+      description: "所有者のユーザ ID（8 進数の ASCII）"
     - name: gid
       type: ascii
       size: "8"
-      description: "所有者グループID（8進ASCII）"
+      description: "所有者のグループ ID（8 進数の ASCII）"
     - name: size
       type: ascii
       size: "12"
-      description: "ファイルサイズ（バイト、8進ASCII）"
+      description: "データのバイト数（8 進数の ASCII。リンク・ディレクトリは 0）"
     - name: mtime
       type: ascii
       size: "12"
-      description: "更新日時（8進ASCII、Unixタイムスタンプ）"
+      description: "更新日時（8 進数の ASCII。UNIX 時刻の秒）"
     - name: checksum
       type: ascii
       size: "8"
-      description: "ヘッダ全バイトの合計値（チェックサムフィールドはスペースとして計算）"
+      description: "ヘッダのチェックサム（8 進数の ASCII。このフィールドを空白 8 個とみなしたヘッダ 512 バイトの符号なしの合計。検証しない）"
     - name: typeflag
       type: uint8
       enum: tar_typeflag
-      description: "ファイルタイプフラグ"
+      description: "エントリの種類（1 文字）"
     - name: linkname
       type: ascii
       size: "100"
-      description: "リンク先ファイル名"
+      description: "リンク先のファイル名（ハードリンク・シンボリックリンクのとき）"
     - name: magic
       type: ascii
       size: "6"
-      description: "UStarマジック（'ustar' + null）"
-      validate: "{magic == 'ustar'}"
+      validate: "{trim(magic) == 'ustar' or trim(magic) == ''}"
+      description: "形式のマジック（POSIX の ustar・pax は 'ustar' + NUL、GNU 形式は 'ustar' + 空白、古い v7 形式は空）"
     - name: version
       type: ascii
       size: "2"
-      description: "UStarバージョン（'00'）"
+      description: "ustar の版（POSIX は '00'、GNU 形式は空白 + NUL）"
     - name: uname
       type: ascii
       size: "32"
-      description: "所有者ユーザ名"
+      description: "所有者のユーザ名（NUL 終端。uid より優先される）"
     - name: gname
       type: ascii
       size: "32"
-      description: "所有者グループ名"
+      description: "所有者のグループ名（NUL 終端）"
     - name: devmajor
       type: ascii
       size: "8"
-      description: "デバイスメジャー番号"
+      description: "デバイスのメジャー番号（8 進数の ASCII。デバイスファイルのとき）"
     - name: devminor
       type: ascii
       size: "8"
-      description: "デバイスマイナー番号"
+      description: "デバイスのマイナー番号（8 進数の ASCII。デバイスファイルのとき）"
     - name: prefix
       type: ascii
       size: "155"
-      description: "長いファイル名用プレフィックス"
+      description: "パスの前半（ustar。name に収まらない長いパスのディレクトリ部分。GNU 形式ではこの位置に atime・ctime などがある）"
     - name: header_padding
       type: bytes
       size: "12"
       padding: true
-      description: "512バイトブロックへのパディング"
+      description: "ヘッダを 512 バイトにそろえる詰め物（0）"
     - name: file_size_bytes
       type: virtual
       value: "{parse_int(size, 8)}"
-      description: "ファイルサイズ（8進ASCII → 整数変換）"
+      description: "データのバイト数（size の 8 進数を数値にしたもの）"
+    - name: mtime_value
+      type: virtual
+      value: "{parse_int(mtime, 8)}"
+      description: "更新日時（mtime の 8 進数を数値にしたもの。UNIX 時刻の秒）"
     - name: data_blocks_size
       type: virtual
       value: "{((file_size_bytes + 511) / 512) * 512}"
-      description: "データブロックの合計サイズ（512バイト境界に切り上げ）"
+      description: "データブロックのバイト数（file_size_bytes を 512 の倍数に切り上げたもの）"
     - name: data
-      type: bytes
-      size: "{data_blocks_size}"
+      type: switch
+      switch_on: "{typeflag}"
+      size: "{file_size_bytes}"
       if: "{file_size_bytes > 0}"
-      description: "ファイルデータブロック"
+      cases:
+        "0x78": pax_records
+        "0x67": pax_records
+        "0x58": pax_records
+        "0x4C": gnu_long_name
+        "0x4B": gnu_long_name
+      default: file_data
+      description: "データ（file_size_bytes バイト）。pax 拡張ヘッダはレコードに、GNU の長い名前は文字列に分ける"
+    - name: data_padding
+      type: bytes
+      size: "{data_blocks_size - file_size_bytes}"
+      if: "{data_blocks_size > file_size_bytes}"
+      padding: true
+      description: "データを 512 バイトの倍数にそろえる詰め物（0）"
+    - name: next_header_offset
+      type: virtual
+      value: "{(_index == 0 ? 0 : _prev.next_header_offset) + 512 + data_blocks_size}"
+      description: "次のヘッダの位置（ファイル先頭から。このエントリの位置 + 512 + data_blocks_size）"
+    - name: next_header_first_byte
+      type: uint8
+      seek: "{next_header_offset}"
+      seek_restore: true
+      if: "{next_header_offset < file_size}"
+      description: "次のヘッダの先頭バイト（先読み。0 なら終端のブロックで、このエントリが最後）"
+    - name: is_last
+      type: virtual
+      value: "{next_header_offset + 512 > file_size ? 1 : (next_header_first_byte == 0 ? 1 : 0)}"
+      description: "最後のエントリか（1 = 次が終端のブロックかファイルの終わり）"
+
+  file_data:
+    - name: content
+      type: bytes
+      size: remaining
+      description: "ファイルの内容"
+
+  gnu_long_name:
+    - name: long_name
+      type: utf8
+      size: remaining
+      description: "次のエントリの長いファイル名またはリンク先（NUL 終端を含む）"
+
+  pax_records:
+    - name: records
+      type: struct
+      struct: pax_record
+      repeat: eof
+      description: "pax 拡張ヘッダのレコード（「長さ キーワード=値\\n」の並び）"
+
+  pax_record:
+    - name: length_digits
+      type: virtual
+      value: "{until_marker(0x20)}"
+      description: "長さの 10 進数の桁数（最初の空白までのバイト数）"
+    - name: length_text
+      type: ascii
+      size: "{length_digits}"
+      description: "レコードの長さ（10 進数の ASCII。長さ自身・空白・改行を含むレコード全体のバイト数）"
+    - name: space
+      type: ascii
+      size: "1"
+      description: "区切りの空白"
+    - name: record_length
+      type: virtual
+      value: "{parse_int(length_text, 10)}"
+      description: "レコード全体のバイト数（length_text を数値にしたもの）"
+    - name: keyword_length
+      type: virtual
+      value: "{until_marker(0x3D)}"
+      description: "キーワードのバイト数（最初の '=' までのバイト数）"
+    - name: keyword
+      type: utf8
+      size: "{keyword_length}"
+      description: "キーワード（path・linkpath・size・mtime・uid・gid・uname・gname・charset・comment・hdrcharset、ベンダー拡張の 'GNU.' 'SCHILY.' 'LIBARCHIVE.' など）"
+    - name: equals
+      type: ascii
+      size: "1"
+      description: "区切りの '='"
+    - name: value
+      type: utf8
+      size: "{record_length - length_digits - keyword_length - 3}"
+      description: "値（UTF-8。mtime などは小数点付きの 10 進数）"
+    - name: newline
+      type: ascii
+      size: "1"
+      description: "レコードの終わりの改行（LF）"

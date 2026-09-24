@@ -1,4 +1,6 @@
+using BinAnalyzer.Engine;
 using System.Buffers.Binary;
+using System.Text;
 
 namespace BinAnalyzer.Integration.Tests;
 
@@ -69,5 +71,30 @@ public static class Lz4TestDataGenerator
         BinaryPrimitives.WriteUInt32LittleEndian(span[pos..], 0);
 
         return data;
+    }
+
+    /// <summary>
+    /// スキッパブルフレーム（0x184D2A53、"meta"）+ Block Checksum と Content Size 付きの LZ4 フレーム（無圧縮ブロック "hello"）の連結（REQ-188）。
+    /// Header Checksum も正しい値を入れるので lz4 コマンドで展開できる。
+    /// </summary>
+    public static byte[] CreateSkippableAndChecksummedFrames()
+    {
+        var content = Encoding.ASCII.GetBytes("hello");
+        var ms = new MemoryStream();
+        var w = new BinaryWriter(ms);
+        w.Write(0x184D2A53u); w.Write(4u); w.Write(Encoding.ASCII.GetBytes("meta"));
+
+        w.Write(0x184D2204u);
+        var descriptor = new byte[10];
+        descriptor[0] = 0b01_1_1_1_0_0_0;  // version 01, B.Indep, B.Checksum, Content Size
+        descriptor[1] = 0x40;              // Block Max Size 64 KiB
+        BinaryPrimitives.WriteUInt64LittleEndian(descriptor.AsSpan(2), (ulong)content.Length);
+        w.Write(descriptor);
+        w.Write((byte)(XxHashCalculator.ComputeXxHash32(descriptor) >> 8));
+        w.Write(0x80000000u | (uint)content.Length);  // 無圧縮ブロック
+        w.Write(content);
+        w.Write(XxHashCalculator.ComputeXxHash32(content));
+        w.Write(0u);                                    // EndMark
+        return ms.ToArray();
     }
 }

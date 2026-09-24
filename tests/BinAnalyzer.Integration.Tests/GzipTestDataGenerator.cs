@@ -1,3 +1,7 @@
+using BinAnalyzer.Engine;
+using System.IO.Compression;
+using System.Text;
+
 namespace BinAnalyzer.Integration.Tests;
 
 public static class GzipTestDataGenerator
@@ -43,5 +47,36 @@ public static class GzipTestDataGenerator
         // pos += 4; (already zeroed)
 
         return data;
+    }
+
+    /// <summary>
+    /// FEXTRA（BGZF と同じ 'BC' サブフィールド）・FNAME・FCOMMENT・FHCRC をすべて持つ gzip（REQ-188）。内容は "hello gzip\n" × 3。
+    /// </summary>
+    public static byte[] CreateGzipWithOptionalFields()
+    {
+        var content = Encoding.ASCII.GetBytes(string.Concat(Enumerable.Repeat("hello gzip\n", 3)));
+        var deflated = new MemoryStream();
+        using (var deflate = new DeflateStream(deflated, CompressionLevel.Optimal, leaveOpen: true))
+            deflate.Write(content);
+
+        var header = new MemoryStream();
+        var w = new BinaryWriter(header);
+        w.Write((byte)0x1F); w.Write((byte)0x8B); w.Write((byte)8);
+        w.Write((byte)0b0001_1110);          // FHCRC | FEXTRA | FNAME | FCOMMENT
+        w.Write(1_700_000_000u);             // MTIME
+        w.Write((byte)0); w.Write((byte)3);  // XFL, OS = Unix
+        const int extraLength = 6;
+        w.Write((ushort)extraLength);
+        w.Write((byte)'B'); w.Write((byte)'C'); w.Write((ushort)2);
+        // BSIZE − 1（メンバー全体のバイト数 − 1）
+        var memberSize = 10 + 2 + extraLength + "hello.txt\0".Length + "note\0".Length + 2 + (int)deflated.Length + 8;
+        w.Write((ushort)(memberSize - 1));
+        w.Write(Encoding.ASCII.GetBytes("hello.txt\0"));
+        w.Write(Encoding.ASCII.GetBytes("note\0"));
+        w.Write((ushort)ChecksumCalculators.Integer["crc32"](header.ToArray()));
+        w.Write(deflated.ToArray());
+        w.Write((uint)ChecksumCalculators.Integer["crc32"](content));
+        w.Write((uint)content.Length);
+        return header.ToArray();
     }
 }

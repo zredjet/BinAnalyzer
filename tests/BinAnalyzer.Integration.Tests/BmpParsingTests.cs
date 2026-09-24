@@ -128,4 +128,18 @@ public class BmpParsingTests
         decoded.Children.Should().NotContain(c => c.Name == "color_table", "16 ビットはパレットを持たない");
         ((DecodedBytes)decoded.Children.Single(c => c.Name == "pixel_data")).Size.Should().Be(4);
     }
+
+    [Fact]
+    public void V5Header_DecodesWithoutErrorAndReadsThePalette()
+    {
+        // 以前は color_masks の条件の false（未定義の変数）でデコードエラーになっていた（ImageMagick の既定の出力と同じヘッダ）
+        var data = BmpTestDataGenerator.CreateV5HeaderWithPalette();
+        var decoded = new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(BmpFormatPath));
+
+        decoded.Children.Should().NotContain(c => c is DecodedError);
+        ((DecodedInteger)decoded.Children.Single(c => c.Name == "header_size")).Value.Should().Be(124);
+        decoded.Children.Should().NotContain(c => c.Name == "color_masks", "V4 / V5 のマスクはヘッダの中にある");
+        ((DecodedArray)decoded.Children.Single(c => c.Name == "color_table")).Elements.Should().HaveCount(2);
+        ((DecodedBytes)decoded.Children.Single(c => c.Name == "pixel_data")).Offset.Should().Be(14 + 124 + 8);
+    }
 }

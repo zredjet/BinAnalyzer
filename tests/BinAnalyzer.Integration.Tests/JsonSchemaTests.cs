@@ -3,7 +3,8 @@ using System.Text.Json.Nodes;
 using FluentAssertions;
 using Json.Schema;
 using Xunit;
-using YamlDotNet.Serialization;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 
 namespace BinAnalyzer.Integration.Tests;
 
@@ -28,33 +29,45 @@ public sealed class JsonSchemaTests
 
     private static JsonElement YamlFileToJsonElement(string yamlPath)
     {
-        var yaml = File.ReadAllText(yamlPath);
-        var deserializer = new DeserializerBuilder().Build();
-        var yamlObj = deserializer.Deserialize(new StringReader(yaml))!;
-        var jsonNode = ConvertToJsonNode(yamlObj);
+        var stream = new YamlStream();
+        stream.Load(new StringReader(File.ReadAllText(yamlPath)));
+        var jsonNode = ConvertToJsonNode(stream.Documents[0].RootNode);
         return JsonDocument.Parse(jsonNode!.ToJsonString()).RootElement;
     }
 
-    private static JsonNode? ConvertToJsonNode(object? obj)
+    /// <summary>
+    /// YAML のノードを JSON に変換する。引用符付き・ブロックのスカラーは YAML の意味どおり文字列のまま、
+    /// プレーンなスカラーだけ数値・真偽値として解釈する（"0" のような引用符付きの数字を整数にしない）。
+    /// </summary>
+    private static JsonNode? ConvertToJsonNode(YamlNode node)
     {
-        return obj switch
+        return node switch
         {
-            null => null,
-            Dictionary<object, object> dict =>
-                new JsonObject(dict.Select(kv =>
-                    KeyValuePair.Create(kv.Key.ToString()!, ConvertToJsonNode(kv.Value)))),
-            List<object> list =>
-                new JsonArray(list.Select(ConvertToJsonNode).ToArray()),
-            string s when long.TryParse(s, out var l) => JsonValue.Create(l),
-            string s when s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            YamlMappingNode map =>
+                new JsonObject(map.Children.Select(kv =>
+                    KeyValuePair.Create(((YamlScalarNode)kv.Key).Value!, ConvertToJsonNode(kv.Value)))),
+            YamlSequenceNode seq =>
+                new JsonArray(seq.Children.Select(ConvertToJsonNode).ToArray()),
+            YamlScalarNode { Style: ScalarStyle.Plain } plain => ConvertPlainScalar(plain.Value),
+            YamlScalarNode scalar => JsonValue.Create(scalar.Value),
+            _ => throw new NotSupportedException(node.GetType().Name),
+        };
+    }
+
+    private static JsonNode? ConvertPlainScalar(string? s)
+    {
+        return s switch
+        {
+            null or "" or "~" or "null" => null,
+            _ when long.TryParse(s, out var l) => JsonValue.Create(l),
+            _ when s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
                 && long.TryParse(s.AsSpan(2), System.Globalization.NumberStyles.HexNumber, null, out var hex) => JsonValue.Create(hex),
-            string s when s.StartsWith("0o", StringComparison.OrdinalIgnoreCase)
+            _ when s.StartsWith("0o", StringComparison.OrdinalIgnoreCase)
                 && TryParseOctal(s.AsSpan(2), out var oct) => JsonValue.Create(oct),
-            string s when double.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out var d) => JsonValue.Create(d),
-            string s when s == "true" => JsonValue.Create(true),
-            string s when s == "false" => JsonValue.Create(false),
-            string s => JsonValue.Create(s),
-            _ => JsonValue.Create(obj.ToString()!),
+            _ when double.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out var d) => JsonValue.Create(d),
+            "true" => JsonValue.Create(true),
+            "false" => JsonValue.Create(false),
+            _ => JsonValue.Create(s),
         };
     }
 
@@ -178,6 +191,10 @@ public sealed class JsonSchemaTests
     [InlineData("bmp.bdef.yaml")]
     [InlineData("wav.bdef.yaml")]
     [InlineData("zip.bdef.yaml")]
+    [InlineData("gzip.bdef.yaml")]
+    [InlineData("tar.bdef.yaml")]
+    [InlineData("7z.bdef.yaml")]
+    [InlineData("lz4.bdef.yaml")]
     [InlineData("elf.bdef.yaml")]
     public void Schema_ValidatesFormatFile(string fileName)
     {

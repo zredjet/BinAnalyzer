@@ -27,10 +27,10 @@ public static class FormatCatalog
     /// </summary>
     public static readonly IReadOnlyDictionary<string, Func<byte[]>[]> Samples = new Dictionary<string, Func<byte[]>[]>(StringComparer.Ordinal)
     {
-        ["7z.bdef.yaml"] = [SevenZipTestDataGenerator.CreateMinimal7z],
+        ["7z.bdef.yaml"] = [SevenZipTestDataGenerator.CreateMinimal7z, () => SevenZipTestDataGenerator.Create7zWithCopyFolder(false), () => SevenZipTestDataGenerator.Create7zWithCopyFolder(true)],
         // CreateMinimalAvi は avih を 52 バイトに切り詰めた「わざと不完全な」サンプルなので、完全なものだけを種にする
         ["avi.bdef.yaml"] = [AviTestDataGenerator.CreateAviWithStreamAndIndex, AviTestDataGenerator.CreateAviWithVideoStreamFormat, AviTestDataGenerator.CreateAviWithAudioStreamFormat],
-        ["bmp.bdef.yaml"] = [BmpTestDataGenerator.CreateMinimalBmp],
+        ["bmp.bdef.yaml"] = [BmpTestDataGenerator.CreateMinimalBmp, BmpTestDataGenerator.CreateV5HeaderWithPalette],
         ["cbor.bdef.yaml"] = [CborTestDataGenerator.CreateMinimalCbor],
         ["dns.bdef.yaml"] = [DnsTestDataGenerator.CreateMinimalDns],
         ["elf.bdef.yaml"] = [ElfTestDataGenerator.CreateMinimalElf64, ElfTestDataGenerator.CreateMinimalElf64BigEndian],
@@ -38,13 +38,13 @@ public static class FormatCatalog
         ["flac.bdef.yaml"] = [FlacTestDataGenerator.CreateMinimalFlac, FlacTestDataGenerator.CreateFlacWithCuesheet],
         ["flv.bdef.yaml"] = [FlvTestDataGenerator.CreateMinimalFlv, FlvTestDataGenerator.CreateFlvWithVideoTag],
         ["gif.bdef.yaml"] = [GifTestDataGenerator.CreateMinimalGif, GifTestDataGenerator.CreateGifWithImageBlock],
-        ["gzip.bdef.yaml"] = [GzipTestDataGenerator.CreateMinimalGzip],
+        ["gzip.bdef.yaml"] = [GzipTestDataGenerator.CreateMinimalGzip, GzipTestDataGenerator.CreateGzipWithOptionalFields],
         ["heif.bdef.yaml"] = [HeifTestDataGenerator.CreateMinimalHeif],
         ["icc.bdef.yaml"] = [IccTestDataGenerator.CreateMinimalIcc, IccTestDataGenerator.CreateIccWithTags],
         ["ico.bdef.yaml"] = [IcoTestDataGenerator.CreateMinimalIco],
         ["java-class.bdef.yaml"] = [JavaClassTestDataGenerator.CreateMinimalJavaClass],
         ["jpeg.bdef.yaml"] = [JpegTestDataGenerator.CreateMinimalJpeg, JpegTestDataGenerator.CreateJpegWithEntropyData],
-        ["lz4.bdef.yaml"] = [Lz4TestDataGenerator.CreateMinimalLz4],
+        ["lz4.bdef.yaml"] = [Lz4TestDataGenerator.CreateMinimalLz4, Lz4TestDataGenerator.CreateSkippableAndChecksummedFrames],
         ["macho.bdef.yaml"] = [MachoTestDataGenerator.CreateMinimalMacho64],
         ["midi.bdef.yaml"] = [MidiTestDataGenerator.CreateMinimalMidi],
         ["mkv.bdef.yaml"] = [MkvTestDataGenerator.CreateMinimalWebm],
@@ -60,14 +60,14 @@ public static class FormatCatalog
         ["png.bdef.yaml"] = [PngTestDataGenerator.CreateMinimalPng, PngTestDataGenerator.CreatePngWithSrgb],
         ["protobuf.bdef.yaml"] = [ProtobufTestDataGenerator.CreateMinimalProtobuf],
         ["sqlite.bdef.yaml"] = [SqliteTestDataGenerator.CreateMinimalSqlite, SqliteTestDataGenerator.CreateSqliteWithCell],
-        ["tar.bdef.yaml"] = [TarTestDataGenerator.CreateMinimalTar],
+        ["tar.bdef.yaml"] = [TarTestDataGenerator.CreateMinimalTar, TarTestDataGenerator.CreatePaxAndGnuTar],
         ["tiff.bdef.yaml"] = [TiffTestDataGenerator.CreateMinimalTiff, TiffTestDataGenerator.CreateBigEndianTiff, TiffTestDataGenerator.CreateTiffWithRationalTag],
         ["wasm.bdef.yaml"] = [WasmTestDataGenerator.CreateMinimalWasm, WasmTestDataGenerator.CreateWasmWithExportSection],
         ["wav.bdef.yaml"] = [WavTestDataGenerator.CreateMinimalWav, WavTestDataGenerator.CreateWavWithListInfo],
         ["webp.bdef.yaml"] = [WebpTestDataGenerator.CreateMinimalWebp],
         ["x509.bdef.yaml"] = [X509TestDataGenerator.CreateMinimalCertificate],
         ["xz.bdef.yaml"] = [XzTestDataGenerator.CreateMinimalXz, XzTestDataGenerator.CreateTwoBlockXz],
-        ["zip.bdef.yaml"] = [ZipTestDataGenerator.CreateMinimalZip],
+        ["zip.bdef.yaml"] = [ZipTestDataGenerator.CreateMinimalZip, ZipTestDataGenerator.CreateStreamedDeflateZip, ZipTestDataGenerator.CreateZip64WithUnsignedDataDescriptor],
     };
 
     /// <summary>xunit の MemberData 用: (フォーマットファイル, サンプル番号)。</summary>

@@ -5,136 +5,194 @@
   "name": "LZ4",
   "struct_type": "lz4",
   "children": {
-    "magic": {
-      "_type": "integer",
-      "type": "uint32",
-      "offset": 0,
-      "size": 4,
-      "description": "LZ4\u30D5\u30EC\u30FC\u30E0\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC\uFF080x184D2204\uFF09",
-      "_validation": {
-        "passed": true,
-        "expression": "{magic == 0x184D2204}"
-      },
-      "name": "magic",
-      "value": 407708164,
-      "hex": "0x184D2204"
-    },
-    "flg": {
-      "_type": "bitfield",
-      "type": "bitfield",
-      "offset": 4,
-      "size": 1,
-      "name": "flg",
-      "raw_value": "0x60",
-      "fields": [
-        {
-          "name": "dict_id",
-          "value": 0,
-          "bit_high": 0,
-          "bit_low": 0
-        },
-        {
-          "name": "reserved",
-          "value": 0,
-          "bit_high": 1,
-          "bit_low": 1
-        },
-        {
-          "name": "content_checksum",
-          "value": 0,
-          "bit_high": 2,
-          "bit_low": 2
-        },
-        {
-          "name": "content_size",
-          "value": 0,
-          "bit_high": 3,
-          "bit_low": 3
-        },
-        {
-          "name": "b_checksum",
-          "value": 0,
-          "bit_high": 4,
-          "bit_low": 4
-        },
-        {
-          "name": "b_independence",
-          "value": 1,
-          "bit_high": 5,
-          "bit_low": 5
-        },
-        {
-          "name": "version",
-          "value": 1,
-          "bit_high": 7,
-          "bit_low": 6
-        }
-      ]
-    },
-    "bd": {
-      "_type": "bitfield",
-      "type": "bitfield",
-      "offset": 5,
-      "size": 1,
-      "name": "bd",
-      "raw_value": "0x40",
-      "fields": [
-        {
-          "name": "reserved_bd",
-          "value": 0,
-          "bit_high": 3,
-          "bit_low": 0
-        },
-        {
-          "name": "block_max_size",
-          "value": 4,
-          "bit_high": 6,
-          "bit_low": 4,
-          "enum_label": "64KB"
-        },
-        {
-          "name": "reserved_bd_high",
-          "value": 0,
-          "bit_high": 7,
-          "bit_low": 7
-        }
-      ]
-    },
-    "header_checksum": {
-      "_type": "integer",
-      "type": "uint8",
-      "offset": 6,
-      "size": 1,
-      "description": "\u30D8\u30C3\u30C0\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08xxHash-32\u306E\u7B2C2\u30D0\u30A4\u30C8\uFF09",
-      "name": "header_checksum",
-      "value": 130,
-      "hex": "0x82"
-    },
-    "blocks": {
+    "frames": {
       "_type": "array",
       "type": "struct",
-      "offset": 7,
-      "size": 4,
-      "name": "blocks",
+      "offset": 0,
+      "size": 11,
+      "name": "frames",
       "count": 1,
       "elements": [
         {
           "_type": "struct",
           "type": "struct",
-          "offset": 7,
-          "size": 4,
-          "name": "blocks",
-          "struct_type": "lz4_data_block",
+          "offset": 0,
+          "size": 11,
+          "name": "frames",
+          "struct_type": "frame",
           "children": {
-            "block_size_raw": {
+            "magic": {
               "_type": "integer",
               "type": "uint32",
-              "offset": 7,
+              "offset": 0,
               "size": 4,
-              "description": "\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u6700\u4E0A\u4F4D\u30D3\u30C3\u30C8\u306F\u975E\u5727\u7E2E\u30D5\u30E9\u30B0\u30010=EndMark\uFF09",
-              "name": "block_size_raw",
-              "value": 0,
-              "hex": "0x0"
+              "description": "\u30D5\u30EC\u30FC\u30E0\u306E\u7A2E\u985E\u3092\u793A\u3059\u30DE\u30B8\u30C3\u30AF\uFF080x184D2204 = LZ4 \u30D5\u30EC\u30FC\u30E0\u30010x184D2A50\u301C5F = \u30B9\u30AD\u30C3\u30D1\u30D6\u30EB\u30010x184C2102 = \u30EC\u30AC\u30B7\u30FC\uFF09",
+              "name": "magic",
+              "value": 407708164,
+              "hex": "0x184D2204"
+            },
+            "frame_type": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 4,
+              "size": 0,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u306E\u7A2E\u985E\uFF08\u30B9\u30AD\u30C3\u30D1\u30D6\u30EB\u30D5\u30EC\u30FC\u30E0\u306E 16 \u7A2E\u985E\u306E\u30DE\u30B8\u30C3\u30AF\u3092 0x184D2A50 \u306B\u307E\u3068\u3081\u305F\u3082\u306E\uFF09",
+              "name": "frame_type",
+              "value": 407708164,
+              "enum_label": "LZ4_frame",
+              "enum_description": "LZ4 \u30D5\u30EC\u30FC\u30E0"
+            },
+            "body": {
+              "_type": "struct",
+              "type": "switch",
+              "offset": 4,
+              "size": 7,
+              "name": "body",
+              "struct_type": "lz4_frame",
+              "children": {
+                "flg": {
+                  "_type": "bitfield",
+                  "type": "bitfield",
+                  "offset": 4,
+                  "size": 1,
+                  "description": "FLG \u30D0\u30A4\u30C8\uFF08Frame Descriptor \u306E\u5148\u982D\u3002\u5F8C\u308D\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u6709\u7121\uFF09",
+                  "name": "flg",
+                  "raw_value": "0x60",
+                  "fields": [
+                    {
+                      "name": "dict_id",
+                      "value": 0,
+                      "bit_high": 0,
+                      "bit_low": 0
+                    },
+                    {
+                      "name": "reserved",
+                      "value": 0,
+                      "bit_high": 1,
+                      "bit_low": 1
+                    },
+                    {
+                      "name": "content_checksum",
+                      "value": 0,
+                      "bit_high": 2,
+                      "bit_low": 2
+                    },
+                    {
+                      "name": "content_size",
+                      "value": 0,
+                      "bit_high": 3,
+                      "bit_low": 3
+                    },
+                    {
+                      "name": "b_checksum",
+                      "value": 0,
+                      "bit_high": 4,
+                      "bit_low": 4
+                    },
+                    {
+                      "name": "b_independence",
+                      "value": 1,
+                      "bit_high": 5,
+                      "bit_low": 5
+                    },
+                    {
+                      "name": "version",
+                      "value": 1,
+                      "bit_high": 7,
+                      "bit_low": 6
+                    }
+                  ]
+                },
+                "bd": {
+                  "_type": "bitfield",
+                  "type": "bitfield",
+                  "offset": 5,
+                  "size": 1,
+                  "description": "BD \u30D0\u30A4\u30C8\uFF08\u30D6\u30ED\u30C3\u30AF\u306E\u6700\u5927\u30B5\u30A4\u30BA\uFF09",
+                  "name": "bd",
+                  "raw_value": "0x40",
+                  "fields": [
+                    {
+                      "name": "reserved_bd",
+                      "value": 0,
+                      "bit_high": 3,
+                      "bit_low": 0
+                    },
+                    {
+                      "name": "block_max_size",
+                      "value": 4,
+                      "bit_high": 6,
+                      "bit_low": 4,
+                      "enum_label": "64KB",
+                      "enum_description": "64 KiB"
+                    },
+                    {
+                      "name": "reserved_bd_high",
+                      "value": 0,
+                      "bit_high": 7,
+                      "bit_low": 7
+                    }
+                  ]
+                },
+                "header_checksum": {
+                  "_type": "integer",
+                  "type": "uint8",
+                  "offset": 6,
+                  "size": 1,
+                  "description": "\u30D8\u30C3\u30C0\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08FLG \u304B\u3089 dict_id_value \u307E\u3067\u306E xxHash-32 \u306E 2 \u30D0\u30A4\u30C8\u76EE = (xxh32 \u003E\u003E 8) \u0026 0xFF\u3002\u691C\u8A3C\u3057\u306A\u3044\uFF09",
+                  "name": "header_checksum",
+                  "value": 130,
+                  "hex": "0x82"
+                },
+                "blocks": {
+                  "_type": "array",
+                  "type": "struct",
+                  "offset": 7,
+                  "size": 4,
+                  "name": "blocks",
+                  "count": 1,
+                  "elements": [
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 7,
+                      "size": 4,
+                      "name": "blocks",
+                      "struct_type": "lz4_data_block",
+                      "children": {
+                        "block_size_raw": {
+                          "_type": "integer",
+                          "type": "uint32",
+                          "offset": 7,
+                          "size": 4,
+                          "description": "\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u6700\u4E0A\u4F4D\u30D3\u30C3\u30C8\u306F\u7121\u5727\u7E2E\u30D5\u30E9\u30B0\u3001\u4E0B\u4F4D 31 \u30D3\u30C3\u30C8\u304C\u30C7\u30FC\u30BF\u306E\u30D0\u30A4\u30C8\u6570\u30020 = EndMark\uFF09",
+                          "name": "block_size_raw",
+                          "value": 0,
+                          "hex": "0x0"
+                        },
+                        "is_uncompressed": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 11,
+                          "size": 0,
+                          "description": "1 \u306A\u3089\u30C7\u30FC\u30BF\u306F\u7121\u5727\u7E2E\uFF08block_size_raw \u306E\u6700\u4E0A\u4F4D\u30D3\u30C3\u30C8\uFF09",
+                          "name": "is_uncompressed",
+                          "value": 0
+                        },
+                        "block_size": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 11,
+                          "size": 0,
+                          "description": "\u30D6\u30ED\u30C3\u30AF\u306E\u30C7\u30FC\u30BF\u306E\u30D0\u30A4\u30C8\u6570\uFF08block_size_raw \u306E\u4E0B\u4F4D 31 \u30D3\u30C3\u30C8\uFF09",
+                          "name": "block_size",
+                          "value": 0
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
             }
           }
         }
