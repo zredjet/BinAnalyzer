@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using BinAnalyzer.Engine;
 using FluentAssertions;
@@ -10,8 +9,7 @@ namespace BinAnalyzer.Cli.Tests;
 [Collection("CliTests")]
 public class PatchCommandTests : IDisposable
 {
-    private static readonly string RepoRoot = FindRepoRoot();
-    private static readonly string CliProject = Path.Combine(RepoRoot, "src", "BinAnalyzer.Cli");
+    private static readonly string RepoRoot = CliRunner.RepoRoot;
     private static readonly string PngFormat = Path.Combine(RepoRoot, "formats", "png.bdef.yaml");
 
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"binanalyzer-req164-{Guid.NewGuid():N}");
@@ -27,18 +25,6 @@ public class PatchCommandTests : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(_dir, recursive: true); } catch { }
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            if (Directory.Exists(Path.Combine(dir, "src")) && Directory.Exists(Path.Combine(dir, "formats")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("リポジトリルートが見つかりません");
     }
 
     private static byte[] MinimalPng()
@@ -62,28 +48,8 @@ public class PatchCommandTests : IDisposable
         s.Write([(byte)(crc >> 24), (byte)(crc >> 16), (byte)(crc >> 8), (byte)crc]);
     }
 
-    private static async Task<(int ExitCode, string StdOut, string StdErr)> RunCli(params string[] args)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            WorkingDirectory = RepoRoot,
-        };
-        psi.ArgumentList.Add("run");
-        psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(CliProject);
-        psi.ArgumentList.Add("--");
-        foreach (var a in args) psi.ArgumentList.Add(a);
-
-        using var process = Process.Start(psi)!;
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        return (process.ExitCode, await stdoutTask, await stderrTask);
-    }
+    private static Task<(int ExitCode, string StdOut, string StdErr)> RunCli(params string[] args) =>
+        CliRunner.RunAsync(args);
 
     private static async Task<JsonElement> DecodeIhdrAsync(string file)
     {

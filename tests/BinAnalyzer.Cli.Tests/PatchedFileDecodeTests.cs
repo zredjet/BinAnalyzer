@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using BinAnalyzer.Core.Patching;
 using BinAnalyzer.Dsl;
@@ -12,21 +11,8 @@ namespace BinAnalyzer.Cli.Tests;
 [Collection("CliTests")]
 public class PatchedFileDecodeTests
 {
-    private static readonly string RepoRoot = FindRepoRoot();
-    private static readonly string CliProject = Path.Combine(RepoRoot, "src", "BinAnalyzer.Cli");
+    private static readonly string RepoRoot = CliRunner.RepoRoot;
     private static readonly string PngFormat = Path.Combine(RepoRoot, "formats", "png.bdef.yaml");
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            if (Directory.Exists(Path.Combine(dir, "src")) && Directory.Exists(Path.Combine(dir, "formats")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("リポジトリルートが見つかりません");
-    }
 
     /// <summary>1x1 の最小 PNG（signature + IHDR + IDAT + IEND）。</summary>
     private static byte[] MinimalPng()
@@ -50,23 +36,8 @@ public class PatchedFileDecodeTests
         s.Write([(byte)(crc >> 24), (byte)(crc >> 16), (byte)(crc >> 8), (byte)crc]);
     }
 
-    private static async Task<(int ExitCode, string StdOut, string StdErr)> RunCli(string args)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"run --project \"{CliProject}\" -- {args}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            WorkingDirectory = RepoRoot,
-        };
-        using var process = Process.Start(psi)!;
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        return (process.ExitCode, await stdoutTask, await stderrTask);
-    }
+    private static Task<(int ExitCode, string StdOut, string StdErr)> RunCli(string args) =>
+        CliRunner.RunAsync(args);
 
     [Fact]
     public async Task PatchedPng_DecodesWithCli_WidthChangedAndCrcValid()

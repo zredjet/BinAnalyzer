@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using FluentAssertions;
 using Xunit;
@@ -8,45 +7,10 @@ namespace BinAnalyzer.Cli.Tests;
 [Collection("CliTests")]
 public class ValidateCommandTests : IDisposable
 {
-    private static readonly string RepoRoot = FindRepoRoot();
-    private static readonly string CliProject = Path.Combine(RepoRoot, "src", "BinAnalyzer.Cli");
-
     private readonly List<string> _tempFiles = new();
 
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            if (Directory.Exists(Path.Combine(dir, "src")) && Directory.Exists(Path.Combine(dir, "formats")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("リポジトリルートが見つかりません");
-    }
-
-    private static async Task<(int ExitCode, string StdOut, string StdErr)> RunCli(string args)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            // --no-build は付けない: 同じコレクションの他クラスが先に Debug ビルドしている前提になり、実行順で CI が落ちうる
-            Arguments = $"run --project \"{CliProject}\" -- {args}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            WorkingDirectory = RepoRoot,
-        };
-
-        using var process = Process.Start(psi)!;
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-
-        await process.WaitForExitAsync();
-
-        return (process.ExitCode, await stdoutTask, await stderrTask);
-    }
+    private static Task<(int ExitCode, string StdOut, string StdErr)> RunCli(string args) =>
+        CliRunner.RunAsync(args);
 
     private string CreateTempFormatFile(string content)
     {
