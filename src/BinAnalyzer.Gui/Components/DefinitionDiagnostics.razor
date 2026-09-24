@@ -1,0 +1,56 @@
+@* フォーマット定義の診断の一覧（REQ-185）。定義ビューの上部に置き、項目を選ぶとその定義の行へ移る。 *@
+
+<div class="defdiag @(Open ? "open" : "")">
+    <button class="defdiag-head" aria-expanded="@(Open ? "true" : "false")" @onclick="OnToggle">
+        <span class="chev">@(Open ? "▾" : "▸")</span>
+        <span>定義の診断</span>
+        @if (_errors > 0)
+        {
+            <span class="cnt err">エラー @_errors</span>
+        }
+        @if (_warnings > 0)
+        {
+            <span class="cnt warn">警告 @_warnings</span>
+        }
+    </button>
+    @if (Open)
+    {
+        <ul class="defdiag-list">
+            @foreach (var d in Diagnostics)
+            {
+                var sev = d.Severity == DiagnosticSeverity.Error ? "err" : "warn";
+                var located = d.SourceLine is not null;
+                <li>
+                    <button class="defdiag-item @sev @(ReferenceEquals(d, Current) ? "cur" : "")" disabled="@(!located)"
+                            title="@(located ? "定義の行を表示" : "位置の情報がありません")" @onclick="() => OnSelect.InvokeAsync(d)">
+                        <span class="code">@d.Code</span>
+                        <span class="msg">@d.Message</span>
+                        @if (d.Location is { } loc)
+                        {
+                            <span class="loc">@loc</span>
+                        }
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ValidationDiagnostic> Diagnostics { get; set; } = [];
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+    [Parameter] public EventCallback<ValidationDiagnostic> OnSelect { get; set; }
+
+    /// <summary>定義ビューが今表示している診断（強調する）。</summary>
+    [Parameter] public ValidationDiagnostic? Current { get; set; }
+
+    private int _errors;
+    private int _warnings;
+
+    protected override void OnParametersSet()
+    {
+        _errors = Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error);
+        _warnings = Diagnostics.Count - _errors;
+    }
+}

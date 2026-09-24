@@ -1,4 +1,5 @@
 using BinAnalyzer.Core.Models;
+using BinAnalyzer.Core.Validation;
 
 namespace BinAnalyzer.Gui.Abstractions;
 
@@ -6,7 +7,14 @@ namespace BinAnalyzer.Gui.Abstractions;
 public sealed record FormatCatalogEntry(string Name, string File, IReadOnlyList<string> Extensions);
 
 /// <summary>読み込んだフォーマット定義（IR と元 YAML テキスト）。</summary>
-public sealed record FormatDocument(string File, string DisplayName, FormatDefinition Definition, string YamlText);
+public sealed record FormatDocument(string File, string DisplayName, FormatDefinition Definition, string YamlText)
+{
+    /// <summary>
+    /// 定義の静的検証の結果（REQ-185）。生成時に 1 回だけ行う。カタログがキャッシュした定義を複数のタブで共有するので、
+    /// タブや再デコードのたびには検証し直さない。
+    /// </summary>
+    public ValidationResult Validation { get; } = FormatValidator.Validate(Definition);
+}
 
 /// <summary>ホストから渡されたバイナリファイル。</summary>
 public sealed record OpenedFile(string Name, byte[] Data, string? FullPath = null);

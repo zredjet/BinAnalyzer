@@ -220,6 +220,23 @@ public sealed class GuiSession
         Raise();
     }
 
+    /// <summary>定義ビューの上部に定義の診断の一覧を開いているか（REQ-185）。</summary>
+    public bool DefinitionDiagnosticsOpen { get; private set; }
+
+    /// <summary>右ペインを「定義」にして診断の一覧を開く（ステータスバーの件数から）。</summary>
+    public void ShowDefinitionDiagnostics()
+    {
+        Pane = PaneKind.Definition;
+        DefinitionDiagnosticsOpen = true;
+        Raise();
+    }
+
+    public void ToggleDefinitionDiagnostics()
+    {
+        DefinitionDiagnosticsOpen = !DefinitionDiagnosticsOpen;
+        Raise();
+    }
+
     public async Task ChangeFormatAsync(GuiDocument doc, string formatFile)
     {
         if (doc.Format.File == formatFile) return;

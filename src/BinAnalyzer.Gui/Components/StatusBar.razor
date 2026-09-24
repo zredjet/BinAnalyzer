@@ -1,3 +1,5 @@
+@inject GuiSession Session
+
 <div class="status">
     @if (Document is null)
     {
@@ -11,6 +13,11 @@
         <span>@Document.Format.Definition.Name</span>
         <span>@(Endian(Document))</span>
         <span class="grow"></span>
+        @if (DiagnosticsLabel(Document.Format.Validation) is { } diag)
+        {
+            <button class="diag @(Document.Format.Validation.IsValid ? "warn" : "err")" title="フォーマット定義の検証結果を表示"
+                    @onclick="Session.ShowDefinitionDiagnostics">定義: @diag</button>
+        }
         <span>検証 @Document.Summary.ValidationPassed / @Document.Summary.ValidationTotal</span>
         <span>チェックサム @Document.Summary.ChecksumValid / @Document.Summary.ChecksumTotal</span>
         <span>@Document.Index.FieldCount フィールド</span>
@@ -19,6 +26,18 @@
 
 @code {
     [Parameter] public GuiDocument? Document { get; set; }
+
+    /// <summary>定義の診断の件数（「エラー 1・警告 2」）。診断が無ければ null（表示しない）。REQ-185</summary>
+    private static string? DiagnosticsLabel(ValidationResult validation)
+    {
+        var errors = validation.Errors.Count();
+        var warnings = validation.Warnings.Count();
+        if (errors == 0 && warnings == 0) return null;
+        var parts = new List<string>(2);
+        if (errors > 0) parts.Add($"エラー {errors}");
+        if (warnings > 0) parts.Add($"警告 {warnings}");
+        return string.Join("・", parts);
+    }
 
     private static string Endian(GuiDocument doc)
     {
