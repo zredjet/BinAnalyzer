@@ -5,12 +5,14 @@
 | 項目 | 値 |
 |---|---|
 | ステータス | draft |
-| 優先度 | 高 |
-| 依存 | REQ-101 |
+| 優先度 | 中 |
+| 依存 | REQ-101, REQ-168 |
 | 作成日 | 2026-02-23 |
-| 更新日 | 2026-02-23 |
+| 更新日 | 2026-09-24 |
 
 ## 背景・動機
+
+> **見直し（2026-09-24）**: 当初は CLI の `diff --hexdump` を主としていたが、その後 REQ-168 の GUI に 2 ファイルの構造差分（差分ペイン、`DiffEngine` の `DiffResult` を表示）ができた。ただしバイト単位の差分はどこにも無い（CLI の `diff` は flat / tree の構造差分、GUI の差分ペインはフィールドの一覧のみでヘックスは強調しない）。主対象を「GUI で差分を開いたとき変わったバイトをヘックスで強調する」に変え、CLI の hexdump 差分は後段に回す。優先度は高 → 中。
 
 REQ-101 で構造化 diff（ツリーレベルの差分表示）が実装済みである。しかし、バイナリファイルのデバッグでは、構造的な差分に加えてバイトレベルの差分を hexdump 形式で確認したいケースが多い。
 
@@ -20,27 +22,31 @@ REQ-101 で構造化 diff（ツリーレベルの差分表示）が実装済み�
 
 ### 追加する機能
 
-- [ ] `binanalyzer diff --hexdump <file1> <file2> -f <format>` オプション
-- [ ] hexdump 上の差分バイトをカラーハイライト表示
-- [ ] 左右並列表示（side-by-side）モード
-- [ ] 差分のあるオフセット範囲のみ表示するフィルタオプション（`--only-diff`）
+- [ ] GUI: 差分表示中、ヘックスビューで左右のファイルの内容が異なるバイトを強調する
+- [ ] GUI: 差分ペインでフィールドを選ぶと、ヘックスがその範囲に移動する（既存の選択の仕組みを使う）
+- [ ] Presentation: 2 つのバイト列から差分のあるバイト範囲（`ByteRange` の列）を求める純関数。GUI と CLI で共有する
+- [ ] CLI（後段）: `binanalyzer diff --hexdump <file1> <file2> -f <format>` で差分のある行を hexdump 形式で表示し、差分バイトを色で強調する。`--only-diff` で差分のある行だけを表示する
 
 ### 変更する既存機能
 
-- [ ] `binanalyzer diff` コマンド — `--hexdump` オプション追加
+- [ ] GUI の `HexView` / `HexRowView`（Presentation の `HexRowBuilder`） — 差分バイトの表示
+- [ ] `binanalyzer diff` コマンド — `--hexdump` / `--only-diff` オプション追加（後段）
 
 ### 変更しないもの（スコープ外）
 
 - 構造化 diff の表示方法変更（REQ-101 の範囲）
+- 挿入・削除によるずれの整列（同じオフセット同士を比べる）
+- CLI の左右並列（side-by-side）表示
 - バイナリパッチ適用（REQ-164 の範囲）
 
 ## 受入条件
 
-1. [ ] `binanalyzer diff --hexdump` で2ファイルのバイトレベル差分が hexdump 形式で表示されること
-2. [ ] 差分バイトがカラーハイライトされること
-3. [ ] `--only-diff` で差分のあるオフセット範囲のみ表示されること
-4. [ ] 同一ファイル同士の diff で差分なしと表示されること
-5. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [ ] GUI で 2 ファイルの差分を開くと、同じオフセットで値の異なるバイトがヘックスで強調されること
+2. [ ] 差分ペインでフィールドを選ぶと、ヘックスがその範囲に移動し、強調が見えること
+3. [ ] 同一内容のファイル同士では強調が出ないこと
+4. [ ] ファイル長が異なる場合、短い側の末尾を越える範囲が差分として扱われること
+5. [ ] `binanalyzer diff --hexdump` で差分のある行が hexdump 形式で表示され、`--only-diff` で差分のある行だけになること
+6. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -48,18 +54,18 @@ REQ-101 で構造化 diff（ツリーレベルの差分表示）が実装済み�
 
 | プロジェクト | 変更内容の概要 |
 |---|---|
-| BinAnalyzer.Core | 変更なし |
-| BinAnalyzer.Dsl | 変更なし |
-| BinAnalyzer.Engine | 変更なし |
-| BinAnalyzer.Output | hexdump差分フォーマッター追加 |
-| BinAnalyzer.Cli | diff サブコマンドに --hexdump オプション追加 |
+| BinAnalyzer.Core | 変更なし（`ByteRange` を使う） |
+| BinAnalyzer.Presentation | バイト差分範囲の計算、`HexRowBuilder` への差分フラグ |
+| BinAnalyzer.Gui | ヘックスでの差分強調 |
+| BinAnalyzer.Output | hexdump 差分フォーマッター（後段） |
+| BinAnalyzer.Cli | `diff --hexdump` / `--only-diff`（後段） |
 
 ### 変更が必要なドキュメント
 
 - [ ] docs/cli-usage.md — hexdump diff の説明追加
-- [ ] docs/architecture.md — 変更不要
+- [ ] docs/architecture.md — GUI 節に差分バイトの強調
 - [ ] CLAUDE.md — 変更不要
-- [ ] README.md — 変更不要
+- [ ] README.md — 機能一覧の差分比較に追記
 
 ---
 
