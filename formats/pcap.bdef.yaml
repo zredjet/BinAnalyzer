@@ -1,17 +1,19 @@
 # pcap / pcapng（パケットキャプチャ）
 # 仕様: pcap は draft-ietf-opsawg-pcap-05（2025）、pcapng は draft-ietf-opsawg-pcapng-04（2025）、リンク層の種類は draft-ietf-opsawg-pcaplinktype / tcpdump.org の LINKTYPE_ 一覧。
-#   中のプロトコルは IEEE 802.3・802.1Q（VLAN）、RFC 826（ARP）、RFC 791（IPv4）、RFC 8200（IPv6）、RFC 9293（TCP）、RFC 768（UDP）、RFC 792 / 4443（ICMP / ICMPv6）。
+#   中のプロトコルは IEEE 802.3・802.1Q（VLAN）、RFC 826（ARP）、RFC 791（IPv4）、RFC 8200（IPv6）、RFC 9293（TCP）、RFC 768（UDP）、RFC 792 / 4443（ICMP / ICMPv6）、UDP の 53 / 5353 / 5355 番の DNS / mDNS / LLMNR は formats/dns.bdef.yaml（RFC 1035・6762・4795）をインポートして読む。
 #   tcpdump 4.99（libpcap 1.10）が読める・出力したファイルで照合した
 # 構造: pcap はファイルヘッダ（マジック・版・スナップ長・リンク層の種類）→ パケット（時刻・キャプチャした長さ・元の長さ + データ）の並び。
 #   マジックでバイト順（0xA1B2C3D4 / 0xD4C3B2A1）と時刻の単位（マイクロ秒 / ナノ秒の 0xA1B23C4D）が決まる。
 #   pcapng はブロック（種類 + 長さ + 中身 + 長さ）の並びで、セクションヘッダ（SHB）のバイト順の印でバイト順が決まり、インタフェースの記述（IDB）がリンク層の種類を持つ
 # 対応していないもの: IPv4・TCP・UDP・ICMP のチェックサムの検証（インターネットチェックサムのアルゴリズムが無い）、IP のフラグメントの再組み立て・TCP のストリームの再構成、
-#   アプリケーション層（DNS・HTTP・TLS など。ペイロードはバイト列）、pcapng の複数のセクションでバイト順が違うファイル（最初の SHB のバイト順で読む）、
+#   DNS 以外のアプリケーション層（HTTP・TLS・DHCP など。ペイロードはバイト列）と TCP の上の DNS、pcapng の複数のセクションでバイト順が違うファイル（最初の SHB のバイト順で読む）、
 #   複数のインタフェースでリンク層の種類が違う pcapng（最後に読んだ IDB の種類で EPB を分解する）、
 #   pcap の LinkType の上位ビット（FCS の長さ）の分解、802.11・Bluetooth など Ethernet 以外のリンク層の中身（バイト列）、IPv4 のオプションの分解
 name: PCAP
 endianness: little
 root: capture
+imports:
+  - path: dns.bdef.yaml
 
 enums:
   link_type:
@@ -1089,10 +1091,27 @@ structs:
       - name: checksum
         type: uint16
         description: "チェックサム（0 は無し。検証しない）"
+      - name: payload_size
+        type: virtual
+        value: "{length >= 8 and length - 8 <= remaining ? length - 8 : remaining}"
+        padding: true
+        description: "ペイロードのバイト数（作業用。length が壊れていればキャプチャされた残り）"
+      - name: is_dns
+        type: virtual
+        value: "{payload_size >= 12 and (src_port == 53 or dst_port == 53 or src_port == 5353 or dst_port == 5353 or src_port == 5355 or dst_port == 5355) ? 1 : 0}"
+        padding: true
+        description: "ペイロードを DNS として読むか（作業用。ポート 53 = DNS、5353 = mDNS、5355 = LLMNR で、12 バイトのヘッダーが収まるとき）"
+      - name: payload
+        type: struct
+        struct: dns
+        size: "{payload_size}"
+        if: "{is_dns == 1}"
+        description: "DNS のメッセージ（formats/dns.bdef.yaml の定義。圧縮ポインタはメッセージの先頭から）"
       - name: payload
         type: bytes
-        size: "{length >= 8 and length - 8 <= remaining ? length - 8 : remaining}"
-        description: "ペイロード（DNS などはバイト列のまま）"
+        size: "{payload_size}"
+        if: "{is_dns == 0}"
+        description: "ペイロード（DNS 以外と、DNS のヘッダーに満たないものはバイト列のまま）"
       - name: extra
         type: bytes
         size: remaining

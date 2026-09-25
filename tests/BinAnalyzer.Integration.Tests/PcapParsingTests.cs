@@ -147,10 +147,62 @@ public class PcapParsingTests
 
         var epb = blocks[2].Child("block_body");
         epb.Child("packet_data").Child("payload").Child("packet").Child("dst_ip").Str().Should().Be("8.8.8.8");
+        epb.Child("packet_data").Child("payload").Child("packet").Child("body").Child("payload")
+            .Child("questions").Elements().Single().Child("qname").Child("full_name").Str().Should().Be("www.example.com.");   // UDP 53 番は DNS として読む
         epb.Child("options").Elements()[0].Child("comment").Str().Should().Be("コメント");
         blocks[4].Child("block_body").Child("packet_data").Child("payload").Child("operation").Label().Should().Be("request");
         var record = blocks[5].Child("block_body").Child("records").Elements()[0];
         record.Child("ipv4_address").Str().Should().Be("8.8.8.8");
+    }
+
+    [Fact]
+    public void PcapFormat_UdpDns_IsDecodedWithTheDnsDefinition()
+    {
+        var packets = Packets(PcapTestDataGenerator.CreateDnsPcap());
+
+        var query = UdpOf(packets[0]).Child("payload");
+        ((DecodedStruct)query).StructType.Should().Be("dns");
+        query.Child("questions").Elements().Single().Child("qname").Child("full_name").Str().Should().Be("www.example.com.");
+
+        // 圧縮ポインタはメッセージ（UDP のペイロード）の先頭からの位置として読む
+        var response = UdpOf(packets[1]).Child("payload");
+        var answers = response.Child("answers").Elements();
+        answers.Select(a => a.Child("name").Child("full_name").Str()).Should().Equal(
+            "www.example.com.", "www.example.com.", "example.com.", "example.com.", "cdn.example.com.", "example.com.");
+        answers[2].Child("body").Child("rdata").Child("exchange").Child("full_name").Str().Should().Be("mail.example.com.");
+        answers[0].Child("body").Child("rdata").Child("address").Str().Should().Be("93.184.216.34");
+    }
+
+    [Fact]
+    public void PcapFormat_UdpDns_MatchesTheStandaloneDecode()
+    {
+        var embedded = UdpOf(Packets(PcapTestDataGenerator.CreateDnsPcap())[1]).Child("payload");
+        var standalone = new BinaryDecoder().Decode(DnsTestDataGenerator.CreateDnsResponse(),
+            new YamlFormatLoader().Load(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "formats", "dns.bdef.yaml")));
+
+        static List<string> Names(DecodedNode node) => node.FindAll("full_name").Select(n => n.Str()).ToList();
+        Names(embedded).Should().Equal(Names(standalone));
+        embedded.Size.Should().Be(DnsTestDataGenerator.CreateDnsResponse().Length);
+    }
+
+    [Fact]
+    public void PcapFormat_Mdns_DecodesTheCacheFlushBit()
+    {
+        var mdns = UdpOf(Packets(PcapTestDataGenerator.CreateDnsPcap())[2]).Child("payload");
+
+        var answer = mdns.Child("answers").Elements().Single();
+        answer.Child("name").Child("full_name").Str().Should().Be("printer.local.");
+        var classField = (DecodedBitfield)answer.Child("body").Child("class_field");
+        classField.Fields.Should().Contain(f => f.Name == "cache_flush" && f.Value == 1);
+        classField.Fields.Should().Contain(f => f.Name == "rr_class" && f.EnumLabel == "IN");
+    }
+
+    [Fact]
+    public void PcapFormat_NonDnsUdp_KeepsThePayloadAsBytes()
+    {
+        var payload = UdpOf(Packets(PcapTestDataGenerator.CreateDnsPcap())[3]).Child("payload");
+
+        payload.Should().BeOfType<DecodedBytes>().Which.RawBytes.ToArray().Should().Equal("not dns"u8.ToArray());
     }
 
     [Fact]
@@ -167,4 +219,6 @@ public class PcapParsingTests
         new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(PcapFormatPath));
 
     private static IReadOnlyList<DecodedNode> Packets(byte[] data) => Decode(data).Child("body").Child("packets").Elements();
+
+    private static DecodedNode UdpOf(DecodedNode packet) => packet.Child("data").Child("payload").Child("packet").Child("body");
 }

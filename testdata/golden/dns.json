@@ -5,6 +5,15 @@
   "name": "DNS",
   "struct_type": "dns",
   "children": {
+    "message_start": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u30E1\u30C3\u30BB\u30FC\u30B8\u306E\u5148\u982D\u306E\u4F4D\u7F6E\uFF08\u4F5C\u696D\u7528\u3002\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u306E\u57FA\u6E96\u3002\u5358\u72EC\u306E\u30D5\u30A1\u30A4\u30EB\u3067\u306F 0\u3001pcap \u306E\u4E2D\u3067\u306F UDP \u306E\u30DA\u30A4\u30ED\u30FC\u30C9\u306E\u5148\u982D\uFF09",
+      "name": "message_start",
+      "value": 0
+    },
     "header": {
       "_type": "struct",
       "type": "struct",

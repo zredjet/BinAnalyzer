@@ -436,4 +436,24 @@ public static class PcapTestDataGenerator
             Opt(4, BitConverter.GetBytes(4UL)), EndOpt()));
         return Cat(shb, idb, epb0, epb1, spb, nrb, isb);
     }
+
+    /// <summary>
+    /// UDP の DNS を含む pcap（REQ-198）: DNS の問い合わせ（53 番宛て）、DNS の応答（53 番から。DnsTestDataGenerator.CreateDnsResponse の圧縮ポインタ付きのメッセージ）、
+    /// mDNS の応答（5353 番、printer.local の A、クラスの cache flush のビット付き）、DNS でない UDP（1234 番）。tcpdump -r で同じ内容に読めることを確かめた。
+    /// </summary>
+    public static byte[] CreateDnsPcap()
+    {
+        var mdns = Cat(Be(0, 0x8400, 0, 1, 0, 0),
+            [7, (byte)'p', (byte)'r', (byte)'i', (byte)'n', (byte)'t', (byte)'e', (byte)'r', 5, (byte)'l', (byte)'o', (byte)'c', (byte)'a', (byte)'l', 0],
+            Be(1, 0x8001), Be(0, 120), Be(4), [192, 168, 1, 50]);
+        byte[] mdnsGroup = [224, 0, 0, 251];
+        byte[] printer = [192, 168, 1, 50];
+        return PcapFile(
+        [
+            Ethernet(0x0800, Ipv4(17, Udp(53000, 53, DnsQuery), Client, Server)),
+            Ethernet(0x0800, Ipv4(17, Udp(53, 53000, DnsTestDataGenerator.CreateDnsResponse()), Server, Client)),
+            Ethernet(0x0800, Ipv4(17, Udp(5353, 5353, mdns), printer, mdnsGroup)),
+            Ethernet(0x0800, Ipv4(17, Udp(40000, 1234, "not dns"u8.ToArray()), Client, Server)),
+        ], bigEndian: false, nanosecond: false, linkType: 1);
+    }
 }
