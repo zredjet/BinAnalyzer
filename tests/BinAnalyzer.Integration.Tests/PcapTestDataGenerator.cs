@@ -336,14 +336,17 @@ public static class PcapTestDataGenerator
     private static byte[] Be(params int[] u16) => u16.SelectMany(v => new[] { (byte)(v >> 8), (byte)v }).ToArray();
     private static byte[] Cat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
 
-    private static byte[] Ipv4(int protocol, byte[] payload, byte[] src, byte[] dst)
+    private static byte[] Ipv4(int protocol, byte[] payload, byte[] src, byte[] dst) =>
+        Cat(WithInternetChecksum(Cat([0x45, 0x00], Be(20 + payload.Length, 0x1234, 0x4000), [64, (byte)protocol, 0, 0], src, dst), at: 10), payload);
+
+    /// <summary>インターネットチェックサム（RFC 1071。16 ビットの語の 1 の補数の和の 1 の補数）を <paramref name="at"/> に書く（その欄は 0 で渡す）。</summary>
+    private static byte[] WithInternetChecksum(byte[] data, int at)
     {
-        var header = Cat([0x45, 0x00], Be(20 + payload.Length, 0x1234, 0x4000), [64, (byte)protocol, 0, 0], src, dst);
         var sum = 0;
-        for (var i = 0; i < 20; i += 2) sum += (header[i] << 8) | header[i + 1];
+        for (var i = 0; i < data.Length; i += 2) sum += (data[i] << 8) | (i + 1 < data.Length ? data[i + 1] : 0);
         while (sum > 0xFFFF) sum = (sum & 0xFFFF) + (sum >> 16);
-        header[10] = (byte)(~sum >> 8); header[11] = (byte)~sum;
-        return Cat(header, payload);
+        data[at] = (byte)(~sum >> 8); data[at + 1] = (byte)~sum;
+        return data;
     }
 
     private static byte[] Udp(int src, int dst, byte[] data) => Cat(Be(src, dst, 8 + data.Length, 0), data);
@@ -364,7 +367,7 @@ public static class PcapTestDataGenerator
     /// <summary>Ethernet のフレームの見本: UDP の DNS・ARP の要求・VLAN 100 の ICMP エコー・IPv6 の UDP。</summary>
     private static byte[][] SampleFrames()
     {
-        var icmp = Cat([8, 0, 0, 0], Be(7, 1), "ping"u8.ToArray());
+        var icmp = WithInternetChecksum(Cat([8, 0, 0, 0], Be(7, 1), "ping"u8.ToArray()), at: 2);
         var arp = Cat(Be(1, 0x0800), [6, 4], Be(1), [0x00, 0x11, 0x22, 0x33, 0x44, 0x55], Client, new byte[6], [192, 168, 1, 1]);
         var v6src = Convert.FromHexString("20010DB8000000000000000000000001");
         var v6dst = Convert.FromHexString("20010DB8000000000000000000000002");
@@ -455,5 +458,14 @@ public static class PcapTestDataGenerator
             Ethernet(0x0800, Ipv4(17, Udp(5353, 5353, mdns), printer, mdnsGroup)),
             Ethernet(0x0800, Ipv4(17, Udp(40000, 1234, "not dns"u8.ToArray()), Client, Server)),
         ], bigEndian: false, nanosecond: false, linkType: 1);
+    }
+
+    /// <summary>IPv6 の ICMPv6 のエコー要求 1 つの pcap（REQ-199。ICMPv6 のチェックサムは擬似ヘッダを含むので検証しない。チェックサムの欄は 0）。</summary>
+    public static byte[] CreateIcmpv6Pcap()
+    {
+        var icmp6 = Cat([128, 0, 0, 0], Be(7, 1), "ping"u8.ToArray());
+        var ipv6 = Cat([0x60, 0, 0, 0], Be(icmp6.Length), [58, 64],
+            Convert.FromHexString("20010DB8000000000000000000000001"), Convert.FromHexString("20010DB8000000000000000000000002"), icmp6);
+        return PcapFile([Ethernet(0x86DD, ipv6)], bigEndian: false, nanosecond: false, linkType: 1);
     }
 }

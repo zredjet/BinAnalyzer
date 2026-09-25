@@ -3,7 +3,7 @@
 #   （TTC・可変フォント・CFF）で照合した
 # 構造: オフセット表（sfntVersion + 表の数）→ 表のレコード（タグ・チェックサム・位置・長さ）の並び。表はそれぞれの位置にあり、タグで分解する。
 #   TTC（'ttcf'）は先頭の見出しに各フォントのオフセット表の位置が並ぶ
-# 対応していないもの: 表のチェックサムの検証（uint32 の単純な合計のアルゴリズムが無い）、WOFF / WOFF2、glyf・loca・hmtx・kern・CFF の中身・COLR / CPAL・sbix などの
+# 対応していないもの: head の表のチェックサムとファイル全体の checksumAdjustment の検証（head の checksumAdjustment を 0 として計算する）、WOFF / WOFF2、glyf・loca・hmtx・kern・CFF の中身・COLR / CPAL・sbix などの
 #   分解（バイト列）、GSUB / GPOS のルックアップ、cmap の形式 2・8・10、16.16 の固定小数点数の小数での表示（整数のまま表示）、Mac の文字コード（MacRoman を Latin-1 として表示）
 name: OTF
 endianness: big
@@ -219,9 +219,32 @@ structs:
       type: ascii
       size: "4"
       description: "表のタグ（'head'・'cmap' など）"
+    # チェックサムの範囲（表の位置と長さ）はこの後ろの offset と length で決まるので、先に覗いておく
+    - name: peek_offset
+      type: uint32
+      seek: "{_offset + 4}"
+      seek_restore: true
+      padding: true
+      description: "表の位置（作業用。チェックサムの範囲を求めるための offset の先読み）"
+    - name: peek_length
+      type: uint32
+      seek: "{_offset + 8}"
+      seek_restore: true
+      padding: true
+      description: "表のバイト数（作業用。チェックサムの範囲を求めるための length の先読み）"
     - name: checksum
       type: uint32
-      description: "表のチェックサム（uint32 の合計。検証しない）"
+      checksum:
+        algorithm: sum32-be
+        range:
+          offset: "{peek_offset}"
+          size: "{peek_length}"
+      if: "{tag != 'head'}"
+      description: "表のチェックサム（uint32 の合計。長さが 4 の倍数でなければ 0 で埋めて計算する）"
+    - name: checksum
+      type: uint32
+      if: "{tag == 'head'}"
+      description: "表のチェックサム（head は checksumAdjustment を 0 として計算するので検証しない）"
     - name: offset
       type: uint32
       description: "表の位置（ファイルの先頭から）"

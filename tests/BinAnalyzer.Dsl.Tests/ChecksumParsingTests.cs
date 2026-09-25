@@ -54,6 +54,9 @@ public class ChecksumParsingTests
     [InlineData("fletcher32")]
     [InlineData("sha384")]
     [InlineData("sha512")]
+    [InlineData("internet-checksum")]
+    [InlineData("crc32-ogg")]
+    [InlineData("sum32-be")]
     public void Load_NewAlgorithmNames_ParsesCorrectly(string algorithm)
     {
         var yaml = $"""

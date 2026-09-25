@@ -267,7 +267,7 @@ public static class OtfTestDataGenerator
         {
             var offset = sharedOffsets?[i] ?? baseOffset + headerSize + (int)body.Position;
             directory.Write(System.Text.Encoding.ASCII.GetBytes(tables[i].Tag));
-            directory.Write(U32(0, offset, tables[i].Data.Length));
+            directory.Write(U32(tables[i].Tag == "head" ? 0 : TableChecksum(tables[i].Data), offset, tables[i].Data.Length));
             if (sharedOffsets is null)
             {
                 body.Write(tables[i].Data);
@@ -275,6 +275,16 @@ public static class OtfTestDataGenerator
             }
         }
         return Cat(directory.ToArray(), body.ToArray());
+    }
+
+    /// <summary>表のチェックサム（OpenType の CalcTableChecksum: 4 の倍数に 0 で埋めた uint32 の合計）。head は checksumAdjustment が 0 のままなので書かない。</summary>
+    private static long TableChecksum(byte[] table)
+    {
+        uint sum = 0;
+        for (var i = 0; i < table.Length; i += 4)
+            for (var j = 0; j < 4; j++)
+                sum += (uint)(i + j < table.Length ? table[i + j] : 0) << (24 - 8 * j);
+        return sum;
     }
 
     private static (string, byte[])[] SampleTables() =>
