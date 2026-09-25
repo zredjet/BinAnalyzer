@@ -124,9 +124,9 @@ structs:
       repeat: eof
       description: "値の並び"
 
-  # 値。エンディアンを書いた形にして独自の変数のスコープを持たせる（入れ子の値の引数などが親の値を上書きしないように）
+  # 値。独自の変数のスコープを持たせる（入れ子の値の引数などが親の値を上書きしないように）
   cbor_value:
-    endianness: big
+    scope: isolated
     fields:
       - name: initial_byte
         type: bitfield
@@ -210,9 +210,9 @@ structs:
       size: "{argument}"
       description: "文字列（UTF-8）"
 
-  # 配列・マップ・不定長の並びは独自のスコープを持たせ、要素の値の昇格が外の値を上書きしないようにする
+  # 配列・マップ・不定長の並びも独自のスコープを持たせる（要素の値がこの値の変数と混ざらないように）
   cbor_array:
-    endianness: big
+    scope: isolated
     fields:
       - name: items
         type: struct
@@ -221,7 +221,7 @@ structs:
         description: "要素の並び"
 
   cbor_map:
-    endianness: big
+    scope: isolated
     fields:
       - name: entries
         type: struct
@@ -240,17 +240,12 @@ structs:
       description: "値"
 
   cbor_indefinite_items:
-    endianness: big
+    scope: isolated
     fields:
-      - name: is_break
-        type: virtual
-        value: "{0}"
-        padding: true
-        description: "直前の値が break か（作業用。各要素の is_break で上書きされる）"
       - name: items
         type: struct
         struct: cbor_value
-        repeat_while: "{is_break == 0}"
+        repeat_until: "{is_break == 1}"
         description: "値の並び（最後は break）。バイト列・文字列は定長の断片、マップはキーと値を交互に並べたもの"
 
   cbor_tagged:

@@ -110,5 +110,5 @@ REQ-188 の見直しでは、ルートの先頭で `file_size: "{remaining}"` �
 
 ### 気づき・今後の課題
 
-- 同梱定義の `file_size - remaining` の回避策（flac・mp3・ogg・pdf・protobuf・x509）の置き換えと、pcap の中の DNS の分解は、スコープ外として別の PR で行う
+- 同梱定義の `file_size - remaining` の回避策（flac・mp3・ogg・pdf・protobuf・x509）は `_offset` に置き換えた（PR: 同梱定義の置き換え。作業用の `file_size` / `value_offset` が無くなった以外、全サンプルの出力は同じ）。pcap の中の DNS の分解は別の要望とする
 

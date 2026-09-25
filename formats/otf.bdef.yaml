@@ -184,7 +184,7 @@ structs:
 
   # コレクションの中のフォント。独自のスコープを持たせ、表の数などが次のフォントの値と混ざらないようにする
   collection_font:
-    endianness: big
+    scope: isolated
     fields:
       - name: offset_table
         type: struct

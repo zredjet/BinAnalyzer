@@ -113,6 +113,6 @@ AVI の strh の fccType を、兄弟の strf から引く（dsl-reference の�
 
 ### 気づき・今後の課題
 
-- 同梱定義の回避策（cbor・dns・fat・msgpack・otf・parquet・protobuf・x509 のエンディアンの形、Parquet の書き直しの virtual、FAT の 1 個の配列）の置き換えは、スコープ外として別の PR で行う
+- 同梱定義の回避策（cbor・dns・fat・msgpack・otf・parquet・protobuf・x509 のエンディアンの形、Parquet の書き直しの virtual、FAT の 1 個の配列）は `scope: isolated` に置き換えた（PR: 同梱定義の置き換え。Parquet の `own_kind` と書き直しの `struct_kind` が無くなり、FAT のサブディレクトリが配列でなく struct になった以外、全サンプルの出力は同じ）
 - REQ-196（独自のスコープの要素の値を repeat_until の条件から見る）は、`scope: isolated` の要素でも同じ問題が起きる
 

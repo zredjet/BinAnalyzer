@@ -393,9 +393,9 @@ structs:
       description: "オプションのデータ"
 
   # 名前: ラベルの並び。長さ 0 のラベル（ルート）か圧縮ポインタで終わる。
-  # エンディアンを書いた形にして独自の変数のスコープを持たせる（ポインタの先の dns_name の値が、同じ名前でこの名前の値を上書きしないように）
+  # 独自の変数のスコープを持たせる（ポインタの先の dns_name の値が、同じ名前でこの名前の値を上書きしないように）
   dns_name:
-    endianness: big
+    scope: isolated
     fields:
       - name: name_acc
         type: virtual

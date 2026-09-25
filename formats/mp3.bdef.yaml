@@ -195,7 +195,7 @@ structs:
   mpeg_frame:
     - name: frame_offset
       type: virtual
-      value: "{file_size - remaining}"
+      value: "{_offset}"
       description: "このフレームの位置（ファイル先頭から）"
     - name: header
       type: bitfield

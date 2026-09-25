@@ -150,15 +150,6 @@
                   "name": "field_id",
                   "value": 1
                 },
-                "own_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 34,
-                  "size": 0,
-                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                  "name": "own_kind",
-                  "value": 1
-                },
                 "field": {
                   "_type": "virtual",
                   "type": "virtual",
@@ -204,17 +195,8 @@
                   "type": "virtual",
                   "offset": 35,
                   "size": 0,
-                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                   "name": "last_field_id",
-                  "value": 1
-                },
-                "struct_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 35,
-                  "size": 0,
-                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                  "name": "struct_kind",
                   "value": 1
                 }
               }
@@ -260,15 +242,6 @@
                   "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                   "name": "field_id",
                   "value": 2
-                },
-                "own_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 36,
-                  "size": 0,
-                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                  "name": "own_kind",
-                  "value": 1
                 },
                 "field": {
                   "_type": "virtual",
@@ -428,15 +401,6 @@
                                           "name": "field_id",
                                           "value": 4
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 38,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 2
-                                        },
                                         "field": {
                                           "_type": "virtual",
                                           "type": "virtual",
@@ -483,18 +447,9 @@
                                           "type": "virtual",
                                           "offset": 45,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 4
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 45,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 2
                                         }
                                       }
                                     },
@@ -539,15 +494,6 @@
                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                           "name": "field_id",
                                           "value": 5
-                                        },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 46,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 2
                                         },
                                         "field": {
                                           "_type": "virtual",
@@ -594,18 +540,9 @@
                                           "type": "virtual",
                                           "offset": 47,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 5
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 47,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 2
                                         }
                                       }
                                     },
@@ -651,32 +588,14 @@
                                           "name": "field_id",
                                           "value": 0
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 48,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 2
-                                        },
                                         "last_field_id": {
                                           "_type": "virtual",
                                           "type": "virtual",
                                           "offset": 48,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 0
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 48,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 2
                                         }
                                       }
                                     }
@@ -772,15 +691,6 @@
                                           "name": "field_id",
                                           "value": 1
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 49,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 2
-                                        },
                                         "field": {
                                           "_type": "virtual",
                                           "type": "virtual",
@@ -837,18 +747,9 @@
                                           "type": "virtual",
                                           "offset": 50,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 1
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 50,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 2
                                         }
                                       }
                                     },
@@ -893,15 +794,6 @@
                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                           "name": "field_id",
                                           "value": 3
-                                        },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 51,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 2
                                         },
                                         "field": {
                                           "_type": "virtual",
@@ -959,18 +851,9 @@
                                           "type": "virtual",
                                           "offset": 52,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 3
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 52,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 2
                                         }
                                       }
                                     },
@@ -1015,15 +898,6 @@
                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                           "name": "field_id",
                                           "value": 4
-                                        },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 53,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 2
                                         },
                                         "field": {
                                           "_type": "virtual",
@@ -1071,18 +945,9 @@
                                           "type": "virtual",
                                           "offset": 56,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 4
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 56,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 2
                                         }
                                       }
                                     },
@@ -1128,32 +993,14 @@
                                           "name": "field_id",
                                           "value": 0
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 57,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 2
-                                        },
                                         "last_field_id": {
                                           "_type": "virtual",
                                           "type": "virtual",
                                           "offset": 57,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 0
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 57,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 2
                                         }
                                       }
                                     }
@@ -1172,18 +1019,9 @@
                   "type": "virtual",
                   "offset": 57,
                   "size": 0,
-                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                   "name": "last_field_id",
                   "value": 2
-                },
-                "struct_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 57,
-                  "size": 0,
-                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                  "name": "struct_kind",
-                  "value": 1
                 }
               }
             },
@@ -1228,15 +1066,6 @@
                   "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                   "name": "field_id",
                   "value": 3
-                },
-                "own_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 58,
-                  "size": 0,
-                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                  "name": "own_kind",
-                  "value": 1
                 },
                 "field": {
                   "_type": "virtual",
@@ -1283,18 +1112,9 @@
                   "type": "virtual",
                   "offset": 59,
                   "size": 0,
-                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                   "name": "last_field_id",
                   "value": 3
-                },
-                "struct_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 59,
-                  "size": 0,
-                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                  "name": "struct_kind",
-                  "value": 1
                 }
               }
             },
@@ -1339,15 +1159,6 @@
                   "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                   "name": "field_id",
                   "value": 4
-                },
-                "own_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 60,
-                  "size": 0,
-                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                  "name": "own_kind",
-                  "value": 1
                 },
                 "field": {
                   "_type": "virtual",
@@ -1507,15 +1318,6 @@
                                           "name": "field_id",
                                           "value": 1
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 62,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 3
-                                        },
                                         "field": {
                                           "_type": "virtual",
                                           "type": "virtual",
@@ -1674,15 +1476,6 @@
                                                                   "name": "field_id",
                                                                   "value": 2
                                                                 },
-                                                                "own_kind": {
-                                                                  "_type": "virtual",
-                                                                  "type": "virtual",
-                                                                  "offset": 64,
-                                                                  "size": 0,
-                                                                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                  "name": "own_kind",
-                                                                  "value": 4
-                                                                },
                                                                 "field": {
                                                                   "_type": "virtual",
                                                                   "type": "virtual",
@@ -1728,18 +1521,9 @@
                                                                   "type": "virtual",
                                                                   "offset": 65,
                                                                   "size": 0,
-                                                                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                   "name": "last_field_id",
                                                                   "value": 2
-                                                                },
-                                                                "struct_kind": {
-                                                                  "_type": "virtual",
-                                                                  "type": "virtual",
-                                                                  "offset": 65,
-                                                                  "size": 0,
-                                                                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                  "name": "struct_kind",
-                                                                  "value": 4
                                                                 }
                                                               }
                                                             },
@@ -1784,15 +1568,6 @@
                                                                   "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                   "name": "field_id",
                                                                   "value": 3
-                                                                },
-                                                                "own_kind": {
-                                                                  "_type": "virtual",
-                                                                  "type": "virtual",
-                                                                  "offset": 66,
-                                                                  "size": 0,
-                                                                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                  "name": "own_kind",
-                                                                  "value": 4
                                                                 },
                                                                 "field": {
                                                                   "_type": "virtual",
@@ -1894,15 +1669,6 @@
                                                                               "name": "field_id",
                                                                               "value": 1
                                                                             },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 67,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
-                                                                            },
                                                                             "field": {
                                                                               "_type": "virtual",
                                                                               "type": "virtual",
@@ -1959,18 +1725,9 @@
                                                                               "type": "virtual",
                                                                               "offset": 68,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 1
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 68,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         },
@@ -2015,15 +1772,6 @@
                                                                               "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                               "name": "field_id",
                                                                               "value": 2
-                                                                            },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 69,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
                                                                             },
                                                                             "field": {
                                                                               "_type": "virtual",
@@ -2206,18 +1954,9 @@
                                                                               "type": "virtual",
                                                                               "offset": 72,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 2
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 72,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         },
@@ -2262,15 +2001,6 @@
                                                                               "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                               "name": "field_id",
                                                                               "value": 3
-                                                                            },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 73,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
                                                                             },
                                                                             "field": {
                                                                               "_type": "virtual",
@@ -2393,18 +2123,9 @@
                                                                               "type": "virtual",
                                                                               "offset": 77,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 3
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 77,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         },
@@ -2449,15 +2170,6 @@
                                                                               "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                               "name": "field_id",
                                                                               "value": 4
-                                                                            },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 78,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
                                                                             },
                                                                             "field": {
                                                                               "_type": "virtual",
@@ -2515,18 +2227,9 @@
                                                                               "type": "virtual",
                                                                               "offset": 79,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 4
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 79,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         },
@@ -2570,15 +2273,6 @@
                                                                               "size": 0,
                                                                               "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                               "name": "field_id",
-                                                                              "value": 5
-                                                                            },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 80,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
                                                                               "value": 5
                                                                             },
                                                                             "field": {
@@ -2626,17 +2320,8 @@
                                                                               "type": "virtual",
                                                                               "offset": 81,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
-                                                                              "value": 5
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 81,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
                                                                               "value": 5
                                                                             }
                                                                           }
@@ -2683,15 +2368,6 @@
                                                                               "name": "field_id",
                                                                               "value": 6
                                                                             },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 82,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
-                                                                            },
                                                                             "field": {
                                                                               "_type": "virtual",
                                                                               "type": "virtual",
@@ -2737,18 +2413,9 @@
                                                                               "type": "virtual",
                                                                               "offset": 83,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 6
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 83,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         },
@@ -2793,15 +2460,6 @@
                                                                               "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                               "name": "field_id",
                                                                               "value": 7
-                                                                            },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 84,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
                                                                             },
                                                                             "field": {
                                                                               "_type": "virtual",
@@ -2848,18 +2506,9 @@
                                                                               "type": "virtual",
                                                                               "offset": 85,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 7
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 85,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         },
@@ -2904,15 +2553,6 @@
                                                                               "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                               "name": "field_id",
                                                                               "value": 9
-                                                                            },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 86,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
                                                                             },
                                                                             "field": {
                                                                               "_type": "virtual",
@@ -3043,15 +2683,6 @@
                                                                                           "name": "field_id",
                                                                                           "value": 1
                                                                                         },
-                                                                                        "own_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 5,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                          "name": "own_kind",
-                                                                                          "value": 8
-                                                                                        },
                                                                                         "field": {
                                                                                           "_type": "virtual",
                                                                                           "type": "virtual",
@@ -3108,18 +2739,9 @@
                                                                                           "type": "virtual",
                                                                                           "offset": 6,
                                                                                           "size": 0,
-                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                           "name": "last_field_id",
                                                                                           "value": 1
-                                                                                        },
-                                                                                        "struct_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 6,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                          "name": "struct_kind",
-                                                                                          "value": 8
                                                                                         }
                                                                                       }
                                                                                     },
@@ -3164,15 +2786,6 @@
                                                                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                                           "name": "field_id",
                                                                                           "value": 2
-                                                                                        },
-                                                                                        "own_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 7,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                          "name": "own_kind",
-                                                                                          "value": 8
                                                                                         },
                                                                                         "field": {
                                                                                           "_type": "virtual",
@@ -3219,18 +2832,9 @@
                                                                                           "type": "virtual",
                                                                                           "offset": 8,
                                                                                           "size": 0,
-                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                           "name": "last_field_id",
                                                                                           "value": 2
-                                                                                        },
-                                                                                        "struct_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 8,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                          "name": "struct_kind",
-                                                                                          "value": 8
                                                                                         }
                                                                                       }
                                                                                     },
@@ -3275,15 +2879,6 @@
                                                                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                                           "name": "field_id",
                                                                                           "value": 3
-                                                                                        },
-                                                                                        "own_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 9,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                          "name": "own_kind",
-                                                                                          "value": 8
                                                                                         },
                                                                                         "field": {
                                                                                           "_type": "virtual",
@@ -3330,18 +2925,9 @@
                                                                                           "type": "virtual",
                                                                                           "offset": 10,
                                                                                           "size": 0,
-                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                           "name": "last_field_id",
                                                                                           "value": 3
-                                                                                        },
-                                                                                        "struct_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 10,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                          "name": "struct_kind",
-                                                                                          "value": 8
                                                                                         }
                                                                                       }
                                                                                     },
@@ -3386,15 +2972,6 @@
                                                                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                                           "name": "field_id",
                                                                                           "value": 5
-                                                                                        },
-                                                                                        "own_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 11,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                          "name": "own_kind",
-                                                                                          "value": 8
                                                                                         },
                                                                                         "field": {
                                                                                           "_type": "virtual",
@@ -3496,15 +3073,6 @@
                                                                                                       "name": "field_id",
                                                                                                       "value": 1
                                                                                                     },
-                                                                                                    "own_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 12,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                                      "name": "own_kind",
-                                                                                                      "value": 9
-                                                                                                    },
                                                                                                     "field": {
                                                                                                       "_type": "virtual",
                                                                                                       "type": "virtual",
@@ -3550,18 +3118,9 @@
                                                                                                       "type": "virtual",
                                                                                                       "offset": 13,
                                                                                                       "size": 0,
-                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                                       "name": "last_field_id",
                                                                                                       "value": 1
-                                                                                                    },
-                                                                                                    "struct_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 13,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                                      "name": "struct_kind",
-                                                                                                      "value": 9
                                                                                                     }
                                                                                                   }
                                                                                                 },
@@ -3606,15 +3165,6 @@
                                                                                                       "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                                                       "name": "field_id",
                                                                                                       "value": 2
-                                                                                                    },
-                                                                                                    "own_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 14,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                                      "name": "own_kind",
-                                                                                                      "value": 9
                                                                                                     },
                                                                                                     "field": {
                                                                                                       "_type": "virtual",
@@ -3672,18 +3222,9 @@
                                                                                                       "type": "virtual",
                                                                                                       "offset": 15,
                                                                                                       "size": 0,
-                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                                       "name": "last_field_id",
                                                                                                       "value": 2
-                                                                                                    },
-                                                                                                    "struct_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 15,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                                      "name": "struct_kind",
-                                                                                                      "value": 9
                                                                                                     }
                                                                                                   }
                                                                                                 },
@@ -3728,15 +3269,6 @@
                                                                                                       "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                                                       "name": "field_id",
                                                                                                       "value": 3
-                                                                                                    },
-                                                                                                    "own_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 16,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                                      "name": "own_kind",
-                                                                                                      "value": 9
                                                                                                     },
                                                                                                     "field": {
                                                                                                       "_type": "virtual",
@@ -3794,18 +3326,9 @@
                                                                                                       "type": "virtual",
                                                                                                       "offset": 17,
                                                                                                       "size": 0,
-                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                                       "name": "last_field_id",
                                                                                                       "value": 3
-                                                                                                    },
-                                                                                                    "struct_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 17,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                                      "name": "struct_kind",
-                                                                                                      "value": 9
                                                                                                     }
                                                                                                   }
                                                                                                 },
@@ -3850,15 +3373,6 @@
                                                                                                       "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                                                                                       "name": "field_id",
                                                                                                       "value": 4
-                                                                                                    },
-                                                                                                    "own_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 18,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                                      "name": "own_kind",
-                                                                                                      "value": 9
                                                                                                     },
                                                                                                     "field": {
                                                                                                       "_type": "virtual",
@@ -3916,18 +3430,9 @@
                                                                                                       "type": "virtual",
                                                                                                       "offset": 19,
                                                                                                       "size": 0,
-                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                                       "name": "last_field_id",
                                                                                                       "value": 4
-                                                                                                    },
-                                                                                                    "struct_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 19,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                                      "name": "struct_kind",
-                                                                                                      "value": 9
                                                                                                     }
                                                                                                   }
                                                                                                 },
@@ -3973,32 +3478,14 @@
                                                                                                       "name": "field_id",
                                                                                                       "value": 0
                                                                                                     },
-                                                                                                    "own_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 20,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                                      "name": "own_kind",
-                                                                                                      "value": 9
-                                                                                                    },
                                                                                                     "last_field_id": {
                                                                                                       "_type": "virtual",
                                                                                                       "type": "virtual",
                                                                                                       "offset": 20,
                                                                                                       "size": 0,
-                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                                      "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                                       "name": "last_field_id",
                                                                                                       "value": 0
-                                                                                                    },
-                                                                                                    "struct_kind": {
-                                                                                                      "_type": "virtual",
-                                                                                                      "type": "virtual",
-                                                                                                      "offset": 20,
-                                                                                                      "size": 0,
-                                                                                                      "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                                      "name": "struct_kind",
-                                                                                                      "value": 9
                                                                                                     }
                                                                                                   }
                                                                                                 }
@@ -4011,18 +3498,9 @@
                                                                                           "type": "virtual",
                                                                                           "offset": 20,
                                                                                           "size": 0,
-                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                           "name": "last_field_id",
                                                                                           "value": 5
-                                                                                        },
-                                                                                        "struct_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 20,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                          "name": "struct_kind",
-                                                                                          "value": 8
                                                                                         }
                                                                                       }
                                                                                     },
@@ -4068,32 +3546,14 @@
                                                                                           "name": "field_id",
                                                                                           "value": 0
                                                                                         },
-                                                                                        "own_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 21,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                                          "name": "own_kind",
-                                                                                          "value": 8
-                                                                                        },
                                                                                         "last_field_id": {
                                                                                           "_type": "virtual",
                                                                                           "type": "virtual",
                                                                                           "offset": 21,
                                                                                           "size": 0,
-                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                                           "name": "last_field_id",
                                                                                           "value": 0
-                                                                                        },
-                                                                                        "struct_kind": {
-                                                                                          "_type": "virtual",
-                                                                                          "type": "virtual",
-                                                                                          "offset": 21,
-                                                                                          "size": 0,
-                                                                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                                          "name": "struct_kind",
-                                                                                          "value": 8
                                                                                         }
                                                                                       }
                                                                                     }
@@ -4106,18 +3566,9 @@
                                                                               "type": "virtual",
                                                                               "offset": 87,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 9
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 87,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         },
@@ -4163,32 +3614,14 @@
                                                                               "name": "field_id",
                                                                               "value": 0
                                                                             },
-                                                                            "own_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 88,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                              "name": "own_kind",
-                                                                              "value": 5
-                                                                            },
                                                                             "last_field_id": {
                                                                               "_type": "virtual",
                                                                               "type": "virtual",
                                                                               "offset": 88,
                                                                               "size": 0,
-                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                              "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                               "name": "last_field_id",
                                                                               "value": 0
-                                                                            },
-                                                                            "struct_kind": {
-                                                                              "_type": "virtual",
-                                                                              "type": "virtual",
-                                                                              "offset": 88,
-                                                                              "size": 0,
-                                                                              "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                              "name": "struct_kind",
-                                                                              "value": 5
                                                                             }
                                                                           }
                                                                         }
@@ -4201,18 +3634,9 @@
                                                                   "type": "virtual",
                                                                   "offset": 88,
                                                                   "size": 0,
-                                                                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                   "name": "last_field_id",
                                                                   "value": 3
-                                                                },
-                                                                "struct_kind": {
-                                                                  "_type": "virtual",
-                                                                  "type": "virtual",
-                                                                  "offset": 88,
-                                                                  "size": 0,
-                                                                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                  "name": "struct_kind",
-                                                                  "value": 4
                                                                 }
                                                               }
                                                             },
@@ -4258,32 +3682,14 @@
                                                                   "name": "field_id",
                                                                   "value": 0
                                                                 },
-                                                                "own_kind": {
-                                                                  "_type": "virtual",
-                                                                  "type": "virtual",
-                                                                  "offset": 89,
-                                                                  "size": 0,
-                                                                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                                                  "name": "own_kind",
-                                                                  "value": 4
-                                                                },
                                                                 "last_field_id": {
                                                                   "_type": "virtual",
                                                                   "type": "virtual",
                                                                   "offset": 89,
                                                                   "size": 0,
-                                                                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                                                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                                                   "name": "last_field_id",
                                                                   "value": 0
-                                                                },
-                                                                "struct_kind": {
-                                                                  "_type": "virtual",
-                                                                  "type": "virtual",
-                                                                  "offset": 89,
-                                                                  "size": 0,
-                                                                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                                                  "name": "struct_kind",
-                                                                  "value": 4
                                                                 }
                                                               }
                                                             }
@@ -4302,18 +3708,9 @@
                                           "type": "virtual",
                                           "offset": 89,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 1
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 89,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 3
                                         }
                                       }
                                     },
@@ -4358,15 +3755,6 @@
                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                           "name": "field_id",
                                           "value": 2
-                                        },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 90,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 3
                                         },
                                         "field": {
                                           "_type": "virtual",
@@ -4413,18 +3801,9 @@
                                           "type": "virtual",
                                           "offset": 91,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 2
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 91,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 3
                                         }
                                       }
                                     },
@@ -4468,15 +3847,6 @@
                                           "size": 0,
                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                           "name": "field_id",
-                                          "value": 3
-                                        },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 92,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
                                           "value": 3
                                         },
                                         "field": {
@@ -4524,17 +3894,8 @@
                                           "type": "virtual",
                                           "offset": 93,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
-                                          "value": 3
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 93,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
                                           "value": 3
                                         }
                                       }
@@ -4581,32 +3942,14 @@
                                           "name": "field_id",
                                           "value": 0
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 94,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 3
-                                        },
                                         "last_field_id": {
                                           "_type": "virtual",
                                           "type": "virtual",
                                           "offset": 94,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 0
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 94,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 3
                                         }
                                       }
                                     }
@@ -4625,18 +3968,9 @@
                   "type": "virtual",
                   "offset": 94,
                   "size": 0,
-                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                   "name": "last_field_id",
                   "value": 4
-                },
-                "struct_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 94,
-                  "size": 0,
-                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                  "name": "struct_kind",
-                  "value": 1
                 }
               }
             },
@@ -4681,15 +4015,6 @@
                   "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                   "name": "field_id",
                   "value": 5
-                },
-                "own_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 95,
-                  "size": 0,
-                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                  "name": "own_kind",
-                  "value": 1
                 },
                 "field": {
                   "_type": "virtual",
@@ -4849,15 +4174,6 @@
                                           "name": "field_id",
                                           "value": 1
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 97,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 7
-                                        },
                                         "field": {
                                           "_type": "virtual",
                                           "type": "virtual",
@@ -4904,18 +4220,9 @@
                                           "type": "virtual",
                                           "offset": 104,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 1
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 104,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 7
                                         }
                                       }
                                     },
@@ -4960,15 +4267,6 @@
                                           "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                                           "name": "field_id",
                                           "value": 2
-                                        },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 105,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 7
                                         },
                                         "field": {
                                           "_type": "virtual",
@@ -5016,18 +4314,9 @@
                                           "type": "virtual",
                                           "offset": 117,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 2
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 117,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 7
                                         }
                                       }
                                     },
@@ -5073,32 +4362,14 @@
                                           "name": "field_id",
                                           "value": 0
                                         },
-                                        "own_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 118,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                                          "name": "own_kind",
-                                          "value": 7
-                                        },
                                         "last_field_id": {
                                           "_type": "virtual",
                                           "type": "virtual",
                                           "offset": 118,
                                           "size": 0,
-                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                                          "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                                           "name": "last_field_id",
                                           "value": 0
-                                        },
-                                        "struct_kind": {
-                                          "_type": "virtual",
-                                          "type": "virtual",
-                                          "offset": 118,
-                                          "size": 0,
-                                          "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                                          "name": "struct_kind",
-                                          "value": 7
                                         }
                                       }
                                     }
@@ -5117,18 +4388,9 @@
                   "type": "virtual",
                   "offset": 118,
                   "size": 0,
-                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                   "name": "last_field_id",
                   "value": 5
-                },
-                "struct_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 118,
-                  "size": 0,
-                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                  "name": "struct_kind",
-                  "value": 1
                 }
               }
             },
@@ -5173,15 +4435,6 @@
                   "description": "\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7",
                   "name": "field_id",
                   "value": 6
-                },
-                "own_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 119,
-                  "size": 0,
-                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                  "name": "own_kind",
-                  "value": 1
                 },
                 "field": {
                   "_type": "virtual",
@@ -5229,18 +4482,9 @@
                   "type": "virtual",
                   "offset": 136,
                   "size": 0,
-                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                   "name": "last_field_id",
                   "value": 6
-                },
-                "struct_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 136,
-                  "size": 0,
-                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                  "name": "struct_kind",
-                  "value": 1
                 }
               }
             },
@@ -5286,32 +4530,14 @@
                   "name": "field_id",
                   "value": 0
                 },
-                "own_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 137,
-                  "size": 0,
-                  "description": "\u3053\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u6301\u3064\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\uFF09",
-                  "name": "own_kind",
-                  "value": 1
-                },
                 "last_field_id": {
                   "_type": "virtual",
                   "type": "virtual",
                   "offset": 137,
                   "size": 0,
-                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
+                  "description": "\u6B21\u306E\u30D5\u30A3\u30FC\u30EB\u30C9\u306E\u756A\u53F7\u306E\u57FA\u6E96\uFF08\u4F5C\u696D\u7528\uFF09",
                   "name": "last_field_id",
                   "value": 0
-                },
-                "struct_kind": {
-                  "_type": "virtual",
-                  "type": "virtual",
-                  "offset": 137,
-                  "size": 0,
-                  "description": "\u3053\u306E\u69CB\u9020\u4F53\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u5165\u308C\u5B50\u306E\u5024\u3067\u4E0A\u66F8\u304D\u3055\u308C\u305F\u5024\u3092\u623B\u3059\uFF09",
-                  "name": "struct_kind",
-                  "value": 1
                 }
               }
             }

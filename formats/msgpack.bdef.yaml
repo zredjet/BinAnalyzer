@@ -16,9 +16,9 @@ structs:
       repeat: eof
       description: "値の並び"
 
-  # 値。エンディアンを書いた形にして独自の変数のスコープを持たせる（入れ子の値の format_byte などが親の値を上書きしないように）
+  # 値。独自の変数のスコープを持たせる（入れ子の値の format_byte などが親の値を上書きしないように）
   msgpack_value:
-    endianness: big
+    scope: isolated
     fields:
       - name: format_byte
         type: uint8
@@ -392,9 +392,9 @@ structs:
       struct: msgpack_map
       description: "マップ"
 
-  # 配列とマップは独自のスコープを持たせ、要素の値の昇格が外の値を上書きしないようにする
+  # 配列とマップも独自のスコープを持たせる（要素の値がこの値の変数と混ざらないように）
   msgpack_array:
-    endianness: big
+    scope: isolated
     fields:
       - name: elements
         type: struct
@@ -403,7 +403,7 @@ structs:
         description: "要素の並び"
 
   msgpack_map:
-    endianness: big
+    scope: isolated
     fields:
       - name: entries
         type: struct

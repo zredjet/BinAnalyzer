@@ -98,5 +98,5 @@ REQ-188 の CBOR の見直しで、不定長の配列の要素（`cbor_value`、
 
 ### 気づき・今後の課題
 
-- 同梱定義の回避策（CBOR の不定長の並び・FAT のディレクトリの、既定値の virtual + `repeat_while`）の置き換えは、スコープ外として別の PR で行う
+- 同梱定義の回避策（CBOR の不定長の並び・FAT のディレクトリの、既定値の virtual + `repeat_while`）は `repeat_until` に置き換えた（PR: 同梱定義の置き換え）
 

@@ -97,11 +97,6 @@ enums:
 
 structs:
   x509_file:
-    - name: file_size
-      type: virtual
-      value: "{remaining}"
-      padding: true
-      description: "ファイルのバイト数（作業用。現在の位置を求める基準）"
     - name: certificates
       type: struct
       struct: certificate
@@ -134,7 +129,7 @@ structs:
       description: "TBSCertificate の SEQUENCE の識別子と長さ"
     - name: next_tag1
       type: uint8
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       padding: true
       description: "次の要素の識別子（作業用。省略できる版の有無を見る）"
@@ -169,7 +164,7 @@ structs:
       description: "主体の公開鍵の情報"
     - name: next_tag2
       type: uint8
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       if: "{remaining > 0}"
       padding: true
@@ -181,7 +176,7 @@ structs:
       description: "発行者の一意の ID（[1] IMPLICIT BIT STRING。v2 以降）"
     - name: next_tag3
       type: uint8
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       if: "{remaining > 0}"
       padding: true
@@ -193,7 +188,7 @@ structs:
       description: "主体の一意の ID（[2] IMPLICIT BIT STRING。v2 以降）"
     - name: next_tag4
       type: uint8
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       if: "{remaining > 0}"
       padding: true
@@ -237,7 +232,7 @@ structs:
       description: "未使用のビット数（0）"
     - name: key_first_byte
       type: uint8
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       padding: true
       description: "鍵の先頭のバイト（作業用。0x30 なら RSA などの DER の鍵）"
@@ -263,13 +258,13 @@ structs:
       description: "Extensions の SEQUENCE の識別子と長さ"
     - name: list_end
       type: virtual
-      value: "{file_size - remaining + der_length}"
+      value: "{_offset + der_length}"
       padding: true
       description: "拡張の並びの終わりの位置（作業用）"
     - name: extensions
       type: struct
       struct: extension
-      repeat_while: "{file_size - remaining < list_end}"
+      repeat_while: "{_offset < list_end}"
       description: "拡張の並び"
 
   extension:
@@ -287,7 +282,7 @@ structs:
       description: "拡張の名前"
     - name: next_tag
       type: uint8
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       padding: true
       description: "次の要素の識別子（作業用。省略できる critical の有無を見る）"
@@ -351,9 +346,9 @@ structs:
       value: "{length_first < 0x80 ? length_first : (length_first == 0x81 ? length1 : (length_first == 0x82 ? length2 : (length_first == 0x83 ? length3_value : (length_first == 0x84 ? length4 : 0))))}"
       description: "中身のバイト数"
 
-  # 入れ子の TLV の値が親の値を上書きしないように、エンディアンを書いた形にして独自の変数のスコープを持たせる
+  # 入れ子の TLV の値が親の値を上書きしないように、独自の変数のスコープを持たせる
   der_tlv:
-    endianness: big
+    scope: isolated
     fields:
       - name: header
         type: struct
