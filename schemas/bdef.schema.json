@@ -477,6 +477,11 @@
           "enum": ["msb", "lsb"],
           "description": "ビットストリームのビットオーダー。\"msb\"（デフォルト）はMSB-first、\"lsb\"はLSB-first。mode: bitstream と併用。"
         },
+        "scope": {
+          "type": "string",
+          "enum": ["isolated"],
+          "description": "変数のスコープ。\"isolated\" を指定すると独自のスコープを持ち、中のフィールドの値が親のスコープに書かれず、繰り返しの要素の値の昇格もこの struct の中へ入らない（REQ-195）。"
+        },
         "resync_marker": {
           "type": "array",
           "items": { "type": "integer", "minimum": 0, "maximum": 255 },

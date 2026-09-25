@@ -19,6 +19,9 @@ public sealed class YamlStructModel
     [YamlMember(Alias = "bit_order")]
     public string? BitOrder { get; set; }
 
+    [YamlMember(Alias = "scope")]
+    public string? Scope { get; set; }
+
     [YamlMember(Alias = "resync_marker")]
     public List<int>? ResyncMarker { get; set; }
 

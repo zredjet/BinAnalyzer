@@ -119,6 +119,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
         string name,
         FieldType? dslType = null)
     {
+        // scope: isolated の struct は独自の変数のスコープを持つ（REQ-195）
+        if (structDef.IsolatedScope)
+            context.PushVariableScope();
+
         var hasEndiannessOverride = structDef.Endianness.HasValue;
         if (hasEndiannessOverride)
             context.PushEndiannessScope(structDef.Endianness!.Value);
@@ -162,6 +166,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
             context.PopScope();
         if (hasEndiannessOverride)
             context.PopScope();
+        if (structDef.IsolatedScope)
+            context.PopScope();
 
         // 文字列テーブル登録
         if (structDef.StringTableEncoding is { } stEncoding)
@@ -179,6 +185,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Size = Math.Max(0, context.Position - startOffset),
             Children = children,
             DslType = dslType,
+            IsolatedScope = structDef.IsolatedScope,
         };
     }
 
@@ -1390,7 +1397,13 @@ public sealed class BinaryDecoder : IBinaryDecoder
             case DecodedStruct st:
                 var children = st.Children;
                 for (var i = 0; i < children.Count; i++)
+                {
+                    // 独自のスコープを持つ入れ子の struct の値は昇格しない（外からはメンバーアクセスで引く。REQ-195）。
+                    // 要素そのもの（呼び出し元が渡した st）は、独自のスコープでも直下の値を昇格する
+                    if (children[i] is DecodedStruct { IsolatedScope: true })
+                        continue;
                     PromoteDecodedValues(children[i], context);
+                }
                 break;
             case DecodedArray arr:
                 // スカラー配列は REQ-098 で既に処理済み。struct 配列の内部は走査しない
