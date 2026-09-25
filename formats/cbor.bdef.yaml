@@ -1,295 +1,296 @@
+# CBOR（Concise Binary Object Representation）
+# 仕様: RFC 8949 Concise Binary Object Representation (CBOR)（2020）、IANA "Concise Binary Object Representation (CBOR) Tags"（2025）。
+#   RFC 8949 付録 A の例で照合した
+# 構造: 値の並び（ファイルの中の複数の値を順に読む。CBOR シーケンス RFC 8742）。値は先頭の 1 バイト（主型 3 ビット + 追加情報 5 ビット）と引数
+#   （追加情報が 0〜23 ならその値、24〜27 なら後ろの 1・2・4・8 バイト）で、配列・マップ・タグは中に値を再帰的に持つ。追加情報 31 は不定長（0xFF の break まで）
+# 対応していないもの: 半精度の浮動小数点数の値（符号・指数・仮数に分けて表示）、8 バイトの引数の長さのバイト列・文字列（DSL の大きさの上限）、
+#   タグ 24（CBOR の埋め込み）のバイト列の中身の分解・タグ 2 / 3（多倍長整数）の値、2^63 以上の符号なし整数・-2^63 より小さい負の整数（負の値・誤った値で表示）、
+#   正規形・決定的な符号化かの検査
 name: CBOR
 endianness: big
 root: cbor_root
 
+enums:
+  major_type:
+    - value: 0
+      label: unsigned_integer
+      description: "符号なし整数"
+    - value: 1
+      label: negative_integer
+      description: "負の整数（-1 - 引数）"
+    - value: 2
+      label: byte_string
+      description: "バイト列"
+    - value: 3
+      label: text_string
+      description: "文字列（UTF-8）"
+    - value: 4
+      label: array
+      description: "配列"
+    - value: 5
+      label: map
+      description: "マップ"
+    - value: 6
+      label: tag
+      description: "タグ（意味付け）+ 値"
+    - value: 7
+      label: simple_or_float
+      description: "単純値・浮動小数点数・break"
+
+  cbor_tag:
+    - value: 0
+      label: date_time_string
+      description: "RFC 3339 の日時の文字列"
+    - value: 1
+      label: epoch_time
+      description: "1970-01-01 からの秒"
+    - value: 2
+      label: positive_bignum
+      description: "正の多倍長整数（バイト列）"
+    - value: 3
+      label: negative_bignum
+      description: "負の多倍長整数（バイト列）"
+    - value: 4
+      label: decimal_fraction
+      description: "10 進の小数（[指数, 仮数]）"
+    - value: 5
+      label: bigfloat
+      description: "2 進の浮動小数点数（[指数, 仮数]）"
+    - value: 21
+      label: base64url_expected
+      description: "base64url への変換を期待"
+    - value: 22
+      label: base64_expected
+      description: "base64 への変換を期待"
+    - value: 23
+      label: base16_expected
+      description: "base16 への変換を期待"
+    - value: 24
+      label: encoded_cbor
+      description: "CBOR で符号化したデータ（バイト列）"
+    - value: 32
+      label: uri
+      description: "URI"
+    - value: 33
+      label: base64url
+      description: "base64url の文字列"
+    - value: 34
+      label: base64
+      description: "base64 の文字列"
+    - value: 36
+      label: mime_message
+      description: "MIME のメッセージ"
+    - value: 37
+      label: uuid
+      description: "UUID（RFC 9562）"
+    - value: 52
+      label: ipv4
+      description: "IPv4 アドレス（RFC 9164）"
+    - value: 54
+      label: ipv6
+      description: "IPv6 アドレス（RFC 9164）"
+    - value: 100
+      label: epoch_date
+      description: "1970-01-01 からの日数（RFC 8943）"
+    - value: 258
+      label: set
+      description: "集合（重複の無い配列）"
+    - value: 1004
+      label: full_date
+      description: "RFC 3339 の日付の文字列（RFC 8943）"
+    - value: 55799
+      label: self_described_cbor
+      description: "CBOR であることの印（0xD9D9F7）"
+
+  simple_value:
+    - value: 20
+      label: "false"
+      description: "偽"
+    - value: 21
+      label: "true"
+      description: "真"
+    - value: 22
+      label: "null"
+      description: "null"
+    - value: 23
+      label: undefined
+      description: "未定義"
+
 structs:
   cbor_root:
-    - name: value
+    - name: values
       type: struct
       struct: cbor_value
+      repeat: eof
+      description: "値の並び"
 
+  # 値。エンディアンを書いた形にして独自の変数のスコープを持たせる（入れ子の値の引数などが親の値を上書きしないように）
   cbor_value:
-    - name: initial_byte
-      type: uint8
-      description: "CBOR 初期バイト: 上位3ビット=major type, 下位5ビット=additional info"
-    - name: major_type
+    endianness: big
+    fields:
+      - name: initial_byte
+        type: bitfield
+        size: "1"
+        description: "先頭のバイト"
+        fields:
+          - name: major_type
+            bits: "7:5"
+            enum: major_type
+            description: "主型"
+          - name: additional_info
+            bits: "4:0"
+            description: "追加情報（0〜23 は引数そのもの、24〜27 は引数のバイト数 1・2・4・8、31 は不定長・break）"
+      - name: arg8
+        type: uint8
+        if: "{additional_info == 24}"
+        description: "1 バイトの引数"
+      - name: arg16
+        type: uint16
+        if: "{additional_info == 25 and major_type != 7}"
+        description: "2 バイトの引数"
+      - name: arg32
+        type: uint32
+        if: "{additional_info == 26 and major_type != 7}"
+        description: "4 バイトの引数"
+      - name: arg64
+        type: uint64
+        if: "{additional_info == 27 and major_type != 7}"
+        description: "8 バイトの引数"
+      - name: argument
+        type: virtual
+        value: "{additional_info < 24 ? additional_info : (additional_info == 24 ? arg8 : (additional_info == 25 and major_type != 7 ? arg16 : (additional_info == 26 and major_type != 7 ? arg32 : (additional_info == 27 and major_type != 7 ? arg64 : 0))))}"
+        description: "引数（整数の値・長さ・要素数・タグの番号）"
+      - name: indefinite
+        type: virtual
+        value: "{additional_info == 31 ? 1 : 0}"
+        description: "不定長か（バイト列・文字列・配列・マップ。主型 7 では break）"
+      - name: content
+        type: switch
+        switch_on: "{major_type * 2 + (major_type >= 2 and major_type <= 5 ? indefinite : 0)}"
+        cases:
+          "0": cbor_unsigned
+          "2": cbor_negative
+          "4": cbor_bytes
+          "5": cbor_indefinite_items
+          "6": cbor_text
+          "7": cbor_indefinite_items
+          "8": cbor_array
+          "9": cbor_indefinite_items
+          "10": cbor_map
+          "11": cbor_indefinite_items
+          "12": cbor_tagged
+        default: cbor_simple
+        description: "値（不定長のバイト列・文字列・配列・マップは break までの値の並び。主型 7 は既定の cbor_simple）"
+      - name: is_break
+        type: virtual
+        value: "{major_type == 7 and additional_info == 31 ? 1 : 0}"
+        description: "不定長の終わりの印（break、0xFF）か"
+
+  cbor_unsigned:
+    - name: value
       type: virtual
-      value: "{initial_byte >> 5}"
-      description: "メジャータイプ (0-7)"
-    - name: additional_info
+      value: "{argument}"
+      description: "符号なし整数"
+
+  cbor_negative:
+    - name: value
       type: virtual
-      value: "{initial_byte & 0x1f}"
-      description: "追加情報 (0-31)"
+      value: "{-1 - argument}"
+      description: "負の整数（-1 - 引数）"
+
+  cbor_bytes:
     - name: data
-      type: switch
-      switch_on: "{major_type}"
-      cases:
-        "0": unsigned_int_data
-        "1": negative_int_data
-        "2": byte_string_data
-        "3": text_string_data
-        "4": array_data
-        "5": map_data
-        "6": tag_data
-        "7": simple_float_data
-      default: raw_data
+      type: bytes
+      size: "{argument}"
+      description: "バイト列"
 
-  # === Major type 0: Unsigned integer ===
-  unsigned_int_data:
-    - name: extra_1byte
-      type: uint8
-      if: "{additional_info == 24}"
-      description: "1バイト追加値"
-    - name: extra_2byte
-      type: uint16
-      if: "{additional_info == 25}"
-      description: "2バイト追加値"
-    - name: extra_4byte
-      type: uint32
-      if: "{additional_info == 26}"
-      description: "4バイト追加値"
-    - name: extra_8byte
-      type: uint64
-      if: "{additional_info == 27}"
-      description: "8バイト追加値"
+  cbor_text:
+    - name: text
+      type: utf8
+      size: "{argument}"
+      description: "文字列（UTF-8）"
 
-  # === Major type 1: Negative integer ===
-  negative_int_data:
-    - name: extra_1byte
-      type: uint8
-      if: "{additional_info == 24}"
-      description: "1バイト追加値（実際の値は -1 - extra）"
-    - name: extra_2byte
-      type: uint16
-      if: "{additional_info == 25}"
-      description: "2バイト追加値"
-    - name: extra_4byte
-      type: uint32
-      if: "{additional_info == 26}"
-      description: "4バイト追加値"
-    - name: extra_8byte
-      type: uint64
-      if: "{additional_info == 27}"
-      description: "8バイト追加値"
+  # 配列・マップ・不定長の並びは独自のスコープを持たせ、要素の値の昇格が外の値を上書きしないようにする
+  cbor_array:
+    endianness: big
+    fields:
+      - name: items
+        type: struct
+        struct: cbor_value
+        repeat_count: "{argument}"
+        description: "要素の並び"
 
-  # === Major type 2: Byte string ===
-  byte_string_data:
-    # additional_info 0-23: 長さは additional_info 自身
-    - name: short_data
-      type: bytes
-      size: "{additional_info}"
-      if: "{additional_info <= 23}"
-      description: "短いバイト列（長さ = additional_info）"
-    # additional_info 24: 次の1バイトが長さ
-    - name: len_1byte
-      type: uint8
-      if: "{additional_info == 24}"
-    - name: data_1byte
-      type: bytes
-      size: "{len_1byte}"
-      if: "{additional_info == 24}"
-    # additional_info 25: 次の2バイトが長さ
-    - name: len_2byte
-      type: uint16
-      if: "{additional_info == 25}"
-    - name: data_2byte
-      type: bytes
-      size: "{len_2byte}"
-      if: "{additional_info == 25}"
-    # additional_info 26: 次の4バイトが長さ
-    - name: len_4byte
-      type: uint32
-      if: "{additional_info == 26}"
-    - name: data_4byte
-      type: bytes
-      size: "{len_4byte}"
-      if: "{additional_info == 26}"
-    # additional_info 31: 不定長（break byte まで）→ raw_data フォールバック
-    - name: indefinite_data
-      type: bytes
-      size: remaining
-      if: "{additional_info == 31}"
-      description: "不定長バイト列（break byte 0xff まで）"
+  cbor_map:
+    endianness: big
+    fields:
+      - name: entries
+        type: struct
+        struct: cbor_map_entry
+        repeat_count: "{argument}"
+        description: "エントリ（キーと値）の並び"
 
-  # === Major type 3: Text string ===
-  text_string_data:
-    - name: short_data
-      type: bytes
-      size: "{additional_info}"
-      if: "{additional_info <= 23}"
-      description: "短いテキスト（長さ = additional_info）"
-    - name: len_1byte
-      type: uint8
-      if: "{additional_info == 24}"
-    - name: data_1byte
-      type: bytes
-      size: "{len_1byte}"
-      if: "{additional_info == 24}"
-    - name: len_2byte
-      type: uint16
-      if: "{additional_info == 25}"
-    - name: data_2byte
-      type: bytes
-      size: "{len_2byte}"
-      if: "{additional_info == 25}"
-    - name: len_4byte
-      type: uint32
-      if: "{additional_info == 26}"
-    - name: data_4byte
-      type: bytes
-      size: "{len_4byte}"
-      if: "{additional_info == 26}"
-    - name: indefinite_data
-      type: bytes
-      size: remaining
-      if: "{additional_info == 31}"
-      description: "不定長テキスト（break byte 0xff まで）"
-
-  # === Major type 4: Array ===
-  array_data:
-    # additional_info を再帰デコード前にローカルにキャプチャ（スコープ汚染防止）
-    - name: ai
-      type: virtual
-      value: "{additional_info}"
-    # additional_info 0-23: 要素数は additional_info 自身
-    - name: short_elements
-      type: struct
-      struct: cbor_value
-      repeat_count: "{ai}"
-      if: "{ai <= 23}"
-      description: "短い配列（要素数 = additional_info）"
-    # additional_info 24: 次の1バイトが要素数
-    - name: count_1byte
-      type: uint8
-      if: "{ai == 24}"
-    - name: elements_1byte
-      type: struct
-      struct: cbor_value
-      repeat_count: "{count_1byte}"
-      if: "{ai == 24}"
-    # additional_info 25: 次の2バイトが要素数
-    - name: count_2byte
-      type: uint16
-      if: "{ai == 25}"
-    - name: elements_2byte
-      type: struct
-      struct: cbor_value
-      repeat_count: "{count_2byte}"
-      if: "{ai == 25}"
-    # additional_info 26: 次の4バイトが要素数
-    - name: count_4byte
-      type: uint32
-      if: "{ai == 26}"
-    - name: elements_4byte
-      type: struct
-      struct: cbor_value
-      repeat_count: "{count_4byte}"
-      if: "{ai == 26}"
-    # additional_info 31: 不定長配列
-    - name: indefinite_elements
-      type: bytes
-      size: remaining
-      if: "{ai == 31}"
-      description: "不定長配列（break byte 0xff まで）"
-
-  # === Major type 5: Map ===
-  map_data:
-    # additional_info を再帰デコード前にローカルにキャプチャ（スコープ汚染防止）
-    - name: ai
-      type: virtual
-      value: "{additional_info}"
-    - name: short_entries
-      type: struct
-      struct: cbor_kv_pair
-      repeat_count: "{ai}"
-      if: "{ai <= 23}"
-      description: "短いマップ（ペア数 = additional_info）"
-    - name: count_1byte
-      type: uint8
-      if: "{ai == 24}"
-    - name: entries_1byte
-      type: struct
-      struct: cbor_kv_pair
-      repeat_count: "{count_1byte}"
-      if: "{ai == 24}"
-    - name: count_2byte
-      type: uint16
-      if: "{ai == 25}"
-    - name: entries_2byte
-      type: struct
-      struct: cbor_kv_pair
-      repeat_count: "{count_2byte}"
-      if: "{ai == 25}"
-    - name: count_4byte
-      type: uint32
-      if: "{ai == 26}"
-    - name: entries_4byte
-      type: struct
-      struct: cbor_kv_pair
-      repeat_count: "{count_4byte}"
-      if: "{ai == 26}"
-    - name: indefinite_entries
-      type: bytes
-      size: remaining
-      if: "{ai == 31}"
-      description: "不定長マップ（break byte 0xff まで）"
-
-  cbor_kv_pair:
+  cbor_map_entry:
     - name: key
       type: struct
       struct: cbor_value
+      description: "キー"
     - name: value
       type: struct
       struct: cbor_value
+      description: "値"
 
-  # === Major type 6: Tag ===
-  tag_data:
-    - name: tag_extra_1byte
-      type: uint8
-      if: "{additional_info == 24}"
-      description: "1バイトタグ番号"
-    - name: tag_extra_2byte
-      type: uint16
-      if: "{additional_info == 25}"
-      description: "2バイトタグ番号"
-    - name: tag_extra_4byte
-      type: uint32
-      if: "{additional_info == 26}"
-      description: "4バイトタグ番号"
-    - name: tag_extra_8byte
-      type: uint64
-      if: "{additional_info == 27}"
-      description: "8バイトタグ番号"
+  cbor_indefinite_items:
+    endianness: big
+    fields:
+      - name: is_break
+        type: virtual
+        value: "{0}"
+        padding: true
+        description: "直前の値が break か（作業用。各要素の is_break で上書きされる）"
+      - name: items
+        type: struct
+        struct: cbor_value
+        repeat_while: "{is_break == 0}"
+        description: "値の並び（最後は break）。バイト列・文字列は定長の断片、マップはキーと値を交互に並べたもの"
+
+  cbor_tagged:
+    - name: tag
+      type: virtual
+      value: "{argument}"
+      enum: cbor_tag
+      description: "タグの番号"
     - name: tagged_value
       type: struct
       struct: cbor_value
-      description: "タグ付き値"
+      description: "タグを付けた値"
 
-  # === Major type 7: Simple values and floats ===
-  simple_float_data:
-    - name: simple_value
-      type: uint8
-      if: "{additional_info == 24}"
-      description: "シンプル値（24: 次の1バイト）"
-    - name: float16_data
-      type: bytes
+  cbor_simple:
+    - name: simple
+      type: virtual
+      value: "{additional_info < 24 ? additional_info : arg8}"
+      enum: simple_value
+      if: "{additional_info <= 24}"
+      description: "単純値（20 = false、21 = true、22 = null、23 = undefined、24 は後ろの 1 バイトの値）"
+    - name: half_float
+      type: bitfield
       size: "2"
       if: "{additional_info == 25}"
-      description: "IEEE 754 half-precision float"
-    - name: float32_data
-      type: bytes
-      size: "4"
+      description: "半精度の浮動小数点数"
+      fields:
+        - name: sign
+          bits: "15"
+          description: "符号（1 は負）"
+        - name: exponent
+          bits: "14:10"
+          description: "指数（バイアス 15。31 は無限大・NaN）"
+        - name: fraction
+          bits: "9:0"
+          description: "仮数（暗黙の 1 を除く 10 ビット）"
+    - name: float32_value
+      type: float32
       if: "{additional_info == 26}"
-      description: "IEEE 754 single-precision float"
-    - name: float64_data
-      type: bytes
-      size: "8"
+      description: "単精度の浮動小数点数"
+    - name: float64_value
+      type: float64
       if: "{additional_info == 27}"
-      description: "IEEE 754 double-precision float"
-    # additional_info 0-19: false, true, null, undefined 等（追加バイトなし）
-    # additional_info 31: break code（追加バイトなし）
-
-  raw_data:
-    - name: data
-      type: bytes
-      size: remaining
+      description: "倍精度の浮動小数点数"

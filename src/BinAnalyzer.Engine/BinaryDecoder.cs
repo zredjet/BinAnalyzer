@@ -60,6 +60,18 @@ public sealed class BinaryDecoder : IBinaryDecoder
         };
     }
 
+    /// <summary>
+    /// エラー継続モードで読めなかったフィールドの名前を未定義にする。bitfield はエントリの名前も未定義にする（REQ-193）。
+    /// しないと、外側のスコープや前の要素の同名の値が見えたまま後ろの式が評価され、再帰する定義では壊れた入力で指数的に展開する。
+    /// </summary>
+    private static void MarkFieldUndefined(FieldDefinition field, DecodeContext context)
+    {
+        context.MarkVariableUndefined(field.Name);
+        if (field.BitfieldEntries is { } entries)
+            foreach (var entry in entries)
+                context.MarkVariableUndefined(entry.Name);
+    }
+
     private void ProcessStateVariable(FieldDefinition field, DecodeContext context)
     {
         if (field.State is not { } stateName)
@@ -250,7 +262,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             if (_errorMode == ErrorMode.Continue)
             {
                 _errors!.Add(new DecodeError(dex.Message, dex.Offset, dex.FieldPath, dex.FieldType));
-                context.MarkVariableUndefined(field.Name);
+                MarkFieldUndefined(field, context);
                 var posBeforeSkip = context.Position;
                 TrySkipField(field, context, parentStruct?.ResyncMarker, parentStruct?.Align);
                 var skipped = context.Position - posBeforeSkip;
@@ -273,7 +285,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             {
                 var errorOffset = context.Position;
                 _errors!.Add(new DecodeError(ex.Message, errorOffset, CurrentPath, field.Type.ToString()));
-                context.MarkVariableUndefined(field.Name);
+                MarkFieldUndefined(field, context);
                 var posBeforeSkip = context.Position;
                 TrySkipField(field, context, parentStruct?.ResyncMarker, parentStruct?.Align);
                 var skipped = context.Position - posBeforeSkip;
@@ -1892,6 +1904,8 @@ public sealed class BinaryDecoder : IBinaryDecoder
             EnumLabel = enumEntry?.Label,
             EnumDescription = enumEntry?.Description,
             Description = field.Description,
+            // padding: true の virtual は作業用の値としてツリーに出さない（REQ-192）
+            IsPadding = field.IsPadding,
             BitOffset = context.IsBitstreamMode ? context.CurrentBitOffset : null,
             DslType = field.Type,
         };

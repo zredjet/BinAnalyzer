@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 
 namespace BinAnalyzer.Integration.Tests;
 
@@ -329,5 +330,110 @@ public static class PcapTestDataGenerator
         pos += 6;
 
         return data;
+    }
+
+    // ===== REQ-188: 複数のプロトコル・バイト順・pcapng =====
+    private static byte[] Be(params int[] u16) => u16.SelectMany(v => new[] { (byte)(v >> 8), (byte)v }).ToArray();
+    private static byte[] Cat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
+
+    private static byte[] Ipv4(int protocol, byte[] payload, byte[] src, byte[] dst)
+    {
+        var header = Cat([0x45, 0x00], Be(20 + payload.Length, 0x1234, 0x4000), [64, (byte)protocol, 0, 0], src, dst);
+        var sum = 0;
+        for (var i = 0; i < 20; i += 2) sum += (header[i] << 8) | header[i + 1];
+        while (sum > 0xFFFF) sum = (sum & 0xFFFF) + (sum >> 16);
+        header[10] = (byte)(~sum >> 8); header[11] = (byte)~sum;
+        return Cat(header, payload);
+    }
+
+    private static byte[] Udp(int src, int dst, byte[] data) => Cat(Be(src, dst, 8 + data.Length, 0), data);
+
+    private static byte[] Ethernet(int etherType, byte[] payload)
+    {
+        var frame = Cat([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55], Be(etherType), payload);
+        return frame.Length >= 60 ? frame : Cat(frame, new byte[60 - frame.Length]);
+    }
+
+    private static readonly byte[] Client = [192, 168, 1, 10];
+    private static readonly byte[] Server = [8, 8, 8, 8];
+
+    /// <summary>DNS の問い合わせ（www.example.com A）。</summary>
+    private static readonly byte[] DnsQuery = Cat(Be(0x1234, 0x0100, 1, 0, 0, 0),
+        [3, (byte)'w', (byte)'w', (byte)'w', 7, (byte)'e', (byte)'x', (byte)'a', (byte)'m', (byte)'p', (byte)'l', (byte)'e', 3, (byte)'c', (byte)'o', (byte)'m', 0], Be(1, 1));
+
+    /// <summary>Ethernet のフレームの見本: UDP の DNS・ARP の要求・VLAN 100 の ICMP エコー・IPv6 の UDP。</summary>
+    private static byte[][] SampleFrames()
+    {
+        var icmp = Cat([8, 0, 0, 0], Be(7, 1), "ping"u8.ToArray());
+        var arp = Cat(Be(1, 0x0800), [6, 4], Be(1), [0x00, 0x11, 0x22, 0x33, 0x44, 0x55], Client, new byte[6], [192, 168, 1, 1]);
+        var v6src = Convert.FromHexString("20010DB8000000000000000000000001");
+        var v6dst = Convert.FromHexString("20010DB8000000000000000000000002");
+        var udp6 = Udp(5353, 53, DnsQuery);
+        var ipv6 = Cat([0x60, 0, 0, 0], Be(udp6.Length), [17, 64], v6src, v6dst, udp6);
+        return
+        [
+            Ethernet(0x0800, Ipv4(17, Udp(53000, 53, DnsQuery), Client, Server)),
+            Ethernet(0x0806, arp),
+            Ethernet(0x8100, Cat(Be((3 << 13) | 100, 0x0800), Ipv4(1, icmp, Client, Server))),
+            Ethernet(0x86DD, ipv6),
+        ];
+    }
+
+    private static byte[] PcapFile(byte[][] packets, bool bigEndian, bool nanosecond, uint linkType)
+    {
+        var ms = new MemoryStream();
+        void U32(uint v) { var b = BitConverter.GetBytes(v); if (bigEndian == BitConverter.IsLittleEndian) Array.Reverse(b); ms.Write(b); }
+        void U16(ushort v) { var b = BitConverter.GetBytes(v); if (bigEndian == BitConverter.IsLittleEndian) Array.Reverse(b); ms.Write(b); }
+        U32(nanosecond ? 0xA1B23C4Du : 0xA1B2C3D4u); U16(2); U16(4); U32(0); U32(0); U32(65535); U32(linkType);
+        for (var i = 0; i < packets.Length; i++)
+        {
+            U32((uint)(1758700000 + i)); U32(nanosecond ? 123456789u : 123456u); U32((uint)packets[i].Length); U32((uint)packets[i].Length);
+            ms.Write(packets[i]);
+        }
+        return ms.ToArray();
+    }
+
+    /// <summary>リトルエンディアン・マイクロ秒の pcap（Ethernet）: UDP の DNS・ARP・VLAN の ICMP・IPv6 の UDP。tcpdump -r で読めることを確かめた。</summary>
+    public static byte[] CreateEthernetMixPcap() => PcapFile(SampleFrames(), bigEndian: false, nanosecond: false, linkType: 1);
+
+    /// <summary>ビッグエンディアン・ナノ秒の pcap（マジック 0xA1B23C4D を BE で書く）。</summary>
+    public static byte[] CreateBigEndianNanosecondPcap() => PcapFile(SampleFrames()[..2], bigEndian: true, nanosecond: true, linkType: 1);
+
+    /// <summary>リンク層の種類が RAW（101）の pcap: IPv4 の ICMP と IPv6 の UDP（先頭 4 ビットの版で分ける）。</summary>
+    public static byte[] CreateRawIpPcap()
+    {
+        var frames = SampleFrames();
+        return PcapFile([frames[2][18..(18 + 32)], frames[3][14..]], bigEndian: false, nanosecond: false, linkType: 101);
+    }
+
+    /// <summary>
+    /// pcapng（リトルエンディアン）: SHB（shb_userappl）・IDB（Ethernet、if_name・if_tsresol）・EPB × 2（1 つ目に opt_comment）・SPB・NRB（8.8.8.8 = dns.google）・ISB。
+    /// </summary>
+    public static byte[] CreatePcapNg()
+    {
+        static byte[] Pad(byte[] b) => Cat(b, new byte[(4 - b.Length % 4) % 4]);
+        static byte[] Opt(ushort code, byte[] value) => Cat(BitConverter.GetBytes(code), BitConverter.GetBytes((ushort)value.Length), Pad(value));
+        static byte[] EndOpt() => Opt(0, []);
+        static byte[] Block(uint type, byte[] body)
+        {
+            body = Pad(body);
+            var length = (uint)(12 + body.Length);
+            return Cat(BitConverter.GetBytes(type), BitConverter.GetBytes(length), body, BitConverter.GetBytes(length));
+        }
+        var frames = SampleFrames();
+        var shb = Block(0x0A0D0D0A, Cat(BitConverter.GetBytes(0x1A2B3C4Du), BitConverter.GetBytes((ushort)1), BitConverter.GetBytes((ushort)0),
+            BitConverter.GetBytes(-1L), Opt(4, "binanalyzer-test"u8.ToArray()), EndOpt()));
+        var idb = Block(1, Cat(BitConverter.GetBytes((ushort)1), BitConverter.GetBytes((ushort)0), BitConverter.GetBytes(65535u),
+            Opt(2, "en0"u8.ToArray()), Opt(9, [6]), EndOpt()));
+        byte[] Epb(int i, byte[] frame, byte[] options) => Block(6, Cat(BitConverter.GetBytes(0u), BitConverter.GetBytes(0x00063F00u),
+            BitConverter.GetBytes((uint)(i * 1000)), BitConverter.GetBytes((uint)frame.Length), BitConverter.GetBytes((uint)frame.Length), Pad(frame), options));
+        var epb0 = Epb(0, frames[0], Cat(Opt(1, Encoding.UTF8.GetBytes("コメント")), EndOpt()));
+        var epb1 = Epb(1, frames[2], []);
+        var spb = Block(3, Cat(BitConverter.GetBytes((uint)frames[1].Length), frames[1]));
+        var nrb = Block(4, Cat(BitConverter.GetBytes((ushort)1), BitConverter.GetBytes((ushort)16), Server, "dns.google\0\0"u8.ToArray(),
+            BitConverter.GetBytes((ushort)0), BitConverter.GetBytes((ushort)0)));
+        var isb = Block(5, Cat(BitConverter.GetBytes(0u), BitConverter.GetBytes(0x00063F00u), BitConverter.GetBytes(5000u),
+            Opt(4, BitConverter.GetBytes(4UL)), EndOpt()));
+        return Cat(shb, idb, epb0, epb1, spb, nrb, isb);
     }
 }

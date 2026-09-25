@@ -1,3 +1,12 @@
+# SQLite 3 のデータベースファイル
+# 仕様: SQLite "Database File Format"（sqlite.org、2025） https://www.sqlite.org/fileformat2.html 。sqlite3 3.50 が出力したファイルで照合した
+# 構造: ページ（大きさはヘッダで決まる 512〜65536 バイト）の並び。1 ページ目の先頭 100 バイトがデータベースのヘッダ。
+#   B 木のページはヘッダ（種類・セル数・セルの領域の位置）+ セルの位置の配列 + セル（ページの後ろから詰める）で、
+#   表の葉のセルは行 ID と記録（ヘッダ = 各列のシリアル型の可変長整数 + 値の並び）を持つ。可変長整数はビッグエンディアンの 7 ビットずつの形
+# 対応していないもの: あふれページに続く記録の続き（ページ内の部分だけをバイト列で表示し、あふれページの番号を示す）、
+#   9 バイトの可変長整数（56 ビットを超える値。DSL の vlq で読むため 9 バイト目の 8 ビットを正しく扱わない）、
+#   2 つ目以降の空きリストのトランクページ・空きリストの葉のページ・ポインタマップのページ・あふれページの判別（先頭 4 バイトの次のページ番号とバイト列で表示）、
+#   ページ内の空きブロックの連なり、WAL ファイル（-wal）・ロールバックジャーナル（-journal）
 name: SQLite
 endianness: big
 root: sqlite
@@ -6,152 +15,457 @@ enums:
   text_encoding:
     - value: 1
       label: UTF-8
+      description: "UTF-8"
     - value: 2
       label: UTF-16le
+      description: "UTF-16 リトルエンディアン"
     - value: 3
       label: UTF-16be
+      description: "UTF-16 ビッグエンディアン"
 
   btree_page_type:
     - value: 2
       label: INDEX_INTERIOR
-      description: "内部インデックスB-Treeページ"
+      description: "索引の B 木の内部ページ"
     - value: 5
       label: TABLE_INTERIOR
-      description: "内部テーブルB-Treeページ"
+      description: "表の B+ 木の内部ページ"
     - value: 10
       label: INDEX_LEAF
-      description: "リーフインデックスB-Treeページ"
+      description: "索引の B 木の葉のページ"
     - value: 13
       label: TABLE_LEAF
-      description: "リーフテーブルB-Treeページ"
+      description: "表の B+ 木の葉のページ"
 
   file_format_version:
     - value: 1
       label: legacy
-      description: "レガシーロールバックジャーナル"
+      description: "ロールバックジャーナル"
     - value: 2
       label: WAL
-      description: "先行書き込みログ"
+      description: "先行書き込みログ（WAL）"
+
+  schema_format:
+    - value: 1
+      label: format_1
+      description: "3.0.0 以降"
+    - value: 2
+      label: format_2
+      description: "3.1.3 以降（ALTER TABLE ADD COLUMN の可変長の行）"
+    - value: 3
+      label: format_3
+      description: "3.1.4 以降（ALTER TABLE ADD COLUMN の既定値が NULL でない列）"
+    - value: 4
+      label: format_4
+      description: "3.3.0 以降（DESC の索引・boolean の 0 / 1 のシリアル型）"
 
 structs:
   sqlite:
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      padding: true
+      description: "ファイルのバイト数（作業用）"
     - name: header
       type: struct
       struct: database_header
-    - name: first_page
+      description: "データベースのヘッダ（1 ページ目の先頭 100 バイト）"
+    - name: page_count
+      type: virtual
+      value: "{database_size_pages != 0 and version_valid_for == file_change_counter ? database_size_pages : file_size / page_size_bytes}"
+      description: "ページ数（ヘッダの値が有効ならその値、無効ならファイルの大きさから求める）"
+    - name: pages
       type: struct
-      struct: btree_page_header
+      struct: page
+      repeat_count: "{page_count <= file_size / page_size_bytes ? page_count : file_size / page_size_bytes}"
+      seek: "{_index * page_size_bytes}"
+      element_size: "{page_size_bytes}"
+      seek_restore: true
+      description: "ページの並び（1 番から）"
 
   database_header:
     - name: magic
       type: ascii
       size: "16"
-      description: "ヘッダ文字列: 'SQLite format 3\\000'"
+      validate: "{trim(magic) == 'SQLite format 3'}"
+      description: "ヘッダの文字列（'SQLite format 3' + NUL）"
     - name: page_size
       type: uint16
-      description: "ページサイズ（バイト）。1の場合は65536を意味する。512から65536の間の2の累乗であること"
+      description: "ページのバイト数（512〜32768 の 2 の累乗。1 は 65536）"
+    - name: page_size_bytes
+      type: virtual
+      value: "{page_size == 1 ? 65536 : page_size}"
+      description: "ページのバイト数"
     - name: write_version
       type: uint8
-      description: "ファイルフォーマット書き込みバージョン（1=レガシー、2=WAL）"
       enum: file_format_version
+      description: "書き込みの版（1 = ロールバックジャーナル、2 = WAL）"
     - name: read_version
       type: uint8
-      description: "ファイルフォーマット読み取りバージョン（1=レガシー、2=WAL）"
       enum: file_format_version
+      description: "読み取りの版（1 = ロールバックジャーナル、2 = WAL）"
     - name: reserved_space
       type: uint8
-      description: "各ページ末尾の未使用バイト数"
+      description: "各ページの末尾の拡張用に予約したバイト数（暗号化の拡張などが使う）"
+    - name: usable_size
+      type: virtual
+      value: "{page_size_bytes - reserved_space}"
+      description: "ページの使えるバイト数"
     - name: max_embedded_payload_fraction
       type: uint8
-      description: "Must be 64"
       validate: "{max_embedded_payload_fraction == 64}"
+      description: "埋め込むペイロードの最大の割合（64 でなければならない）"
     - name: min_embedded_payload_fraction
       type: uint8
-      description: "Must be 32"
       validate: "{min_embedded_payload_fraction == 32}"
+      description: "埋め込むペイロードの最小の割合（32 でなければならない）"
     - name: leaf_payload_fraction
       type: uint8
-      description: "Must be 32"
       validate: "{leaf_payload_fraction == 32}"
+      description: "葉のペイロードの割合（32 でなければならない）"
     - name: file_change_counter
       type: uint32
-      description: "トランザクションコミットごとにインクリメント。データベース変更の検出に使用"
+      description: "変更の回数（トランザクションのコミットごとに増える）"
     - name: database_size_pages
       type: uint32
-      description: "データベースサイズ（ページ数）"
+      description: "データベースのページ数（version_valid_for が file_change_counter と等しいときだけ有効）"
     - name: first_freelist_trunk_page
       type: uint32
+      description: "最初の空きリストのトランクページの番号（0 なら空きページ無し）"
     - name: total_freelist_pages
       type: uint32
+      description: "空きページの総数"
     - name: schema_cookie
       type: uint32
+      description: "スキーマのクッキー（スキーマが変わるたびに増える）"
     - name: schema_format_number
       type: uint32
-      description: "1, 2, 3, or 4"
+      enum: schema_format
       validate: "{schema_format_number >= 1 and schema_format_number <= 4}"
+      description: "スキーマの形式の番号（1〜4）"
     - name: default_page_cache_size
       type: uint32
+      description: "既定のページキャッシュの大きさ（PRAGMA default_cache_size）"
     - name: largest_root_btree_page
       type: uint32
-      description: "最大ルートB-Treeページ番号（自動バキューム/増分バキュームモード）"
+      description: "最大のルートの B 木のページ番号（自動バキューム・増分バキュームのとき。それ以外は 0）"
     - name: text_encoding
       type: uint32
       enum: text_encoding
+      description: "文字列の符号化"
     - name: user_version
       type: uint32
+      description: "ユーザの版（PRAGMA user_version）"
     - name: incremental_vacuum_mode
       type: uint32
-      description: "増分バキュームモードの場合は非ゼロ"
+      description: "増分バキュームのモードなら 0 以外"
     - name: application_id
       type: uint32
+      description: "アプリケーション ID（PRAGMA application_id）"
     - name: reserved_for_expansion
       type: bytes
       size: "20"
-      description: "拡張用予約領域（ゼロであること）"
+      description: "拡張用に予約（0）"
     - name: version_valid_for
       type: uint32
+      description: "version_number と database_size_pages が有効な変更の回数"
     - name: sqlite_version_number
       type: uint32
-      description: "e.g. 3039004 for 3.39.4"
+      description: "最後に書き込んだ SQLite の版（3.50.4 なら 3050004）"
 
-  btree_page_header:
+  page:
+    - name: page_number
+      type: virtual
+      value: "{_index + 1}"
+      description: "ページ番号（1 から）"
+    - name: page_start
+      type: virtual
+      value: "{_index * page_size_bytes}"
+      padding: true
+      description: "ページの先頭のファイル上の位置（作業用）"
+    - name: header_area
+      type: bytes
+      size: "100"
+      if: "{page_number == 1}"
+      description: "データベースのヘッダ（1 ページ目の先頭 100 バイト。上の header で分解）"
+    - name: type_byte
+      type: uint8
+      seek: "{page_start + (page_number == 1 ? 100 : 0)}"
+      seek_restore: true
+      padding: true
+      description: "ページの先頭のバイト（作業用。B 木のページの種類か）"
+    - name: is_btree
+      type: virtual
+      value: "{type_byte == 2 or type_byte == 5 or type_byte == 10 or type_byte == 13 ? 1 : 0}"
+      padding: true
+      description: "B 木のページか（作業用）"
+    - name: btree
+      type: struct
+      struct: btree_page
+      if: "{is_btree == 1 and page_number != first_freelist_trunk_page}"
+      description: "B 木のページ"
+    - name: freelist_trunk
+      type: struct
+      struct: freelist_trunk_page
+      if: "{page_number == first_freelist_trunk_page}"
+      description: "空きリストのトランクページ（最初のもの）"
+    - name: other
+      type: struct
+      struct: other_page
+      if: "{is_btree == 0 and page_number != first_freelist_trunk_page}"
+      description: "B 木でないページ（あふれページ・空きリストの葉・ポインタマップ・未使用）"
+
+  btree_page:
     - name: page_type
       type: uint8
       enum: btree_page_type
+      description: "ページの種類"
     - name: first_freeblock
       type: uint16
+      description: "最初の空きブロックのページ内の位置（0 なら無し）"
     - name: number_of_cells
       type: uint16
+      description: "セルの数"
     - name: cell_content_offset
       type: uint16
-      description: "セルコンテンツ領域の先頭バイトへのオフセット（0は65536を意味する）"
+      description: "セルの領域の先頭のページ内の位置（0 は 65536）"
     - name: fragmented_free_bytes
       type: uint8
+      description: "セルの領域の中の断片化した空きバイト数"
     - name: right_most_pointer
       type: uint32
       if: "{page_type == 2 or page_type == 5}"
-      description: "最右ポインタ（内部ページのみ）"
+      description: "右端の子のページ番号（内部ページのみ）"
     - name: cell_pointer_array
       type: uint16
       repeat_count: "{number_of_cells}"
-      description: "ページ内のセルコンテンツへのオフセット配列"
+      description: "各セルのページ内の位置"
     - name: cells
-      type: struct
-      struct: table_leaf_cell
+      type: switch
+      switch_on: "{page_type}"
       repeat_count: "{number_of_cells}"
-      seek: "{cell_pointer_array[_index]}"
+      seek: "{page_start + cell_pointer_array[_index]}"
       seek_restore: true
-      if: "{page_type == 13}"
-      description: "リーフテーブルセル（cell_pointer_arrayが指すオフセットに配置）"
+      cases:
+        "2": index_interior_cell
+        "5": table_interior_cell
+        "10": index_leaf_cell
+        "13": table_leaf_cell
+      default: unknown_cell
+      description: "セル（cell_pointer_array の位置にある）"
 
   table_leaf_cell:
     - name: payload_size
-      type: uleb128
-      description: "ペイロードサイズ（バイト）"
+      type: vlq
+      description: "ペイロード（記録）のバイト数（あふれページの分を含む）"
     - name: rowid
-      type: uleb128
-      description: "行ID（INTEGER PRIMARY KEY の値）"
-    - name: payload
+      type: vlq
+      description: "行 ID（INTEGER PRIMARY KEY の値）"
+    - name: max_local
+      type: virtual
+      value: "{usable_size - 35}"
+      padding: true
+      description: "ページ内に置けるペイロードの最大（作業用。表の葉は U - 35）"
+    - name: local_size
+      type: virtual
+      value: "{payload_size <= max_local ? payload_size : ((((usable_size - 12) * 32 / 255) - 23) + ((payload_size - (((usable_size - 12) * 32 / 255) - 23)) % (usable_size - 4)) <= max_local ? (((usable_size - 12) * 32 / 255) - 23) + ((payload_size - (((usable_size - 12) * 32 / 255) - 23)) % (usable_size - 4)) : ((usable_size - 12) * 32 / 255) - 23)}"
+      description: "ページ内にあるペイロードのバイト数（残りはあふれページ）"
+    - name: record
+      type: struct
+      struct: record
+      size: "{local_size}"
+      if: "{local_size == payload_size}"
+      description: "記録（行の列の値）"
+    - name: local_payload
       type: bytes
-      size: "{payload_size}"
-      description: "レコードデータ"
+      size: "{local_size}"
+      if: "{local_size != payload_size}"
+      description: "ページ内にあるペイロードの先頭部分（続きはあふれページ）"
+    - name: overflow_page
+      type: uint32
+      if: "{local_size != payload_size}"
+      description: "最初のあふれページの番号"
+
+  table_interior_cell:
+    - name: left_child_page
+      type: uint32
+      description: "左の子のページ番号（この行 ID 以下の行を持つ）"
+    - name: rowid
+      type: vlq
+      description: "行 ID の区切り"
+
+  index_leaf_cell:
+    - name: payload_size
+      type: vlq
+      description: "ペイロード（索引のキーの記録）のバイト数"
+    - name: index_payload
+      type: struct
+      struct: index_payload
+      description: "ペイロード"
+
+  index_interior_cell:
+    - name: left_child_page
+      type: uint32
+      description: "左の子のページ番号"
+    - name: payload_size
+      type: vlq
+      description: "ペイロード（索引のキーの記録）のバイト数"
+    - name: index_payload
+      type: struct
+      struct: index_payload
+      description: "ペイロード"
+
+  index_payload:
+    - name: max_local
+      type: virtual
+      value: "{((usable_size - 12) * 64 / 255) - 23}"
+      padding: true
+      description: "ページ内に置けるペイロードの最大（作業用。索引は ((U - 12) × 64 / 255) - 23）"
+    - name: local_size
+      type: virtual
+      value: "{payload_size <= max_local ? payload_size : ((((usable_size - 12) * 32 / 255) - 23) + ((payload_size - (((usable_size - 12) * 32 / 255) - 23)) % (usable_size - 4)) <= max_local ? (((usable_size - 12) * 32 / 255) - 23) + ((payload_size - (((usable_size - 12) * 32 / 255) - 23)) % (usable_size - 4)) : ((usable_size - 12) * 32 / 255) - 23)}"
+      description: "ページ内にあるペイロードのバイト数（残りはあふれページ）"
+    - name: record
+      type: struct
+      struct: record
+      size: "{local_size}"
+      if: "{local_size == payload_size}"
+      description: "記録（索引の列の値 + 行 ID）"
+    - name: local_payload
+      type: bytes
+      size: "{local_size}"
+      if: "{local_size != payload_size}"
+      description: "ページ内にあるペイロードの先頭部分（続きはあふれページ）"
+    - name: overflow_page
+      type: uint32
+      if: "{local_size != payload_size}"
+      description: "最初のあふれページの番号"
+
+  record:
+    - name: record_size
+      type: virtual
+      value: "{remaining}"
+      padding: true
+      description: "記録のバイト数（作業用）"
+    - name: header_size
+      type: vlq
+      description: "記録のヘッダのバイト数（この可変長整数を含む）"
+    - name: serial_types
+      type: vlq
+      repeat_while: "{record_size - remaining < header_size}"
+      description: "各列のシリアル型（値の型と大きさ）"
+    - name: values
+      type: struct
+      struct: record_value
+      repeat_count: "{len(serial_types)}"
+      description: "列の値"
+
+  record_value:
+    - name: serial_type
+      type: virtual
+      value: "{serial_types[_index]}"
+      description: "シリアル型（0 = NULL、1〜6 = 整数、7 = 浮動小数点数、8 / 9 = 定数 0 / 1、12 以上の偶数 = BLOB、13 以上の奇数 = 文字列）"
+    - name: kind
+      type: virtual
+      value: "{serial_type == 0 ? 'NULL' : (serial_type <= 6 ? 'INTEGER' : (serial_type == 7 ? 'REAL' : (serial_type <= 9 ? 'INTEGER' : (serial_type <= 11 ? 'reserved' : (serial_type % 2 == 0 ? 'BLOB' : 'TEXT')))))}"
+      description: "値の型"
+    - name: int8_value
+      type: int8
+      if: "{serial_type == 1}"
+      description: "8 ビットの符号付き整数"
+    - name: int16_value
+      type: int16
+      if: "{serial_type == 2}"
+      description: "16 ビットの符号付き整数"
+    - name: int24_raw
+      type: bitfield
+      size: "3"
+      if: "{serial_type == 3}"
+      description: "24 ビットの符号付き整数"
+      fields:
+        - name: int24_bits
+          bits: "23:0"
+          description: "ビット列"
+    - name: int24_value
+      type: virtual
+      value: "{int24_bits >= 0x800000 ? int24_bits - 0x1000000 : int24_bits}"
+      if: "{serial_type == 3}"
+      description: "24 ビットの符号付き整数の値"
+    - name: int32_value
+      type: int32
+      if: "{serial_type == 4}"
+      description: "32 ビットの符号付き整数"
+    - name: int48_raw
+      type: bitfield
+      size: "6"
+      if: "{serial_type == 5}"
+      description: "48 ビットの符号付き整数"
+      fields:
+        - name: int48_bits
+          bits: "47:0"
+          description: "ビット列"
+    - name: int48_value
+      type: virtual
+      value: "{int48_bits >= 0x800000000000 ? int48_bits - 0x1000000000000 : int48_bits}"
+      if: "{serial_type == 5}"
+      description: "48 ビットの符号付き整数の値"
+    - name: int64_value
+      type: int64
+      if: "{serial_type == 6}"
+      description: "64 ビットの符号付き整数"
+    - name: real_value
+      type: float64
+      if: "{serial_type == 7}"
+      description: "倍精度の浮動小数点数"
+    - name: constant_value
+      type: virtual
+      value: "{serial_type - 8}"
+      if: "{serial_type == 8 or serial_type == 9}"
+      description: "定数の整数（0 か 1。スキーマの形式 4 以降）"
+    - name: blob_value
+      type: bytes
+      size: "{(serial_type - 12) / 2}"
+      if: "{serial_type >= 12 and serial_type % 2 == 0}"
+      description: "BLOB（バイト列）"
+    - name: text_value
+      type: utf8
+      size: "{(serial_type - 13) / 2}"
+      if: "{serial_type >= 13 and serial_type % 2 == 1 and text_encoding == 1}"
+      description: "文字列（UTF-8）"
+    - name: text_value_utf16le
+      type: utf16le
+      size: "{(serial_type - 13) / 2}"
+      if: "{serial_type >= 13 and serial_type % 2 == 1 and text_encoding == 2}"
+      description: "文字列（UTF-16LE）"
+    - name: text_value_utf16be
+      type: utf16be
+      size: "{(serial_type - 13) / 2}"
+      if: "{serial_type >= 13 and serial_type % 2 == 1 and text_encoding == 3}"
+      description: "文字列（UTF-16BE）"
+
+  unknown_cell: []
+
+  freelist_trunk_page:
+    - name: next_trunk_page
+      type: uint32
+      description: "次のトランクページの番号（0 なら最後）"
+    - name: leaf_count
+      type: uint32
+      description: "このトランクが持つ葉のページの数"
+    - name: leaf_pages
+      type: uint32
+      repeat_count: "{leaf_count}"
+      description: "空きリストの葉のページの番号"
+    - name: unused
+      type: bytes
+      size: remaining
+      description: "未使用"
+
+  other_page:
+    - name: next_page
+      type: uint32
+      description: "先頭 4 バイト（あふれページ・空きリストのトランクなら次のページの番号）"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "ページの残り"

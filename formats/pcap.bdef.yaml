@@ -1,311 +1,1131 @@
+# pcap / pcapng（パケットキャプチャ）
+# 仕様: pcap は draft-ietf-opsawg-pcap-05（2025）、pcapng は draft-ietf-opsawg-pcapng-04（2025）、リンク層の種類は draft-ietf-opsawg-pcaplinktype / tcpdump.org の LINKTYPE_ 一覧。
+#   中のプロトコルは IEEE 802.3・802.1Q（VLAN）、RFC 826（ARP）、RFC 791（IPv4）、RFC 8200（IPv6）、RFC 9293（TCP）、RFC 768（UDP）、RFC 792 / 4443（ICMP / ICMPv6）。
+#   tcpdump 4.99（libpcap 1.10）が読める・出力したファイルで照合した
+# 構造: pcap はファイルヘッダ（マジック・版・スナップ長・リンク層の種類）→ パケット（時刻・キャプチャした長さ・元の長さ + データ）の並び。
+#   マジックでバイト順（0xA1B2C3D4 / 0xD4C3B2A1）と時刻の単位（マイクロ秒 / ナノ秒の 0xA1B23C4D）が決まる。
+#   pcapng はブロック（種類 + 長さ + 中身 + 長さ）の並びで、セクションヘッダ（SHB）のバイト順の印でバイト順が決まり、インタフェースの記述（IDB）がリンク層の種類を持つ
+# 対応していないもの: IPv4・TCP・UDP・ICMP のチェックサムの検証（インターネットチェックサムのアルゴリズムが無い）、IP のフラグメントの再組み立て・TCP のストリームの再構成、
+#   アプリケーション層（DNS・HTTP・TLS など。ペイロードはバイト列）、pcapng の複数のセクションでバイト順が違うファイル（最初の SHB のバイト順で読む）、
+#   複数のインタフェースでリンク層の種類が違う pcapng（最後に読んだ IDB の種類で EPB を分解する）、
+#   pcap の LinkType の上位ビット（FCS の長さ）の分解、802.11・Bluetooth など Ethernet 以外のリンク層の中身（バイト列）、IPv4 のオプションの分解
 name: PCAP
 endianness: little
-root: pcap
+root: capture
 
 enums:
   link_type:
     - value: 0
       label: "NULL"
-      description: "BSDループバック"
+      description: "BSD のループバック（ホストのバイト順の 4 バイトのアドレスファミリ）"
     - value: 1
       label: ETHERNET
       description: "IEEE 802.3 Ethernet"
     - value: 6
-      label: TOKEN_RING
-      description: "IEEE 802.5 Token Ring"
+      label: IEEE802_5
+      description: "IEEE 802.5 トークンリング"
+    - value: 9
+      label: PPP
+      description: "PPP"
     - value: 101
-      label: RAW_IP
-      description: "Raw IP"
+      label: RAW
+      description: "IP のみ（先頭 4 ビットの版で IPv4 / IPv6）"
     - value: 105
       label: IEEE802_11
-      description: "IEEE 802.11無線LAN"
+      description: "IEEE 802.11 無線 LAN"
     - value: 108
       label: LOOP
-      description: "OpenBSDループバック"
+      description: "OpenBSD のループバック（ネットワークのバイト順のアドレスファミリ）"
     - value: 113
       label: LINUX_SLL
-      description: "Linuxクックドキャプチャ"
+      description: "Linux の cooked キャプチャ（版 1）"
+    - value: 127
+      label: IEEE802_11_RADIOTAP
+      description: "IEEE 802.11 + radiotap ヘッダ"
+    - value: 147
+      label: USER0
+      description: "利用者が定義（147〜162）"
+    - value: 187
+      label: BLUETOOTH_HCI_H4
+      description: "Bluetooth HCI（H4）"
+    - value: 220
+      label: USB_LINUX_MMAPPED
+      description: "Linux の USB（usbmon）"
     - value: 228
       label: IPV4
-      description: "Raw IPv4"
+      description: "IPv4 のみ"
     - value: 229
       label: IPV6
-      description: "Raw IPv6"
+      description: "IPv6 のみ"
     - value: 276
       label: LINUX_SLL2
-      description: "Linuxクックドキャプチャv2"
+      description: "Linux の cooked キャプチャ（版 2）"
 
   ether_type:
     - value: 0x0800
       label: IPv4
-      description: "インターネットプロトコルv4"
+      description: "IPv4"
     - value: 0x0806
       label: ARP
-      description: "アドレス解決プロトコル"
+      description: "ARP"
     - value: 0x8100
       label: VLAN
-      description: "IEEE 802.1Q VLANタギング"
+      description: "IEEE 802.1Q の VLAN タグ"
     - value: 0x86DD
       label: IPv6
-      description: "インターネットプロトコルv6"
+      description: "IPv6"
+    - value: 0x88A8
+      label: QinQ
+      description: "IEEE 802.1ad の S タグ"
+    - value: 0x8847
+      label: MPLS
+      description: "MPLS ユニキャスト"
+    - value: 0x8863
+      label: PPPoE_Discovery
+      description: "PPPoE の探索"
+    - value: 0x8864
+      label: PPPoE_Session
+      description: "PPPoE のセッション"
+    - value: 0x88CC
+      label: LLDP
+      description: "LLDP"
 
-  protocol:
+  ip_protocol:
+    - value: 0
+      label: HOPOPT
+      description: "IPv6 のホップバイホップオプション"
     - value: 1
       label: ICMP
-      description: "インターネット制御メッセージプロトコル"
+      description: "ICMP"
+    - value: 2
+      label: IGMP
+      description: "IGMP"
     - value: 6
       label: TCP
-      description: "伝送制御プロトコル"
+      description: "TCP"
     - value: 17
       label: UDP
-      description: "ユーザデータグラムプロトコル"
+      description: "UDP"
+    - value: 41
+      label: IPv6
+      description: "IPv6 のカプセル化"
+    - value: 43
+      label: IPv6_Route
+      description: "IPv6 のルーティングヘッダ"
+    - value: 44
+      label: IPv6_Frag
+      description: "IPv6 のフラグメントヘッダ"
+    - value: 47
+      label: GRE
+      description: "GRE"
+    - value: 50
+      label: ESP
+      description: "ESP（IPsec）"
+    - value: 51
+      label: AH
+      description: "AH（IPsec）"
+    - value: 58
+      label: IPv6_ICMP
+      description: "ICMPv6"
+    - value: 59
+      label: IPv6_NoNxt
+      description: "次のヘッダ無し"
+    - value: 60
+      label: IPv6_Opts
+      description: "IPv6 の宛先オプション"
+    - value: 132
+      label: SCTP
+      description: "SCTP"
+
+  arp_operation:
+    - value: 1
+      label: request
+      description: "要求"
+    - value: 2
+      label: reply
+      description: "応答"
+
+  tcp_option_kind:
+    - value: 0
+      label: EOL
+      description: "オプションの終わり"
+    - value: 1
+      label: NOP
+      description: "詰め物"
+    - value: 2
+      label: MSS
+      description: "最大セグメント長"
+    - value: 3
+      label: WS
+      description: "ウィンドウスケール"
+    - value: 4
+      label: SACK_PERMITTED
+      description: "選択確認応答を使える"
+    - value: 5
+      label: SACK
+      description: "選択確認応答"
+    - value: 8
+      label: TIMESTAMPS
+      description: "タイムスタンプ"
+    - value: 30
+      label: MPTCP
+      description: "マルチパス TCP"
+    - value: 34
+      label: TFO
+      description: "TCP Fast Open のクッキー"
+
+  pcapng_block_type:
+    - value: 0x0A0D0D0A
+      label: SHB
+      description: "セクションヘッダ"
+    - value: 1
+      label: IDB
+      description: "インタフェースの記述"
+    - value: 2
+      label: PB
+      description: "パケット（廃止）"
+    - value: 3
+      label: SPB
+      description: "簡易パケット"
+    - value: 4
+      label: NRB
+      description: "名前の解決"
+    - value: 5
+      label: ISB
+      description: "インタフェースの統計"
+    - value: 6
+      label: EPB
+      description: "拡張パケット"
+    - value: 7
+      label: TSJB
+      description: "systemd のジャーナルのエクスポート"
+    - value: 10
+      label: DSB
+      description: "復号の秘密（TLS の鍵など）"
+    - value: 0x00000BAD
+      label: CB
+      description: "独自のブロック（コピーしてよい）"
+    - value: 0x40000BAD
+      label: CB_NOCOPY
+      description: "独自のブロック（コピーしてはならない）"
+
+  nrb_record_type:
+    - value: 0
+      label: nrb_record_end
+      description: "レコードの終わり"
+    - value: 1
+      label: nrb_record_ipv4
+      description: "IPv4 アドレスと名前"
+    - value: 2
+      label: nrb_record_ipv6
+      description: "IPv6 アドレスと名前"
 
 structs:
-  pcap:
-    - name: header
-      type: struct
-      struct: pcap_header
-    - name: packets
-      type: struct
-      struct: pcap_packet
-      repeat: eof
+  capture:
+    - name: magic_be
+      type: uint32
+      endianness: big
+      seek: "{0}"
+      seek_restore: true
+      padding: true
+      description: "先頭 4 バイト（作業用。ビッグエンディアンで読んだマジック）"
+    - name: bom_be
+      type: uint32
+      endianness: big
+      seek: "{8}"
+      seek_restore: true
+      if: "{magic_be == 0x0A0D0D0A and remaining >= 12}"
+      padding: true
+      description: "最初の SHB のバイト順の印（作業用。ビッグエンディアンで読んだ値）"
+    - name: body
+      type: switch
+      switch_on: "{magic_be}"
+      cases:
+        "0x0A0D0D0A": pcapng_file
+      default: pcap_file
+      description: "pcap か pcapng か（先頭の 4 バイトで判別）"
 
-  pcap_header:
-    - name: magic
-      type: uint32
-      description: "PCAPマジックナンバー（リトルエンディアン: 0xA1B2C3D4）"
-      validate: "{magic == 0xA1B2C3D4}"
-    - name: version_major
-      type: uint16
-    - name: version_minor
-      type: uint16
-    - name: thiszone
-      type: int32
-      description: "GMTからローカルタイムゾーンへの補正"
-    - name: sigfigs
-      type: uint32
-      description: "タイムスタンプの精度（通常0）"
-    - name: snaplen
-      type: uint32
-      description: "キャプチャパケットの最大長"
-    - name: network
-      type: uint32
-      enum: link_type
+  # ================= pcap =================
+  pcap_file:
+    endianness: "{magic_be == 0xA1B2C3D4 or magic_be == 0xA1B23C4D ? 'big' : 'little'}"
+    fields:
+      - name: magic
+        type: uint32
+        validate: "{magic == 0xA1B2C3D4 or magic == 0xA1B23C4D}"
+        description: "マジック（0xA1B2C3D4 = マイクロ秒、0xA1B23C4D = ナノ秒。書いた機械のバイト順で書かれる）"
+      - name: nanosecond
+        type: virtual
+        value: "{magic == 0xA1B23C4D ? 1 : 0}"
+        description: "時刻の端数がナノ秒か（0 ならマイクロ秒）"
+      - name: version_major
+        type: uint16
+        description: "主版（2）"
+      - name: version_minor
+        type: uint16
+        description: "副版（4）"
+      - name: thiszone
+        type: int32
+        description: "時刻の補正（予約。0）"
+      - name: sigfigs
+        type: uint32
+        description: "時刻の精度（予約。0）"
+      - name: snaplen
+        type: uint32
+        description: "パケットごとにキャプチャする最大バイト数"
+      - name: network
+        type: uint32
+        enum: link_type
+        description: "リンク層の種類（LINKTYPE_）"
+      - name: link
+        type: virtual
+        value: "{network & 0x0FFFFFFF}"
+        padding: true
+        description: "リンク層の種類（作業用。上位 4 ビットの FCS の情報を除く）"
+      - name: packets
+        type: struct
+        struct: pcap_record
+        repeat: eof
+        description: "パケットの並び"
 
-  pcap_packet:
+  pcap_record:
     - name: ts_sec
       type: uint32
-      description: "タイムスタンプ（秒）"
-    - name: ts_usec
+      description: "時刻（1970-01-01 からの秒）"
+    - name: ts_frac
       type: uint32
-      description: "タイムスタンプ（マイクロ秒）"
+      description: "時刻の端数（ヘッダのマジックでマイクロ秒かナノ秒）"
     - name: incl_len
       type: uint32
-      description: "キャプチャされたバイト数"
+      description: "キャプチャしたバイト数"
     - name: orig_len
       type: uint32
-      description: "元のパケット長"
+      description: "元のパケットのバイト数（スナップ長で切り詰める前）"
     - name: data
       type: switch
       size: "{incl_len}"
-      switch_on: "{network}"
+      switch_on: "{link}"
+      cases:
+        "0": null_frame
+        "1": ethernet_frame
+        "101": ip_packet
+        "108": loop_frame
+        "113": linux_sll_frame
+        "228": ip_packet
+        "229": ip_packet
+        "276": linux_sll2_frame
+      default: raw_data
+      description: "パケットのデータ（リンク層の種類で分解する）"
+
+  # ================= pcapng =================
+  pcapng_file:
+    endianness: "{bom_be == 0x1A2B3C4D ? 'big' : 'little'}"
+    fields:
+      - name: blocks
+        type: struct
+        struct: pcapng_block
+        repeat: eof
+        description: "ブロックの並び"
+
+  pcapng_block:
+    - name: block_type
+      type: uint32
+      enum: pcapng_block_type
+      description: "ブロックの種類"
+    - name: block_total_length
+      type: uint32
+      description: "ブロック全体のバイト数（種類と 2 つの長さを含む。4 の倍数）"
+    - name: block_body
+      type: switch
+      size: "{block_total_length - 12}"
+      switch_on: "{block_type}"
+      cases:
+        "0x0A0D0D0A": section_header_block
+        "1": interface_description_block
+        "3": simple_packet_block
+        "4": name_resolution_block
+        "5": interface_statistics_block
+        "6": enhanced_packet_block
+      default: raw_data
+      description: "ブロックの中身"
+    - name: block_total_length_trailer
+      type: uint32
+      validate: "{block_total_length_trailer == block_total_length}"
+      description: "ブロック全体のバイト数（先頭の値と同じ。後ろから読むため）"
+
+  section_header_block:
+    - name: byte_order_magic
+      type: uint32
+      validate: "{byte_order_magic == 0x1A2B3C4D}"
+      description: "バイト順の印（0x1A2B3C4D。逆に読めたらバイト順が逆）"
+    - name: major_version
+      type: uint16
+      description: "主版（1）"
+    - name: minor_version
+      type: uint16
+      description: "副版（0）"
+    - name: section_length
+      type: int64
+      description: "セクションのバイト数（-1 は不明）"
+    - name: options
+      type: struct
+      struct: pcapng_option
+      repeat: eof
+      description: "オプション（shb_hardware = 2・shb_os = 3・shb_userappl = 4）"
+
+  interface_description_block:
+    - name: link_type
+      type: uint16
+      enum: link_type
+      state: link_type
+      description: "リンク層の種類（この後ろの EPB の分解に使う）"
+    - name: reserved
+      type: uint16
+      description: "予約（0）"
+    - name: snaplen
+      type: uint32
+      description: "パケットごとにキャプチャする最大バイト数（0 は無制限）"
+    - name: options
+      type: struct
+      struct: pcapng_option
+      repeat: eof
+      description: "オプション（if_name = 2・if_description = 3・if_tsresol = 9・if_os = 12 など）"
+
+  enhanced_packet_block:
+    - name: interface_id
+      type: uint32
+      description: "インタフェースの番号（IDB の順番）"
+    - name: timestamp_high
+      type: uint32
+      description: "時刻の上位 32 ビット（既定の単位はマイクロ秒。IDB の if_tsresol で変わる）"
+    - name: timestamp_low
+      type: uint32
+      description: "時刻の下位 32 ビット"
+    - name: timestamp
+      type: virtual
+      value: "{(timestamp_high << 32) | timestamp_low}"
+      description: "時刻（1970-01-01 からの if_tsresol の単位の数）"
+    - name: captured_length
+      type: uint32
+      description: "キャプチャしたバイト数"
+    - name: original_length
+      type: uint32
+      description: "元のパケットのバイト数"
+    - name: link
+      type: virtual
+      value: "{@link_type}"
+      padding: true
+      description: "リンク層の種類（作業用。最後に読んだ IDB の値）"
+    - name: packet_data
+      type: switch
+      size: "{captured_length}"
+      switch_on: "{link}"
+      cases:
+        "0": null_frame
+        "1": ethernet_frame
+        "101": ip_packet
+        "108": loop_frame
+        "113": linux_sll_frame
+        "228": ip_packet
+        "229": ip_packet
+        "276": linux_sll2_frame
+      default: raw_data
+      description: "パケットのデータ"
+    - name: packet_padding
+      type: bytes
+      size: "{(4 - captured_length % 4) % 4}"
+      padding: true
+      description: "4 バイト境界への詰め物"
+    - name: options
+      type: struct
+      struct: pcapng_option
+      repeat: eof
+      description: "オプション（epb_flags = 2・epb_hash = 3・epb_dropcount = 4 など）"
+
+  simple_packet_block:
+    - name: original_length
+      type: uint32
+      description: "元のパケットのバイト数"
+    - name: link
+      type: virtual
+      value: "{@link_type}"
+      padding: true
+      description: "リンク層の種類（作業用。最初の IDB の値）"
+    - name: packet_data
+      type: switch
+      size: "{remaining < original_length ? remaining : original_length}"
+      switch_on: "{link}"
       cases:
         "1": ethernet_frame
       default: raw_data
+      description: "パケットのデータ（スナップ長で切り詰められていることがある）"
+    - name: packet_padding
+      type: bytes
+      size: remaining
+      padding: true
+      description: "4 バイト境界への詰め物"
 
+  name_resolution_block:
+    - name: records
+      type: struct
+      struct: nrb_record
+      repeat_until: "{record_type == 0 or remaining == 0}"
+      description: "名前の解決のレコード（nrb_record_end で終わる）"
+    - name: options
+      type: struct
+      struct: pcapng_option
+      repeat: eof
+      description: "オプション"
+
+  nrb_record:
+    - name: record_type
+      type: uint16
+      enum: nrb_record_type
+      description: "レコードの種類"
+    - name: record_value_length
+      type: uint16
+      description: "値のバイト数"
+    - name: ipv4_value
+      type: uint32
+      endianness: big
+      if: "{record_type == 1}"
+      padding: true
+      description: "IPv4 アドレス（作業用）"
+    - name: ipv4_address
+      type: virtual
+      value: "{concat(((ipv4_value >> 24) & 255), '.', ((ipv4_value >> 16) & 255), '.', ((ipv4_value >> 8) & 255), '.', ((ipv4_value >> 0) & 255))}"
+      if: "{record_type == 1}"
+      description: "IPv4 アドレス（ドット区切り）"
+    - name: ipv6_address
+      type: bytes
+      size: "16"
+      if: "{record_type == 2}"
+      description: "IPv6 アドレス"
+    - name: names
+      type: bytes
+      size: "{record_value_length - (record_type == 1 ? 4 : (record_type == 2 ? 16 : record_value_length))}"
+      description: "名前（NUL で終わる文字列の並び）"
+    - name: record_padding
+      type: bytes
+      size: "{(4 - record_value_length % 4) % 4}"
+      padding: true
+      description: "4 バイト境界への詰め物"
+
+  interface_statistics_block:
+    - name: interface_id
+      type: uint32
+      description: "インタフェースの番号"
+    - name: timestamp_high
+      type: uint32
+      description: "時刻の上位 32 ビット"
+    - name: timestamp_low
+      type: uint32
+      description: "時刻の下位 32 ビット"
+    - name: options
+      type: struct
+      struct: pcapng_option
+      repeat: eof
+      description: "オプション（isb_ifrecv = 4・isb_ifdrop = 5 など）"
+
+  pcapng_option:
+    - name: option_code
+      type: uint16
+      description: "オプションの種類（0 = opt_endofopt、1 = opt_comment、それ以外はブロックごと）"
+    - name: option_length
+      type: uint16
+      description: "値のバイト数"
+    - name: option_value
+      type: bytes
+      size: "{option_length}"
+      if: "{option_code != 1}"
+      description: "値"
+    - name: comment
+      type: utf8
+      size: "{option_length}"
+      if: "{option_code == 1}"
+      description: "コメント（UTF-8）"
+    - name: option_padding
+      type: bytes
+      size: "{(4 - option_length % 4) % 4}"
+      padding: true
+      description: "4 バイト境界への詰め物"
+
+  # ================= リンク層 =================
   ethernet_frame:
     endianness: big
     fields:
+      - name: dst_mac_hi
+        type: uint16
+        padding: true
+        description: "宛先の MAC アドレスの上位 2 バイト（作業用）"
+      - name: dst_mac_lo
+        type: uint32
+        padding: true
+        description: "宛先の MAC アドレスの下位 4 バイト（作業用）"
       - name: dst_mac
-        type: bytes
-        size: "6"
-        description: "宛先MACアドレス"
+        type: virtual
+        value: "{concat(lower(substr(hex(((dst_mac_hi >> 8) & 255) + 256), 3, 2)), ':', lower(substr(hex((dst_mac_hi & 255) + 256), 3, 2)), ':', lower(substr(hex(((dst_mac_lo >> 24) & 255) + 256), 3, 2)), ':', lower(substr(hex(((dst_mac_lo >> 16) & 255) + 256), 3, 2)), ':', lower(substr(hex(((dst_mac_lo >> 8) & 255) + 256), 3, 2)), ':', lower(substr(hex((dst_mac_lo & 255) + 256), 3, 2)))}"
+        description: "宛先の MAC アドレス（コロン区切り）"
+      - name: src_mac_hi
+        type: uint16
+        padding: true
+        description: "送信元の MAC アドレスの上位 2 バイト（作業用）"
+      - name: src_mac_lo
+        type: uint32
+        padding: true
+        description: "送信元の MAC アドレスの下位 4 バイト（作業用）"
       - name: src_mac
-        type: bytes
-        size: "6"
-        description: "送信元MACアドレス"
+        type: virtual
+        value: "{concat(lower(substr(hex(((src_mac_hi >> 8) & 255) + 256), 3, 2)), ':', lower(substr(hex((src_mac_hi & 255) + 256), 3, 2)), ':', lower(substr(hex(((src_mac_lo >> 24) & 255) + 256), 3, 2)), ':', lower(substr(hex(((src_mac_lo >> 16) & 255) + 256), 3, 2)), ':', lower(substr(hex(((src_mac_lo >> 8) & 255) + 256), 3, 2)), ':', lower(substr(hex((src_mac_lo & 255) + 256), 3, 2)))}"
+        description: "送信元の MAC アドレス（コロン区切り）"
       - name: ether_type
         type: uint16
         enum: ether_type
-        description: "EtherType"
+        description: "上位のプロトコル（1536 以上）か、IEEE 802.3 の長さ（1500 以下）"
+      - name: vlan_tags
+        type: struct
+        struct: vlan_tag
+        repeat_while: "{ether_type == 0x8100 or ether_type == 0x88A8}"
+        description: "VLAN タグ（802.1Q / 802.1ad。タグの後ろに次の EtherType が続く）"
       - name: payload
         type: switch
         switch_on: "{ether_type}"
         cases:
-          "2048": ipv4_packet
-          "34525": ipv6_packet
+          "0x0800": ip_packet
+          "0x0806": arp_packet
+          "0x86DD": ip_packet
         default: raw_data
+        description: "中身（EtherType で振り分ける。IPv4 の後ろの 60 バイトに満たない分の詰め物を含む）"
+
+  vlan_tag:
+    - name: tci
+      type: bitfield
+      size: "2"
+      description: "タグの制御情報"
+      fields:
+        - name: priority
+          bits: "15:13"
+          description: "優先度（PCP）"
+        - name: dei
+          bits: "12"
+          description: "廃棄してよい印"
+        - name: vlan_id
+          bits: "11:0"
+          description: "VLAN ID"
+    - name: ether_type
+      type: uint16
+      enum: ether_type
+      description: "タグの後ろのプロトコル"
+
+  null_frame:
+    - name: family
+      type: uint32
+      description: "アドレスファミリ（キャプチャした機械のバイト順。2 = IPv4、24 / 28 / 30 = IPv6）"
+    - name: payload
+      type: switch
+      switch_on: "{family == 2 or family == 0x02000000 ? 4 : (family == 24 or family == 28 or family == 30 or family == 0x18000000 or family == 0x1C000000 or family == 0x1E000000 ? 6 : 0)}"
+      cases:
+        "4": ip_packet
+        "6": ip_packet
+      default: raw_data
+      description: "中身"
+
+  loop_frame:
+    - name: family
+      type: uint32
+      endianness: big
+      description: "アドレスファミリ（ネットワークのバイト順。2 = IPv4、24 / 28 / 30 = IPv6）"
+    - name: payload
+      type: switch
+      switch_on: "{family == 2 ? 4 : (family == 24 or family == 28 or family == 30 ? 6 : 0)}"
+      cases:
+        "4": ip_packet
+        "6": ip_packet
+      default: raw_data
+      description: "中身"
+
+  linux_sll_frame:
+    endianness: big
+    fields:
+      - name: packet_type
+        type: uint16
+        description: "パケットの向き（0 = 自分宛て、1 = ブロードキャスト、2 = マルチキャスト、3 = 他宛て、4 = 送信）"
+      - name: arphrd_type
+        type: uint16
+        description: "リンク層のアドレスの種類（ARPHRD_。1 = Ethernet）"
+      - name: address_length
+        type: uint16
+        description: "リンク層のアドレスのバイト数"
+      - name: address
+        type: bytes
+        size: "8"
+        description: "リンク層のアドレス（8 バイトに詰める）"
+      - name: protocol
+        type: uint16
+        enum: ether_type
+        description: "上位のプロトコル（EtherType）"
+      - name: payload
+        type: switch
+        switch_on: "{protocol}"
+        cases:
+          "0x0800": ip_packet
+          "0x0806": arp_packet
+          "0x86DD": ip_packet
+        default: raw_data
+        description: "中身"
+
+  linux_sll2_frame:
+    endianness: big
+    fields:
+      - name: protocol
+        type: uint16
+        enum: ether_type
+        description: "上位のプロトコル（EtherType）"
+      - name: reserved
+        type: uint16
+        description: "予約（0）"
+      - name: interface_index
+        type: uint32
+        description: "インタフェースの番号"
+      - name: arphrd_type
+        type: uint16
+        description: "リンク層のアドレスの種類（ARPHRD_）"
+      - name: packet_type
+        type: uint8
+        description: "パケットの向き"
+      - name: address_length
+        type: uint8
+        description: "リンク層のアドレスのバイト数"
+      - name: address
+        type: bytes
+        size: "8"
+        description: "リンク層のアドレス"
+      - name: payload
+        type: switch
+        switch_on: "{protocol}"
+        cases:
+          "0x0800": ip_packet
+          "0x0806": arp_packet
+          "0x86DD": ip_packet
+        default: raw_data
+        description: "中身"
+
+  arp_packet:
+    endianness: big
+    fields:
+      - name: hardware_type
+        type: uint16
+        description: "ハードウェアの種類（1 = Ethernet）"
+      - name: protocol_type
+        type: uint16
+        enum: ether_type
+        description: "プロトコルの種類（0x0800 = IPv4）"
+      - name: hardware_size
+        type: uint8
+        description: "ハードウェアのアドレスのバイト数（6）"
+      - name: protocol_size
+        type: uint8
+        description: "プロトコルのアドレスのバイト数（4）"
+      - name: operation
+        type: uint16
+        enum: arp_operation
+        description: "操作"
+      - name: sender_hardware_address
+        type: bytes
+        size: "{hardware_size}"
+        description: "送信元のハードウェアのアドレス"
+      - name: sender_protocol_address
+        type: bytes
+        size: "{protocol_size}"
+        description: "送信元のプロトコルのアドレス"
+      - name: target_hardware_address
+        type: bytes
+        size: "{hardware_size}"
+        description: "対象のハードウェアのアドレス"
+      - name: target_protocol_address
+        type: bytes
+        size: "{protocol_size}"
+        description: "対象のプロトコルのアドレス"
+      - name: trailer
+        type: bytes
+        size: remaining
+        if: "{remaining > 0}"
+        description: "Ethernet の最小長への詰め物"
+
+  # ================= IP =================
+  # IP パケット: 先頭 4 ビットの版で IPv4 と IPv6 に分ける（リンク層の種類が RAW のときも同じ）
+  ip_packet:
+    endianness: big
+    fields:
+      - name: version_byte
+        type: bitfield
+        size: "1"
+        description: "先頭のバイト"
+        fields:
+          - name: version
+            bits: "7:4"
+            description: "IP の版（4 / 6）"
+          - name: low_nibble
+            bits: "3:0"
+            description: "IPv4 はヘッダ長（4 バイト単位）、IPv6 はトラフィッククラスの上位 4 ビット"
+      - name: packet
+        type: switch
+        switch_on: "{version}"
+        cases:
+          "4": ipv4_packet
+          "6": ipv6_packet
+        default: raw_data
+        description: "版ごとのヘッダと中身"
 
   ipv4_packet:
     endianness: big
     fields:
-      - name: version_ihl
-        type: uint8
-        description: "バージョン（4ビット）+ IHL（4ビット）"
-      - name: version
-        type: virtual
-        value: "{version_ihl >> 4}"
-        description: "IPバージョン（4 = IPv4）"
       - name: ihl
         type: virtual
-        value: "{version_ihl & 0x0F}"
-        description: "インターネットヘッダ長（32ビットワード単位）"
-      - name: tos
-        type: uint8
-        description: "サービスタイプ"
+        value: "{low_nibble}"
+        description: "ヘッダ長（4 バイト単位。5〜15）"
+      - name: dscp_ecn
+        type: bitfield
+        size: "1"
+        description: "サービスの種類"
+        fields:
+          - name: dscp
+            bits: "7:2"
+            description: "DiffServ のコードポイント"
+          - name: ecn
+            bits: "1:0"
+            description: "明示的な輻輳通知"
       - name: total_length
         type: uint16
-        description: "パケット全長"
+        description: "パケット全体のバイト数（ヘッダを含む）"
       - name: identification
         type: uint16
-        description: "識別子"
+        description: "フラグメントの識別子"
       - name: flags_fragment
-        type: uint16
-        description: "フラグ（3ビット）+ フラグメントオフセット（13ビット）"
-      - name: flags
-        type: virtual
-        value: "{flags_fragment >> 13}"
-        description: "フラグ（bit 0=予約、bit 1=DF、bit 2=MF）"
-      - name: fragment_offset
-        type: virtual
-        value: "{flags_fragment & 0x1FFF}"
-        description: "フラグメントオフセット（8バイト単位）"
+        type: bitfield
+        size: "2"
+        description: "フラグとフラグメントの位置"
+        fields:
+          - name: reserved_flag
+            bits: "15"
+            description: "予約（0）"
+          - name: dont_fragment
+            bits: "14"
+            description: "フラグメントしてはならない（DF）"
+          - name: more_fragments
+            bits: "13"
+            description: "後ろにフラグメントが続く（MF）"
+          - name: fragment_offset
+            bits: "12:0"
+            description: "フラグメントの位置（8 バイト単位）"
       - name: ttl
         type: uint8
-        description: "生存時間"
+        description: "生存時間（ホップ数の上限）"
       - name: protocol
         type: uint8
-        enum: protocol
-        description: "プロトコル番号"
+        enum: ip_protocol
+        description: "上位のプロトコル"
       - name: header_checksum
         type: uint16
-        description: "ヘッダチェックサム"
+        description: "ヘッダのチェックサム（検証しない）"
+      - name: src_address
+        type: uint32
+        padding: true
+        description: "送信元の IP アドレス（作業用）"
       - name: src_ip
-        type: bytes
-        size: "4"
-        description: "送信元IPアドレス"
+        type: virtual
+        value: "{concat(((src_address >> 24) & 255), '.', ((src_address >> 16) & 255), '.', ((src_address >> 8) & 255), '.', ((src_address >> 0) & 255))}"
+        description: "送信元の IP アドレス（ドット区切り）"
+      - name: dst_address
+        type: uint32
+        padding: true
+        description: "宛先の IP アドレス（作業用）"
       - name: dst_ip
-        type: bytes
-        size: "4"
-        description: "宛先IPアドレス"
+        type: virtual
+        value: "{concat(((dst_address >> 24) & 255), '.', ((dst_address >> 16) & 255), '.', ((dst_address >> 8) & 255), '.', ((dst_address >> 0) & 255))}"
+        description: "宛先の IP アドレス（ドット区切り）"
       - name: options
         type: bytes
         size: "{(ihl - 5) * 4}"
         if: "{ihl > 5}"
-        description: "IPv4オプション（IHL > 5の場合）"
+        description: "IPv4 のオプション（分解しない）"
       - name: body
         type: switch
-        size: remaining
-        switch_on: "{protocol}"
+        size: "{total_length - ihl * 4 >= 0 and total_length - ihl * 4 <= remaining ? total_length - ihl * 4 : remaining}"
+        switch_on: "{fragment_offset == 0 ? protocol : 256}"
         cases:
+          "1": icmp_message
           "6": tcp_segment
           "17": udp_datagram
         default: raw_data
+        description: "中身（total_length で区切る。2 つ目以降のフラグメントは分解しない）"
+      - name: link_padding
+        type: bytes
+        size: remaining
+        if: "{remaining > 0}"
+        description: "IP パケットの後ろの詰め物（Ethernet の最小長など）"
 
+  ipv6_packet:
+    endianness: big
+    fields:
+      - name: tc_flow
+        type: bitfield
+        size: "3"
+        description: "トラフィッククラスの下位 4 ビットとフローラベル"
+        fields:
+          - name: traffic_class_low
+            bits: "23:20"
+            description: "トラフィッククラスの下位 4 ビット"
+          - name: flow_label
+            bits: "19:0"
+            description: "フローラベル"
+      - name: traffic_class
+        type: virtual
+        value: "{(low_nibble << 4) | traffic_class_low}"
+        description: "トラフィッククラス（DSCP + ECN）"
+      - name: payload_length
+        type: uint16
+        description: "ヘッダの後ろのバイト数（拡張ヘッダを含む）"
+      - name: next_header
+        type: uint8
+        enum: ip_protocol
+        description: "次のヘッダ（拡張ヘッダか上位のプロトコル）"
+      - name: hop_limit
+        type: uint8
+        description: "ホップ数の上限"
+      - name: src_hi
+        type: uint64
+        padding: true
+        description: "送信元の IPv6 アドレスの上位 8 バイト（作業用）"
+      - name: src_lo
+        type: uint64
+        padding: true
+        description: "送信元の IPv6 アドレスの下位 8 バイト（作業用）"
+      - name: src_ip
+        type: virtual
+        value: "{concat(lower(substr(hex(((src_hi >> 48) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((src_hi >> 32) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((src_hi >> 16) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((src_hi >> 0) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((src_lo >> 48) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((src_lo >> 32) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((src_lo >> 16) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((src_lo >> 0) & 0xFFFF)), 2, 4)))}"
+        description: "送信元の IPv6 アドレス（コロン区切り。0 の連続は省略しない）"
+      - name: dst_hi
+        type: uint64
+        padding: true
+        description: "宛先の IPv6 アドレスの上位 8 バイト（作業用）"
+      - name: dst_lo
+        type: uint64
+        padding: true
+        description: "宛先の IPv6 アドレスの下位 8 バイト（作業用）"
+      - name: dst_ip
+        type: virtual
+        value: "{concat(lower(substr(hex(((dst_hi >> 48) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((dst_hi >> 32) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((dst_hi >> 16) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((dst_hi >> 0) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((dst_lo >> 48) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((dst_lo >> 32) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((dst_lo >> 16) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((dst_lo >> 0) & 0xFFFF)), 2, 4)))}"
+        description: "宛先の IPv6 アドレス（コロン区切り。0 の連続は省略しない）"
+      - name: payload
+        type: struct
+        struct: ipv6_payload
+        size: "{payload_length <= remaining ? payload_length : remaining}"
+        description: "拡張ヘッダと上位のプロトコル"
+      - name: link_padding
+        type: bytes
+        size: remaining
+        if: "{remaining > 0}"
+        description: "IP パケットの後ろの詰め物"
+
+  ipv6_payload:
+    - name: extension_headers
+      type: struct
+      struct: ipv6_extension_header
+      repeat_while: "{(next_header == 0 or next_header == 43 or next_header == 44 or next_header == 60) and remaining >= 8}"
+      description: "拡張ヘッダ（ホップバイホップ・ルーティング・フラグメント・宛先オプション）"
+    - name: upper_layer
+      type: switch
+      size: remaining
+      switch_on: "{next_header}"
+      cases:
+        "6": tcp_segment
+        "17": udp_datagram
+        "58": icmp_message
+      default: raw_data
+      description: "上位のプロトコル"
+
+  ipv6_extension_header:
+    - name: header_type
+      type: virtual
+      value: "{next_header}"
+      enum: ip_protocol
+      description: "この拡張ヘッダの種類"
+    - name: next_header
+      type: uint8
+      enum: ip_protocol
+      description: "次のヘッダ"
+    - name: header_ext_length
+      type: uint8
+      description: "ヘッダの長さ（8 バイト単位、最初の 8 バイトを除く。フラグメントヘッダは予約）"
+    - name: data
+      type: bytes
+      size: "{header_type == 44 ? 6 : header_ext_length * 8 + 6}"
+      description: "ヘッダの残り（オプション・ルーティングの情報・フラグメントの位置と識別子）"
+
+  # ================= トランスポート層 =================
   tcp_segment:
     endianness: big
     fields:
       - name: src_port
         type: uint16
+        description: "送信元のポート番号"
       - name: dst_port
         type: uint16
+        description: "宛先のポート番号"
       - name: seq_number
         type: uint32
+        description: "シーケンス番号"
       - name: ack_number
         type: uint32
+        description: "確認応答番号"
       - name: data_offset_flags
         type: bitfield
         size: "2"
+        description: "ヘッダ長とフラグ"
         fields:
           - name: data_offset
             bits: "15:12"
-            description: "データオフセット（32ビットワード単位）"
+            description: "ヘッダ長（4 バイト単位）"
           - name: reserved
             bits: "11:9"
-          - name: ns
+            description: "予約（0）"
+          - name: ae
             bits: "8"
+            description: "AccECN（旧 NS）"
           - name: cwr
             bits: "7"
+            description: "輻輳ウィンドウを減らした"
           - name: ece
             bits: "6"
+            description: "ECN のエコー"
           - name: urg
             bits: "5"
+            description: "緊急ポインタが有効"
           - name: ack
             bits: "4"
+            description: "確認応答番号が有効"
           - name: psh
             bits: "3"
+            description: "すぐに上位へ渡す"
           - name: rst
             bits: "2"
+            description: "接続のリセット"
           - name: syn
             bits: "1"
+            description: "接続の開始（シーケンス番号の同期）"
           - name: fin
             bits: "0"
+            description: "送信の終わり"
       - name: window_size
         type: uint16
+        description: "受信ウィンドウ（ウィンドウスケールの前の値）"
       - name: checksum
         type: uint16
+        description: "チェックサム（検証しない）"
       - name: urgent_pointer
         type: uint16
+        description: "緊急データの終わり（URG のとき）"
       - name: options
-        type: bytes
+        type: struct
+        struct: tcp_option
         size: "{(data_offset - 5) * 4}"
+        repeat: eof
         if: "{data_offset > 5}"
-        description: "TCPオプション（data_offset > 5の場合）"
+        description: "TCP のオプション"
       - name: payload
         type: bytes
         size: remaining
+        description: "ペイロード"
+
+  tcp_option:
+    - name: kind
+      type: uint8
+      enum: tcp_option_kind
+      description: "オプションの種類"
+    - name: length
+      type: uint8
+      if: "{kind > 1}"
+      description: "オプション全体のバイト数（種類と長さを含む）"
+    - name: mss
+      type: uint16
+      if: "{kind == 2 and length == 4}"
+      description: "最大セグメント長"
+    - name: window_scale
+      type: uint8
+      if: "{kind == 3 and length == 3}"
+      description: "ウィンドウスケールのシフト数"
+    - name: ts_value
+      type: uint32
+      if: "{kind == 8 and length == 10}"
+      description: "タイムスタンプの値"
+    - name: ts_echo_reply
+      type: uint32
+      if: "{kind == 8 and length == 10}"
+      description: "相手のタイムスタンプの反響"
+    - name: data
+      type: bytes
+      size: "{length - 2}"
+      if: "{kind > 1 and not ((kind == 2 and length == 4) or (kind == 3 and length == 3) or (kind == 8 and length == 10)) and length >= 2}"
+      description: "オプションの値（SACK のブロックなど）"
+    - name: rest
+      type: bytes
+      size: remaining
+      if: "{kind == 0}"
+      padding: true
+      description: "EOL の後ろの詰め物"
 
   udp_datagram:
     endianness: big
     fields:
       - name: src_port
         type: uint16
+        description: "送信元のポート番号"
       - name: dst_port
         type: uint16
+        description: "宛先のポート番号"
       - name: length
         type: uint16
+        description: "ヘッダを含むバイト数"
       - name: checksum
         type: uint16
+        description: "チェックサム（0 は無し。検証しない）"
       - name: payload
         type: bytes
+        size: "{length >= 8 and length - 8 <= remaining ? length - 8 : remaining}"
+        description: "ペイロード（DNS などはバイト列のまま）"
+      - name: extra
+        type: bytes
         size: remaining
+        if: "{remaining > 0}"
+        description: "length より後ろのバイト列"
 
-  ipv6_packet:
+  icmp_message:
     endianness: big
     fields:
-      - name: version_tc_flow
-        type: bitfield
-        size: "4"
-        fields:
-          - name: version
-            bits: "31:28"
-          - name: traffic_class
-            bits: "27:20"
-          - name: flow_label
-            bits: "19:0"
-      - name: payload_length
+      - name: icmp_type
+        type: uint8
+        description: "種類（ICMP: 0 = エコー応答、3 = 到達不能、8 = エコー要求、11 = 時間切れ。ICMPv6: 128 / 129 = エコー、133〜137 = 近隣探索）"
+      - name: code
+        type: uint8
+        description: "種類ごとの詳細の番号"
+      - name: checksum
         type: uint16
-      - name: next_header
-        type: uint8
-        enum: protocol
-      - name: hop_limit
-        type: uint8
-      - name: src_ip
+        description: "チェックサム（検証しない）"
+      - name: identifier
+        type: uint16
+        if: "{(icmp_type == 0 or icmp_type == 8 or icmp_type == 128 or icmp_type == 129) and remaining >= 4}"
+        description: "エコーの識別子"
+      - name: sequence
+        type: uint16
+        if: "{(icmp_type == 0 or icmp_type == 8 or icmp_type == 128 or icmp_type == 129) and remaining >= 2}"
+        description: "エコーのシーケンス番号"
+      - name: rest
         type: bytes
-        size: "16"
-      - name: dst_ip
-        type: bytes
-        size: "16"
-      - name: body
-        type: switch
         size: remaining
-        switch_on: "{next_header}"
-        cases:
-          "6": tcp_segment
-          "17": udp_datagram
-        default: raw_data
+        description: "残り（エコーのデータ・元のパケットのヘッダなど）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ"

@@ -1,31 +1,313 @@
 # PDF（Portable Document Format）
-#
-# PDFは主にテキストベースのフォーマット。オブジェクト（n 0 obj ... endobj）、
-# クロスリファレンステーブル（xref）、トレーラ（trailer << ... >>）は
-# すべてテキスト構文であり、バイナリフィールドレベルの解析では解析不可。
-#
-# また、xrefテーブルの検索にはファイル末尾からの逆方向解析（startxref）が必要で、
-# シーケンシャルなバイナリリーダーでは対応不可。
-# ストリームコンテンツ（stream ... endstream）もバイナリペイロード抽出前に
-# テキスト解析によるストリーム位置の特定が必要。
-#
-# そのため、この定義はバイナリヘッダ（バージョン + バイナリコメントマーカー）に
-# 限定し、残りは生バイト列としてキャプチャする。
-
+# 仕様: ISO 32000-2:2020（PDF 2.0。2024 年の追補を含む）の 7.5 ファイルの構造。qpdf 12・img2pdf が出力した PDF で照合した
+# 構造: ヘッダ（'%PDF-1.x' / '%PDF-2.0' の行 + バイナリであることを示すコメント行）→ 改訂（間接オブジェクト 'n g obj' 〜 'endobj' の並び →
+#   [相互参照表 'xref'] → [トレーラ 'trailer' + 辞書] → 'startxref' + 相互参照の位置 + '%%EOF'）の並び。増分更新のたびに改訂が後ろに足される。
+#   PDF はテキストの構文なので、キーワード（obj・stream・endstream・endobj・xref・trailer・startxref・%%EOF）を前から探して区切る
+# 対応していないもの: 辞書・配列などの値の構文の分解（テキストとして表示）、FlateDecode 以外のフィルタ（LZW・DCT・JBIG2 など。バイト列）と
+#   予測子（PNG の予測子を使う相互参照ストリームの行の復元）、相互参照ストリームとオブジェクトストリームの中身の分解、暗号化された PDF のストリーム（展開しない）、
+#   文字列やストリームの中に現れたキーワード（区切りを誤る）、ヘッダの前のゴミ・末尾の '%%EOF' の後ろの改訂以外のデータ、FDF・リニアライズのヒント表
 name: PDF
 endianness: big
 root: pdf
+
 structs:
   pdf:
-    - name: version
+    - name: file_end
+      type: virtual
+      value: "{remaining}"
+      padding: true
+      description: "ファイルのバイト数（作業用）"
+    - name: is_encrypted
+      type: virtual
+      value: "{until_marker(0x2F, 0x45, 0x6E, 0x63, 0x72, 0x79, 0x70, 0x74) < remaining ? 1 : 0}"
+      description: "暗号化されているか（ファイルのどこかに /Encrypt がある。ストリームを展開しない）"
+    - name: header
       type: ascii
-      size: "8"
-      description: "PDFバージョンヘッダ（例: %PDF-1.7）"
+      size: "{until_marker(0x0A) + 1}"
+      validate: "{substr(header, 0, 5) == '%PDF-'}"
+      description: "ヘッダの行（'%PDF-1.7' など。改行を含む）"
+    - name: version
+      type: virtual
+      value: "{trim(substr(header, 5, 3))}"
+      description: "PDF の版"
     - name: binary_comment
       type: bytes
-      size: "5"
-      description: "バイナリマーカー: % の後に127超の4バイトが続き、バイナリコンテンツを示す"
-    - name: body
+      size: "{until_marker(0x0A) + 1}"
+      if: "{until_marker(0x25) == 0 and until_marker(0x0A) < 16}"
+      description: "バイナリであることを示すコメント行（'%' + 128 以上のバイト 4 個以上。転送でテキスト扱いされないように）"
+    - name: revisions
+      type: struct
+      struct: revision
+      repeat_while: "{until_marker(0x73, 0x74, 0x61, 0x72, 0x74, 0x78, 0x72, 0x65, 0x66) < remaining}"
+      description: "改訂の並び（最初の版と増分更新。それぞれ startxref と %%EOF で終わる）"
+    - name: trailing_data
       type: bytes
       size: remaining
-      description: "PDF本体: オブジェクト、ストリーム、xref、トレーラ。テキストベース構造のためバイナリフィールドレベルの解析には不適"
+      if: "{remaining > 0}"
+      description: "最後の %%EOF の後ろのバイト列（改行など）"
+
+  revision:
+    - name: objects
+      type: struct
+      struct: indirect_object
+      repeat_until: "{more_objects == 0}"
+      description: "間接オブジェクトの並び（endobj の後ろの最初の空白でない文字が数字なら次のオブジェクト）"
+    - name: xref_table
+      type: struct
+      struct: xref_table
+      if: "{until_marker(0x78, 0x72, 0x65, 0x66) < until_marker(0x73, 0x74, 0x61, 0x72, 0x74, 0x78, 0x72, 0x65, 0x66)}"
+      description: "相互参照表（'xref'。PDF 1.5 以降は相互参照ストリームのオブジェクトだけのこともある）"
+    - name: trailer
+      type: struct
+      struct: trailer
+      if: "{until_marker(0x74, 0x72, 0x61, 0x69, 0x6C, 0x65, 0x72) < until_marker(0x73, 0x74, 0x61, 0x72, 0x74, 0x78, 0x72, 0x65, 0x66)}"
+      description: "トレーラ（文書全体の辞書: /Size・/Root・/Info・/ID・/Prev・/Encrypt）"
+    - name: startxref
+      type: struct
+      struct: startxref
+      description: "最後の相互参照の位置と %%EOF"
+
+  indirect_object:
+    - name: object_header
+      type: latin1
+      size: "{until_marker(0x6F, 0x62, 0x6A) + 3}"
+      description: "オブジェクトの見出し（前の改行・コメント + 'オブジェクト番号 世代番号 obj'）"
+    - name: object_id
+      type: virtual
+      value: "{trim(object_header)}"
+      description: "オブジェクトの番号・世代番号（'1 0 obj' の形）"
+    - name: end_distance
+      type: virtual
+      value: "{until_marker(0x65, 0x6E, 0x64, 0x6F, 0x62, 0x6A)}"
+      padding: true
+      description: "endobj までのバイト数（作業用）"
+    - name: stream_search
+      type: struct
+      struct: object_probe
+      size: "{end_distance}"
+      seek: "{file_end - remaining}"
+      seek_restore: true
+      description: "endobj までの範囲で stream を探す（作業用。範囲を区切って後ろのオブジェクトまで探さない）"
+    - name: has_stream
+      type: virtual
+      value: "{stream_search.stream_distance < end_distance ? 1 : 0}"
+      description: "ストリームを持つか（endobj より前に stream がある）"
+    - name: value
+      type: latin1
+      size: "{has_stream == 1 ? stream_search.stream_distance : end_distance}"
+      description: "オブジェクトの値（辞書・配列・数値・文字列などのテキスト。ストリームなら直前の辞書）"
+    - name: stream
+      type: struct
+      struct: pdf_stream
+      if: "{has_stream == 1}"
+      description: "ストリーム"
+    - name: end_keyword
+      type: latin1
+      size: "{until_marker(0x65, 0x6E, 0x64, 0x6F, 0x62, 0x6A) + 6}"
+      description: "オブジェクトの終わり（'endobj'。前の空白を含む）"
+    - name: peek0
+      type: uint8
+      seek: "{file_end - remaining + 0}"
+      seek_restore: true
+      if: "{remaining > 0}"
+      padding: true
+      description: "後ろの 1 バイト目（作業用。次がオブジェクトかを見る）"
+    - name: peek1
+      type: uint8
+      seek: "{file_end - remaining + 1}"
+      seek_restore: true
+      if: "{remaining > 1}"
+      padding: true
+      description: "後ろの 2 バイト目（作業用。次がオブジェクトかを見る）"
+    - name: peek2
+      type: uint8
+      seek: "{file_end - remaining + 2}"
+      seek_restore: true
+      if: "{remaining > 2}"
+      padding: true
+      description: "後ろの 3 バイト目（作業用。次がオブジェクトかを見る）"
+    - name: peek3
+      type: uint8
+      seek: "{file_end - remaining + 3}"
+      seek_restore: true
+      if: "{remaining > 3}"
+      padding: true
+      description: "後ろの 4 バイト目（作業用。次がオブジェクトかを見る）"
+    - name: next_char
+      type: virtual
+      value: "{(remaining > 0 ? ((peek0 == 32 or peek0 == 10 or peek0 == 13 or peek0 == 9 or peek0 == 12 or peek0 == 0) ? (remaining > 1 ? ((peek1 == 32 or peek1 == 10 or peek1 == 13 or peek1 == 9 or peek1 == 12 or peek1 == 0) ? (remaining > 2 ? ((peek2 == 32 or peek2 == 10 or peek2 == 13 or peek2 == 9 or peek2 == 12 or peek2 == 0) ? (remaining > 3 ? ((peek3 == 32 or peek3 == 10 or peek3 == 13 or peek3 == 9 or peek3 == 12 or peek3 == 0) ? -1 : peek3) : -1) : peek2) : -1) : peek1) : -1) : peek0) : -1)}"
+      padding: true
+      description: "後ろの最初の空白でない文字（作業用。4 バイトの中に無ければ -1）"
+    - name: more_objects
+      type: virtual
+      value: "{(next_char >= 0x30 and next_char <= 0x39) or next_char == 0x25 ? 1 : 0}"
+      padding: true
+      description: "次もオブジェクトか（作業用。数字か、オブジェクトの前のコメントの '%' で始まる）"
+
+  object_probe:
+    - name: stream_distance
+      type: virtual
+      value: "{until_marker(0x73, 0x74, 0x72, 0x65, 0x61, 0x6D)}"
+      description: "stream までのバイト数（無ければ範囲のバイト数）"
+
+  pdf_stream:
+    - name: keyword
+      type: ascii
+      size: "6"
+      description: "ストリームの始まりのキーワード（'stream'）"
+    - name: eol
+      type: bytes
+      size: "{until_marker(0x0A) + 1}"
+      description: "キーワードの後ろの改行（CR LF か LF）"
+    - name: is_flate
+      type: virtual
+      value: "{contains(value, '/FlateDecode') and is_encrypted == 0 ? 1 : 0}"
+      description: "FlateDecode で展開するか（暗号化されていない FlateDecode のストリーム）"
+    - name: data
+      type: bytes
+      size: "{until_marker(0x65, 0x6E, 0x64, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6D)}"
+      if: "{is_flate != 1}"
+      description: "ストリームのデータ（後ろの改行を含む。/Length を読まず endstream までとする）"
+    - name: flate_data
+      type: zlib
+      size: "{until_marker(0x65, 0x6E, 0x64, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6D)}"
+      struct: stream_content
+      if: "{is_flate == 1}"
+      description: "FlateDecode のストリームを展開した中身"
+    - name: end_keyword
+      type: ascii
+      size: "9"
+      description: "ストリームの終わりのキーワード（'endstream'）"
+
+  stream_content:
+    - name: content
+      type: latin1
+      size: remaining
+      description: "展開した中身（ページの描画命令・フォントのデータなど。バイナリのものも文字として表示する）"
+
+  xref_table:
+    - name: keyword
+      type: latin1
+      size: "{until_marker(0x78, 0x72, 0x65, 0x66) + 4}"
+      description: "'xref'（前の空白を含む）"
+    - name: eol
+      type: bytes
+      size: "{until_marker(0x0A) + 1}"
+      description: "キーワードの後ろの改行"
+    - name: subsections
+      type: struct
+      struct: xref_subsection
+      repeat_while: "{until_marker(0x74, 0x72, 0x61, 0x69, 0x6C, 0x65, 0x72) > 0 and until_marker(0x74, 0x72, 0x61, 0x69, 0x6C, 0x65, 0x72) < remaining}"
+      description: "小節（連続するオブジェクト番号の範囲）の並び"
+
+  xref_subsection:
+    - name: first_text
+      type: ascii
+      size: "{until_marker(0x20)}"
+      description: "最初のオブジェクト番号（テキスト）"
+    - name: separator
+      type: bytes
+      size: "1"
+      padding: true
+      description: "区切りの空白"
+    - name: count_text
+      type: ascii
+      size: "{until_marker(0x0A) + 1}"
+      description: "エントリ数（テキスト。改行を含む）"
+    - name: first_object
+      type: virtual
+      value: "{parse_int(trim(first_text), 10)}"
+      description: "最初のオブジェクト番号"
+    - name: count
+      type: virtual
+      value: "{parse_int(trim(count_text), 10)}"
+      description: "エントリ数"
+    - name: entries
+      type: struct
+      struct: xref_entry
+      repeat_count: "{count}"
+      description: "エントリ（各 20 バイト）の並び"
+
+  xref_entry:
+    - name: offset_text
+      type: ascii
+      size: "10"
+      description: "使用中ならファイルの先頭からの位置、空きなら次の空きのオブジェクト番号（10 桁）"
+    - name: separator1
+      type: bytes
+      size: "1"
+      padding: true
+      description: "区切りの空白"
+    - name: generation_text
+      type: ascii
+      size: "5"
+      description: "世代番号（5 桁）"
+    - name: separator2
+      type: bytes
+      size: "1"
+      padding: true
+      description: "区切りの空白"
+    - name: kind
+      type: ascii
+      size: "1"
+      description: "'n' = 使用中、'f' = 空き"
+    - name: eol
+      type: bytes
+      size: "2"
+      padding: true
+      description: "行の終わり（2 バイト: SP CR・SP LF・CR LF）"
+    - name: offset
+      type: virtual
+      value: "{parse_int(trim(offset_text), 10)}"
+      description: "位置（使用中）・次の空きのオブジェクト番号（空き）"
+    - name: generation
+      type: virtual
+      value: "{parse_int(trim(generation_text), 10)}"
+      description: "世代番号"
+    - name: object_at_offset
+      type: latin1
+      size: "{until_marker(0x6F, 0x62, 0x6A) + 3}"
+      seek: "{offset}"
+      seek_restore: true
+      if: "{kind == 'n' and offset > 0 and offset < file_end}"
+      description: "この位置にあるオブジェクトの見出し（相互参照が正しいかの確認）"
+
+  trailer:
+    - name: keyword
+      type: latin1
+      size: "{until_marker(0x74, 0x72, 0x61, 0x69, 0x6C, 0x65, 0x72) + 7}"
+      description: "'trailer'（前の空白を含む）"
+    - name: dictionary
+      type: latin1
+      size: "{until_marker(0x73, 0x74, 0x61, 0x72, 0x74, 0x78, 0x72, 0x65, 0x66)}"
+      description: "トレーラの辞書（テキスト）"
+
+  startxref:
+    - name: keyword
+      type: latin1
+      size: "{until_marker(0x73, 0x74, 0x61, 0x72, 0x74, 0x78, 0x72, 0x65, 0x66) + 9}"
+      description: "'startxref'（前の空白を含む）"
+    - name: eol
+      type: bytes
+      size: "{until_marker(0x0A) + 1}"
+      description: "キーワードの後ろの改行"
+    - name: offset_text
+      type: ascii
+      size: "{until_marker(0x25, 0x25, 0x45, 0x4F, 0x46)}"
+      description: "最後の相互参照（表かストリーム）の位置（テキスト）"
+    - name: xref_offset
+      type: virtual
+      value: "{parse_int(trim(offset_text), 10)}"
+      description: "最後の相互参照の位置"
+    - name: xref_at_offset
+      type: latin1
+      size: "{until_marker(0x0A)}"
+      seek: "{xref_offset}"
+      seek_restore: true
+      if: "{xref_offset > 0 and xref_offset < file_end}"
+      description: "その位置の行（'xref' か相互参照ストリームの 'n g obj'。位置が正しいかの確認）"
+    - name: eof_marker
+      type: ascii
+      size: "5"
+      validate: "{eof_marker == '%%EOF'}"
+      description: "ファイルの終わりの印（'%%EOF'）"

@@ -1919,6 +1919,15 @@ structs:
   padding: true   # ツリー出力で非表示
 ```
 
+`virtual` に付けると、式の途中の値など作業用の計算フィールドをツリー（CLI の tree 出力・TUI・GUI）に出さずに済みます（REQ-192）。値は通常どおり変数として束縛され、JSON 出力には残ります。
+
+```yaml
+- name: own_kind
+  type: virtual
+  value: "{struct_kind}"
+  padding: true   # 後ろの式で使う作業用の値。ツリーには出さない
+```
+
 ## エラー回復マーカー（resync_marker）
 
 構造体定義に `resync_marker` を指定すると、`on-error: continue` モードでのエラー回復が改善されます。繰り返しフィールドの要素デコードに失敗した場合、マーカーバイトパターンを前方スキャンして次の要素の開始位置を特定し、デコードを再開します。

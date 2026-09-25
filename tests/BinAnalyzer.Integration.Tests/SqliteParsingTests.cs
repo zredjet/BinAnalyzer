@@ -16,102 +16,85 @@ public class SqliteParsingTests
     [Fact]
     public void SqliteFormat_LoadsWithoutErrors()
     {
-        var format = new YamlFormatLoader().Load(SqliteFormatPath);
-        var result = FormatValidator.Validate(format);
+        var result = FormatValidator.Validate(new YamlFormatLoader().Load(SqliteFormatPath));
         result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void SqliteFormat_DecodesMinimalSqlite()
-    {
-        var data = SqliteTestDataGenerator.CreateMinimalSqlite();
-        var format = new YamlFormatLoader().Load(SqliteFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-
-        decoded.Name.Should().Be("SQLite");
-        decoded.Children.Should().HaveCount(2);
-        decoded.Children[0].Name.Should().Be("header");
-        decoded.Children[1].Name.Should().Be("first_page");
+        result.Warnings.Should().BeEmpty();
     }
 
     [Fact]
     public void SqliteFormat_Header_DecodesCorrectly()
     {
-        var data = SqliteTestDataGenerator.CreateMinimalSqlite();
-        var format = new YamlFormatLoader().Load(SqliteFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var header = Decode(SqliteTestDataGenerator.CreateMinimalSqlite()).Child("header");
 
-        var header = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var pageSize = header.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        pageSize.Name.Should().Be("page_size");
-        pageSize.Value.Should().Be(4096);
-
-        var maxEmbedded = header.Children[5].Should().BeOfType<DecodedInteger>().Subject;
-        maxEmbedded.Value.Should().Be(64);
-
-        var textEncoding = header.Children[16].Should().BeOfType<DecodedInteger>().Subject;
-        textEncoding.Name.Should().Be("text_encoding");
-        textEncoding.EnumLabel.Should().Be("UTF-8");
+        header.Child("magic").Validation!.Passed.Should().BeTrue();
+        header.Child("page_size_bytes").Int().Should().Be(4096);
+        header.Child("text_encoding").Label().Should().Be("UTF-8");
+        header.Child("write_version").Label().Should().Be("legacy");
     }
 
     [Fact]
-    public void SqliteFormat_BtreePage_DecodesCorrectly()
+    public void SqliteFormat_MinimalSqlite_DecodesFirstPage()
     {
-        var data = SqliteTestDataGenerator.CreateMinimalSqlite();
-        var format = new YamlFormatLoader().Load(SqliteFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var page = Decode(SqliteTestDataGenerator.CreateMinimalSqlite()).Child("pages").Elements().Single();
 
-        var firstPage = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-
-        var pageType = firstPage.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        pageType.Name.Should().Be("page_type");
-        pageType.Value.Should().Be(13);
-        pageType.EnumLabel.Should().Be("TABLE_LEAF");
+        page.Child("page_number").Int().Should().Be(1);
+        page.Child("header_area").Size.Should().Be(100);
+        page.Child("btree").Child("page_type").Label().Should().Be("TABLE_LEAF");
     }
 
     [Fact]
-    public void SqliteFormat_TableLeafCell_DecodesCorrectly()
+    public void SqliteFormat_Records_DecodeSerialTypes()
     {
-        var data = SqliteTestDataGenerator.CreateSqliteWithCell();
-        var format = new YamlFormatLoader().Load(SqliteFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var decoded = Decode(SqliteTestDataGenerator.CreateSqliteWithRecords());
 
-        var firstPage = decoded.Children[1].Should().BeOfType<DecodedStruct>().Subject;
+        var pages = decoded.Child("pages").Elements();
+        pages.Should().HaveCount(3);
+        var schema = Values(pages[0].Child("btree").Child("cells").Elements().Single());
+        schema.Select(v => v.Child("kind").Str()).Should().Equal("TEXT", "TEXT", "TEXT", "INTEGER", "TEXT");
+        schema[4].Child("text_value").Str().Should().Be("CREATE TABLE t(a, b, c, d, e)");
 
-        // cells should be present as the last child (after cell_pointer_array)
-        var cells = firstPage.Children.Last().Should().BeOfType<DecodedArray>().Subject;
-        cells.Name.Should().Be("cells");
-        cells.Elements.Should().HaveCount(1);
+        var rows = pages[1].Child("btree").Child("cells").Elements();
+        rows.Select(r => r.Child("rowid").Int()).Should().Equal(1, 2, 3);
+        var row1 = Values(rows[0]);
+        row1[0].Child("kind").Str().Should().Be("NULL");
+        row1[1].Child("int8_value").Int().Should().Be(-1);
+        row1[2].Child("int24_value").Int().Should().Be(70000);
+        row1[3].Child("text_value").Str().Should().Be("abc");
+        ((DecodedFloat)row1[4].Child("real_value")).Value.Should().Be(1.5);
+        var row2 = Values(rows[1]);
+        row2[0].Child("constant_value").Int().Should().Be(0);
+        row2[1].Child("constant_value").Int().Should().Be(1);
+        row2[2].Child("int48_value").Int().Should().Be(1L << 40);
+        ((DecodedBytes)row2[3].Child("blob_value")).RawBytes.ToArray().Should().Equal(0x00, 0xFF);
+        row2[4].Child("text_value").Str().Should().Be("こんにちは");
+    }
 
-        var cell = cells.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+    [Fact]
+    public void SqliteFormat_OverflowingPayload_KeepsLocalPartAndOverflowPage()
+    {
+        var pages = Decode(SqliteTestDataGenerator.CreateSqliteWithRecords()).Child("pages").Elements();
 
-        var payloadSize = cell.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        payloadSize.Name.Should().Be("payload_size");
-        payloadSize.Value.Should().Be(2);
-
-        var rowid = cell.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        rowid.Name.Should().Be("rowid");
-        rowid.Value.Should().Be(1);
-
-        var payload = cell.Children[2].Should().BeOfType<DecodedBytes>().Subject;
-        payload.Name.Should().Be("payload");
-        payload.Size.Should().Be(2);
+        var cell = pages[1].Child("btree").Child("cells").Elements()[2];
+        cell.Child("payload_size").Int().Should().Be(611);
+        cell.Child("local_size").Int().Should().Be(103);   // M + (P - M) % (U - 4)
+        cell.Child("local_payload").Size.Should().Be(103);
+        cell.Child("overflow_page").Int().Should().Be(3);
+        // あふれページは B 木でないページとして、先頭 4 バイト（次のページ番号 = 0）を示す
+        pages[2].Child("other").Child("next_page").Int().Should().Be(0);
     }
 
     [Fact]
     public void SqliteFormat_TreeOutput_ContainsExpectedElements()
     {
-        var data = SqliteTestDataGenerator.CreateMinimalSqlite();
-        var format = new YamlFormatLoader().Load(SqliteFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-        var output = new TreeOutputFormatter().Format(decoded);
+        var output = new TreeOutputFormatter().Format(Decode(SqliteTestDataGenerator.CreateSqliteWithRecords()));
 
         output.Should().Contain("SQLite");
-        output.Should().Contain("header");
-        output.Should().Contain("page_size");
-        output.Should().Contain("UTF-8");
         output.Should().Contain("TABLE_LEAF");
+        output.Should().Contain("CREATE TABLE t");
     }
+
+    private static DecodedStruct Decode(byte[] data) =>
+        new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(SqliteFormatPath));
+
+    private static IReadOnlyList<DecodedNode> Values(DecodedNode cell) => cell.Child("record").Child("values").Elements();
 }

@@ -16,214 +16,155 @@ public class PcapParsingTests
     [Fact]
     public void PcapFormat_LoadsWithoutErrors()
     {
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var result = FormatValidator.Validate(format);
+        var result = FormatValidator.Validate(new YamlFormatLoader().Load(PcapFormatPath));
         result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void PcapFormat_DecodesMinimalPcap()
-    {
-        var data = PcapTestDataGenerator.CreateMinimalPcap();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-
-        decoded.Name.Should().Be("PCAP");
-        decoded.Children.Should().HaveCount(2);
-        decoded.Children[0].Name.Should().Be("header");
-        decoded.Children[1].Name.Should().Be("packets");
+        result.Warnings.Should().BeEmpty();
     }
 
     [Fact]
     public void PcapFormat_Header_DecodesCorrectly()
     {
-        var data = PcapTestDataGenerator.CreateMinimalPcap();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var file = Decode(PcapTestDataGenerator.CreateMinimalPcap()).Child("body");
 
-        var header = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var magic = header.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        magic.Name.Should().Be("magic");
-        magic.Value.Should().Be(0xA1B2C3D4);
-
-        var network = header.Children[6].Should().BeOfType<DecodedInteger>().Subject;
-        network.Name.Should().Be("network");
-        network.Value.Should().Be(1);
-        network.EnumLabel.Should().Be("ETHERNET");
-    }
-
-    [Fact]
-    public void PcapFormat_Packet_DecodesCorrectly()
-    {
-        var data = PcapTestDataGenerator.CreateMinimalPcap();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-
-        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        packets.Elements.Should().HaveCount(1);
-
-        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var inclLen = packet.Children[2].Should().BeOfType<DecodedInteger>().Subject;
-        inclLen.Name.Should().Be("incl_len");
-        inclLen.Value.Should().Be(54);
+        ((DecodedStruct)file).StructType.Should().Be("pcap_file");
+        file.Child("magic").Validation!.Passed.Should().BeTrue();
+        file.Child("nanosecond").Int().Should().Be(0);
+        file.Child("version_major").Int().Should().Be(2);
+        file.Child("network").Label().Should().Be("ETHERNET");
     }
 
     [Fact]
     public void PcapFormat_TcpSegment_DecodesCorrectly()
     {
-        var data = PcapTestDataGenerator.CreateMinimalPcap();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var ip = Packets(PcapTestDataGenerator.CreateMinimalPcap())[0].Child("data").Child("payload").Child("packet");
 
-        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        // data → ethernet_frame → payload → ipv4_packet → body → tcp_segment
-        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
-        var ipv4 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
-
-        // body is the last child of ipv4_packet (after virtual fields)
-        var body = ipv4.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
-        body.Name.Should().Be("body");
-
-        // tcp_segment fields
-        var srcPort = body.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        srcPort.Name.Should().Be("src_port");
-        srcPort.Value.Should().Be(80);
-
-        var dstPort = body.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        dstPort.Name.Should().Be("dst_port");
-        dstPort.Value.Should().Be(12345);
+        ip.Child("src_ip").Str().Should().Be("192.168.1.1");
+        ip.Child("dst_ip").Str().Should().Be("192.168.1.2");
+        ip.Child("protocol").Label().Should().Be("TCP");
+        var tcp = ip.Child("body");
+        tcp.Child("src_port").Int().Should().Be(80);
+        tcp.Child("dst_port").Int().Should().Be(12345);
+        tcp.Child("data_offset_flags").Bits("syn").Should().Be(1);
     }
 
     [Fact]
-    public void PcapFormat_Ipv6_DecodesCorrectly()
+    public void PcapFormat_Ipv4Options_AreSkippedByIhl()
     {
-        var data = PcapTestDataGenerator.CreatePcapWithIpv6();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var ip = Packets(PcapTestDataGenerator.CreatePcapWithIpv4Options())[0].Child("data").Child("payload").Child("packet");
 
-        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
+        ip.Child("ihl").Int().Should().Be(6);
+        ip.Child("options").Size.Should().Be(4);
+        ((DecodedStruct)ip.Child("body")).StructType.Should().Be("tcp_segment");
+    }
 
-        // data → ethernet_frame → payload → ipv6_packet
-        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
+    [Fact]
+    public void PcapFormat_TcpOptions_DecodeKinds()
+    {
+        var tcp = Packets(PcapTestDataGenerator.CreatePcapWithTcpOptions())[0].Find("body");
 
-        var etherType = ethFrame.Children[2].Should().BeOfType<DecodedInteger>().Subject;
-        etherType.Value.Should().Be(0x86DD);
+        tcp.Child("data_offset_flags").Bits("data_offset").Should().Be(8);
+        var options = tcp.Child("options").Elements();
+        options.Should().NotBeEmpty();
+        options.Select(o => o.Child("kind").Label()).Should().Contain("MSS");
+    }
 
-        var ipv6 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
+    [Fact]
+    public void PcapFormat_Ipv6_DecodesAddressesAndUdp()
+    {
+        var ip = Packets(PcapTestDataGenerator.CreatePcapWithIpv6())[0].Child("data").Child("payload").Child("packet");
 
-        // payload_length
-        var payloadLength = ipv6.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        payloadLength.Name.Should().Be("payload_length");
-        payloadLength.Value.Should().Be(8);
+        ((DecodedStruct)ip).StructType.Should().Be("ipv6_packet");
+        ip.Child("next_header").Label().Should().Be("UDP");
+        ip.Child("src_ip").Str().Should().Contain(":");
+        ((DecodedStruct)ip.Child("payload").Child("upper_layer")).StructType.Should().Be("udp_datagram");
+    }
 
-        // next_header = 17 (UDP)
-        var nextHeader = ipv6.Children[2].Should().BeOfType<DecodedInteger>().Subject;
-        nextHeader.Name.Should().Be("next_header");
-        nextHeader.Value.Should().Be(17);
-        nextHeader.EnumLabel.Should().Be("UDP");
+    [Fact]
+    public void PcapFormat_EthernetMix_DecodesUdpArpVlanAndIpv6()
+    {
+        var packets = Packets(PcapTestDataGenerator.CreateEthernetMixPcap());
 
-        // body → udp_datagram
-        var body = ipv6.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
-        body.Name.Should().Be("body");
+        packets.Should().HaveCount(4);
+        var dns = packets[0].Child("data");
+        dns.Child("src_mac").Str().Should().Be("00:11:22:33:44:55");
+        dns.Child("dst_mac").Str().Should().Be("ff:ff:ff:ff:ff:ff");
+        var udp = dns.Child("payload").Child("packet").Child("body");
+        udp.Child("dst_port").Int().Should().Be(53);
+        udp.Child("payload").Size.Should().Be(33);
 
-        var srcPort = body.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        srcPort.Name.Should().Be("src_port");
-        srcPort.Value.Should().Be(5353);
+        var arp = packets[1].Child("data").Child("payload");
+        arp.Child("operation").Label().Should().Be("request");
+        arp.Child("trailer").Size.Should().Be(18);                      // 60 バイトへの詰め物
+
+        var vlan = packets[2].Child("data");
+        vlan.Child("vlan_tags").Elements().Single().Child("tci").Bits("vlan_id").Should().Be(100);
+        var vlanIp = vlan.Child("payload").Child("packet");
+        var icmp = vlanIp.Child("body");
+        icmp.Child("icmp_type").Int().Should().Be(8);
+        icmp.Child("identifier").Int().Should().Be(7);
+        // IPv4 の total_length で区切り、Ethernet の最小長（60 バイト）への詰め物は中身に含めない（旧定義は TCP / UDP の中身に含めていた）
+        icmp.Size.Should().Be(12);
+        vlanIp.Child("link_padding").Size.Should().Be(10);
+
+        var v6 = packets[3].Child("data").Child("payload").Child("packet");
+        v6.Child("src_ip").Str().Should().Be("2001:db8:0:0:0:0:0:1");
+        v6.Child("payload").Child("upper_layer").Child("dst_port").Int().Should().Be(53);
+    }
+
+    [Fact]
+    public void PcapFormat_BigEndianNanosecond_UsesMagicForByteOrder()
+    {
+        var file = Decode(PcapTestDataGenerator.CreateBigEndianNanosecondPcap()).Child("body");
+
+        file.Child("magic").Int().Should().Be(0xA1B23C4D);
+        file.Child("nanosecond").Int().Should().Be(1);
+        file.Child("snaplen").Int().Should().Be(65535);
+        var packets = file.Child("packets").Elements();
+        packets[0].Child("ts_frac").Int().Should().Be(123456789);
+        packets[0].Child("data").Child("payload").Child("packet").Child("src_ip").Str().Should().Be("192.168.1.10");
+    }
+
+    [Fact]
+    public void PcapFormat_RawIp_DispatchesByVersionNibble()
+    {
+        var packets = Packets(PcapTestDataGenerator.CreateRawIpPcap());
+
+        ((DecodedStruct)packets[0].Child("data").Child("packet")).StructType.Should().Be("ipv4_packet");
+        ((DecodedStruct)packets[1].Child("data").Child("packet")).StructType.Should().Be("ipv6_packet");
+    }
+
+    [Fact]
+    public void PcapFormat_PcapNg_DecodesBlocksAndPackets()
+    {
+        var file = Decode(PcapTestDataGenerator.CreatePcapNg()).Child("body");
+
+        ((DecodedStruct)file).StructType.Should().Be("pcapng_file");
+        var blocks = file.Child("blocks").Elements();
+        blocks.Select(b => b.Child("block_type").Label()).Should().Equal("SHB", "IDB", "EPB", "EPB", "SPB", "NRB", "ISB");
+        blocks.Should().OnlyContain(b => b.Child("block_total_length_trailer").Validation!.Passed);
+        blocks[0].Child("block_body").Child("byte_order_magic").Validation!.Passed.Should().BeTrue();
+        blocks[1].Child("block_body").Child("link_type").Label().Should().Be("ETHERNET");
+
+        var epb = blocks[2].Child("block_body");
+        epb.Child("packet_data").Child("payload").Child("packet").Child("dst_ip").Str().Should().Be("8.8.8.8");
+        epb.Child("options").Elements()[0].Child("comment").Str().Should().Be("コメント");
+        blocks[4].Child("block_body").Child("packet_data").Child("payload").Child("operation").Label().Should().Be("request");
+        var record = blocks[5].Child("block_body").Child("records").Elements()[0];
+        record.Child("ipv4_address").Str().Should().Be("8.8.8.8");
     }
 
     [Fact]
     public void PcapFormat_TreeOutput_ContainsExpectedElements()
     {
-        var data = PcapTestDataGenerator.CreateMinimalPcap();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-        var output = new TreeOutputFormatter().Format(decoded);
+        var output = new TreeOutputFormatter().Format(Decode(PcapTestDataGenerator.CreateEthernetMixPcap()));
 
         output.Should().Contain("PCAP");
-        output.Should().Contain("header");
-        output.Should().Contain("ETHERNET");
-        output.Should().Contain("packets");
+        output.Should().Contain("192.168.1.10");
+        output.Should().NotContain("magic_be");
     }
 
-    [Fact]
-    public void PcapFormat_Ipv4Options_DecodesCorrectly()
-    {
-        var data = PcapTestDataGenerator.CreatePcapWithIpv4Options();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+    private static DecodedStruct Decode(byte[] data) =>
+        new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(PcapFormatPath));
 
-        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        // data → ethernet_frame → payload → ipv4_packet
-        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
-        var ipv4 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
-
-        // Find options field (should exist because IHL=6 > 5)
-        var options = ipv4.Children.First(c => c.Name == "options")
-            .Should().BeOfType<DecodedBytes>().Subject;
-        options.RawBytes.Length.Should().Be(4); // (6-5)*4 = 4 bytes
-
-        // body → tcp_segment should still decode correctly
-        var body = ipv4.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
-        body.Name.Should().Be("body");
-        var srcPort = body.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        srcPort.Value.Should().Be(80);
-    }
-
-    [Fact]
-    public void PcapFormat_TcpOptions_DecodesCorrectly()
-    {
-        var data = PcapTestDataGenerator.CreatePcapWithTcpOptions();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-
-        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
-        var ipv4 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
-
-        // IPv4 options should NOT be present (IHL=5)
-        ipv4.Children.Should().NotContain(c => c.Name == "options");
-
-        // body → tcp_segment
-        var body = ipv4.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
-        var tcp = body;
-
-        // TCP options should exist (data_offset=8 > 5)
-        var tcpOptions = tcp.Children.First(c => c.Name == "options")
-            .Should().BeOfType<DecodedBytes>().Subject;
-        tcpOptions.RawBytes.Length.Should().Be(12); // (8-5)*4 = 12 bytes
-
-        var srcPort = tcp.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        srcPort.Value.Should().Be(443);
-    }
-
-    [Fact]
-    public void PcapFormat_NoOptions_StillWorks()
-    {
-        // Regression test: IHL=5, data_offset=5 → no options fields
-        var data = PcapTestDataGenerator.CreateMinimalPcap();
-        var format = new YamlFormatLoader().Load(PcapFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-
-        var packets = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        var packet = packets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var ethFrame = packet.Children[4].Should().BeOfType<DecodedStruct>().Subject;
-        var ipv4 = ethFrame.Children[3].Should().BeOfType<DecodedStruct>().Subject;
-
-        // No IPv4 options (IHL=5)
-        ipv4.Children.Should().NotContain(c => c.Name == "options");
-
-        // body → tcp_segment → no TCP options (data_offset=5)
-        var body = ipv4.Children.Last().Should().BeOfType<DecodedStruct>().Subject;
-        body.Children.Should().NotContain(c => c.Name == "options");
-    }
+    private static IReadOnlyList<DecodedNode> Packets(byte[] data) => Decode(data).Child("body").Child("packets").Elements();
 }

@@ -40,4 +40,12 @@ public static class ProtobufTestDataGenerator
 
         return ms.ToArray();
     }
+
+    /// <summary>
+    /// Python の protobuf 4.25 で proto2 のメッセージを SerializeToString した 78 バイト（REQ-188）。
+    /// 1: int32 = -5（10 バイトの varint）、2: sint32 = -3（ジグザグ）、3: string = "こんにちは"、4: bytes = 00 FF、5: 入れ子のメッセージ { 1: 42 }、
+    /// 6: double = 3.5、7: float = -1.25、8: fixed32 = 0xDEADBEEF、9: bool = true、10: グループ { 11: "g" }、12: パックされた int32 [1, 150, 3]、300: uint64 = 2^40。
+    /// </summary>
+    public static byte[] CreateProtobufWithAllWireTypes() => Convert.FromHexString(
+        "08fbffffffffffffffff0110051a0fe38193e38293e381abe381a1e381af220200ff2a02082a310000000000000c403d0000a0bf45efbeadde4801535a016754620401960103e012808080808020");
 }

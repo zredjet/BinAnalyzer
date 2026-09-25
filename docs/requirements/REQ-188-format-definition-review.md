@@ -4,11 +4,11 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | implementing |
+| ステータス | done |
 | 優先度 | 中 |
 | 依存 | なし（REQ-183 のドキュメント整合性テスト、REQ-186 の「同梱定義の警告 0 件」テストの上で行う） |
 | 作成日 | 2026-09-24 |
-| 更新日 | 2026-09-24 |
+| 更新日 | 2026-09-25 |
 
 ## 背景・動機
 
@@ -102,14 +102,14 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 
 ## 受入条件
 
-1. [ ] `docs/format-authoring.md` に定義の書き方の規約があり、README か architecture.md から参照されていること
-2. [ ] 全 42 定義（共通ライブラリを含む）の先頭コメントに準拠仕様（名称・版）と、対応していないものが書かれていること
-3. [ ] 全フィールドに日本語の description があること（テストで固定され、「対応待ち一覧」が空になっていること）
-4. [ ] 背景 3 の差分の候補のそれぞれについて、定義に足したか、足さない理由を先頭コメントに書いたかのどちらかであること
-5. [ ] 背景 4 の parquet / pdf の末尾からの読み取りが、今の DSL で書き直されているか、書き直さない理由が書かれていること
-6. [ ] 足した構造ごとに、テストデータ（Generator）と解析テストがあること。可能なものは実在のツール（`xz` / `ffmpeg` など）で作ったファイルでもデコードを確認し、実装メモに記録すること
-7. [ ] 同梱定義の検証警告が 0 件のままであること（REQ-186 のテスト）
-8. [ ] 既存テストが全て通過すること（`dotnet test` 全通過。ゴールデンファイルは見直した定義の分だけ更新する）
+1. [x] `docs/format-authoring.md` に定義の書き方の規約があり、README か architecture.md から参照されていること
+2. [x] 全 42 定義（共通ライブラリを含む）の先頭コメントに準拠仕様（名称・版）と、対応していないものが書かれていること
+3. [x] 全フィールドに日本語の description があること（テストで固定され、「対応待ち一覧」が空になっていること）
+4. [x] 背景 3 の差分の候補のそれぞれについて、定義に足したか、足さない理由を先頭コメントに書いたかのどちらかであること
+5. [x] 背景 4 の parquet / pdf の末尾からの読み取りが、今の DSL で書き直されているか、書き直さない理由が書かれていること
+6. [x] 足した構造ごとに、テストデータ（Generator）と解析テストがあること。可能なものは実在のツール（`xz` / `ffmpeg` など）で作ったファイルでもデコードを確認し、実装メモに記録すること
+7. [x] 同梱定義の検証警告が 0 件のままであること（REQ-186 のテスト）
+8. [x] 既存テストが全て通過すること（`dotnet test` 全通過。ゴールデンファイルは見直した定義の分だけ更新する）
 
 ## 影響範囲
 
@@ -125,10 +125,10 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/format-authoring.md — 新規（定義の書き方の規約）
-- [ ] README.md / docs/architecture.md — 規約への参照
-- [ ] docs/dsl-reference.md — 変更なし（見直しで DSL の説明の不足が見つかれば追記）
-- [ ] CLAUDE.md — 定義の書き方の規約への参照（フォーマット定義を書くときに読むもの）
+- [x] docs/format-authoring.md — 新規（定義の書き方の規約）
+- [x] README.md / docs/architecture.md — 規約への参照
+- [x] docs/dsl-reference.md — 共通ライブラリの表（音声・映像）、virtual の padding（データ・その他、REQ-192）
+- [x] CLAUDE.md — 定義の書き方の規約への参照（フォーマット定義を書くときに読むもの）
 
 ---
 
@@ -177,7 +177,7 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | アーカイブ・圧縮 | zip / gzip / tar / 7z / lz4（先頭コメント・全フィールドの説明、ZIP を Central Directory から読む形に変更・Zip64・拡張フィールド、7z のヘッダの分解、pax / GNU tar、LZ4 のフレームの種類と Block Checksum、下記のバグ修正。画像の BMP の条件式のバグもここで直した） | 済 |
 | 実行形式・バイトコード | elf / pe / macho / java-class / wasm（先頭コメント・全フィールドの説明、ELF のセクションの中身、PE のデータディレクトリ、Mach-O のユニバーサルバイナリ・シンボル・コード署名、Java のコンスタントプールの 2 スロットと属性、WASM 3.0 の全セクション、下記のバグ修正） | 済 |
 | 音声・映像 | mp3 / mp4 / wav / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff（先頭コメント・全フィールドの説明、RF64 / BW64・WAVEFORMATEXTENSIBLE・BWF、OpenDML、MP4 のサンプルエントリ・フラグメント・iTunes のメタデータ、ID3v2.4 / ID3v1 / Xing、Opus・FLAC・Speex・Theora の Ogg、AMF0 と Enhanced FLV の FourCC、MIDI のランニングステータス、下記のバグ修正） | 済 |
-| データ・その他 | sqlite / parquet / pdf / pcap / dns / protobuf / msgpack / cbor / x509 / fat / otf | 未着手 |
+| データ・その他 | sqlite / parquet / pdf / pcap / dns / protobuf / msgpack / cbor / x509 / fat / otf（先頭コメント・全フィールドの説明、Parquet のフッタ（Thrift Compact Protocol）、PDF の改訂・相互参照表・FlateDecode、SQLite の全ページと記録、pcapng・pcap のバイト順とナノ秒、DNS の名前の圧縮と RR、X.509 の DER の汎用の分解と拡張、FAT の長いファイル名とディレクトリの連鎖、OTF の TTC・name・cmap・fvar、下記のバグ修正。エンジンの変更 REQ-192・REQ-193） | 済 |
 
 ### 実装中の設計変更
 
@@ -218,6 +218,20 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | FlvParsingTests | ScriptTag_DecodesOnMetaData / AvcTags_DecodePacketTypeAndCompositionTime / AacTag_DecodesPacketType / PreviousTagSize_IsValidated（既存は子を名前で引くよう更新） | 6 |
 | MidiParsingTests | UnknownChunk_IsSkipped / RunningStatus_ReusesPreviousStatus / MetaEvents_DecodeTempoAndTimeSignature（既存は子を名前で引くよう更新） | 6 |
 | JsonSchemaTests | Schema_ValidatesFormatFile に mp3 / mp4 / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff を追加 | 7 |
+| DnsParsingTests | DecodesMinimalQuery / CompressionPointers_ResolveFullNames / ResourceRecords_DecodeRdataByType / OptRecord_DecodesEdns（既存は子を名前で引くよう書き直し） | 4, 6 |
+| ProtobufParsingTests（新規） | MinimalMessage_DecodesFields / Varints_ShowTwosComplementAndZigZag / FixedValues_ShowIntegerAndFloat / LengthDelimited_ShowsTextAndBytes / Group_DecodesNestedFieldsUntilEndGroup | 6 |
+| MsgpackParsingTests（新規） | MinimalMap_DecodesKeyAndValue / Document_DecodesAllTypes / Timestamps_DecodeThreeForms | 6 |
+| CborParsingTests（新規） | MinimalMap_DecodesKeyAndValue / Rfc8949Examples_MatchDiagnosticNotation / IndefiniteLength_ReadsUntilBreak | 6 |
+| ParquetParsingTests | MagicAndFooterLength_DecodeCorrectly / FileMetaData_NamesFieldsAndValues / Schema_DecodesElementsWithEnums / ColumnMetaData_FollowsDataPageOffsetToPageHeader / TreeOutput_HidesWorkingValues | 4, 5, 6 |
+| PdfParsingTests | Header_DecodesVersionAndBinaryComment / MinimalPdf_DecodesObjectsXrefAndTrailer / FlateStream_IsDecompressed / IncrementalUpdate_DecodesTwoRevisions | 5, 6 |
+| SqliteParsingTests | MinimalSqlite_DecodesFirstPage / Records_DecodeSerialTypes / OverflowingPayload_KeepsLocalPartAndOverflowPage（既存は書き直し） | 4, 6 |
+| PcapParsingTests | EthernetMix_DecodesUdpArpVlanAndIpv6 / BigEndianNanosecond_UsesMagicForByteOrder / RawIp_DispatchesByVersionNibble / PcapNg_DecodesBlocksAndPackets（既存は書き直し） | 4, 6 |
+| X509ParsingTests | MinimalCertificate_DecodesTbsFields / V1Certificate_HasNoVersionField / RsaKey_DecodesModulusAndExponent / Extensions_DecodeInnerDer / ConcatenatedCertificates_AreReadInOrder（既存は書き直し） | 4, 6 |
+| FatParsingTests | SmallImage_IsFat12ByClusterCount / LongFileNames_AreAssembledFromLfnEntries / Subdirectory_FollowsClusterChain / Fat32_ReadsFsInfoAndRootCluster（既存は書き直し） | 4, 6 |
+| OtfParsingTests | NameTable_DecodesStringsByPlatform / Cmap_DecodesFormat4And12 / MetricsAndVariationTables_Decode / Collection_DecodesEachFontWithSharedTables（既存は書き直し） | 4, 6 |
+| VirtualFieldTests（Engine） | PaddingVirtual_IsMarkedAsPaddingAndStillBindsItsValue（REQ-192） | — |
+| ErrorRecoveryTests（Engine） | ContinueMode_FailedBitfield_HidesEarlierValuesOfItsEntries（REQ-193） | 8 |
+| JsonSchemaTests | Schema_ValidatesFormatFile に sqlite / parquet / pdf / pcap / dns / protobuf / msgpack / cbor / x509 / fat / otf を追加 | 7 |
 | SourceLocationTests / GuiImportTests | common/isobmff の dref の子を iso_box にしたことと、WAV の fmt のフィールド名の変更に合わせて更新 | — |
 
 ### 画像の見直し（PR: 画像）
@@ -361,7 +375,74 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 - MIDI: RMID、テキストの文字コードの判定（Shift_JIS）、システムエクスクルーシブの中身
 - MKV: レーシングの分割、CRC-32 の検証、ContentEncoding の解除、サイズ不定の Cluster の連続
 
+### データ・その他の見直し（PR: データ・その他）
+
+**直したバグ**（旧定義で実際のファイルを読んで確かめたもの）
+
+- SQLite: 可変長整数を LEB128（リトルエンディアンの 7 ビットずつ）として読んでいた。SQLite の可変長整数はビッグエンディアンの 7 ビットずつなので、128 以上の値（ペイロードの長さ・行 ID）を誤読していた。sqlite3 が作った普通のデータベースでも、スキーマの行が 128 バイト以上だと `81 3D`（189）を 7809 と読んでデコードエラーになった。読むのは 1 ページ目だけで、記録（行の列の値）も分解していなかった
+- pcap: マジックがリトルエンディアン・マイクロ秒の形しか無く、ビッグエンディアンとナノ秒（0xA1B23C4D）の pcap はパケットの長さを逆のバイト順で読んでデコードエラーになった。pcapng（Wireshark の既定の形）も読めなかった。IPv4 の中身を total_length ではなくパケットの残りで区切っていたため、60 バイトに満たない Ethernet のフレームの詰め物が TCP / UDP のペイロードに入っていた
+- X.509: 版の [0] を必須にしていたため、版 1 の証明書でデコードエラーになった。長さは 2 バイトまで（64 KB 未満）しか読めなかった
+- MessagePack: 入れ子の値の format_byte が親の format_byte を上書きし（名前の同じ値の昇格）、マップの最後の値が fixarray だと、マップの後ろの値を配列の要素として読んでいた（`81 A1 61 91 01 2A` の 42）。浮動小数点数と文字列をバイト列のまま表示し、ファイルの先頭の値しか読まなかった
+- CBOR: 不定長の値を「残り全部」として読み、後ろの値を失っていた。浮動小数点数をバイト列、負の整数を引数のまま表示し、ファイルの先頭の値しか読まなかった
+- FAT: FAT の種類を root_entry_count で判定していた（仕様はクラスタ数）。テストデータの「FAT16」のイメージはクラスタ数 16 で、仕様では FAT12。FAT32 のルートディレクトリ（クラスタの連鎖）を読んでおらず、長いファイル名も組み立てていなかった
+- DNS: ヘッダしか読まず、AD / CD のビットを予約のビットとまとめていた
+- テストデータの Generator の誤り: 最小の DNS の質問がクラスの途中で終わっていた、最小の X.509 の公開鍵の情報の中身が `DE AD BE EF` だけだった、最小の SQLite がページの途中で切れていて空のページの cell_content_offset が 0 だった（sqlite3 が壊れていると判定する）、最小の Parquet・PDF がフッタ・構造を持たなかった。どれも正しい形に直した
+
+**足した構造**
+
+- Parquet: フッタの FileMetaData を Thrift Compact Protocol として再帰的に分解する。構造体の種類（FileMetaData・SchemaElement・RowGroup・ColumnChunk・ColumnMetaData・Statistics・PageHeader など 15 種）を親のフィールドの番号から決め、フィールドの名前と値の列挙型（物理型・繰り返し・変換型・符号化・圧縮方式・ページの種類）を付ける。ColumnMetaData の data_page_offset / dictionary_page_offset から各列の最初のページのヘッダを読む
+- PDF: ヘッダ・バイナリのコメント・改訂（増分更新）ごとの間接オブジェクト・ストリーム（FlateDecode は zlib で展開）・相互参照表と各エントリの位置の確認・トレーラ・startxref の位置の確認。相互参照ストリームだけの PDF 1.5 以降と、リニアライズされた PDF も読める。キーワードの検索が後ろまで走らないよう、オブジェクトの続きは endobj の後ろの最初の文字で、ストリームの有無は endobj までの範囲で判定する
+- SQLite: 全ページ（B 木の 4 種類・空きリストのトランク・それ以外）、セル（表の葉・表の内部・索引の葉・索引の内部）、記録のヘッダとシリアル型ごとの値（24 / 48 ビットの符号付き整数、UTF-8 / UTF-16LE / UTF-16BE の文字列）、ページ内に置けるペイロードの計算とあふれページの番号
+- pcap / pcapng: pcap の 4 つのマジック（バイト順 × 時刻の単位）、pcapng の SHB・IDB・EPB・SPB・NRB・ISB とオプション。リンク層は Ethernet（VLAN）・NULL・LOOP・RAW・IPv4・IPv6・Linux SLL / SLL2。ARP、IPv4（total_length で区切る）・IPv6 と拡張ヘッダ、TCP のオプション、UDP、ICMP / ICMPv6。MAC・IP アドレスの文字列
+- DNS: 質問と回答・権威・追加の RR。名前はラベルと圧縮ポインタを再帰的にたどって完全な名前にする。A・AAAA・NS・CNAME・PTR・DNAME・SOA・MX・TXT・SRV・HINFO・CAA のデータ、EDNS の OPT
+- Protobuf: グループ（ワイヤ型 3 / 4）の再帰、ジグザグ符号化の値、8 / 4 バイトの値の浮動小数点数としての値、長さ付きの値の UTF-8 の文字列としての値
+- MessagePack: 値の並び、全形式、浮動小数点数・UTF-8 の文字列、タイムスタンプの拡張型（32 / 64 / 96）
+- CBOR: 値の並び（RFC 8742）、引数の 1〜8 バイト、不定長のバイト列・文字列・配列・マップ（break まで）、タグ（IANA の主な番号）、単純値、半精度・単精度・倍精度の浮動小数点数
+- X.509: DER の TLV の汎用の分解（長さ 4 バイトまで、OID のドット区切りと約 70 個の名前、整数・文字列・時刻）と、証明書の名前付きの層（版の有無・発行者・有効期間・主体・公開鍵（RSA の鍵は DER として分解）・一意の ID・拡張と extnValue の中の DER）。連結した証明書を順に読む
+- FAT: 仕様どおりのクラスタ数による FAT の種類、FSInfo、FAT の表（先頭 512 エントリ）、ルート・サブディレクトリを FAT の連鎖でたどる、長いファイル名（UTF-16）の組み立て、日時の文字列、ファイルの中身の先頭。壊れた・細工したイメージで展開し続けないよう、読むディレクトリのクラスタを 1024 個までにする（状態変数）
+- OTF: TTC、head・hhea / vhea・maxp・name（文字列）・cmap（形式 0・4・6・12・13・14）・OS/2（版 0〜5）・post（版 2 のグリフ名）・fvar（軸とインスタンス）・GSUB / GPOS（スクリプト・機能の一覧）・CFF / CFF2・DSIG のヘッダ
+
+**エンジンの変更**（別の要望として記録）
+
+- REQ-192: `padding: true` の virtual をツリーに出さない。Parquet・DNS・PDF・FAT・X.509 などの作業用の値を隠す
+- REQ-193: エラー継続モードで読めなかった bitfield のエントリの名前を未定義にする。途中で切れた CBOR で、読めなかった値に親の主型が見えて再帰し、メモリ不足になっていた（ファズで見つかった）
+
+**DSL の書き方の工夫**
+
+- 入れ子の struct は、size が無いと親と同じ変数のスコープを使う。再帰する struct（DNS の名前・CBOR / MessagePack の値・X.509 の TLV・Thrift の構造体・FAT のディレクトリ）は、エンディアンを書いた形（`endianness:` + `fields:`）にして独自のスコープを持たせ、入れ子の値が親の同じ名前の値を上書きしないようにした
+- 値の昇格は、入れ子の struct の子まで再帰的に親のスコープへ書く（配列の中は走査しない）。Thrift のフィールドは、入れ子の値の後ろに「構造体の種類」「直前のフィールドの番号」を書き直す virtual を置いた。FAT のサブディレクトリは `repeat_count` の配列として読み、昇格が届かないようにした
+- 独自のスコープを持つ struct を要素にした `repeat_until` は、条件から要素の値が見えない（要素のスコープは条件を評価する前に閉じる）。CBOR の不定長の並び・FAT のディレクトリは、既定値の virtual を置いた `repeat_while` にした
+- 現在の位置は `remaining` からしか分からないので、ファイルの先頭から大きさの無いスコープが続く定義（Protobuf・PDF・X.509 の名前付きの層）では `file_size - remaining` で先読みの位置を求めた。size 付きのスコープの中では使えないので、pcap の RAW の IP の版は、先頭のバイトを読んでから分ける形（ip_packet）にした
+- 要素が 0 バイトで成功しうる繰り返し（Thrift の型の分からない値の後ろ）は、壊れた要素数で止まらなくなる（エンジンの「進まない要素で打ち切る」はエラーの要素にしか効かない）。Thrift のリスト・マップの要素数を残りのバイト数で抑えた
+
+**実在のツールでの確認**:
+
+- Parquet: pyarrow 22.0（parquet-cpp-arrow）で作った 3 ファイル（圧縮なしの版 1 のデータページと辞書、Snappy の版 2 のデータページと 2 つの行グループ、Zstandard の入れ子のリスト）を読み、各列の data_page_offset・dictionary_page_offset が pyarrow のメタデータと一致し、そこにページヘッダ（DATA_PAGE / DATA_PAGE_V2 / DICTIONARY_PAGE）があることを確かめた。テスト用の Parquet も pyarrow で読めて値が一致する
+- PDF: img2pdf・qpdf 12（QDF・オブジェクトストリーム・AES-256 の暗号化・リニアライズ）と手で組み立てた増分更新の PDF を読んだ。テスト用の PDF は qpdf --check が通る
+- SQLite: sqlite3 3.51 で作ったデータベース（ページサイズ 1024、各種の型・索引・あふれ・削除による空きリスト、UTF-16LE）を読み、あふれるセルのページ内の大きさが仕様の式と一致することを確かめた。テスト用のデータベースは PRAGMA integrity_check が ok で、SELECT で同じ値が返る
+- pcap: 組み立てた pcap（リトルエンディアン・マイクロ秒、ビッグエンディアン・ナノ秒、RAW、NULL）と pcapng を tcpdump 4.99 が同じ内容で読むことを確かめた（DNS の応答の中身も tcpdump の表示と一致）
+- X.509: OpenSSL 3.6 で作った証明書（RSA 2048 + SAN・EKU、EC P-256、Ed25519、ML-DSA-44、連結）を読み、シリアル番号・有効期間・拡張が openssl x509 -text と一致することを確かめた。テスト用の証明書（版 1、拡張付き）も openssl が読める
+- FAT: macOS の hdiutil / newfs_msdos で作った FAT12・FAT16・FAT32 のイメージに長いファイル名・日本語の名前・入れ子のディレクトリ・40 個のファイルを入れて読み、すべて見つかることを確かめた。テスト用の FAT12 のイメージは macOS でマウントでき、fsck_msdos が問題を報告しない
+- OTF: macOS のシステムのフォント（Helvetica.ttc・SFNS.ttf（可変フォント）・LastResort.otf・Arial.ttf・ヒラギノ角ゴシック W3.ttc の 7.8 MB）を読み、fvar の軸・インスタンスの数・グリフ数・cmap の形式・GSUB の機能の数・TTC のフォントの数が fontTools 4.63 と一致することを確かめた。テスト用のフォントも fontTools が読める
+- Protobuf・MessagePack・CBOR: Python の protobuf 4.25 と msgpack 1.1 が出力したデータ、RFC 8949 付録 A の例（72 個）を読み、値が一致することを確かめた
+
+**出力の大きさ**: 9 件のゴールデン（JSON）は合計 62,116 → 597,492 バイト。Parquet のゴールデンは 434,993 バイトで、Thrift のフィールドごとに種類・番号・作業用の値を持つため大きい（1 列 3 行のファイル）。JSON は日本語を \u で書くので、説明の分が大きい
+
+**残した課題**（各定義の「対応していないもの」に記載）
+
+- Parquet: ページのデータ（圧縮・符号化された値）、2 つ目以降のページ、暗号化されたフッタ、インデックス・ブルームフィルタ
+- PDF: 辞書・配列の構文の分解、FlateDecode 以外のフィルタと予測子、相互参照ストリーム・オブジェクトストリームの中身、暗号化されたストリーム
+- SQLite: あふれページに続く記録、9 バイトの可変長整数、2 つ目以降の空きリストのトランク・ポインタマップの判別、WAL
+- pcap: チェックサムの検証、再組み立て、アプリケーション層（DNS などはバイト列）
+- DNS: TCP の長さの前置き、DNSSEC・SVCB などのデータ
+- X.509: PEM、BER、CSR・CRL など証明書以外の名前付きの分解、署名の検証
+- FAT: パーティション表、exFAT、ファイルの中身の 2 つ目以降のクラスタ、LFN のチェックサム
+- OTF: 表のチェックサム、WOFF、glyf・CFF の中身、ルックアップ、16.16 の固定小数点数の小数での表示
+- MessagePack / CBOR: 2^63 以上の整数、CBOR の半精度の値・多倍長整数
+
 ### 気づき・今後の課題
+
+- 入れ子の struct の値の扱い（大きさの無い struct は親とスコープを共有する・昇格は入れ子の struct の子まで再帰する・独自のスコープの要素の値は repeat_until の条件から見えない・現在の位置を式で得られない）は、再帰する定義を書くたびに回避策が要った（データ・その他の「DSL の書き方の工夫」）。現在の位置の変数（`_offset` など）と、入れ子の struct に独自のスコープを持たせる指定を DSL に足すかは別要望で検討する
 
 - size 付きのスコープ（size を持つ struct・switch）の中から、その範囲の外へ seek して読むと「範囲外」のデコードエラーになる。ELF のセクションの中身では、別のセクションの文字列を引くために switch の size を外し、各ケースで sh_size を使って大きさを決める形で避けた → REQ-191 で解消（範囲の外への seek は、行き先を含む外側の境界の中で読む）。PR #21・#22 のマージ後に ELF の回避策を外し、switch に size を戻した（JSON 出力は変わらない）
 
