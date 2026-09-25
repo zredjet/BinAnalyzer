@@ -46,4 +46,11 @@ public static class CborTestDataGenerator
     /// </summary>
     public static byte[] CreateCborHalfFloatExamples() => Convert.FromHexString(
         "f90000" + "f98000" + "f93c00" + "f93e00" + "f97bff" + "f90001" + "f90400" + "f9c400" + "f97c00" + "f97e00" + "f9fc00");
+
+    /// <summary>
+    /// 8 バイトの引数の整数（REQ-201）: RFC 8949 付録 A の 18446744073709551615（1b ff…）と -18446744073709551616（3b ff…）、
+    /// 9223372036854775808（1b 80 00…）、-9223372036854775808（3b 7f ff…）。
+    /// </summary>
+    public static byte[] CreateCbor64BitIntegers() => Convert.FromHexString(
+        "1bffffffffffffffff" + "3bffffffffffffffff" + "1b8000000000000000" + "3b7fffffffffffffff");
 }

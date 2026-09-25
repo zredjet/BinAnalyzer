@@ -279,7 +279,7 @@ public static class DiffEngine
             {
                 return child switch
                 {
-                    DecodedInteger i => i.EnumLabel ?? i.Value.ToString(),
+                    DecodedInteger i => i.EnumLabel ?? i.ValueText,
                     DecodedString s => s.Value,
                     _ => null,
                 };
@@ -355,7 +355,7 @@ public static class DiffEngine
 
     private static string FormatIntegerValue(DecodedInteger node)
     {
-        var result = node.Value.ToString();
+        var result = node.ValueText;
         if (node.EnumLabel is not null)
             result += $" \"{node.EnumLabel}\"";
         return result;

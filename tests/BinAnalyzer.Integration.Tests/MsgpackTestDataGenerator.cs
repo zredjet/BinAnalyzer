@@ -45,4 +45,11 @@ public static class MsgpackTestDataGenerator
         B(0xD6, 0x01, 0x01, 0x02, 0x03, 0x04);
         return ms.ToArray();
     }
+
+    /// <summary>
+    /// 64 ビットの整数の配列（REQ-201）: [2^64 - 1, 2^63, -2^63]。Python の msgpack 1.1 の packb の出力
+    /// （uint 64 の 0xCF が 2 つと int 64 の 0xD3）。
+    /// </summary>
+    public static byte[] CreateMsgpack64BitIntegers() =>
+        Convert.FromHexString("93cfffffffffffffffffcf8000000000000000d38000000000000000");
 }

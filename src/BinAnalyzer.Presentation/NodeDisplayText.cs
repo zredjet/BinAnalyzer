@@ -85,7 +85,7 @@ public static class NodeDisplayText
 
     private static string FormatIntegerValue(DecodedInteger node)
     {
-        var text = node.Value.ToString();
+        var text = node.ValueText;
         if (node.EnumLabel is not null)
             text += $" \"{node.EnumLabel}\"";
         if (node.StringTableValue is not null)

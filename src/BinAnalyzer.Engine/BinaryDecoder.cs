@@ -1950,8 +1950,9 @@ public sealed class BinaryDecoder : IBinaryDecoder
             foreach (var entry in field.BitfieldEntries)
             {
                 var bitWidth = entry.BitHigh - entry.BitLow + 1;
-                var mask = (1L << bitWidth) - 1;
-                var value = (rawValue >> entry.BitLow) & mask;
+                // 64 ビットの幅は 1L << 64 が 1 に戻る（シフト量は 64 で割った余り）ので全ビット。上位ビットを符号拡張しないよう論理シフト
+                var mask = bitWidth >= 64 ? -1L : (1L << bitWidth) - 1;
+                var value = (rawValue >>> entry.BitLow) & mask;
 
                 string? enumLabel = null;
                 string? enumDesc = null;

@@ -101,7 +101,7 @@ public sealed class CsvOutputFormatter : IOutputFormatter
 
     private static (string type, string value) GetTypeAndValue(DecodedNode node) => node switch
     {
-        DecodedInteger intNode => ("integer", intNode.Value.ToString()),
+        DecodedInteger intNode => ("integer", intNode.ValueText),
         DecodedString strNode => ("string", strNode.Value),
         DecodedFloat floatNode => (floatNode.FloatTypeName, floatNode.Value.ToString("G")),
         DecodedBytes bytesNode => ("bytes", FormatBytes(bytesNode.RawBytes)),

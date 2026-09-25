@@ -121,7 +121,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 - **DecodedStruct** — 名前付き構造体と子要素
 - **DecodedArray** — 繰り返し要素
-- **DecodedInteger** — オプションのenumラベル付き、チェックサム検証結果（ChecksumValid, ChecksumExpected）、文字列テーブル参照値。これらは使うノードだけが持つ補助オブジェクトに置き、本体は 104 B（REQ-180）
+- **DecodedInteger** — 値は long（uint64 などの 2^63 以上は同じビットの負の値。表示は `ValueText` で符号なしに戻す。REQ-201）。オプションのenumラベル付き、チェックサム検証結果（ChecksumValid, ChecksumExpected）、文字列テーブル参照値。これらは使うノードだけが持つ補助オブジェクトに置き、本体は 104 B（REQ-180）
 - **DecodedFloat** — 半精度/単精度/倍精度浮動小数点数（`Precision` で区別。値は double）
 - **DecodedBytes** — オプションのバリデーション付き
 - **DecodedString** — オプションのフラグ付き

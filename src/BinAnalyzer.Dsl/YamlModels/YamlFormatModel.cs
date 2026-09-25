@@ -38,8 +38,9 @@ public sealed class YamlImportModel
 
 public sealed class YamlEnumEntry
 {
+    /// <summary>値のリテラル（10 進・<c>0x</c> の 16 進。2^64 - 1 まで書けるよう文字列で受け、IR に写すときに読む。REQ-201）。</summary>
     [YamlMember(Alias = "value")]
-    public long Value { get; set; }
+    public string Value { get; set; } = "";
 
     [YamlMember(Alias = "label")]
     public string Label { get; set; } = "";

@@ -221,13 +221,13 @@ internal static class PatchCommand
     /// <summary>enum 参照付き整数で、数値として読めなければラベルとして解決する。</summary>
     private static string ResolveEnumLabel(DecodedNode node, string input, FormatDefinition format)
     {
-        if (node is not DecodedInteger { EnumRef: { } enumRef } || FieldEncoder.TryParseInteger(input.Trim(), out _))
+        if (node is not DecodedInteger { EnumRef: { } enumRef } integer || FieldEncoder.TryParseInteger(input.Trim(), out _))
             return input;
         if (!format.Enums.TryGetValue(enumRef, out var def))
             return input;
         var entry = def.Entries.FirstOrDefault(e => string.Equals(e.Label, input.Trim(), StringComparison.Ordinal))
                  ?? def.Entries.FirstOrDefault(e => string.Equals(e.Label, input.Trim(), StringComparison.OrdinalIgnoreCase));
-        return entry is null ? input : entry.Value.ToString(CultureInfo.InvariantCulture);
+        return entry is null ? input : IntegerText.Format(entry.Value, integer.DslType);
     }
 
     private static string CurrentValue(DecodedNode node) => node switch

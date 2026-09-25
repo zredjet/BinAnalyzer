@@ -285,7 +285,7 @@ public sealed class DiffTreeOutputFormatter
             {
                 return child switch
                 {
-                    DecodedInteger i => i.EnumLabel ?? i.Value.ToString(),
+                    DecodedInteger i => i.EnumLabel ?? i.ValueText,
                     DecodedString s => s.Value,
                     _ => null,
                 };
@@ -480,7 +480,7 @@ public sealed class DiffTreeOutputFormatter
 
     private static string FormatIntegerDisplay(DecodedInteger node)
     {
-        var result = node.Value.ToString();
+        var result = node.ValueText;
         if (node.EnumLabel is not null)
             result += $" \"{node.EnumLabel}\"";
         return result;

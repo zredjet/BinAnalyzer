@@ -161,15 +161,15 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
     private static void WriteIntegerNode(StringBuilder sb, DecodedInteger node)
     {
         var searchParts = new StringBuilder();
-        searchParts.Append(node.Name).Append(' ').Append(node.Value);
-        if (node.Value is >= 16 or <= -16)
+        searchParts.Append(node.Name).Append(' ').Append(node.ValueText);
+        if (node.ShowsHex)
             searchParts.Append(" 0x").Append(node.Value.ToString("X"));
         if (node.EnumLabel is not null)
             searchParts.Append(' ').Append(node.EnumLabel);
         sb.Append("<div class=\"node integer\"").Append(SearchAttr(searchParts.ToString())).AppendLine(">");
         sb.Append("  <span class=\"name\">").Append(E(node.Name)).Append("</span>: ");
-        sb.Append("<span class=\"value int\">").Append(node.Value).Append("</span>");
-        if (node.Value is >= 16 or <= -16)
+        sb.Append("<span class=\"value int\">").Append(node.ValueText).Append("</span>");
+        if (node.ShowsHex)
             sb.Append(" <span class=\"meta\">(0x").Append(node.Value.ToString("X")).Append(")</span>");
         if (node.EnumLabel is not null)
         {
@@ -307,11 +307,11 @@ public sealed class HtmlOutputFormatter : IOutputFormatter
         foreach (var field in node.Fields)
         {
             var searchText = field.EnumLabel is not null
-                ? $"{field.Name} {field.Value} {field.EnumLabel}"
-                : $"{field.Name} {field.Value}";
+                ? $"{field.Name} {field.ValueText} {field.EnumLabel}"
+                : $"{field.Name} {field.ValueText}";
             sb.Append("<div class=\"node integer\"").Append(SearchAttr(searchText)).AppendLine(">");
             sb.Append("  <span class=\"name\">").Append(E(field.Name)).Append("</span>: ");
-            sb.Append("<span class=\"value int\">").Append(field.Value).Append("</span>");
+            sb.Append("<span class=\"value int\">").Append(field.ValueText).Append("</span>");
             if (field.BitHigh == field.BitLow)
                 sb.Append(" <span class=\"meta\">(bit ").Append(field.BitLow).Append(")</span>");
             else

@@ -17,8 +17,8 @@ internal static class NodeDetailFormatter
         {
             case DecodedInteger intNode:
                 details.Add(("Type", "integer"));
-                details.Add(("Value", intNode.Value.ToString()));
-                if (intNode.Value is >= 16 or <= -16)
+                details.Add(("Value", intNode.ValueText));
+                if (intNode.ShowsHex)
                     details.Add(("Hex", $"0x{intNode.Value:X}"));
                 if (intNode.EnumLabel is not null)
                     details.Add(("Enum", intNode.EnumLabel));
@@ -74,7 +74,7 @@ internal static class NodeDetailFormatter
                     var bits = field.BitHigh == field.BitLow
                         ? $"bit {field.BitLow}"
                         : $"bits {field.BitHigh}:{field.BitLow}";
-                    details.Add(($"  {field.Name}", $"{field.Value} ({bits})"));
+                    details.Add(($"  {field.Name}", $"{field.ValueText} ({bits})"));
                 }
                 break;
 

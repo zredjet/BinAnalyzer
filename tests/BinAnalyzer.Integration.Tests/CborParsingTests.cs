@@ -92,6 +92,19 @@ public class CborParsingTests
     }
 
     [Fact]
+    public void CborFormat_EightByteIntegers_AreShownWithoutWrapping()
+    {
+        var contents = Values(CborTestDataGenerator.CreateCbor64BitIntegers()).Select(v => (DecodedStruct)v.Child("content")).ToList();
+
+        ((DecodedInteger)contents[0].Child("value")).ValueText.Should().Be("18446744073709551615");       // 1b ff…（RFC 8949 付録 A）
+        // 3b ff… = -18446744073709551616 は 64 ビットに収まらないので値を出さず、引数を符号なしで見せる
+        contents[1].Children.Should().NotContain(c => c.Name == "value");
+        ((DecodedInteger)contents[1].Child("argument_unsigned")).ValueText.Should().Be("18446744073709551615");
+        ((DecodedInteger)contents[2].Child("value")).ValueText.Should().Be("9223372036854775808");
+        ((DecodedVirtual)contents[3].Child("value")).Value.Should().Be(long.MinValue);                   // -9223372036854775808
+    }
+
+    [Fact]
     public void CborFormat_IndefiniteLength_ReadsUntilBreak()
     {
         var values = Values(CborTestDataGenerator.CreateCborRfc8949Examples()).Select(Convert).ToList();

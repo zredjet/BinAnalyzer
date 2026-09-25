@@ -146,8 +146,8 @@ public sealed class TreeOutputFormatter : IOutputFormatter
         sb.Append(prefix);
         sb.Append(node.Name);
         sb.Append(": ");
-        sb.Append(C(node.Value.ToString(), AnsiColors.Cyan));
-        if (node.Value is >= 16 or <= -16)
+        sb.Append(C(node.ValueText, AnsiColors.Cyan));
+        if (node.ShowsHex)
             sb.Append(C($" (0x{node.Value:X})", AnsiColors.Dim));
         if (node.BitOffset.HasValue)
             sb.Append(C($" [0x{node.Offset:X8}:{node.BitOffset}] ({node.Size} bits)", AnsiColors.Dim));
@@ -269,7 +269,7 @@ public sealed class TreeOutputFormatter : IOutputFormatter
             sb.Append(_useColor ? C(connector, AnsiColors.Dim) : connector);
             sb.Append(field.Name);
             sb.Append(": ");
-            sb.Append(C(field.Value.ToString(), AnsiColors.Cyan));
+            sb.Append(C(field.ValueText, AnsiColors.Cyan));
 
             if (field.BitHigh == field.BitLow)
                 sb.Append(C($" (bit {field.BitLow})", AnsiColors.Dim));
