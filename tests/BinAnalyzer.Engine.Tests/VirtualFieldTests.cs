@@ -176,6 +176,36 @@ public class VirtualFieldTests
         marker.Value.Should().Be(0xFF);
     }
 
+    [Fact]
+    public void PaddingVirtual_IsMarkedAsPaddingAndStillBindsItsValue()
+    {
+        // REQ-192: padding: true の virtual はツリーに出さない作業用の値。値は後ろの式から使える
+        var format = CreateFormat("main",
+            new FieldDefinition { Name = "raw", Type = FieldType.UInt8 },
+            new FieldDefinition
+            {
+                Name = "doubled",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{raw * 2}"),
+                IsPadding = true,
+            },
+            new FieldDefinition
+            {
+                Name = "shown",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{doubled + 1}"),
+            });
+
+        var result = _decoder.Decode(new byte[] { 0x05 }, format);
+
+        var hidden = result.Children[1].Should().BeOfType<DecodedVirtual>().Subject;
+        hidden.IsPadding.Should().BeTrue();
+        hidden.Value.Should().Be(10L);
+        var shown = result.Children[2].Should().BeOfType<DecodedVirtual>().Subject;
+        shown.IsPadding.Should().BeFalse();
+        shown.Value.Should().Be(11L);
+    }
+
     private static FormatDefinition CreateFormat(string rootName, params FieldDefinition[] fields)
     {
         return new FormatDefinition

@@ -140,6 +140,39 @@ public class ErrorRecoveryTests
             .Which.Value.Should().Be(0xFF);
     }
 
+    [Fact]
+    public void ContinueMode_FailedBitfield_HidesEarlierValuesOfItsEntries()
+    {
+        // REQ-193: 読めなかった bitfield のエントリの名前は未定義になり、前に読んだ同名の値が後ろの式に見えない
+        var format = CreateFormat("main",
+            new FieldDefinition
+            {
+                Name = "first",
+                Type = FieldType.Bitfield,
+                Size = 1,
+                BitfieldEntries = [new BitfieldEntry { Name = "kind", BitHigh = 7, BitLow = 0 }],
+            },
+            new FieldDefinition
+            {
+                Name = "second",
+                Type = FieldType.Bitfield,
+                Size = 2,
+                BitfieldEntries = [new BitfieldEntry { Name = "kind", BitHigh = 15, BitLow = 0 }],
+            },
+            new FieldDefinition
+            {
+                Name = "seen",
+                Type = FieldType.Virtual,
+                ValueExpression = ExpressionParser.Parse("{kind}"),
+            });
+
+        // 1 バイト目は first（kind = 5）、second は 2 バイト要るが 1 バイトしか無い
+        var result = _decoder.DecodeWithRecovery(new byte[] { 0x05, 0x01 }, format, ErrorMode.Continue);
+
+        result.Root.Children[1].Should().BeOfType<DecodedError>();
+        result.Root.Children[2].Should().BeOfType<DecodedError>("second の kind が読めなかったので、first の kind = 5 を使ってはならない");
+    }
+
     private static FormatDefinition CreateFormat(string rootName, params FieldDefinition[] fields)
     {
         return new FormatDefinition
