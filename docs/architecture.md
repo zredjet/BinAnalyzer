@@ -133,7 +133,7 @@ ASTの定義はCore（DSLとEngineの両方が必要とするため）。評価�
 
 ### バイナリデコーダー — Engine/
 
-- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）。スコープと変数辞書は Pop 後に使い回し、小さな整数のボックスは `BoxCache` で共有する（REQ-180）。`size` 付きの繰り返しの境界スコープは、抜けるときに変数を外側のスコープへ移す（`_index` / `_prev` を除く。REQ-190）。size 付きのスコープの中から範囲の外へ seek したフィールドは、行き先を含む外側の境界まで広げたオーバーレイスコープ（変数を捕捉しない）の中で読む（`PushSeekBoundary` / `PopScopesTo`。REQ-191）
+- **DecodeContext** — ReadOnlyMemory\<byte\>のラッパー。位置追跡、スコープスタック、変数バインディング、Seek()による絶対オフセットジャンプ、SavePosition()/RestorePosition()による位置の保存・復帰、文字列テーブル登録・参照、BitReader内部クラスによるビットストリーム読み取り、PushVariableScope()によるテンプレートパラメータ用オーバーレイスコープ、状態変数ストア（スコープスタックとは独立した永続Dictionary）。スコープと変数辞書は Pop 後に使い回し、小さな整数のボックスは `BoxCache` で共有する（REQ-180）。`size` 付きの繰り返しの境界スコープは、抜けるときに変数を外側のスコープへ移す（`_index` / `_prev` を除く。REQ-190）。size 付きのスコープの中から範囲の外へ seek したフィールドは、行き先を含む外側の境界まで広げたオーバーレイスコープ（変数を捕捉しない）の中で読む（`PushSeekBoundary` / `PopScopesTo`。REQ-191）。式の `_offset` は `ByteOffset`（今の位置。ビットストリームモードで読みかけのバイトがあればそのバイトの位置。REQ-194）
 - **NodeValues** — 式評価から struct / array の値を参照する変換。struct フィールドは `DecodedStruct` ノードそのものを変数に束縛し、メンバーアクセス・添字・`len` 等のときに子を名前で引く（以前はフィールドごとに辞書を再帰的に複製していた）
 - **ExpressionEvaluator** — DecodeContextの変数を使用してASTを評価。`@state_name` による状態変数の参照にも対応
 - **BinaryDecoder** — フィールドデコード、繰り返し処理、switch解決、テンプレート引数の解決・バインドのオーケストレーター

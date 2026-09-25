@@ -13,8 +13,8 @@ namespace BinAnalyzer.Core.Validation;
 /// </remarks>
 internal static class ExpressionReferences
 {
-    /// <summary>エンジンが実行時に束縛する名前（繰り返しの <c>_index</c> / <c>_prev</c>、評価器が特別扱いする <c>remaining</c>）。</summary>
-    internal static readonly IReadOnlyList<string> SpecialVariables = ["_index", "_prev", "remaining"];
+    /// <summary>エンジンが実行時に束縛する名前（繰り返しの <c>_index</c> / <c>_prev</c>、評価器が特別扱いする <c>remaining</c> / <c>_offset</c>）。</summary>
+    internal static readonly IReadOnlyList<string> SpecialVariables = ["_index", "_prev", "remaining", "_offset"];
 
     /// <summary>
     /// 式から参照できる名前（定義順、重複なし）: 全 struct のフィールド名・bitfield のエントリ名・テンプレートのパラメータ名と特殊変数。

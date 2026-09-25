@@ -38,6 +38,12 @@ public sealed class DecodeContext
     public int Position => _position;
     public int DataLength => _data.Length;
     public int Remaining => CurrentScope.End - _position;
+
+    /// <summary>
+    /// 式の <c>_offset</c> の値（REQ-194）。ふつうは <see cref="Position"/> と同じ。ビットストリームモードで読みかけのバイトがあれば、
+    /// そのバイトの位置（端数のビットは切り捨て）。<see cref="Position"/> は読みかけのバイトの次を指している。
+    /// </summary>
+    public int ByteOffset => _bitReader is { HasPartialByte: true } ? _position - 1 : _position;
     public bool IsEof => _position >= CurrentScope.End;
 
     public ReadOnlyMemory<byte> SliceOriginal(int offset, int length) => _data.Slice(offset, length);
@@ -565,6 +571,9 @@ public sealed class DecodeContext
         }
 
         public int BitPosition => _bitPosition;
+
+        /// <summary>読みかけのバイトがあるか（次のビットを今のバイトから読む）。</summary>
+        public bool HasPartialByte => _hasByte;
 
         public long ReadBits(int count)
         {
