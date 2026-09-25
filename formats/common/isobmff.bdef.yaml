@@ -1,60 +1,87 @@
+# ISO Base Media File Format（MP4・HEIF など）の共通定義ライブラリ
+# 仕様: ISO/IEC 14496-12:2022（ISO Base Media File Format）。box の構造は ffmpeg 9.0 が出力した MP4・M4A と、テストデータの HEIF で照合した
+# 構造: インポートして使う struct の集まり（ルートはダミー）。container_box の子 box（iso_box）はインポート側が定義する
+# 対応していないもの: dref の中の 'url ' / 'urn ' box の分解（インポート側の iso_box の既定の扱いになる）
 name: ISOBMFF_Common
 root: _isobmff_common
 structs:
   _isobmff_common:
     - name: _unused
       type: uint8
+      description: "ライブラリのダミーのルート（使われない）"
 
   container_box:
     - name: children
       type: struct
       struct: iso_box
       repeat: eof
+      description: "子 box の並び（iso_box はインポート側の定義）"
 
   ftyp_box:
     - name: major_brand
       type: ascii
       size: "4"
+      description: "主なブランド（ファイルが準拠する仕様。'isom'・'mp42'・'M4A '・'heic' など）"
     - name: minor_version
       type: uint32
+      description: "主なブランドの版"
     - name: compatible_brands
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
+      type: struct
+      struct: brand
+      repeat: eof
+      description: "互換のあるブランドの並び（4 文字ずつ）"
+
+  brand:
+    - name: brand
+      type: ascii
+      size: "4"
+      description: "ブランド（4 文字）"
 
   hdlr_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: pre_defined
       type: uint32
+      description: "予約（0。QuickTime ではコンポーネントの種類 'mhlr' / 'dhlr'）"
     - name: handler_type
       type: ascii
       size: "4"
+      description: "ハンドラの種類（'vide' = 映像、'soun' = 音声、'hint'・'meta'・'mdir' = iTunes のメタデータ、'pict' = HEIF の画像 など）"
     - name: reserved
       type: bytes
       size: "12"
+      padding: true
+      description: "予約（0）"
     - name: name
-      type: bytes
+      type: utf8
       size: remaining
       if: "{remaining > 0}"
+      description: "ハンドラの名前（UTF-8、NUL 終端。例: 'VideoHandler'）"
 
   dref_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: entry_count
       type: uint32
+      description: "データ参照の数"
     - name: entries
-      type: bytes
-      size: remaining
-      if: "{remaining > 0}"
+      type: struct
+      struct: iso_box
+      repeat: eof
+      description: "データ参照（'url ' / 'urn ' の box。フラグ 1 は同じファイルの中を指す）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ（バイト列）"

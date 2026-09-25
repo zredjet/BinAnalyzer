@@ -1,9 +1,13 @@
-# Matroska / WebM（.mkv / .webm / .mka）— EBML（RFC 8794）+ Matroska 要素（RFC 9559）
-# 要素 = ID（VINT、1〜4 バイト、長さを示すビットを含めて ID とする）+ サイズ（VINT、1〜8 バイト、長さのビットを除いた値）+ データ。
-# VINT の長さは先頭バイトの上位にある 0 の数 + 1。サイズの値ビットがすべて 1 のときは「サイズ不定」（ライブ配信の Segment / Cluster）で、
-# スコープの残りすべてをデータとして扱う。
-# データの型は ID で決まる: 子要素を持つ要素（master）/ 符号なし整数 / 符号付き整数 / 浮動小数点 / 文字列（ASCII・UTF-8）/ 日付 / バイナリ。
-# 表に無い ID はバイナリとして表示する。
+# Matroska / WebM 動画（.mkv / .webm / .mka / .mk3d）
+# 仕様: RFC 8794 Extensible Binary Meta Language（2020）、RFC 9559 Matroska Media Container Format Specification（2024）、
+#   WebM Container Guidelines（The WebM Project）
+# 構造: 要素 = ID（VINT、1〜4 バイト。長さを示すビットを含めて ID とする）+ サイズ（VINT、1〜8 バイト。長さのビットを除いた値）+ データ。
+#   VINT の長さは先頭バイトの上位にある 0 の数 + 1。サイズの値ビットがすべて 1 のときは「サイズ不定」（ライブ配信の Segment / Cluster）で、
+#   スコープの残りすべてをデータとして扱う。データの型は ID で switch する: 子要素を持つ要素（master）/ 符号なし整数 / 符号付き整数 /
+#   浮動小数点数 / 文字列（ASCII・UTF-8）/ 日付 / SimpleBlock・Block / バイナリ。
+# 対応していないもの: 表に無い ID の要素（バイナリとして表示）、フレームの中身とレーシング（Xiph / EBML / 固定長）の分割、
+#   CRC-32 要素の検証（親の要素の残りの子に対する値）、コンテンツの圧縮・暗号化（ContentEncoding）の解除、
+#   サイズ不定の Cluster が並ぶライブ配信のファイルで、後続の Cluster を兄弟として読むこと（サイズ不定の要素はスコープの残りをすべて子とする）
 name: Matroska
 endianness: big
 root: mkv
@@ -245,6 +249,7 @@ structs:
       type: struct
       struct: ebml_element
       repeat: eof
+      description: "最上位の要素の並び（EBML ヘッダ → Segment）"
 
   ebml_element:
     # --- ID（VINT、長さのビットを含めた値） ---
@@ -254,6 +259,7 @@ structs:
     - name: id_length
       type: virtual
       value: "{id_first >= 0x80 ? 1 : id_first >= 0x40 ? 2 : id_first >= 0x20 ? 3 : 4}"
+      description: "ID のバイト数（先頭バイトの上位の 0 の数 + 1）"
     - name: id_rest
       type: switch
       if: "{id_length > 1}"
@@ -264,17 +270,20 @@ structs:
         "2": be2
         "3": be3
       default: be0  # id_length は 1〜4 なので到達しない
+      description: "ID の 2 バイト目以降（ID のバイト数 − 1 バイトのビッグエンディアンの整数）"
     - name: id
       type: virtual
       value: "{id_length == 1 ? id_first : (id_first << (8 * (id_length - 1))) | id_rest.value}"
       enum: ebml_id
     # --- サイズ（VINT、長さのビットを除いた値） ---
+      description: "要素の ID（長さを示すビットを含めた値。例: 0x1A45DFA3 = EBML、0x18538067 = Segment）"
     - name: size_first
       type: uint8
       description: "サイズの先頭バイト（上位の 0 の数 + 1 がサイズのバイト数。8 バイトまで）"
     - name: size_length
       type: virtual
       value: "{size_first >= 0x80 ? 1 : size_first >= 0x40 ? 2 : size_first >= 0x20 ? 3 : size_first >= 0x10 ? 4 : size_first >= 0x08 ? 5 : size_first >= 0x04 ? 6 : size_first >= 0x02 ? 7 : 8}"
+      description: "サイズのバイト数（先頭バイトの上位の 0 の数 + 1）"
     - name: size_rest
       type: switch
       if: "{size_length > 1}"
@@ -289,6 +298,7 @@ structs:
         "6": be6
         "7": be7
       default: be0  # size_length は 1〜8 なので到達しない
+      description: "サイズの 2 バイト目以降（サイズのバイト数 − 1 バイトのビッグエンディアンの整数）"
     - name: data_size
       type: virtual
       value: "{size_length == 1 ? size_first & 0x7F : ((size_first & (0xFF >> size_length)) << (8 * (size_length - 1))) | size_rest.value}"
@@ -391,7 +401,10 @@ structs:
         "0x467E": ebml_utf8  # FileDescription
         "0x4461": ebml_date  # DateUTC
         "0xA3": simple_block  # SimpleBlock
+        "0xA1": simple_block  # Block（SimpleBlock と同じ形。フラグは invisible と lacing だけが意味を持つ）
+        "0xBF": crc32_element  # CRC-32
       default: ebml_binary
+      description: "要素のデータ（ID で型を振り分ける。サイズ不定ならスコープの残りすべて）"
 
   # --- 子要素を持つ要素 ---
   ebml_master:
@@ -399,6 +412,7 @@ structs:
       type: struct
       struct: ebml_element
       repeat: eof
+      description: "子要素の並び"
 
   # --- 値の型 ---
   ebml_uint:
@@ -425,11 +439,13 @@ structs:
       cases:
         "1": track_type_u8
       default: ebml_uint
+      description: "トラックの種類（1 バイトなら enum で表示）"
 
   track_type_u8:
     - name: value
       type: uint8
       enum: track_type
+      description: "トラックの種類（1 = video、2 = audio、17 = subtitle など）"
 
   ebml_int:
     - name: value
@@ -451,16 +467,19 @@ structs:
         "4": float4
         "8": float8
       default: ebml_binary
+      description: "浮動小数点数（4 / 8 バイト。0 バイトなら 0.0、それ以外の長さはバイト列）"
 
   ebml_ascii:
     - name: value
       type: ascii
       size: remaining
+      description: "ASCII の文字列（末尾の NUL は詰め物）"
 
   ebml_utf8:
     - name: value
       type: utf8
       size: remaining
+      description: "UTF-8 の文字列（末尾の NUL は詰め物）"
 
   ebml_date:
     - name: value
@@ -471,6 +490,7 @@ structs:
     - name: value
       type: bytes
       size: remaining
+      description: "バイナリのデータ（表に無い ID の要素を含む）"
 
   # --- SimpleBlock（Cluster 内の 1 フレーム） ---
   simple_block:
@@ -480,6 +500,7 @@ structs:
     - name: track_length
       type: virtual
       value: "{track_first >= 0x80 ? 1 : track_first >= 0x40 ? 2 : track_first >= 0x20 ? 3 : track_first >= 0x10 ? 4 : track_first >= 0x08 ? 5 : track_first >= 0x04 ? 6 : track_first >= 0x02 ? 7 : 8}"
+      description: "トラック番号のバイト数（VINT の長さ）"
     - name: track_rest
       type: switch
       if: "{track_length > 1}"
@@ -494,97 +515,136 @@ structs:
         "6": be6
         "7": be7
       default: be0  # track_length は 1〜8 なので到達しない
+      description: "トラック番号の 2 バイト目以降"
     - name: track_number
       type: virtual
       value: "{track_length == 1 ? track_first & 0x7F : ((track_first & (0xFF >> track_length)) << (8 * (track_length - 1))) | track_rest.value}"
+      description: "このフレームのトラック番号（TrackEntry の TrackNumber）"
     - name: timecode
       type: int16
       description: "Cluster の Timestamp からの相対時刻"
     - name: flags
       type: bitfield
       size: "1"
+      description: "フレームのフラグ"
       fields:
         - name: keyframe
           bits: "7"
+          description: "1 ならキーフレーム（SimpleBlock のみ）"
         - name: reserved
           bits: "6:4"
+          description: "予約（0）"
         - name: invisible
           bits: "3"
+          description: "1 なら表示しない（復号だけする）"
         - name: lacing
           bits: "2:1"
           enum: block_lacing
+          description: "レーシング（1 ブロックに複数フレームを入れる方式）"
         - name: discardable
           bits: "0"
+          description: "1 なら捨ててよいフレーム（SimpleBlock のみ）"
     - name: frame_data
       type: bytes
       size: remaining
+      description: "フレームのデータ（レーシングがあれば複数のフレームの大きさと中身）"
+
+  crc32_element:
+    - name: value
+      type: bytes
+      size: remaining
+      description: "CRC-32（4 バイト、リトルエンディアン。親の要素の、この要素より後ろの子すべてに対する値。検証しない）"
 
   # --- ビッグエンディアン整数（VINT の残りバイト・可変長の値） ---
   be0:
     - name: value
       type: virtual
       value: "0"
+      description: "値（0 バイトなら 0）"
   be1:
     - name: value
       type: uint8
+      description: "1 バイトの符号なし整数"
   be2:
     - name: value
       type: uint16
+      description: "2 バイトの符号なし整数（ビッグエンディアン）"
   be3:
     - name: hi
       type: uint8
+      description: "3 バイトの整数の上位 1 バイト"
     - name: lo
       type: uint16
+      description: "3 バイトの整数の下位 2 バイト"
     - name: value
       type: virtual
       value: "{(hi << 16) | lo}"
+      description: "3 バイトの符号なし整数"
   be4:
     - name: value
       type: uint32
+      description: "4 バイトの符号なし整数（ビッグエンディアン）"
   be5:
     - name: hi
       type: uint8
+      description: "5 バイトの整数の上位 1 バイト"
     - name: lo
       type: uint32
+      description: "5 バイトの整数の下位 4 バイト"
     - name: value
       type: virtual
       value: "{(hi << 32) | lo}"
+      description: "5 バイトの符号なし整数"
   be6:
     - name: hi
       type: uint16
+      description: "6 バイトの整数の上位 2 バイト"
     - name: lo
       type: uint32
+      description: "6 バイトの整数の下位 4 バイト"
     - name: value
       type: virtual
       value: "{(hi << 32) | lo}"
+      description: "6 バイトの符号なし整数"
   be7:
     - name: hi
       type: uint8
+      description: "7 バイトの整数の上位 1 バイト"
     - name: mid
       type: uint16
+      description: "7 バイトの整数の中間 2 バイト"
     - name: lo
       type: uint32
+      description: "7 バイトの整数の下位 4 バイト"
     - name: value
       type: virtual
       value: "{(hi << 48) | (mid << 32) | lo}"
+      description: "7 バイトの符号なし整数"
   be8:
     - name: value
       type: uint64
+      description: "8 バイトの符号なし整数（ビッグエンディアン）"
   be1_signed:
     - name: value
       type: int8
+      description: "1 バイトの符号付き整数"
   be2_signed:
     - name: value
       type: int16
+      description: "2 バイトの符号付き整数"
   be4_signed:
     - name: value
       type: int32
+      description: "4 バイトの符号付き整数"
   be8_signed:
     - name: value
       type: int64
+      description: "8 バイトの符号付き整数"
   float4:
     - name: value
       type: float32
+      description: "32 ビット浮動小数点数"
   float8:
     - name: value
       type: float64
+      description: "64 ビット浮動小数点数"

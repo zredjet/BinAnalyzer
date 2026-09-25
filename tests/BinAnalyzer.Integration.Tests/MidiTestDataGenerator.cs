@@ -52,4 +52,36 @@ public static class MidiTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// ランニングステータスと未知のチャンクを含む形式 1 の MIDI（REQ-188）。MThd の後ろに未知のチャンク 'XFIH'（3 バイト）、
+    /// MTrk にトラック名・テンポ（120 BPM）・拍子（3/4）・プログラムチェンジ・ノートオン（60）・ランニングステータスのノートオン（64 と 60 のベロシティ 0）・
+    /// ピッチベンド（中央）・トラックの終わり。
+    /// </summary>
+    public static byte[] CreateMidiWithRunningStatus()
+    {
+        var events = new byte[]
+        {
+            0x00, 0xFF, 0x03, 0x04, (byte)'T', (byte)'e', (byte)'s', (byte)'t',
+            0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20,
+            0x00, 0xFF, 0x58, 0x04, 0x03, 0x02, 0x18, 0x08,
+            0x00, 0xC0, 0x05,
+            0x00, 0x90, 0x3C, 0x64,
+            0x81, 0x70, 0x40, 0x64,
+            0x81, 0x70, 0x3C, 0x00,
+            0x00, 0xE0, 0x00, 0x40,
+            0x83, 0x60, 0xFF, 0x2F, 0x00,
+        };
+        var ms = new MemoryStream();
+        ms.Write("MThd"u8);
+        ms.Write([0, 0, 0, 6, 0, 1, 0, 1, 0x01, 0xE0]);
+        ms.Write("XFIH"u8);
+        ms.Write([0, 0, 0, 3, (byte)'a', (byte)'b', (byte)'c']);
+        ms.Write("MTrk"u8);
+        var length = new byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(length, (uint)events.Length);
+        ms.Write(length);
+        ms.Write(events);
+        return ms.ToArray();
+    }
 }

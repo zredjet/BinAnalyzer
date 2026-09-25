@@ -1,3 +1,12 @@
+# FLV 動画（.flv。Flash Video）
+# 仕様: Adobe Flash Video File Format Specification Version 10.1（2010）の FLV と AMF0（Action Message Format 0、Adobe AMF0 Specification 2007）、
+#   Enhanced RTMP / FLV（Veovera Software Organization、v2、2024。HEVC・AV1・Opus などを FourCC で示す拡張）
+# 構造: 'FLV' + 版 + フラグ + ヘッダのバイト数 → [PreviousTagSize0 + タグ（種類 + 大きさ + 時刻 + ストリーム ID + 中身）]* の並び。
+#   タグの中身は種類（音声・映像・スクリプト）で switch する。スクリプト（onMetaData）は AMF0 の値を再帰的に読む。
+#   各タグの後ろの PreviousTagSize は、直前のタグの大きさ（中身 + 11）であることを検証する。
+# 対応していないもの: 音声・映像のフレームの中身、AVC / HEVC のデコーダ設定（AVCDecoderConfigurationRecord。バイト列として表示）、
+#   Enhanced RTMP の拡張ヘッダ（ExHeader）の後ろの分解（FourCC までは読む）、暗号化されたタグ（Filter = 1）、AMF3、
+#   AMF0 の参照（0x07）・XML 文書（0x0F）・型付きオブジェクト（0x10）の中身
 name: FLV
 endianness: big
 root: flv
@@ -6,10 +15,166 @@ enums:
   tag_type:
     - value: 8
       label: audio
+      description: "音声"
     - value: 9
       label: video
+      description: "映像"
     - value: 18
       label: script
+      description: "スクリプトデータ（AMF0。onMetaData など）"
+
+  sound_format:
+    - value: 0
+      label: LPCM_platform
+      description: "リニア PCM（実行環境のエンディアン）"
+    - value: 1
+      label: ADPCM
+      description: "ADPCM"
+    - value: 2
+      label: MP3
+      description: "MP3"
+    - value: 3
+      label: LPCM_LE
+      description: "リニア PCM（リトルエンディアン）"
+    - value: 4
+      label: Nellymoser_16kHz
+      description: "Nellymoser 16 kHz モノラル"
+    - value: 5
+      label: Nellymoser_8kHz
+      description: "Nellymoser 8 kHz モノラル"
+    - value: 6
+      label: Nellymoser
+      description: "Nellymoser"
+    - value: 7
+      label: G711_A-law
+      description: "G.711 A-law"
+    - value: 8
+      label: G711_mu-law
+      description: "G.711 μ-law"
+    - value: 9
+      label: ExHeader
+      description: "Enhanced RTMP の拡張ヘッダ（後ろにパケットの種類と FourCC）"
+    - value: 10
+      label: AAC
+      description: "AAC"
+    - value: 11
+      label: Speex
+      description: "Speex"
+    - value: 14
+      label: MP3_8kHz
+      description: "MP3 8 kHz"
+    - value: 15
+      label: device_specific
+      description: "機器固有の音声"
+
+  frame_type:
+    - value: 1
+      label: key_frame
+      description: "キーフレーム（AVC なら IDR）"
+    - value: 2
+      label: inter_frame
+      description: "インターフレーム"
+    - value: 3
+      label: disposable_inter_frame
+      description: "捨ててよいインターフレーム（H.263 のみ）"
+    - value: 4
+      label: generated_key_frame
+      description: "サーバーが生成したキーフレーム"
+    - value: 5
+      label: video_info_frame
+      description: "映像の情報・コマンドのフレーム"
+
+  codec_id:
+    - value: 2
+      label: Sorenson_H263
+      description: "Sorenson H.263"
+    - value: 3
+      label: Screen_video
+      description: "Screen video"
+    - value: 4
+      label: On2_VP6
+      description: "On2 VP6"
+    - value: 5
+      label: On2_VP6_alpha
+      description: "On2 VP6（アルファ付き）"
+    - value: 6
+      label: Screen_video_v2
+      description: "Screen video 版 2"
+    - value: 7
+      label: AVC
+      description: "H.264 / AVC"
+    - value: 12
+      label: HEVC_legacy
+      description: "H.265 / HEVC（Enhanced RTMP 以前の非公式の値）"
+
+  avc_packet_type:
+    - value: 0
+      label: sequence_header
+      description: "デコーダ設定（AVCDecoderConfigurationRecord）"
+    - value: 1
+      label: NALU
+      description: "NAL ユニット（長さ付き）"
+    - value: 2
+      label: end_of_sequence
+      description: "シーケンスの終わり"
+
+  aac_packet_type:
+    - value: 0
+      label: sequence_header
+      description: "デコーダ設定（AudioSpecificConfig）"
+    - value: 1
+      label: raw
+      description: "AAC のフレーム"
+
+  amf0_type:
+    - value: 0x00
+      label: number
+      description: "数値（64 ビット浮動小数点数）"
+    - value: 0x01
+      label: boolean
+      description: "真偽値"
+    - value: 0x02
+      label: string
+      description: "文字列（長さ 16 ビット）"
+    - value: 0x03
+      label: object
+      description: "オブジェクト（名前 + 値の並び、末尾 00 00 09）"
+    - value: 0x04
+      label: movieclip
+      description: "予約"
+    - value: 0x05
+      label: "null"
+      description: "null"
+    - value: 0x06
+      label: undefined
+      description: "undefined"
+    - value: 0x07
+      label: reference
+      description: "参照（16 ビットの番号）"
+    - value: 0x08
+      label: ecma_array
+      description: "連想配列（要素数 + 名前 + 値の並び、末尾 00 00 09）"
+    - value: 0x09
+      label: object_end
+      description: "オブジェクトの終わり"
+    - value: 0x0A
+      label: strict_array
+      description: "配列（要素数 + 値の並び）"
+    - value: 0x0B
+      label: date
+      description: "日時（ミリ秒 + タイムゾーン）"
+    - value: 0x0C
+      label: long_string
+      description: "長い文字列（長さ 32 ビット）"
+    - value: 0x0D
+      label: unsupported
+      description: "未対応の型"
+    - value: 0x0F
+      label: xml_document
+      description: "XML 文書"
+    - value: 0x10
+      label: typed_object
+      description: "型付きオブジェクト"
 
 structs:
   flv:
@@ -17,122 +182,306 @@ structs:
       type: ascii
       size: "3"
       expected: [0x46, 0x4C, 0x56]
-      description: "FLV"
+      description: "シグネチャ（'FLV'）"
     - name: version
       type: uint8
-      description: "FLVバージョン（通常1）"
+      description: "FLV の版（1）"
     - name: flags
       type: bitfield
       size: "1"
+      description: "含まれるストリームのフラグ"
       fields:
         - name: has_video
           bits: "0"
+          description: "1 なら映像のタグがある"
         - name: reserved_a
           bits: "1"
+          description: "予約（0）"
         - name: has_audio
           bits: "2"
+          description: "1 なら音声のタグがある"
         - name: reserved_b
           bits: "7:3"
+          description: "予約（0）"
     - name: data_offset
       type: uint32
-      description: "ヘッダサイズ（通常9）"
+      description: "ヘッダのバイト数（版 1 は 9。タグの並びの位置）"
+    - name: header_extra
+      type: bytes
+      size: "{data_offset - 9}"
+      if: "{data_offset > 9}"
+      description: "ヘッダの後ろの追加のデータ（将来の版用）"
     - name: prev_tag_size_0
       type: uint32
-      description: "先頭エントリの前タグサイズ（常に0）"
+      validate: "{prev_tag_size_0 == 0}"
+      description: "最初の PreviousTagSize（前のタグが無いので 0）"
     - name: tags
       type: struct
       struct: flv_tag
       repeat: eof
+      description: "タグ（+ その大きさ）の並び"
 
   flv_tag:
-    - name: tag_type
-      type: uint8
-      enum: tag_type
-    - name: data_size_b0
-      type: uint8
-      description: "データサイズ バイト0（MSB）"
-    - name: data_size_b1
-      type: uint8
-      description: "データサイズ バイト1"
-    - name: data_size_b2
-      type: uint8
-      description: "データサイズ バイト2（LSB）"
+    - name: tag_header
+      type: bitfield
+      size: "1"
+      description: "タグの種類とフラグ"
+      fields:
+        - name: reserved
+          bits: "7:6"
+          description: "予約（0。FMS 用）"
+        - name: filter
+          bits: "5"
+          description: "1 なら中身が暗号化などの前処理を受けている"
+        - name: tag_type
+          bits: "4:0"
+          enum: tag_type
+          description: "タグの種類"
     - name: data_size
-      type: virtual
-      value: "{(data_size_b0 << 16) | (data_size_b1 << 8) | data_size_b2}"
-      description: "タグデータサイズ（24ビット）"
-    - name: timestamp_b0
-      type: uint8
-      description: "タイムスタンプ バイト0（下位24ビットのMSB）"
-    - name: timestamp_b1
-      type: uint8
-      description: "タイムスタンプ バイト1"
-    - name: timestamp_b2
-      type: uint8
-      description: "タイムスタンプ バイト2（下位24ビットのLSB）"
+      type: bitfield
+      size: "3"
+      description: "中身のバイト数（24 ビット）"
+      fields:
+        - name: body_size
+          bits: "23:0"
+          description: "中身のバイト数（StreamID の後ろから。タグ全体は + 11）"
+    - name: timestamp_low
+      type: bitfield
+      size: "3"
+      description: "時刻の下位 24 ビット"
+      fields:
+        - name: timestamp_lower
+          bits: "23:0"
+          description: "時刻の下位 24 ビット（ミリ秒）"
     - name: timestamp_ext
       type: uint8
-      description: "タイムスタンプ拡張（上位8ビット）"
+      description: "時刻の上位 8 ビット"
+    - name: timestamp_ms
+      type: virtual
+      value: "{(timestamp_ext << 24) | timestamp_lower}"
+      description: "このタグの時刻（ミリ秒。最初のタグからの経過）"
     - name: stream_id
       type: bytes
       size: "3"
-      description: "ストリームID（常に0）"
+      description: "ストリーム ID（常に 0）"
     - name: data
       type: switch
-      size: "{data_size}"
+      size: "{body_size}"
       switch_on: "{tag_type}"
       cases:
         "8": audio_tag_data
         "9": video_tag_data
         "18": script_tag_data
       default: raw_data
+      description: "タグの中身（種類で振り分ける）"
     - name: prev_tag_size
       type: uint32
-      description: "前タグの全体サイズ（ヘッダ含む）"
+      validate: "{prev_tag_size == body_size + 11}"
+      if: "{remaining >= 4}"
+      description: "このタグのバイト数（中身 + ヘッダの 11 バイト。逆向きに読むのに使う）"
 
   audio_tag_data:
     - name: audio_header
       type: bitfield
       size: "1"
+      description: "音声の形式"
       fields:
         - name: sound_format
           bits: "7:4"
-          description: "音声フォーマット（0=raw, 1=ADPCM, 2=MP3, 10=AAC, 11=Speex）"
+          enum: sound_format
+          description: "音声の形式"
         - name: sound_rate
           bits: "3:2"
-          description: "サンプリングレート（0=5.5kHz, 1=11kHz, 2=22kHz, 3=44kHz）"
+          description: "サンプリング周波数（0 = 5.5 kHz、1 = 11 kHz、2 = 22 kHz、3 = 44 kHz。AAC は常に 3）"
         - name: sound_size
           bits: "1"
-          description: "サンプルサイズ（0=8bit, 1=16bit）"
+          description: "サンプルのビット数（0 = 8 ビット、1 = 16 ビット）"
         - name: sound_type
           bits: "0"
-          description: "チャンネル（0=モノラル, 1=ステレオ）"
+          description: "チャンネル（0 = モノラル、1 = ステレオ。AAC は常に 1）"
+    - name: aac_packet_type
+      type: uint8
+      enum: aac_packet_type
+      if: "{sound_format == 10 ? remaining > 0 : 0}"
+      description: "AAC のパケットの種類"
+    - name: audio_fourcc
+      type: ascii
+      size: "4"
+      if: "{sound_format == 9 ? remaining >= 4 : 0}"
+      description: "Enhanced RTMP の音声コーデックの FourCC（'Opus'・'fLaC'・'ac-3'・'ec-3'・'mp4a' など。下位 4 ビットはパケットの種類）"
     - name: audio_data
       type: bytes
       size: remaining
+      description: "音声のフレーム（AAC の sequence_header なら AudioSpecificConfig）"
 
   video_tag_data:
     - name: video_header
       type: bitfield
       size: "1"
+      description: "映像の形式"
       fields:
+        - name: is_ex_header
+          bits: "7"
+          description: "1 なら Enhanced RTMP の拡張ヘッダ（frame_type は 3 ビット、下位 4 ビットはパケットの種類）"
         - name: frame_type
-          bits: "7:4"
-          description: "フレームタイプ（1=キー, 2=インター, 3=使い捨て, 4=生成キー, 5=ビデオ情報）"
+          bits: "6:4"
+          enum: frame_type
+          description: "フレームの種類"
         - name: codec_id
           bits: "3:0"
-          description: "コーデックID（2=Sorenson H.263, 3=Screen Video, 4=VP6, 7=AVC/H.264）"
+          enum: codec_id
+          description: "コーデック（拡張ヘッダのときはパケットの種類）"
+    - name: video_fourcc
+      type: ascii
+      size: "4"
+      if: "{is_ex_header == 1 ? remaining >= 4 : 0}"
+      description: "Enhanced RTMP の映像コーデックの FourCC（'hvc1' = HEVC、'av01' = AV1、'vp09' = VP9、'avc1' = AVC）"
+    - name: has_avc_header
+      type: virtual
+      value: "{is_ex_header == 0 ? ((codec_id == 7 or codec_id == 12) ? (remaining >= 4 ? 1 : 0) : 0) : 0}"
+      description: "AVC / HEVC のパケットヘッダ（種類 + 表示時刻のずれ）があるか"
+    - name: avc_packet_type
+      type: uint8
+      enum: avc_packet_type
+      if: "{has_avc_header == 1}"
+      description: "AVC のパケットの種類"
+    - name: composition_time
+      type: bitfield
+      size: "3"
+      if: "{has_avc_header == 1}"
+      description: "表示時刻のずれ（符号付き 24 ビット、ミリ秒。NALU 以外は 0）"
+      fields:
+        - name: composition_time_raw
+          bits: "23:0"
+          description: "表示時刻のずれ（24 ビットの 2 の補数）"
+    - name: composition_time_ms
+      type: virtual
+      value: "{composition_time_raw >= 0x800000 ? composition_time_raw - 0x1000000 : composition_time_raw}"
+      if: "{has_avc_header == 1}"
+      description: "表示時刻 − 復号時刻（ミリ秒。符号付き）"
     - name: video_data
       type: bytes
       size: remaining
+      description: "映像のフレーム（AVC の sequence_header なら AVCDecoderConfigurationRecord、NALU なら長さ 4 バイト + NAL ユニットの並び）"
 
   script_tag_data:
-    - name: data
-      type: bytes
-      size: remaining
-      description: "AMF0エンコードされたスクリプトデータ（onMetaData等）"
+    - name: values
+      type: struct
+      struct: amf0_value
+      repeat: eof
+      description: "AMF0 の値の並び（通常は名前の文字列 'onMetaData' と、その値の連想配列）"
+
+  # ===== AMF0 =====
+  amf0_value:
+    - name: amf_type
+      type: uint8
+      enum: amf0_type
+      description: "値の型"
+    - name: value
+      type: switch
+      switch_on: "{amf_type}"
+      cases:
+        "0x00": amf0_number
+        "0x01": amf0_boolean
+        "0x02": amf0_string
+        "0x03": amf0_object
+        "0x07": amf0_reference
+        "0x08": amf0_ecma_array
+        "0x0A": amf0_strict_array
+        "0x0B": amf0_date
+        "0x0C": amf0_long_string
+        "0x05": amf0_empty
+        "0x06": amf0_empty
+        "0x09": amf0_empty
+      default: raw_data
+      description: "値（型で振り分ける）"
+
+  amf0_empty: []
+
+  amf0_number:
+    - name: number
+      type: float64
+      description: "数値（IEEE 754 倍精度。duration・width・framerate など）"
+
+  amf0_boolean:
+    - name: boolean
+      type: uint8
+      description: "真偽値（0 = false、それ以外 = true）"
+
+  amf0_string:
+    - name: length
+      type: uint16
+      description: "文字列のバイト数"
+    - name: text
+      type: utf8
+      size: "{length}"
+      description: "文字列（UTF-8）"
+
+  amf0_long_string:
+    - name: length
+      type: uint32
+      description: "文字列のバイト数"
+    - name: text
+      type: utf8
+      size: "{length}"
+      description: "文字列（UTF-8）"
+
+  amf0_reference:
+    - name: reference
+      type: uint16
+      description: "参照するオブジェクトの番号"
+
+  amf0_date:
+    - name: milliseconds
+      type: float64
+      description: "1970-01-01 UTC からのミリ秒"
+    - name: time_zone
+      type: int16
+      description: "タイムゾーン（予約。0）"
+
+  amf0_object:
+    - name: properties
+      type: struct
+      struct: amf0_property
+      repeat_until: "{name_length == 0}"
+      description: "名前と値の並び（空の名前と object_end で終わる）"
+
+  amf0_ecma_array:
+    - name: count
+      type: uint32
+      description: "要素の数（目安。実際は終わりの印まで読む）"
+    - name: properties
+      type: struct
+      struct: amf0_property
+      repeat_until: "{name_length == 0}"
+      description: "名前と値の並び（空の名前と object_end で終わる）"
+
+  amf0_strict_array:
+    - name: count
+      type: uint32
+      description: "要素の数"
+    - name: elements
+      type: struct
+      struct: amf0_value
+      repeat_count: "{count}"
+      description: "値の並び"
+
+  amf0_property:
+    - name: name_length
+      type: uint16
+      description: "名前のバイト数（0 なら終わりの印で、後ろに object_end の型が続く）"
+    - name: name
+      type: utf8
+      size: "{name_length}"
+      if: "{name_length > 0}"
+      description: "名前（'duration'・'width'・'videocodecid' など）"
+    - name: property_value
+      type: struct
+      struct: amf0_value
+      description: "値（名前が空なら object_end）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ（バイト列）"

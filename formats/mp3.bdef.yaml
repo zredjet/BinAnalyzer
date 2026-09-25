@@ -1,3 +1,15 @@
+# MP3 音声（.mp3。MPEG-1 / 2 / 2.5 Audio Layer I / II / III と ID3 タグ）
+# 仕様: ISO/IEC 11172-3:1993（MPEG-1 Audio）と ISO/IEC 13818-3:1998（MPEG-2 の低いサンプリング周波数）のフレームヘッダ、
+#   MPEG 2.5（Fraunhofer の非公式の拡張）、ID3v2.4.0（2000） https://id3.org/id3v2.4.0-structure と ID3v2.3.0 / ID3v2.2、ID3v1 / v1.1、
+#   Xing / Info（LAME）と VBRI（Fraunhofer）の VBR ヘッダ
+# 構造: [ID3v2 タグ] → MPEG オーディオフレームの並び → [ID3v1 タグ（末尾 128 バイト）]。
+#   ID3v2 と ID3v1 の有無は先頭・末尾を先読みして決める。フレームの長さはヘッダのビットレートとサンプリング周波数の表から
+#   (1 フレームのサンプル数 ÷ 8) × ビットレート ÷ サンプリング周波数 + 詰め物（Layer I は 4 バイト単位）で求める。
+#   最初のフレームの Xing / Info / VBRI ヘッダ（VBR の総フレーム数など）は、サイド情報の後ろ（VBRI はヘッダから 36 バイト目）を先読みして読む。
+#   ヘッダの同期ワードが壊れたところから後ろは、1 つのバイト列として読む。途中で切れた最後のフレームは、あるだけ読む。
+# 対応していないもの: 音声データ（サイド情報・メインデータ）の分解、ID3v2 の非同期化（unsynchronisation）の解除と圧縮・暗号化されたフレーム、
+#   UTF-16 の説明文の後ろの値の分け方（APIC・TXXX の説明が UTF-16 のときは残りをまとめて表示）、ID3v1 のジャンル番号の名前、
+#   APEv2 タグ・Lyrics3、フリーフォーマット（ビットレートの番号 0）のフレームの長さ
 name: MP3
 endianness: big
 root: mp3
@@ -6,207 +18,690 @@ enums:
   mpeg_version:
     - value: 0
       label: MPEG2.5
+      description: "MPEG 2.5（非公式の拡張。8〜12 kHz）"
+    - value: 1
+      label: reserved
+      description: "予約"
     - value: 2
       label: MPEG2
+      description: "MPEG-2（16〜24 kHz）"
     - value: 3
       label: MPEG1
+      description: "MPEG-1（32〜48 kHz）"
 
   mpeg_layer:
+    - value: 0
+      label: reserved
+      description: "予約"
     - value: 1
       label: Layer_III
+      description: "Layer III（MP3）"
     - value: 2
       label: Layer_II
+      description: "Layer II（MP2）"
     - value: 3
       label: Layer_I
-
-  mp3_bitrate:
-    - value: 1
-      label: 32kbps
-    - value: 2
-      label: 40kbps
-    - value: 3
-      label: 48kbps
-    - value: 4
-      label: 56kbps
-    - value: 5
-      label: 64kbps
-    - value: 6
-      label: 80kbps
-    - value: 7
-      label: 96kbps
-    - value: 8
-      label: 112kbps
-    - value: 9
-      label: 128kbps
-    - value: 10
-      label: 160kbps
-    - value: 11
-      label: 192kbps
-    - value: 12
-      label: 224kbps
-    - value: 13
-      label: 256kbps
-    - value: 14
-      label: 320kbps
-
-  mp3_sample_rate:
-    - value: 0
-      label: 44100Hz
-    - value: 1
-      label: 48000Hz
-    - value: 2
-      label: 32000Hz
+      description: "Layer I（MP1）"
 
   channel_mode:
     - value: 0
       label: stereo
+      description: "ステレオ"
     - value: 1
       label: joint_stereo
+      description: "ジョイントステレオ（mode_extension で M/S・強度ステレオ）"
     - value: 2
       label: dual_channel
+      description: "デュアルチャンネル（独立した 2 つのモノラル）"
     - value: 3
       label: mono
+      description: "モノラル"
+
+  emphasis:
+    - value: 0
+      label: none
+      description: "なし"
+    - value: 1
+      label: 50_15_us
+      description: "50 / 15 μs"
+    - value: 2
+      label: reserved
+      description: "予約"
+    - value: 3
+      label: CCITT_J17
+      description: "CCITT J.17"
+
+  text_encoding:
+    - value: 0
+      label: ISO-8859-1
+      description: "Latin-1（NUL 1 バイトで終わる）"
+    - value: 1
+      label: UTF-16
+      description: "BOM 付きの UTF-16（NUL 2 バイトで終わる）"
+    - value: 2
+      label: UTF-16BE
+      description: "BOM なしの UTF-16BE（ID3v2.4 以降）"
+    - value: 3
+      label: UTF-8
+      description: "UTF-8（ID3v2.4 以降）"
+
+  picture_type:
+    - value: 0
+      label: other
+      description: "その他"
+    - value: 1
+      label: file_icon
+      description: "32 × 32 の PNG のファイルアイコン"
+    - value: 2
+      label: other_file_icon
+      description: "その他のファイルアイコン"
+    - value: 3
+      label: cover_front
+      description: "表紙"
+    - value: 4
+      label: cover_back
+      description: "裏表紙"
+    - value: 5
+      label: leaflet_page
+      description: "リーフレットのページ"
+    - value: 6
+      label: media
+      description: "メディア（CD のレーベル面など）"
+    - value: 7
+      label: lead_artist
+      description: "リードアーティスト"
+    - value: 8
+      label: artist
+      description: "アーティスト"
+    - value: 9
+      label: conductor
+      description: "指揮者"
+    - value: 10
+      label: band
+      description: "バンド・オーケストラ"
+    - value: 11
+      label: composer
+      description: "作曲者"
+    - value: 12
+      label: lyricist
+      description: "作詞者"
+    - value: 13
+      label: recording_location
+      description: "録音場所"
+    - value: 14
+      label: during_recording
+      description: "録音中の様子"
+    - value: 15
+      label: during_performance
+      description: "演奏中の様子"
+    - value: 16
+      label: video_screen_capture
+      description: "映像のキャプチャ"
+    - value: 17
+      label: bright_coloured_fish
+      description: "明るい色の魚（仕様にある冗談の項目）"
+    - value: 18
+      label: illustration
+      description: "イラスト"
+    - value: 19
+      label: band_logotype
+      description: "バンドのロゴ"
+    - value: 20
+      label: publisher_logotype
+      description: "出版社のロゴ"
 
 structs:
   mp3:
-    - name: id3v2_header
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      description: "ファイル全体のバイト数（末尾の ID3v1 を探すのに使う）"
+    - name: id3v2_probe
+      type: ascii
+      size: "3"
+      seek: "0"
+      seek_restore: true
+      if: "{file_size >= 10}"
+      description: "先頭 3 バイト（先読み。'ID3' なら ID3v2 タグがある）"
+    - name: id3v1_probe
+      type: ascii
+      size: "3"
+      seek: "{file_size - 128}"
+      seek_restore: true
+      if: "{file_size >= 128}"
+      description: "末尾 128 バイトの先頭 3 バイト（先読み。'TAG' なら ID3v1 タグがある）"
+    - name: has_id3v1
+      type: virtual
+      value: "{file_size < 128 ? 0 : (id3v1_probe == 'TAG' ? 1 : 0)}"
+      description: "末尾に ID3v1 タグがあるか"
+    - name: id3v2
       type: struct
-      struct: id3v2_header
+      struct: id3v2_tag
+      if: "{file_size < 10 ? 0 : id3v2_probe == 'ID3'}"
+      description: "ID3v2 タグ（曲名・アーティスト・画像などのメタデータ）"
     - name: frames
       type: struct
-      struct: id3v2_frame
-      size: "{tag_size}"
-      repeat: eof
-      description: "ID3v2タグ本体（フレーム群）"
-    - name: mpeg_frame_header
+      struct: mpeg_frame
+      repeat_while: "{remaining > (has_id3v1 == 1 ? 128 : 0) + 3}"
+      description: "MPEG オーディオフレームの並び"
+    - name: id3v1
       type: struct
-      struct: mpeg_frame_header
-    - name: audio_properties
-      type: struct
-      struct: audio_properties
-    - name: channel_mode_and_extension
-      type: struct
-      struct: channel_mode_and_extension
+      struct: id3v1_tag
+      seek: "{file_size - 128}"
+      if: "{has_id3v1 == 1}"
+      description: "ID3v1 タグ（末尾 128 バイト）"
 
-  id3v2_header:
+  # ===== MPEG オーディオフレーム =====
+  mpeg_frame:
+    - name: frame_offset
+      type: virtual
+      value: "{file_size - remaining}"
+      description: "このフレームの位置（ファイル先頭から）"
+    - name: header
+      type: bitfield
+      size: "4"
+      description: "フレームヘッダ（32 ビット）"
+      fields:
+        - name: sync
+          bits: "31:21"
+          description: "同期ワード（11 ビットすべて 1 = 0x7FF）"
+        - name: version
+          bits: "20:19"
+          enum: mpeg_version
+          description: "MPEG の版"
+        - name: layer
+          bits: "18:17"
+          enum: mpeg_layer
+          description: "レイヤ"
+        - name: protection_absent
+          bits: "16"
+          description: "0 ならヘッダの後ろに CRC-16 がある"
+        - name: bitrate_index
+          bits: "15:12"
+          description: "ビットレートの番号（0 = フリーフォーマット、15 = 不正）"
+        - name: sampling_rate_index
+          bits: "11:10"
+          description: "サンプリング周波数の番号（MPEG-1: 0 = 44100、1 = 48000、2 = 32000 Hz。MPEG-2 は半分、MPEG 2.5 は 1/4。3 = 予約）"
+        - name: padding_bit
+          bits: "9"
+          description: "1 ならフレームの末尾に詰め物のスロット（Layer I は 4 バイト、それ以外は 1 バイト）がある"
+        - name: private_bit
+          bits: "8"
+          description: "アプリケーション用のビット"
+        - name: channel_mode
+          bits: "7:6"
+          enum: channel_mode
+          description: "チャンネルのモード"
+        - name: mode_extension
+          bits: "5:4"
+          description: "ジョイントステレオの方式（Layer III: bit 1 = M/S ステレオ、bit 0 = 強度ステレオ）"
+        - name: copyright
+          bits: "3"
+          description: "著作権のあるストリームか"
+        - name: original
+          bits: "2"
+          description: "オリジナルか（0 = コピー）"
+        - name: emphasis
+          bits: "1:0"
+          enum: emphasis
+          description: "エンファシス"
+    - name: is_valid
+      type: virtual
+      value: "{sync == 0x7FF and version != 1 and layer != 0 and bitrate_index != 0 and bitrate_index != 15 and sampling_rate_index != 3 ? 1 : 0}"
+      description: "長さを求められる正しいヘッダか（同期ワード・版・レイヤ・ビットレート・サンプリング周波数）"
+    - name: bitrate_kbps
+      type: virtual
+      value: "{is_valid == 0 ? 0 : (version == 3 ? (layer == 3 ? (bitrate_index == 1 ? 32 : bitrate_index == 2 ? 64 : bitrate_index == 3 ? 96 : bitrate_index == 4 ? 128 : bitrate_index == 5 ? 160 : bitrate_index == 6 ? 192 : bitrate_index == 7 ? 224 : bitrate_index == 8 ? 256 : bitrate_index == 9 ? 288 : bitrate_index == 10 ? 320 : bitrate_index == 11 ? 352 : bitrate_index == 12 ? 384 : bitrate_index == 13 ? 416 : 448) : layer == 2 ? (bitrate_index == 1 ? 32 : bitrate_index == 2 ? 48 : bitrate_index == 3 ? 56 : bitrate_index == 4 ? 64 : bitrate_index == 5 ? 80 : bitrate_index == 6 ? 96 : bitrate_index == 7 ? 112 : bitrate_index == 8 ? 128 : bitrate_index == 9 ? 160 : bitrate_index == 10 ? 192 : bitrate_index == 11 ? 224 : bitrate_index == 12 ? 256 : bitrate_index == 13 ? 320 : 384) : (bitrate_index == 1 ? 32 : bitrate_index == 2 ? 40 : bitrate_index == 3 ? 48 : bitrate_index == 4 ? 56 : bitrate_index == 5 ? 64 : bitrate_index == 6 ? 80 : bitrate_index == 7 ? 96 : bitrate_index == 8 ? 112 : bitrate_index == 9 ? 128 : bitrate_index == 10 ? 160 : bitrate_index == 11 ? 192 : bitrate_index == 12 ? 224 : bitrate_index == 13 ? 256 : 320)) : (layer == 3 ? (bitrate_index == 1 ? 32 : bitrate_index == 2 ? 48 : bitrate_index == 3 ? 56 : bitrate_index == 4 ? 64 : bitrate_index == 5 ? 80 : bitrate_index == 6 ? 96 : bitrate_index == 7 ? 112 : bitrate_index == 8 ? 128 : bitrate_index == 9 ? 144 : bitrate_index == 10 ? 160 : bitrate_index == 11 ? 176 : bitrate_index == 12 ? 192 : bitrate_index == 13 ? 224 : 256) : (bitrate_index == 1 ? 8 : bitrate_index == 2 ? 16 : bitrate_index == 3 ? 24 : bitrate_index == 4 ? 32 : bitrate_index == 5 ? 40 : bitrate_index == 6 ? 48 : bitrate_index == 7 ? 56 : bitrate_index == 8 ? 64 : bitrate_index == 9 ? 80 : bitrate_index == 10 ? 96 : bitrate_index == 11 ? 112 : bitrate_index == 12 ? 128 : bitrate_index == 13 ? 144 : 160)))}"
+      description: "ビットレート（kbps。版とレイヤごとの表から bitrate_index で引く）"
+    - name: sample_rate_hz
+      type: virtual
+      value: "{is_valid == 0 ? 0 : (sampling_rate_index == 0 ? 44100 : sampling_rate_index == 1 ? 48000 : 32000) / (version == 3 ? 1 : version == 2 ? 2 : 4)}"
+      description: "サンプリング周波数（Hz）"
+    - name: samples_per_frame
+      type: virtual
+      value: "{layer == 3 ? 384 : (layer == 2 ? 1152 : (version == 3 ? 1152 : 576))}"
+      description: "1 フレームのサンプル数（Layer I = 384、Layer II = 1152、Layer III = MPEG-1 で 1152、MPEG-2 / 2.5 で 576）"
+    - name: frame_length
+      type: virtual
+      value: "{is_valid == 0 ? remaining + 4 - (has_id3v1 == 1 ? 128 : 0) : (layer == 3 ? (12 * bitrate_kbps * 1000 / sample_rate_hz + padding_bit) * 4 : samples_per_frame / 8 * bitrate_kbps * 1000 / sample_rate_hz + padding_bit)}"
+      description: "フレームのバイト数（ヘッダを含む。ヘッダが正しくなければ、ID3v1 の手前までの残り全部）"
+    - name: crc
+      type: uint16
+      if: "{is_valid == 1 ? protection_absent == 0 : 0}"
+      description: "ヘッダの後ろの CRC-16（protection_absent が 0 のとき）"
+    - name: side_info_size
+      type: virtual
+      value: "{layer != 1 ? 0 : (version == 3 ? (channel_mode == 3 ? 17 : 32) : (channel_mode == 3 ? 9 : 17))}"
+      description: "Layer III のサイド情報のバイト数（MPEG-1 はモノラル 17・それ以外 32、MPEG-2 / 2.5 は 9・17）"
+    - name: vbr_tag_offset
+      type: virtual
+      value: "{frame_offset + 4 + (protection_absent == 0 ? 2 : 0) + side_info_size}"
+      description: "Xing / Info ヘッダがあるはずの位置（サイド情報の直後）"
+    - name: xing_probe
+      type: ascii
+      size: "4"
+      seek: "{vbr_tag_offset}"
+      seek_restore: true
+      if: "{_index == 0 ? (is_valid == 1 ? (layer == 1 ? vbr_tag_offset + 8 <= file_size : 0) : 0) : 0}"
+      description: "最初のフレームのサイド情報の直後の 4 バイト（先読み。'Xing' / 'Info' なら VBR ヘッダ）"
+    - name: vbri_probe
+      type: ascii
+      size: "4"
+      seek: "{frame_offset + 36}"
+      seek_restore: true
+      if: "{_index == 0 ? (is_valid == 1 ? (layer == 1 ? frame_offset + 40 <= file_size : 0) : 0) : 0}"
+      description: "最初のフレームのヘッダから 36 バイト目の 4 バイト（先読み。'VBRI' なら Fraunhofer の VBR ヘッダ）"
+    - name: xing_header
+      type: struct
+      struct: xing_header
+      seek: "{vbr_tag_offset}"
+      seek_restore: true
+      if: "{_index == 0 ? (is_valid == 1 ? (layer == 1 ? (vbr_tag_offset + 8 <= file_size ? (xing_probe == 'Xing' or xing_probe == 'Info') : 0) : 0) : 0) : 0}"
+      description: "Xing / Info ヘッダ（VBR の総フレーム数・バイト数・シークの表と LAME の情報。'Info' は CBR）"
+    - name: vbri_header
+      type: struct
+      struct: vbri_header
+      seek: "{frame_offset + 36}"
+      seek_restore: true
+      if: "{_index == 0 ? (is_valid == 1 ? (layer == 1 ? (frame_offset + 40 <= file_size ? vbri_probe == 'VBRI' : 0) : 0) : 0) : 0}"
+      description: "VBRI ヘッダ（Fraunhofer のエンコーダの VBR の情報）"
+    - name: payload_length
+      type: virtual
+      value: "{frame_length - 4 - (is_valid == 1 ? (protection_absent == 0 ? 2 : 0) : 0)}"
+      description: "フレームの中身のバイト数（ヘッダと CRC を除く）"
+    - name: available_length
+      type: virtual
+      value: "{remaining - (has_id3v1 == 1 ? 128 : 0)}"
+      description: "ID3v1 の手前までの残りのバイト数（途中で切れたファイルの最後のフレームに使う）"
+    - name: audio_data
+      type: bytes
+      size: "{payload_length <= available_length ? payload_length : (available_length > 0 ? available_length : 0)}"
+      description: "フレームの中身（サイド情報とメインデータ。最初のフレームに VBR ヘッダがあるときはそれを含む。ヘッダが正しくなければ残りのデータ。ファイルが途中で切れていれば、あるだけ）"
+
+  xing_header:
+    - name: tag_id
+      type: ascii
+      size: "4"
+      description: "'Xing'（VBR）または 'Info'（CBR）"
+    - name: flags
+      type: bitfield
+      size: "4"
+      description: "後ろにあるフィールドのフラグ"
+      fields:
+        - name: frames_present
+          bits: "0"
+          description: "1 なら frame_count がある"
+        - name: bytes_present
+          bits: "1"
+          description: "1 なら byte_count がある"
+        - name: toc_present
+          bits: "2"
+          description: "1 なら toc がある"
+        - name: quality_present
+          bits: "3"
+          description: "1 なら quality がある"
+    - name: frame_count
+      type: uint32
+      if: "{frames_present == 1}"
+      description: "総フレーム数（このフレームを含まないことが多い）"
+    - name: byte_count
+      type: uint32
+      if: "{bytes_present == 1}"
+      description: "音声データの総バイト数"
+    - name: toc
+      type: bytes
+      size: "100"
+      if: "{toc_present == 1}"
+      description: "シークの表（再生位置 0〜99 % に対応するファイル位置 ÷ 256 の割合）"
+    - name: quality
+      type: uint32
+      if: "{quality_present == 1}"
+      description: "品質の指標（0 = 最高〜100 = 最低）"
+    - name: encoder
+      type: ascii
+      size: "9"
+      description: "LAME タグのエンコーダの名前と版（例: 'LAME3.100'・'Lavc62.1'。LAME タグが無ければ 0）"
+
+  vbri_header:
+    - name: tag_id
+      type: ascii
+      size: "4"
+      description: "VBRI ヘッダの印（'VBRI'）"
+    - name: version
+      type: uint16
+      description: "VBRI の版"
+    - name: delay
+      type: uint16
+      description: "エンコーダの遅延"
+    - name: quality
+      type: uint16
+      description: "品質"
+    - name: byte_count
+      type: uint32
+      description: "音声データの総バイト数"
+    - name: frame_count
+      type: uint32
+      description: "総フレーム数"
+    - name: toc_entries
+      type: uint16
+      description: "シークの表のエントリ数"
+    - name: toc_scale
+      type: uint16
+      description: "シークの表の値の倍率"
+    - name: toc_entry_size
+      type: uint16
+      description: "シークの表のエントリ 1 個のバイト数"
+    - name: frames_per_entry
+      type: uint16
+      description: "シークの表のエントリ 1 個が表すフレーム数"
+
+  # ===== ID3v2 =====
+  id3v2_tag:
     - name: magic
       type: ascii
       size: "3"
-      description: "ID3"
-    - name: version
+      validate: "{magic == 'ID3'}"
+      description: "ID3v2 の印（'ID3'）"
+    - name: version_major
       type: uint8
-      description: "ID3v2バージョン（3=v2.3, 4=v2.4）"
+      description: "ID3v2 の版（2 = v2.2、3 = v2.3、4 = v2.4）"
     - name: revision
       type: uint8
+      description: "改訂番号（0）"
     - name: flags
       type: bitfield
       size: "1"
+      description: "タグのフラグ"
       fields:
         - name: unsynchronisation
           bits: "7"
+          description: "1 なら非同期化されている（FF の後ろに 00 を入れて同期ワードに見えないようにしている）"
         - name: extended_header
           bits: "6"
+          description: "1 なら拡張ヘッダがある（v2.2 では圧縮）"
         - name: experimental
           bits: "5"
-        - name: footer
+          description: "1 なら実験的なタグ"
+        - name: footer_present
           bits: "4"
-    - name: size_b0
-      type: uint8
-    - name: size_b1
-      type: uint8
-    - name: size_b2
-      type: uint8
-    - name: size_b3
-      type: uint8
+          description: "1 ならタグの末尾に 10 バイトのフッタがある（v2.4）"
+    - name: size_raw
+      type: uint32
+      description: "タグの大きさ（シンクセーフ整数。各バイトの下位 7 ビット）"
     - name: tag_size
       type: virtual
-      value: "{(size_b0 << 21) | (size_b1 << 14) | (size_b2 << 7) | size_b3}"
-      description: "シンクセーフ整数から算出したタグサイズ"
+      value: "{((size_raw >> 24) & 0x7F) << 21 | ((size_raw >> 16) & 0x7F) << 14 | ((size_raw >> 8) & 0x7F) << 7 | (size_raw & 0x7F)}"
+      description: "ヘッダとフッタを除いたタグのバイト数（シンクセーフ整数を数値にしたもの）"
+    - name: body
+      type: struct
+      struct: id3v2_body
+      size: "{tag_size}"
+      description: "拡張ヘッダ・フレーム・詰め物"
+    - name: footer
+      type: bytes
+      size: "10"
+      if: "{footer_present == 1}"
+      description: "フッタ（'3DI' + ヘッダと同じ内容。v2.4）"
+
+  id3v2_body:
+    - name: extended_header_size
+      type: uint32
+      if: "{extended_header == 1 ? version_major >= 3 : 0}"
+      description: "拡張ヘッダの大きさ（v2.3 はこの 4 バイトを除く通常の整数、v2.4 はこの 4 バイトを含むシンクセーフ整数）"
+    - name: extended_header_data
+      type: bytes
+      size: "{version_major == 4 ? (((extended_header_size >> 24) & 0x7F) << 21 | ((extended_header_size >> 16) & 0x7F) << 14 | ((extended_header_size >> 8) & 0x7F) << 7 | (extended_header_size & 0x7F)) - 4 : extended_header_size}"
+      if: "{extended_header == 1 ? version_major >= 3 : 0}"
+      description: "拡張ヘッダの中身（CRC・制限など）"
+    - name: frames
+      type: switch
+      switch_on: "{version_major}"
+      size: remaining
+      cases:
+        "2": id3v22_frames
+      default: id3v2_frames
+      description: "フレームの並び（v2.2 は 3 文字の ID と 3 バイトの大きさ）"
+
+  id3v2_frames:
+    - name: frames
+      type: struct
+      struct: id3v2_frame
+      repeat_until: "{is_padding == 1 or remaining < 10}"
+      description: "フレーム（ID 4 文字 + 大きさ + フラグ + 中身）の並び。0 のバイトから後ろは詰め物"
 
   id3v2_frame:
     - name: frame_id
       type: ascii
       size: "4"
-      description: "フレーム識別子（TIT2, TPE1, TALB等）"
-    - name: frame_size
+      description: "フレームの ID（TIT2 = 曲名、TPE1 = アーティスト、TALB = アルバム、TRCK = トラック番号、APIC = 画像、COMM = コメント など）"
+    - name: is_padding
+      type: virtual
+      value: "{trim(frame_id) == '' ? 1 : 0}"
+      description: "詰め物か（ID が 0 で始まるなら、ここからタグの末尾までは 0 の詰め物）"
+    - name: padding
+      type: bytes
+      size: remaining
+      if: "{is_padding == 1}"
+      padding: true
+      description: "タグの末尾の詰め物（0）"
+    - name: frame_size_raw
       type: uint32
-      description: "フレームデータサイズ"
+      if: "{is_padding == 0}"
+      description: "中身のバイト数（v2.3 は通常の整数、v2.4 はシンクセーフ整数）"
+    - name: frame_size
+      type: virtual
+      value: "{is_padding == 1 ? 0 : (version_major == 4 ? (((frame_size_raw >> 24) & 0x7F) << 21 | ((frame_size_raw >> 16) & 0x7F) << 14 | ((frame_size_raw >> 8) & 0x7F) << 7 | (frame_size_raw & 0x7F)) : frame_size_raw)}"
+      description: "中身のバイト数（v2.4 はシンクセーフ整数を数値にしたもの）"
     - name: frame_flags
       type: uint16
-      description: "フレームフラグ"
-    - name: frame_data
-      type: bytes
+      if: "{is_padding == 0}"
+      description: "フレームのフラグ（上位バイト = 状態のフラグ、下位バイト = 形式のフラグ（圧縮・暗号化・グループ・非同期化・データ長））"
+    - name: body
+      type: switch
+      switch_on: "{frame_id == 'TXXX' ? 'TXXX' : (substr(frame_id, 0, 1) == 'T' ? 'T***' : (frame_id == 'WXXX' ? 'WXXX' : (substr(frame_id, 0, 1) == 'W' ? 'W***' : frame_id)))}"
       size: "{frame_size}"
-      description: "フレームデータ本体"
+      if: "{is_padding == 0}"
+      cases:
+        "'T***'": text_frame
+        "'TXXX'": text_frame
+        "'COMM'": comment_frame
+        "'USLT'": comment_frame
+        "'APIC'": picture_frame
+        "'W***'": url_frame
+        "'WXXX'": text_frame
+        "'PRIV'": owner_frame
+        "'UFID'": owner_frame
+      default: raw_data
+      description: "フレームの中身（テキスト・コメント・画像・URL・独自データを分解する）"
 
-  mpeg_frame_header:
-    - name: raw
-      type: uint16
-      description: "MPEGフレームヘッダ前半2バイト"
-    - name: sync
-      type: virtual
-      value: "{raw >> 5}"
-      description: "同期ワード（0x7FF）"
-    - name: mpeg_version
-      type: virtual
-      value: "{(raw >> 3) & 3}"
-      enum: mpeg_version
-      description: "MPEGバージョン（0=MPEG2.5, 2=MPEG2, 3=MPEG1）"
-    - name: layer
-      type: virtual
-      value: "{(raw >> 1) & 3}"
-      enum: mpeg_layer
-      description: "レイヤー（1=Layer III, 2=Layer II, 3=Layer I）"
-    - name: protection
-      type: virtual
-      value: "{raw & 1}"
-      description: "CRC保護（0=あり, 1=なし）"
+  id3v22_frames:
+    - name: frames
+      type: struct
+      struct: id3v22_frame
+      repeat_until: "{is_padding == 1 or remaining < 6}"
+      description: "v2.2 のフレーム（ID 3 文字 + 大きさ 3 バイト + 中身）の並び"
 
-  audio_properties:
-    - name: raw
-      type: uint8
-      description: "オーディオプロパティバイト"
-    - name: bitrate_index
+  id3v22_frame:
+    - name: frame_id
+      type: ascii
+      size: "3"
+      description: "フレームの ID（TT2 = 曲名、TP1 = アーティスト、TAL = アルバム、PIC = 画像 など）"
+    - name: is_padding
       type: virtual
-      value: "{raw >> 4}"
-      enum: mp3_bitrate
-      description: "ビットレートインデックス（ラベルは MPEG-1 Layer III の値）"
-    - name: sample_rate_index
-      type: virtual
-      value: "{(raw >> 2) & 3}"
-      enum: mp3_sample_rate
-      description: "サンプリングレートインデックス（ラベルは MPEG-1 の値）"
+      value: "{trim(frame_id) == '' ? 1 : 0}"
+      description: "詰め物か"
     - name: padding
-      type: virtual
-      value: "{(raw >> 1) & 1}"
-      description: "パディングビット"
-    - name: private
-      type: virtual
-      value: "{raw & 1}"
-      description: "プライベートビット"
+      type: bytes
+      size: remaining
+      if: "{is_padding == 1}"
+      padding: true
+      description: "タグの末尾の詰め物（0）"
+    - name: frame_size
+      type: bitfield
+      size: "3"
+      if: "{is_padding == 0}"
+      description: "中身のバイト数（24 ビット）"
+      fields:
+        - name: size_value
+          bits: "23:0"
+          description: "中身のバイト数"
+    - name: body
+      type: switch
+      switch_on: "{substr(frame_id, 0, 1) == 'T' ? 'T**' : frame_id}"
+      size: "{size_value}"
+      if: "{is_padding == 0}"
+      cases:
+        "'T**'": text_frame
+        "'COM'": comment_frame
+      default: raw_data
+      description: "フレームの中身（テキストとコメントを分解する）"
 
-  channel_mode_and_extension:
-    - name: raw
+  text_frame:
+    - name: encoding
       type: uint8
-      description: "チャンネルモード・拡張バイト"
-    - name: channel_mode
-      type: virtual
-      value: "{raw >> 6}"
-      enum: channel_mode
-      description: "チャンネルモード（0=ステレオ, 1=ジョイントステレオ, 2=デュアルチャンネル, 3=モノラル）"
-    - name: mode_extension
-      type: virtual
-      value: "{(raw >> 4) & 3}"
-      description: "モード拡張（ジョイントステレオ時のみ有効）"
-    - name: copyright
-      type: virtual
-      value: "{(raw >> 3) & 1}"
-      description: "コピーライトフラグ"
-    - name: original
-      type: virtual
-      value: "{(raw >> 2) & 1}"
-      description: "オリジナルフラグ"
-    - name: emphasis
-      type: virtual
-      value: "{raw & 3}"
-      description: "エンファシス（0=なし, 1=50/15ms, 2=reserved, 3=CCITT J.17）"
+      enum: text_encoding
+      description: "文字コード"
+    - name: text
+      type: switch
+      switch_on: "{encoding}"
+      size: remaining
+      cases:
+        "0": latin1_text
+        "1": utf16_bom_text
+        "2": utf16be_text
+        "3": utf8_text
+      default: raw_data
+      description: "文字列（v2.4 は NUL で区切った複数の値を持てる。TXXX / WXXX は説明 + NUL + 値）"
+
+  comment_frame:
+    - name: encoding
+      type: uint8
+      enum: text_encoding
+      description: "文字コード"
+    - name: language
+      type: ascii
+      size: "3"
+      description: "言語（ISO 639-2 の 3 文字。'eng'・'jpn' など）"
+    - name: text
+      type: switch
+      switch_on: "{encoding}"
+      size: remaining
+      cases:
+        "0": latin1_text
+        "1": utf16_bom_text
+        "2": utf16be_text
+        "3": utf8_text
+      default: raw_data
+      description: "短い説明 + NUL + 本文"
+
+  picture_frame:
+    - name: encoding
+      type: uint8
+      enum: text_encoding
+      description: "説明の文字コード"
+    - name: mime_type
+      type: asciiz
+      description: "画像の MIME タイプ（'image/jpeg'・'image/png'。v2.2 の PIC は 3 文字の形式）"
+    - name: picture_type
+      type: uint8
+      enum: picture_type
+      description: "画像の種類"
+    - name: description
+      type: utf8z
+      if: "{encoding == 0 or encoding == 3}"
+      description: "画像の説明（Latin-1 / UTF-8、NUL 終端）"
+    - name: picture_data
+      type: bytes
+      size: remaining
+      description: "画像のデータ（説明が UTF-16 のときは説明を含む）"
+
+  url_frame:
+    - name: url
+      type: latin1
+      size: remaining
+      description: "URL の文字列（Latin-1）"
+
+  owner_frame:
+    - name: owner
+      type: asciiz
+      description: "所有者の識別子（メールアドレス・URL など）"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "所有者が定める中身"
+
+  latin1_text:
+    - name: value
+      type: latin1
+      size: remaining
+      description: "Latin-1 の文字列"
+
+  utf16_bom_text:
+    - name: bom
+      type: uint16
+      description: "バイト順マーク（0xFFFE = リトルエンディアン、0xFEFF = ビッグエンディアン）"
+    - name: value_le
+      type: utf16le
+      size: remaining
+      if: "{bom == 0xFFFE}"
+      description: "UTF-16LE の文字列"
+    - name: value_be
+      type: utf16be
+      size: remaining
+      if: "{bom != 0xFFFE}"
+      description: "UTF-16BE の文字列"
+
+  utf16be_text:
+    - name: value
+      type: utf16be
+      size: remaining
+      description: "UTF-16BE の文字列"
+
+  utf8_text:
+    - name: value
+      type: utf8
+      size: remaining
+      description: "UTF-8 の文字列"
+
+  # ===== ID3v1 =====
+  id3v1_tag:
+    - name: magic
+      type: ascii
+      size: "3"
+      validate: "{magic == 'TAG'}"
+      description: "ID3v1 の印（'TAG'）"
+    - name: title
+      type: latin1
+      size: "30"
+      description: "曲名（NUL か空白で詰める）"
+    - name: artist
+      type: latin1
+      size: "30"
+      description: "アーティスト"
+    - name: album
+      type: latin1
+      size: "30"
+      description: "アルバム"
+    - name: year
+      type: ascii
+      size: "4"
+      description: "年（4 桁の数字）"
+    - name: comment
+      type: latin1
+      size: "28"
+      description: "コメント（ID3v1.1 では 28 バイト）"
+    - name: zero_byte
+      type: uint8
+      description: "0 なら次がトラック番号（ID3v1.1）。0 以外ならコメントの 29 バイト目（ID3v1）"
+    - name: track
+      type: uint8
+      description: "トラック番号（ID3v1.1。zero_byte が 0 のとき。ID3v1 ならコメントの 30 バイト目）"
+    - name: genre
+      type: uint8
+      description: "ジャンル番号（0 = Blues、12 = Other、17 = Rock、255 = なし。Winamp の拡張で 191 まで）"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "分解しないデータ（バイト列）"

@@ -10,7 +10,7 @@
       "type": "ascii",
       "offset": 0,
       "size": 3,
-      "description": "FLV",
+      "description": "\u30B7\u30B0\u30CD\u30C1\u30E3\uFF08\u0027FLV\u0027\uFF09",
       "name": "signature",
       "value": "FLV",
       "encoding": "ascii"
@@ -20,7 +20,7 @@
       "type": "uint8",
       "offset": 3,
       "size": 1,
-      "description": "FLV\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08\u901A\u5E381\uFF09",
+      "description": "FLV \u306E\u7248\uFF081\uFF09",
       "name": "version",
       "value": 1,
       "hex": "0x1"
@@ -30,6 +30,7 @@
       "type": "bitfield",
       "offset": 4,
       "size": 1,
+      "description": "\u542B\u307E\u308C\u308B\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u30D5\u30E9\u30B0",
       "name": "flags",
       "raw_value": "0x4",
       "fields": [
@@ -64,7 +65,7 @@
       "type": "uint32",
       "offset": 5,
       "size": 4,
-      "description": "\u30D8\u30C3\u30C0\u30B5\u30A4\u30BA\uFF08\u901A\u5E389\uFF09",
+      "description": "\u30D8\u30C3\u30C0\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u7248 1 \u306F 9\u3002\u30BF\u30B0\u306E\u4E26\u3073\u306E\u4F4D\u7F6E\uFF09",
       "name": "data_offset",
       "value": 9,
       "hex": "0x9"
@@ -74,7 +75,11 @@
       "type": "uint32",
       "offset": 9,
       "size": 4,
-      "description": "\u5148\u982D\u30A8\u30F3\u30C8\u30EA\u306E\u524D\u30BF\u30B0\u30B5\u30A4\u30BA\uFF08\u5E38\u306B0\uFF09",
+      "description": "\u6700\u521D\u306E PreviousTagSize\uFF08\u524D\u306E\u30BF\u30B0\u304C\u7121\u3044\u306E\u3067 0\uFF09",
+      "_validation": {
+        "passed": true,
+        "expression": "{prev_tag_size_0 == 0}"
+      },
       "name": "prev_tag_size_0",
       "value": 0,
       "hex": "0x0"
@@ -95,101 +100,96 @@
           "name": "tags",
           "struct_type": "flv_tag",
           "children": {
-            "tag_type": {
-              "_type": "integer",
-              "type": "uint8",
+            "tag_header": {
+              "_type": "bitfield",
+              "type": "bitfield",
               "offset": 13,
               "size": 1,
-              "name": "tag_type",
-              "value": 8,
-              "hex": "0x8",
-              "enum_label": "audio"
-            },
-            "data_size_b0": {
-              "_type": "integer",
-              "type": "uint8",
-              "offset": 14,
-              "size": 1,
-              "description": "\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA \u30D0\u30A4\u30C80\uFF08MSB\uFF09",
-              "name": "data_size_b0",
-              "value": 0,
-              "hex": "0x0"
-            },
-            "data_size_b1": {
-              "_type": "integer",
-              "type": "uint8",
-              "offset": 15,
-              "size": 1,
-              "description": "\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA \u30D0\u30A4\u30C81",
-              "name": "data_size_b1",
-              "value": 0,
-              "hex": "0x0"
-            },
-            "data_size_b2": {
-              "_type": "integer",
-              "type": "uint8",
-              "offset": 16,
-              "size": 1,
-              "description": "\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA \u30D0\u30A4\u30C82\uFF08LSB\uFF09",
-              "name": "data_size_b2",
-              "value": 1,
-              "hex": "0x1"
+              "description": "\u30BF\u30B0\u306E\u7A2E\u985E\u3068\u30D5\u30E9\u30B0",
+              "name": "tag_header",
+              "raw_value": "0x8",
+              "fields": [
+                {
+                  "name": "reserved",
+                  "value": 0,
+                  "bit_high": 7,
+                  "bit_low": 6
+                },
+                {
+                  "name": "filter",
+                  "value": 0,
+                  "bit_high": 5,
+                  "bit_low": 5
+                },
+                {
+                  "name": "tag_type",
+                  "value": 8,
+                  "bit_high": 4,
+                  "bit_low": 0,
+                  "enum_label": "audio",
+                  "enum_description": "\u97F3\u58F0"
+                }
+              ]
             },
             "data_size": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 17,
-              "size": 0,
-              "description": "\u30BF\u30B0\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA\uFF0824\u30D3\u30C3\u30C8\uFF09",
+              "_type": "bitfield",
+              "type": "bitfield",
+              "offset": 14,
+              "size": 3,
+              "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF0824 \u30D3\u30C3\u30C8\uFF09",
               "name": "data_size",
-              "value": 1
+              "raw_value": "0x1",
+              "fields": [
+                {
+                  "name": "body_size",
+                  "value": 1,
+                  "bit_high": 23,
+                  "bit_low": 0
+                }
+              ]
             },
-            "timestamp_b0": {
-              "_type": "integer",
-              "type": "uint8",
+            "timestamp_low": {
+              "_type": "bitfield",
+              "type": "bitfield",
               "offset": 17,
-              "size": 1,
-              "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7 \u30D0\u30A4\u30C80\uFF08\u4E0B\u4F4D24\u30D3\u30C3\u30C8\u306EMSB\uFF09",
-              "name": "timestamp_b0",
-              "value": 0,
-              "hex": "0x0"
-            },
-            "timestamp_b1": {
-              "_type": "integer",
-              "type": "uint8",
-              "offset": 18,
-              "size": 1,
-              "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7 \u30D0\u30A4\u30C81",
-              "name": "timestamp_b1",
-              "value": 0,
-              "hex": "0x0"
-            },
-            "timestamp_b2": {
-              "_type": "integer",
-              "type": "uint8",
-              "offset": 19,
-              "size": 1,
-              "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7 \u30D0\u30A4\u30C82\uFF08\u4E0B\u4F4D24\u30D3\u30C3\u30C8\u306ELSB\uFF09",
-              "name": "timestamp_b2",
-              "value": 0,
-              "hex": "0x0"
+              "size": 3,
+              "description": "\u6642\u523B\u306E\u4E0B\u4F4D 24 \u30D3\u30C3\u30C8",
+              "name": "timestamp_low",
+              "raw_value": "0x0",
+              "fields": [
+                {
+                  "name": "timestamp_lower",
+                  "value": 0,
+                  "bit_high": 23,
+                  "bit_low": 0
+                }
+              ]
             },
             "timestamp_ext": {
               "_type": "integer",
               "type": "uint8",
               "offset": 20,
               "size": 1,
-              "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\u62E1\u5F35\uFF08\u4E0A\u4F4D8\u30D3\u30C3\u30C8\uFF09",
+              "description": "\u6642\u523B\u306E\u4E0A\u4F4D 8 \u30D3\u30C3\u30C8",
               "name": "timestamp_ext",
               "value": 0,
               "hex": "0x0"
+            },
+            "timestamp_ms": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 21,
+              "size": 0,
+              "description": "\u3053\u306E\u30BF\u30B0\u306E\u6642\u523B\uFF08\u30DF\u30EA\u79D2\u3002\u6700\u521D\u306E\u30BF\u30B0\u304B\u3089\u306E\u7D4C\u904E\uFF09",
+              "name": "timestamp_ms",
+              "value": 0
             },
             "stream_id": {
               "_type": "bytes",
               "type": "bytes",
               "offset": 21,
               "size": 3,
-              "description": "\u30B9\u30C8\u30EA\u30FC\u30E0ID\uFF08\u5E38\u306B0\uFF09",
+              "description": "\u30B9\u30C8\u30EA\u30FC\u30E0 ID\uFF08\u5E38\u306B 0\uFF09",
               "name": "stream_id",
               "hex": "00 00 00"
             },
@@ -206,6 +206,7 @@
                   "type": "bitfield",
                   "offset": 24,
                   "size": 1,
+                  "description": "\u97F3\u58F0\u306E\u5F62\u5F0F",
                   "name": "audio_header",
                   "raw_value": "0xAA",
                   "fields": [
@@ -213,7 +214,9 @@
                       "name": "sound_format",
                       "value": 10,
                       "bit_high": 7,
-                      "bit_low": 4
+                      "bit_low": 4,
+                      "enum_label": "AAC",
+                      "enum_description": "AAC"
                     },
                     {
                       "name": "sound_rate",
@@ -240,6 +243,7 @@
                   "type": "bytes",
                   "offset": 25,
                   "size": 0,
+                  "description": "\u97F3\u58F0\u306E\u30D5\u30EC\u30FC\u30E0\uFF08AAC \u306E sequence_header \u306A\u3089 AudioSpecificConfig\uFF09",
                   "name": "audio_data",
                   "hex": ""
                 }
@@ -250,7 +254,11 @@
               "type": "uint32",
               "offset": 25,
               "size": 4,
-              "description": "\u524D\u30BF\u30B0\u306E\u5168\u4F53\u30B5\u30A4\u30BA\uFF08\u30D8\u30C3\u30C0\u542B\u3080\uFF09",
+              "description": "\u3053\u306E\u30BF\u30B0\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4E2D\u8EAB \u002B \u30D8\u30C3\u30C0\u306E 11 \u30D0\u30A4\u30C8\u3002\u9006\u5411\u304D\u306B\u8AAD\u3080\u306E\u306B\u4F7F\u3046\uFF09",
+              "_validation": {
+                "passed": true,
+                "expression": "{prev_tag_size == body_size \u002B 11}"
+              },
               "name": "prev_tag_size",
               "value": 12,
               "hex": "0xC"

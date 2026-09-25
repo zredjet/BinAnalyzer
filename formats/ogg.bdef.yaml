@@ -1,3 +1,13 @@
+# Ogg コンテナ（.ogg / .oga / .opus / .ogv / .spx）
+# 仕様: RFC 3533 The Ogg Encapsulation Format Version 0（2003） https://www.rfc-editor.org/rfc/rfc3533 、
+#   Vorbis I Specification（Xiph.Org）の識別・コメントヘッダ、RFC 7845 Ogg Encapsulation for the Opus Audio Codec（2016）、
+#   Ogg FLAC mapping 1.0（Xiph.Org）、Speex の Ogg のヘッダ、Theora Specification の識別ヘッダ
+# 構造: ページ（'OggS' + 版 + フラグ + granule position + シリアル番号 + ページ番号 + CRC + セグメント表 + 中身）の並び。
+#   中身のバイト数はセグメント表（lacing 値）の合計。ページの先頭から始まるパケットを 8 バイト先読みしてコーデックの
+#   ヘッダパケット（Vorbis の識別・コメント、OpusHead・OpusTags、Ogg FLAC、Speex、Theora）を見分け、分解する。
+# 対応していないもの: ページの CRC の検証（Ogg の CRC は多項式 0x04C11DB7 の非反転の CRC-32 で、対応するアルゴリズムが無い）、
+#   パケットへの分割（複数ページにまたがるパケット・1 ページの 2 つ目以降のパケット）、Vorbis の設定ヘッダ・音声パケットの中身、
+#   Skeleton（fishead / fisbone）・Theora の設定ヘッダの分解
 name: OGG
 endianness: little
 root: ogg_file
@@ -6,98 +16,367 @@ enums:
   vorbis_packet_type:
     - value: 1
       label: identification
+      description: "識別ヘッダ（チャンネル数・サンプリング周波数）"
     - value: 3
       label: comment
+      description: "コメントヘッダ（タグ）"
     - value: 5
       label: setup
+      description: "設定ヘッダ（符号表）"
 
 structs:
   ogg_file:
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      description: "ファイル全体のバイト数（今の位置 = file_size − remaining）"
     - name: pages
       type: struct
       struct: ogg_page
       repeat: eof
+      description: "ページの並び（論理ストリームごとにシリアル番号で区別し、ページが交互に並ぶこともある）"
 
   ogg_page:
     - name: capture_pattern
       type: bytes
       size: "4"
       expected: [0x4F, 0x67, 0x67, 0x53]
+      description: "ページの同期の印（'OggS'）"
     - name: version
       type: uint8
       validate: "{version == 0}"
+      description: "ストリームの構造の版（0）"
     - name: header_type
-      type: uint8
-    - name: is_continuation
-      type: virtual
-      value: "{header_type & 1}"
-    - name: is_bos
-      type: virtual
-      value: "{(header_type >> 1) & 1}"
-    - name: is_eos
-      type: virtual
-      value: "{(header_type >> 2) & 1}"
+      type: bitfield
+      size: "1"
+      description: "ページのフラグ"
+      fields:
+        - name: is_continuation
+          bits: "0"
+          description: "1 ならページの先頭は前のページから続くパケットの続き"
+        - name: is_bos
+          bits: "1"
+          description: "1 なら論理ストリームの最初のページ（Beginning Of Stream）"
+        - name: is_eos
+          bits: "2"
+          description: "1 なら論理ストリームの最後のページ（End Of Stream）"
+        - name: reserved
+          bits: "7:3"
+          description: "予約（0）"
     - name: granule_position
-      type: uint64
+      type: int64
+      description: "このページで終わるパケットの位置（コーデックの単位。音声ならサンプル数。-1 = このページで終わるパケットが無い）"
     - name: serial_number
       type: uint32
+      description: "論理ストリームのシリアル番号"
     - name: page_sequence_number
       type: uint32
+      description: "論理ストリームの中のページ番号（0 から）"
     - name: crc32
       type: uint32
+      description: "ページの CRC-32（この欄を 0 とした全体。多項式 0x04C11DB7・非反転。検証しない）"
     - name: num_segments
       type: uint8
+      description: "セグメント表のエントリ数"
     - name: segment_table
       type: uint8
       repeat_count: "{num_segments}"
+      description: "lacing 値の並び（各セグメントのバイト数。255 未満の値でパケットが終わる）"
+    - name: body_size
+      type: virtual
+      value: "{sum(segment_table)}"
+      description: "中身のバイト数（lacing 値の合計）"
+    - name: packet_magic
+      type: latin1
+      size: "8"
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      if: "{is_continuation == 0 ? body_size >= 8 : 0}"
+      description: "ページの先頭のパケットの先頭 8 バイト（先読み。コーデックのヘッダを見分ける）"
+    - name: packet_kind
+      type: virtual
+      value: "{is_continuation == 1 ? 'data' : (body_size < 8 ? 'data' : (substr(packet_magic, 1, 6) == 'vorbis' ? 'vorbis' : (packet_magic == 'OpusHead' ? 'OpusHead' : (packet_magic == 'OpusTags' ? 'OpusTags' : (substr(packet_magic, 1, 4) == 'FLAC' ? 'FLAC' : (packet_magic == 'Speex   ' ? 'Speex' : (substr(packet_magic, 1, 6) == 'theora' ? 'theora' : 'data')))))))}"
+      description: "先頭のパケットの種類（vorbis・OpusHead・OpusTags・FLAC・Speex・theora、それ以外は data）"
     - name: page_data
       type: switch
-      size: "{until_marker(0x4F, 0x67, 0x67, 0x53)}"
-      switch_on: "{is_bos}"
+      size: "{body_size}"
+      switch_on: "{packet_kind}"
       cases:
-        "1": vorbis_bos_data
+        "'vorbis'": vorbis_header_packet
+        "'OpusHead'": opus_head
+        "'OpusTags'": opus_tags
+        "'FLAC'": ogg_flac_header
+        "'Speex'": speex_header
+        "'theora'": theora_header
       default: raw_data
+      description: "ページの中身（ヘッダパケットを分解する。それ以外はパケットの断片を含むバイト列）"
 
-  vorbis_bos_data:
+  # ===== Vorbis =====
+  vorbis_header_packet:
     - name: packet_type
       type: uint8
       enum: vorbis_packet_type
+      description: "ヘッダパケットの種類"
     - name: codec_id
       type: ascii
       size: "6"
+      description: "Vorbis のヘッダの印（'vorbis'）"
     - name: vorbis_id_header
       type: struct
       struct: vorbis_identification
       if: "{packet_type == 1}"
+      description: "識別ヘッダ"
+    - name: vorbis_comment
+      type: struct
+      struct: vorbis_comment
+      if: "{packet_type == 3}"
+      description: "コメントヘッダ（同じページの後ろに設定ヘッダが続くことが多い）"
     - name: remaining_data
       type: bytes
       size: remaining
+      if: "{remaining > 0}"
+      description: "このページの残り（コメントヘッダの枠の印、後続のパケットの中身）"
 
   vorbis_identification:
     - name: vorbis_version
       type: uint32
+      description: "Vorbis の版（0）"
     - name: channels
       type: uint8
+      description: "チャンネル数"
     - name: sample_rate
       type: uint32
+      description: "サンプリング周波数（Hz）"
     - name: bitrate_maximum
-      type: uint32
+      type: int32
+      description: "最大のビットレート（ビット / 秒。0 = 指定なし）"
     - name: bitrate_nominal
-      type: uint32
+      type: int32
+      description: "目安のビットレート（ビット / 秒）"
     - name: bitrate_minimum
-      type: uint32
+      type: int32
+      description: "最小のビットレート（ビット / 秒）"
     - name: blocksize_info
       type: uint8
+      description: "ブロックサイズ（下位 4 ビット = 短いブロック、上位 4 ビット = 長いブロックの 2 のべき指数）"
     - name: blocksize_0
       type: virtual
       value: "{blocksize_info & 0x0F}"
+      description: "短いブロックのサンプル数の 2 のべき指数（6〜13）"
     - name: blocksize_1
       type: virtual
       value: "{blocksize_info >> 4}"
+      description: "長いブロックのサンプル数の 2 のべき指数（blocksize_0 以上）"
     - name: framing_flag
       type: uint8
+      description: "枠の印（1）"
+
+  vorbis_comment:
+    - name: vendor_length
+      type: uint32
+      description: "ベンダー文字列のバイト数"
+    - name: vendor_string
+      type: utf8
+      size: "{vendor_length}"
+      description: "エンコーダの名前（例: 'Lavf61.1.100'・'Xiph.Org libVorbis I 20200704'）"
+    - name: comment_count
+      type: uint32
+      description: "タグの数"
+    - name: comments
+      type: struct
+      struct: vorbis_comment_entry
+      repeat_count: "{comment_count}"
+      description: "タグ（長さ + KEY=VALUE）の並び"
+
+  vorbis_comment_entry:
+    - name: length
+      type: uint32
+      description: "タグの文字列のバイト数"
+    - name: value
+      type: utf8
+      size: "{length}"
+      description: "タグ（'TITLE=曲名' のような KEY=VALUE）"
+
+  # ===== Opus =====
+  opus_head:
+    - name: magic
+      type: ascii
+      size: "8"
+      description: "Opus の識別ヘッダの印（'OpusHead'）"
+    - name: version
+      type: uint8
+      description: "版（1。上位 4 ビットが同じなら互換）"
+    - name: channel_count
+      type: uint8
+      description: "出力のチャンネル数"
+    - name: pre_skip
+      type: uint16
+      description: "先頭で捨てるサンプル数（48 kHz の単位）"
+    - name: input_sample_rate
+      type: uint32
+      description: "元の音声のサンプリング周波数（Hz。参考情報。再生は常に 48 kHz）"
+    - name: output_gain
+      type: int16
+      description: "出力のゲイン（dB × 256）"
+    - name: channel_mapping_family
+      type: uint8
+      description: "チャンネルの割り当ての方式（0 = モノラル / ステレオ、1 = Vorbis の順の最大 8 チャンネル、255 = 未定義）"
+    - name: channel_mapping_table
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "ストリーム数・結合ストリーム数・チャンネルの割り当て（channel_mapping_family が 0 でないとき）"
+
+  opus_tags:
+    - name: magic
+      type: ascii
+      size: "8"
+      description: "Opus のコメントヘッダの印（'OpusTags'）"
+    - name: comment
+      type: struct
+      struct: vorbis_comment
+      description: "タグ（Vorbis のコメントと同じ形）"
+    - name: extra
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "タグの後ろの任意のデータ（先頭ビットが 1 なら保持する）"
+
+  # ===== Ogg FLAC =====
+  ogg_flac_header:
+    endianness: big
+    fields:
+      - name: packet_type
+        type: uint8
+        description: "パケットの種類（0x7F）"
+      - name: signature
+        type: ascii
+        size: "4"
+        description: "Ogg FLAC の印（'FLAC'）"
+      - name: major_version
+        type: uint8
+        description: "マッピングのメジャーバージョン（1）"
+      - name: minor_version
+        type: uint8
+        description: "マッピングのマイナーバージョン（0）"
+      - name: header_packet_count
+        type: uint16
+        description: "この後ろのメタデータのヘッダパケットの数（0 = 不明）"
+      - name: flac_signature
+        type: ascii
+        size: "4"
+        description: "ネイティブの FLAC の印（'fLaC'）"
+      - name: streaminfo_header
+        type: bitfield
+        size: "4"
+        description: "STREAMINFO のメタデータブロックのヘッダ"
+        fields:
+          - name: is_last
+            bits: "31"
+            description: "最終フラグ"
+          - name: block_type
+            bits: "30:24"
+            description: "ブロックの種類（0 = STREAMINFO）"
+          - name: length
+            bits: "23:0"
+            description: "中身のバイト数（34）"
+      - name: streaminfo
+        type: bytes
+        size: "{length}"
+        description: "STREAMINFO の中身（formats/flac.bdef.yaml と同じ形。ブロックサイズ・サンプリング周波数など）"
+      - name: rest
+        type: bytes
+        size: remaining
+        if: "{remaining > 0}"
+        description: "このページの残り"
+
+  # ===== Speex =====
+  speex_header:
+    - name: speex_string
+      type: ascii
+      size: "8"
+      description: "'Speex   '（空白で詰めた 8 バイト）"
+    - name: speex_version
+      type: ascii
+      size: "20"
+      description: "エンコーダの版の文字列"
+    - name: speex_version_id
+      type: int32
+      description: "版の番号（1）"
+    - name: header_size
+      type: int32
+      description: "このヘッダのバイト数（80）"
+    - name: rate
+      type: int32
+      description: "サンプリング周波数（Hz）"
+    - name: mode
+      type: int32
+      description: "モード（0 = 狭帯域、1 = 広帯域、2 = 超広帯域）"
+    - name: mode_bitstream_version
+      type: int32
+      description: "ビットストリームの版"
+    - name: nb_channels
+      type: int32
+      description: "チャンネル数"
+    - name: bitrate
+      type: int32
+      description: "ビットレート（ビット / 秒。-1 = 不明）"
+    - name: frame_size
+      type: int32
+      description: "1 フレームのサンプル数"
+    - name: vbr
+      type: int32
+      description: "1 なら可変ビットレート"
+    - name: frames_per_packet
+      type: int32
+      description: "1 パケットのフレーム数"
+    - name: extra_headers
+      type: int32
+      description: "追加のヘッダの数"
+    - name: reserved
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "予約"
+
+  # ===== Theora =====
+  theora_header:
+    endianness: big
+    fields:
+      - name: header_type
+        type: uint8
+        description: "ヘッダの種類（0x80 = 識別、0x81 = コメント、0x82 = 設定）"
+      - name: theora_id
+        type: ascii
+        size: "6"
+        description: "Theora のヘッダの印（'theora'）"
+      - name: version_major
+        type: uint8
+        if: "{header_type == 0x80}"
+        description: "版（3）"
+      - name: version_minor
+        type: uint8
+        if: "{header_type == 0x80}"
+        description: "版（2）"
+      - name: version_revision
+        type: uint8
+        if: "{header_type == 0x80}"
+        description: "版（1 など）"
+      - name: frame_width_mbs
+        type: uint16
+        if: "{header_type == 0x80}"
+        description: "符号化の幅（16 ピクセルのマクロブロックの数）"
+      - name: frame_height_mbs
+        type: uint16
+        if: "{header_type == 0x80}"
+        description: "符号化の高さ（マクロブロックの数）"
+      - name: rest
+        type: bytes
+        size: remaining
+        description: "ヘッダの残り（表示の大きさ・フレームレート・コメント・設定など）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ（パケットの中身の断片）"

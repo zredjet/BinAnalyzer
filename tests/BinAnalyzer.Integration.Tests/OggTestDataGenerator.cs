@@ -124,4 +124,53 @@ public static class OggTestDataGenerator
         ms.WriteByte((byte)((value >> 48) & 0xFF));
         ms.WriteByte((byte)((value >> 56) & 0xFF));
     }
+
+    /// <summary>
+    /// Ogg Opus（REQ-188）。1 ページ目（BOS）に OpusHead、2 ページ目に OpusTags（ARTIST=Tester）、3 ページ目（EOS）に
+    /// 途中に 'OggS' を含む 20 バイトの音声データ。CRC は Ogg の CRC-32 で正しく計算する。
+    /// </summary>
+    public static byte[] CreateOpusOgg()
+    {
+        var head = "OpusHead"u8.ToArray().Concat(new byte[] { 1, 2, 0x38, 0x01, 0x80, 0xBB, 0, 0, 0, 0, 0 }).ToArray();
+        var tags = "OpusTags"u8.ToArray().Concat(BitConverter.GetBytes(3)).Concat("gen"u8.ToArray()).Concat(BitConverter.GetBytes(1))
+            .Concat(BitConverter.GetBytes(13)).Concat("ARTIST=Tester"u8.ToArray()).ToArray();
+        var audio = new byte[] { 0xFC, 1, 2, 3, 4, 5, 6, 7, (byte)'O', (byte)'g', (byte)'g', (byte)'S', 8, 9, 10, 11, 12, 13, 14, 15 };
+        return Page(2, 0, 0, head).Concat(Page(0, 0, 1, tags)).Concat(Page(4, 960, 2, audio)).ToArray();
+    }
+
+    private static byte[] Page(byte headerType, long granule, uint sequence, byte[] packet)
+    {
+        var ms = new MemoryStream();
+        var w = new BinaryWriter(ms);
+        w.Write("OggS"u8);
+        w.Write((byte)0);
+        w.Write(headerType);
+        w.Write(granule);
+        w.Write(0x1234u);
+        w.Write(sequence);
+        w.Write(0u);
+        var lacing = new List<byte>();
+        var remaining = packet.Length;
+        while (remaining >= 255) { lacing.Add(255); remaining -= 255; }
+        lacing.Add((byte)remaining);
+        w.Write((byte)lacing.Count);
+        w.Write(lacing.ToArray());
+        w.Write(packet);
+        var page = ms.ToArray();
+        BitConverter.GetBytes(OggCrc(page)).CopyTo(page, 22);
+        return page;
+    }
+
+    /// <summary>Ogg の CRC-32（多項式 0x04C11DB7、初期値 0、非反転）。</summary>
+    private static uint OggCrc(byte[] data)
+    {
+        uint crc = 0;
+        foreach (var b in data)
+        {
+            crc ^= (uint)b << 24;
+            for (var i = 0; i < 8; i++)
+                crc = (crc & 0x80000000) != 0 ? (crc << 1) ^ 0x04C11DB7 : crc << 1;
+        }
+        return crc;
+    }
 }

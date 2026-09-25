@@ -301,4 +301,57 @@ public static class AviTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// OpenDML（AVI 2.0）の AVI（REQ-188）。strl に strn とスーパーインデックス（indx → ix00）、LIST 'odml' に dmlh、
+    /// movi に奇数バイトの 00dc（3 バイト + 詰め物）と標準インデックス ix00、後ろに RIFF 'AVIX' の movi を置く。
+    /// </summary>
+    public static byte[] CreateOpenDmlAvi()
+    {
+        static byte[] Chunk(string id, byte[] body)
+        {
+            var m = new MemoryStream();
+            m.Write(Encoding.ASCII.GetBytes(id));
+            m.Write(BitConverter.GetBytes((uint)body.Length));
+            m.Write(body);
+            if (body.Length % 2 != 0) m.WriteByte(0);
+            return m.ToArray();
+        }
+        static byte[] List(string type, params byte[][] children) =>
+            Chunk("LIST", Encoding.ASCII.GetBytes(type).Concat(children.SelectMany(c => c)).ToArray());
+        static byte[] Le(params uint[] values) => values.SelectMany(BitConverter.GetBytes).ToArray();
+
+        var avih = Le(100000, 1000, 0, 0x10, 2, 0, 1, 0, 64, 48, 0, 0, 0, 0);
+        var strh = Encoding.ASCII.GetBytes("vidsMJPG").Concat(Le(0, 0, 0, 1, 10, 0, 2, 0, 0xFFFFFFFF, 0)).Concat(new byte[] { 0, 0, 0, 0, 64, 0, 48, 0 }).ToArray();
+        var strf = Le(40, 64, 48).Concat(BitConverter.GetBytes((ushort)1)).Concat(BitConverter.GetBytes((ushort)24))
+            .Concat(Encoding.ASCII.GetBytes("MJPG")).Concat(Le(0, 0, 0, 0, 0)).ToArray();
+        var strn = "video\0"u8.ToArray();
+
+        // レイアウトを決めてから、indx の qwOffset と ix00 の qwBaseOffset を埋める
+        var frame0 = new byte[] { 0xFF, 0xD8, 0xD9 };
+        byte[] Indx(ulong ixOffset) => BitConverter.GetBytes((ushort)4).Concat(new byte[] { 0, 0 }).Concat(Le(1)).Concat("00dc"u8.ToArray())
+            .Concat(new byte[12]).Concat(BitConverter.GetBytes(ixOffset)).Concat(Le(32, 1)).ToArray();
+        byte[] Ix00(ulong baseOffset) => BitConverter.GetBytes((ushort)2).Concat(new byte[] { 0, 1 }).Concat(Le(1)).Concat("00dc"u8.ToArray())
+            .Concat(BitConverter.GetBytes(baseOffset)).Concat(Le(0)).Concat(Le(0, 3)).ToArray();
+        byte[] Build(ulong ixOffset, ulong baseOffset)
+        {
+            var hdrl = List("hdrl", Chunk("avih", avih), List("strl", Chunk("strh", strh), Chunk("strf", strf), Chunk("strn", strn), Chunk("indx", Indx(ixOffset))),
+                List("odml", Chunk("dmlh", Le(2).Concat(new byte[244]).ToArray())));
+            var movi = List("movi", Chunk("00dc", frame0), Chunk("ix00", Ix00(baseOffset)));
+            var idx1 = Chunk("idx1", Encoding.ASCII.GetBytes("00dc").Concat(Le(0x10, 4, 3)).ToArray());
+            var first = Encoding.ASCII.GetBytes("AVI ").Concat(hdrl).Concat(movi).Concat(idx1).ToArray();
+            var avix = Chunk("RIFF", Encoding.ASCII.GetBytes("AVIX").Concat(List("movi", Chunk("00dc", new byte[] { 0xAB, 0xCD }))).ToArray());
+            return Chunk("RIFF", first).Concat(avix).ToArray();
+        }
+        var draft = Build(0, 0);
+        var ixPos = FindChunk(draft, "ix00");
+        var framePos = FindChunk(draft, "movi") + 4 + 8;  // movi の最初の 00dc の中身
+        return Build((ulong)ixPos, (ulong)framePos);
+    }
+
+    private static int FindChunk(byte[] data, string id)
+    {
+        var pattern = Encoding.ASCII.GetBytes(id);
+        return data.AsSpan().IndexOf(pattern);
+    }
 }

@@ -1,3 +1,12 @@
+# WAV 音声（.wav。RF64 / BW64 の 4 GiB 超の WAV、BWF を含む）
+# 仕様: Microsoft / IBM "Multimedia Programming Interface and Data Specifications 1.0"（1991）の WAVE、
+#   EBU Tech 3285 v2（2011。BWF の bext）、EBU Tech 3306 v1.1（2009。RF64）と ITU-R BS.2088-1（2019。BW64）の ds64
+# 構造: 'RIFF'（または 'RF64' / 'BW64'）+ 全体の大きさ + 'WAVE' → チャンク（ID 4 バイト + 大きさ 4 バイト + 中身 + 奇数なら詰め物 1 バイト）の並び。
+#   チャンクは ID で switch する。fmt と LIST 'INFO' の中身は formats/common/riff.bdef.yaml を使う。
+#   RF64 / BW64 では大きさが 0xFFFFFFFF のチャンク（data）の本当の大きさは ds64 チャンクにあるので、ds64 の値（値の昇格で届く）を使う。
+# 対応していないもの: 音声データの中身（サンプルの値）、ds64 の表にある data 以外のチャンクの 64 ビットの大きさ、
+#   iXML・axml・chna（ADM）などの XML・メタデータの分解（iXML は文字列、ほかはバイト列）、ID3 チャンクの中身、
+#   'plst'・'labl' などの cue に付随するチャンク、'wavl'（WAVE リスト）の複数データ
 name: WAV
 endianness: little
 root: wav
@@ -5,94 +14,106 @@ imports:
   - path: common/riff.bdef.yaml
 
 enums:
-  audio_format:
+  smpte_format:
+    - value: 0
+      label: none
+      description: "SMPTE オフセットなし"
+    - value: 24
+      label: fps_24
+      description: "24 フレーム / 秒"
+    - value: 25
+      label: fps_25
+      description: "25 フレーム / 秒"
+    - value: 29
+      label: fps_29_97_drop
+      description: "29.97 フレーム / 秒（ドロップフレーム）"
+    - value: 30
+      label: fps_30
+      description: "30 フレーム / 秒"
+
+  loop_type:
+    - value: 0
+      label: forward
+      description: "順方向のループ"
     - value: 1
-      label: PCM
+      label: alternating
+      description: "往復のループ"
     - value: 2
-      label: ADPCM
-    - value: 3
-      label: IEEE_FLOAT
-    - value: 6
-      label: ALAW
-    - value: 7
-      label: MULAW
-    - value: 0xFFFE
-      label: EXTENSIBLE
+      label: backward
+      description: "逆方向のループ"
 
 structs:
   wav:
     - name: riff_id
       type: ascii
       size: "4"
-      expected: [0x52, 0x49, 0x46, 0x46]
+      validate: "{riff_id == 'RIFF' or riff_id == 'RF64' or riff_id == 'BW64'}"
+      description: "ファイルの形式（'RIFF'。4 GiB を超えられる形式は 'RF64' / 'BW64'）"
     - name: file_size
       type: uint32
+      description: "'WAVE' 以降のバイト数（ファイルの大きさ − 8。RF64 / BW64 では 0xFFFFFFFF で、本当の値は ds64）"
     - name: wave_id
       type: ascii
       size: "4"
       expected: [0x57, 0x41, 0x56, 0x45]
+      description: "フォームの種類（'WAVE'）"
     - name: chunks
       type: struct
       struct: riff_chunk
       repeat: eof
+      description: "チャンクの並び（fmt → data が必須。ds64 は RF64 / BW64 の先頭）"
 
   riff_chunk:
     - name: chunk_id
       type: ascii
       size: "4"
+      description: "チャンクの ID（'fmt '・'data'・'LIST'・'fact'・'bext'・'ds64' など）"
     - name: chunk_size
       type: uint32
+      description: "中身のバイト数（詰め物を含まない。RF64 / BW64 の data では 0xFFFFFFFF）"
+    - name: body_size
+      type: virtual
+      value: "{chunk_size != 0xFFFFFFFF ? chunk_size : (chunk_id == 'data' ? ds64_data_size : chunk_size)}"
+      description: "中身の本当のバイト数（0xFFFFFFFF の data は ds64 の data_size）"
     - name: data
       type: switch
-      size: "{chunk_size}"
+      size: "{body_size}"
       switch_on: "{chunk_id}"
       cases:
-        "'fmt '": fmt_chunk
+        "'fmt '": wave_format
         "'data'": data_chunk
         "'fact'": fact_chunk
         "'LIST'": list_chunk
+        "'ds64'": ds64_chunk
+        "'bext'": bext_chunk
+        "'cue '": cue_chunk
+        "'smpl'": smpl_chunk
+        "'iXML'": text_chunk
       default: raw_data
-
-  fmt_chunk:
-    - name: audio_format
-      type: uint16
-      enum: audio_format
-    - name: num_channels
-      type: uint16
-    - name: sample_rate
-      type: uint32
-    - name: byte_rate
-      type: uint32
-    - name: block_align
-      type: uint16
-    - name: bits_per_sample
-      type: uint16
-    - name: cb_size
-      type: uint16
-      if: "{audio_format != 1}"
-      description: "拡張フォーマットデータのサイズ"
-    - name: extra_format_bytes
+      description: "チャンクの中身（ID で振り分ける。fmt は WAVEFORMATEX / WAVEFORMATEXTENSIBLE）"
+    - name: padding
       type: bytes
-      size: "{cb_size}"
-      if: "{audio_format != 1}"
-      description: "非PCMフォーマット向けの拡張データ"
+      size: "1"
+      if: "{body_size % 2 != 0 ? remaining > 0 : 0}"
+      padding: true
+      description: "次のチャンクを 2 バイト境界にそろえる詰め物（中身が奇数バイトのとき。ファイルの末尾で省かれていることがある）"
 
   data_chunk:
     - name: data
       type: bytes
       size: remaining
-      description: "オーディオサンプルデータ"
+      description: "音声のサンプル（fmt の形式。PCM ならチャンネルを交互に並べたリトルエンディアンの整数）"
 
   fact_chunk:
     - name: num_samples
       type: uint32
-      description: "チャンネルあたりのサンプル数"
+      description: "チャンネルあたりのサンプル数（圧縮形式・浮動小数点数で必須）"
 
   list_chunk:
     - name: list_type
       type: ascii
       size: "4"
-      description: "リストタイプ識別子（例: INFO）"
+      description: "リストの種類（'INFO' = テキストの情報、'adtl' = cue の付随データ）"
     - name: data
       type: switch
       size: remaining
@@ -100,28 +121,194 @@ structs:
       cases:
         "'INFO'": info_chunk_data
       default: raw_data
+      description: "リストの中身（INFO は項目に分ける）"
 
-  info_chunk_data:
-    - name: sub_chunks
+  ds64_chunk:
+    - name: riff_size
+      type: uint64
+      description: "'WAVE' 以降のバイト数（RIFF の file_size の 64 ビット版）"
+    - name: ds64_data_size
+      type: uint64
+      description: "data チャンクの中身のバイト数（data の chunk_size が 0xFFFFFFFF のときに使う）"
+    - name: sample_count
+      type: uint64
+      description: "チャンネルあたりのサンプル数（fact の 64 ビット版）"
+    - name: table_length
+      type: uint32
+      description: "ほかのチャンクの大きさの表のエントリ数"
+    - name: table
       type: struct
-      struct: info_sub_chunk
-      repeat: eof
+      struct: ds64_table_entry
+      repeat_count: "{table_length}"
+      description: "data 以外で 4 GiB を超えるチャンクの大きさ"
+    - name: extra
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "予約（無視する）"
 
-  info_sub_chunk:
+  ds64_table_entry:
     - name: chunk_id
       type: ascii
       size: "4"
-      description: "INFO チャンクID（IART, INAM, ICMT, ISFT 等）"
-    - name: chunk_size
-      type: uint32
-    - name: value
-      type: ascii
-      size: "{chunk_size}"
-      description: "チャンク値"
-    - name: padding
-      type: bytes
-      size: "{chunk_size % 2}"
-      if: "{chunk_size % 2 != 0}"
-      padding: true
-      description: "ワード境界アライメント"
+      description: "チャンクの ID"
+    - name: chunk_size_64
+      type: uint64
+      description: "チャンクの中身のバイト数"
 
+  bext_chunk:
+    - name: description
+      type: ascii
+      size: "256"
+      description: "説明（NUL で詰める）"
+    - name: originator
+      type: ascii
+      size: "32"
+      description: "作成者（組織・機器）"
+    - name: originator_reference
+      type: ascii
+      size: "32"
+      description: "作成者が付けた一意の参照"
+    - name: origination_date
+      type: ascii
+      size: "10"
+      description: "作成日（yyyy-mm-dd）"
+    - name: origination_time
+      type: ascii
+      size: "8"
+      description: "作成時刻（hh-mm-ss）"
+    - name: time_reference_low
+      type: uint32
+      description: "録音の開始位置の下位 32 ビット（深夜 0 時からのサンプル数）"
+    - name: time_reference_high
+      type: uint32
+      description: "録音の開始位置の上位 32 ビット"
+    - name: version
+      type: uint16
+      description: "bext の版（0〜2。版 1 で UMID、版 2 でラウドネスの値が有効）"
+    - name: umid
+      type: bytes
+      size: "64"
+      description: "SMPTE UMID（SMPTE 330M。版 1 以降）"
+    - name: loudness_value
+      type: int16
+      description: "統合ラウドネス（LUFS × 100。版 2 以降）"
+    - name: loudness_range
+      type: int16
+      description: "ラウドネスレンジ（LU × 100）"
+    - name: max_true_peak_level
+      type: int16
+      description: "最大トゥルーピーク（dBTP × 100）"
+    - name: max_momentary_loudness
+      type: int16
+      description: "最大モーメンタリーラウドネス（LUFS × 100）"
+    - name: max_short_term_loudness
+      type: int16
+      description: "最大ショートタームラウドネス（LUFS × 100）"
+    - name: reserved
+      type: bytes
+      size: "180"
+      padding: true
+      description: "予約（0）"
+    - name: coding_history
+      type: ascii
+      size: remaining
+      description: "符号化の履歴（CR LF で区切った行。'A=PCM,F=48000,W=24,M=stereo' など）"
+
+  cue_chunk:
+    - name: num_cue_points
+      type: uint32
+      description: "キューポイントの数"
+    - name: cue_points
+      type: struct
+      struct: cue_point
+      repeat_count: "{num_cue_points}"
+      description: "キューポイント（24 バイトずつ）"
+
+  cue_point:
+    - name: identifier
+      type: uint32
+      description: "キューポイントの ID（labl などから参照される）"
+    - name: position
+      type: uint32
+      description: "再生順のサンプル位置"
+    - name: data_chunk_id
+      type: ascii
+      size: "4"
+      description: "位置が入っているチャンクの ID（通常 'data'）"
+    - name: chunk_start
+      type: uint32
+      description: "wavl の中のチャンクの位置（data だけなら 0）"
+    - name: block_start
+      type: uint32
+      description: "位置を含むブロックの位置（非圧縮なら 0）"
+    - name: sample_offset
+      type: uint32
+      description: "ブロックの先頭からのサンプル数"
+
+  smpl_chunk:
+    - name: manufacturer
+      type: uint32
+      description: "サンプラーのメーカーの MIDI の ID（0 = 汎用）"
+    - name: product
+      type: uint32
+      description: "メーカーの製品コード"
+    - name: sample_period
+      type: uint32
+      description: "1 サンプルの長さ（ナノ秒）"
+    - name: midi_unity_note
+      type: uint32
+      description: "元の音の高さの MIDI ノート番号（60 = 中央ハ）"
+    - name: midi_pitch_fraction
+      type: uint32
+      description: "ノート番号の端数（1 半音 = 2^32）"
+    - name: smpte_format
+      type: uint32
+      enum: smpte_format
+      description: "SMPTE のフレームレート"
+    - name: smpte_offset
+      type: uint32
+      description: "SMPTE のオフセット（時・分・秒・フレームの 4 バイト）"
+    - name: num_sample_loops
+      type: uint32
+      description: "ループの数"
+    - name: sampler_data
+      type: uint32
+      description: "ループの後ろのサンプラー固有データのバイト数"
+    - name: loops
+      type: struct
+      struct: sample_loop
+      repeat_count: "{num_sample_loops}"
+      description: "ループ（24 バイトずつ）"
+    - name: sampler_specific
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "サンプラー固有データ"
+
+  sample_loop:
+    - name: cue_point_id
+      type: uint32
+      description: "対応するキューポイントの ID"
+    - name: loop_type
+      type: uint32
+      enum: loop_type
+      description: "ループの種類"
+    - name: start
+      type: uint32
+      description: "ループの開始（サンプル位置）"
+    - name: end
+      type: uint32
+      description: "ループの終わり（このサンプルを含む）"
+    - name: fraction
+      type: uint32
+      description: "ループの位置の端数（1 サンプル = 2^32）"
+    - name: play_count
+      type: uint32
+      description: "繰り返しの回数（0 = 無限）"
+
+  text_chunk:
+    - name: text
+      type: utf8
+      size: remaining
+      description: "テキスト（iXML は XML の文書）"

@@ -25,100 +25,95 @@ public class FlacParsingTests
     [Fact]
     public void FlacFormat_DecodesSuccessfully()
     {
-        var data = FlacTestDataGenerator.CreateMinimalFlac();
-        var format = new YamlFormatLoader().Load(FlacFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var decoded = Decode(FlacTestDataGenerator.CreateMinimalFlac());
 
         decoded.Name.Should().Be("FLAC");
-        decoded.Children.Should().HaveCount(2);
-        decoded.Children[0].Name.Should().Be("magic");
-        decoded.Children[1].Name.Should().Be("metadata_blocks");
+        // 音声フレームが無いので first_frame_header は無い
+        decoded.Children.Select(c => c.Name).Should().Equal("file_size", "magic", "metadata_blocks", "frames");
+        Child(decoded, "frames").Size.Should().Be(0);
     }
 
     [Fact]
     public void FlacFormat_Magic_DecodesCorrectly()
     {
-        var data = FlacTestDataGenerator.CreateMinimalFlac();
-        var format = new YamlFormatLoader().Load(FlacFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var magic = (DecodedBytes)Child(Decode(FlacTestDataGenerator.CreateMinimalFlac()), "magic");
 
-        var magic = decoded.Children[0].Should().BeOfType<DecodedBytes>().Subject;
         magic.ValidationPassed.Should().BeTrue();
     }
 
     [Fact]
     public void FlacFormat_StreamInfo_BitfieldDecodesCorrectly()
     {
-        var data = FlacTestDataGenerator.CreateMinimalFlac();
-        var format = new YamlFormatLoader().Load(FlacFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var block = Block(Decode(FlacTestDataGenerator.CreateMinimalFlac()), 0);
 
-        // Navigate: metadata_blocks[0].data (switch → streaminfo) → sample_rate_channels_bps_samples
-        var metadataBlocks = (DecodedArray)decoded.Children[1]; // metadata_blocks (repeat → array)
-        var firstBlock = (DecodedStruct)metadataBlocks.Elements[0]; // first metadata_block
-        // Fields: header_byte, is_last, block_type, length_b0, length_b1, length_b2, length, data
-        var streamInfoSwitch = (DecodedStruct)firstBlock.Children[7]; // data (switch → streaminfo)
-        // streaminfo: min_block_size, max_block_size, min_frame_size_b0..b2, min_frame_size,
-        //   max_frame_size_b0..b2, max_frame_size, sample_rate_channels_bps_samples, md5
-        var bitfield = streamInfoSwitch.Children[10].Should().BeOfType<DecodedBitfield>().Subject;
+        var header = (DecodedBitfield)Child(block, "header");
+        header.Fields.Should().Contain(f => f.Name == "is_last" && f.Value == 1);
+        header.Fields.Should().Contain(f => f.Name == "block_type" && f.EnumLabel == "STREAMINFO");
+        header.Fields.Should().Contain(f => f.Name == "length" && f.Value == 34);
 
-        bitfield.Name.Should().Be("sample_rate_channels_bps_samples");
+        var streamInfo = Child(block, "data");
+        var bitfield = (DecodedBitfield)Child(streamInfo, "sample_rate_channels_bps_samples");
         bitfield.Fields.Should().Contain(f => f.Name == "sample_rate" && f.Value == 44100);
-        bitfield.Fields.Should().Contain(f => f.Name == "channels" && f.Value == 1); // stereo = 2ch, stored as 1
-        bitfield.Fields.Should().Contain(f => f.Name == "bps" && f.Value == 15); // 16-bit, stored as 15
+        bitfield.Fields.Should().Contain(f => f.Name == "channels" && f.Value == 1); // 2 チャンネルを 1 で表す
+        bitfield.Fields.Should().Contain(f => f.Name == "bps" && f.Value == 15); // 16 ビットを 15 で表す
         bitfield.Fields.Should().Contain(f => f.Name == "total_samples" && f.Value == 0);
+        ((DecodedVirtual)Child(streamInfo, "channel_count")).Value.Should().Be(2L);
+        ((DecodedVirtual)Child(streamInfo, "bits_per_sample")).Value.Should().Be(16L);
     }
 
     [Fact]
     public void FlacFormat_CuesheetIndex_DecodesCorrectly()
     {
-        var data = FlacTestDataGenerator.CreateFlacWithCuesheet();
-        var format = new YamlFormatLoader().Load(FlacFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var decoded = Decode(FlacTestDataGenerator.CreateFlacWithCuesheet());
 
-        // Navigate: metadata_blocks[1].data (switch → cuesheet_block) → tracks[0] → indices
-        var metadataBlocks = (DecodedArray)decoded.Children[1];
-        metadataBlocks.Elements.Should().HaveCount(2);
-
-        var cuesheetBlock = (DecodedStruct)metadataBlocks.Elements[1];
-        // Fields: header_byte, is_last, block_type, length_b0, length_b1, length_b2, length, data
-        var cuesheetData = (DecodedStruct)cuesheetBlock.Children[7]; // data (switch → cuesheet_block)
-
-        // cuesheet_block: media_catalog, lead_in_samples, cuesheet_flags, reserved, num_tracks, tracks
-        var tracks = cuesheetData.Children[5].Should().BeOfType<DecodedArray>().Subject;
+        ((DecodedArray)Child(decoded, "metadata_blocks")).Elements.Should().HaveCount(2);
+        var cuesheet = Child(Block(decoded, 1), "data");
+        var tracks = (DecodedArray)Child(cuesheet, "tracks");
         tracks.Elements.Should().HaveCount(1);
 
-        var track = tracks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        // cuesheet_track: track_offset, track_number, isrc, track_flags, track_reserved, num_indices, indices
-        var numIndices = track.Children[5].Should().BeOfType<DecodedInteger>().Subject;
-        numIndices.Value.Should().Be(1);
+        var track = tracks.Elements[0];
+        ((DecodedInteger)Child(track, "num_indices")).Value.Should().Be(1);
+        var index = ((DecodedArray)Child(track, "indices")).Elements.Single();
+        ((DecodedInteger)Child(index, "offset")).Value.Should().Be(0);
+        ((DecodedInteger)Child(index, "index_number")).Value.Should().Be(1);
+        Child(index, "reserved").Should().BeOfType<DecodedBytes>();
+    }
 
-        var indices = track.Children[6].Should().BeOfType<DecodedArray>().Subject;
-        indices.Elements.Should().HaveCount(1);
+    [Fact]
+    public void FlacFormat_FirstFrameHeader_DecodesCorrectly()
+    {
+        var decoded = Decode(FlacTestDataGenerator.CreateFlacWithFrameHeader());
 
-        var index = indices.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var offset = index.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        offset.Name.Should().Be("offset");
-        offset.Value.Should().Be(0);
-
-        var indexNumber = index.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        indexNumber.Name.Should().Be("index_number");
-        indexNumber.Value.Should().Be(1);
-
-        var reserved = index.Children[2].Should().BeOfType<DecodedBytes>().Subject;
-        reserved.Name.Should().Be("reserved");
+        var frameHeader = Child(decoded, "first_frame_header");
+        var header = (DecodedBitfield)Child(frameHeader, "header");
+        header.Fields.Should().Contain(f => f.Name == "sync_code" && f.Value == 0x3FFE);
+        header.Fields.Should().Contain(f => f.Name == "blocking_strategy" && f.Value == 0);
+        header.Fields.Should().Contain(f => f.Name == "block_size_code" && f.Value == 12);
+        header.Fields.Should().Contain(f => f.Name == "sample_rate_code" && f.Value == 9);
+        header.Fields.Should().Contain(f => f.Name == "channel_code" && f.EnumLabel == "left_side");
+        header.Fields.Should().Contain(f => f.Name == "sample_size_code" && f.Value == 4);
+        ((DecodedVirtual)Child(frameHeader, "sync_valid")).Value.Should().Be(1L);
+        // 先読みなので frames は最初のフレームの先頭から始まる
+        Child(decoded, "frames").Offset.Should().Be(frameHeader.Offset);
+        Child(decoded, "frames").Size.Should().Be(8);
     }
 
     [Fact]
     public void FlacFormat_TreeOutput_ContainsExpectedElements()
     {
-        var data = FlacTestDataGenerator.CreateMinimalFlac();
-        var format = new YamlFormatLoader().Load(FlacFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-        var output = new TreeOutputFormatter().Format(decoded);
+        var output = new TreeOutputFormatter().Format(Decode(FlacTestDataGenerator.CreateMinimalFlac()));
 
         output.Should().Contain("FLAC");
         output.Should().Contain("magic");
         output.Should().Contain("metadata_blocks");
     }
+
+    private static DecodedStruct Decode(byte[] data) =>
+        new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(FlacFormatPath));
+
+    private static DecodedNode Block(DecodedStruct root, int index) =>
+        ((DecodedArray)Child(root, "metadata_blocks")).Elements[index];
+
+    private static DecodedNode Child(DecodedNode node, string name) =>
+        ((DecodedStruct)node).Children.First(c => c.Name == name);
 }

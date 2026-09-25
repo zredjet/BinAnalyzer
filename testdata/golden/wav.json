@@ -10,6 +10,11 @@
       "type": "ascii",
       "offset": 0,
       "size": 4,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u306E\u5F62\u5F0F\uFF08\u0027RIFF\u0027\u30024 GiB \u3092\u8D85\u3048\u3089\u308C\u308B\u5F62\u5F0F\u306F \u0027RF64\u0027 / \u0027BW64\u0027\uFF09",
+      "_validation": {
+        "passed": true,
+        "expression": "{riff_id == \u0027RIFF\u0027 or riff_id == \u0027RF64\u0027 or riff_id == \u0027BW64\u0027}"
+      },
       "name": "riff_id",
       "value": "RIFF",
       "encoding": "ascii"
@@ -19,6 +24,7 @@
       "type": "uint32",
       "offset": 4,
       "size": 4,
+      "description": "\u0027WAVE\u0027 \u4EE5\u964D\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30D5\u30A1\u30A4\u30EB\u306E\u5927\u304D\u3055 \u2212 8\u3002RF64 / BW64 \u3067\u306F 0xFFFFFFFF \u3067\u3001\u672C\u5F53\u306E\u5024\u306F ds64\uFF09",
       "name": "file_size",
       "value": 40,
       "hex": "0x28"
@@ -28,6 +34,7 @@
       "type": "ascii",
       "offset": 8,
       "size": 4,
+      "description": "\u30D5\u30A9\u30FC\u30E0\u306E\u7A2E\u985E\uFF08\u0027WAVE\u0027\uFF09",
       "name": "wave_id",
       "value": "WAVE",
       "encoding": "ascii"
@@ -53,6 +60,7 @@
               "type": "ascii",
               "offset": 12,
               "size": 4,
+              "description": "\u30C1\u30E3\u30F3\u30AF\u306E ID\uFF08\u0027fmt \u0027\u30FB\u0027data\u0027\u30FB\u0027LIST\u0027\u30FB\u0027fact\u0027\u30FB\u0027bext\u0027\u30FB\u0027ds64\u0027 \u306A\u3069\uFF09",
               "name": "chunk_id",
               "value": "fmt ",
               "encoding": "ascii"
@@ -62,9 +70,19 @@
               "type": "uint32",
               "offset": 16,
               "size": 4,
+              "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u8A70\u3081\u7269\u3092\u542B\u307E\u306A\u3044\u3002RF64 / BW64 \u306E data \u3067\u306F 0xFFFFFFFF\uFF09",
               "name": "chunk_size",
               "value": 16,
               "hex": "0x10"
+            },
+            "body_size": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 20,
+              "size": 0,
+              "description": "\u4E2D\u8EAB\u306E\u672C\u5F53\u306E\u30D0\u30A4\u30C8\u6570\uFF080xFFFFFFFF \u306E data \u306F ds64 \u306E data_size\uFF09",
+              "name": "body_size",
+              "value": 16
             },
             "data": {
               "_type": "struct",
@@ -72,60 +90,67 @@
               "offset": 20,
               "size": 16,
               "name": "data",
-              "struct_type": "fmt_chunk",
+              "struct_type": "wave_format",
               "children": {
-                "audio_format": {
+                "wFormatTag": {
                   "_type": "integer",
                   "type": "uint16",
                   "offset": 20,
                   "size": 2,
-                  "name": "audio_format",
+                  "description": "\u97F3\u58F0\u306E\u5F62\u5F0F\uFF08WAVE_FORMAT_*\uFF09",
+                  "name": "wFormatTag",
                   "value": 1,
                   "hex": "0x1",
-                  "enum_label": "PCM"
+                  "enum_label": "PCM",
+                  "enum_description": "\u30EA\u30CB\u30A2 PCM\uFF08\u6574\u6570\uFF09"
                 },
-                "num_channels": {
+                "nChannels": {
                   "_type": "integer",
                   "type": "uint16",
                   "offset": 22,
                   "size": 2,
-                  "name": "num_channels",
+                  "description": "\u30C1\u30E3\u30F3\u30CD\u30EB\u6570",
+                  "name": "nChannels",
                   "value": 1,
                   "hex": "0x1"
                 },
-                "sample_rate": {
+                "nSamplesPerSec": {
                   "_type": "integer",
                   "type": "uint32",
                   "offset": 24,
                   "size": 4,
-                  "name": "sample_rate",
+                  "description": "\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u5468\u6CE2\u6570\uFF08Hz\uFF09",
+                  "name": "nSamplesPerSec",
                   "value": 8000,
                   "hex": "0x1F40"
                 },
-                "byte_rate": {
+                "nAvgBytesPerSec": {
                   "_type": "integer",
                   "type": "uint32",
                   "offset": 28,
                   "size": 4,
-                  "name": "byte_rate",
+                  "description": "\u5E73\u5747\u306E\u30D0\u30A4\u30C8\u30EC\u30FC\u30C8\uFF08\u30D0\u30A4\u30C8 / \u79D2\u3002PCM \u306A\u3089 nSamplesPerSec \u00D7 nBlockAlign\uFF09",
+                  "name": "nAvgBytesPerSec",
                   "value": 8000,
                   "hex": "0x1F40"
                 },
-                "block_align": {
+                "nBlockAlign": {
                   "_type": "integer",
                   "type": "uint16",
                   "offset": 32,
                   "size": 2,
-                  "name": "block_align",
+                  "description": "\u30D6\u30ED\u30C3\u30AF\u306E\u30D0\u30A4\u30C8\u6570\uFF08PCM \u306A\u3089\u5168\u30C1\u30E3\u30F3\u30CD\u30EB\u5206\u306E 1 \u30B5\u30F3\u30D7\u30EB = nChannels \u00D7 wBitsPerSample \u00F7 8\uFF09",
+                  "name": "nBlockAlign",
                   "value": 1,
                   "hex": "0x1"
                 },
-                "bits_per_sample": {
+                "wBitsPerSample": {
                   "_type": "integer",
                   "type": "uint16",
                   "offset": 34,
                   "size": 2,
-                  "name": "bits_per_sample",
+                  "description": "1 \u30B5\u30F3\u30D7\u30EB\u306E\u30D3\u30C3\u30C8\u6570\uFF08\u5727\u7E2E\u5F62\u5F0F\u3067\u306F 0 \u306E\u3053\u3068\u304C\u3042\u308B\uFF09",
+                  "name": "wBitsPerSample",
                   "value": 8,
                   "hex": "0x8"
                 }
@@ -146,6 +171,7 @@
               "type": "ascii",
               "offset": 36,
               "size": 4,
+              "description": "\u30C1\u30E3\u30F3\u30AF\u306E ID\uFF08\u0027fmt \u0027\u30FB\u0027data\u0027\u30FB\u0027LIST\u0027\u30FB\u0027fact\u0027\u30FB\u0027bext\u0027\u30FB\u0027ds64\u0027 \u306A\u3069\uFF09",
               "name": "chunk_id",
               "value": "data",
               "encoding": "ascii"
@@ -155,9 +181,19 @@
               "type": "uint32",
               "offset": 40,
               "size": 4,
+              "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u8A70\u3081\u7269\u3092\u542B\u307E\u306A\u3044\u3002RF64 / BW64 \u306E data \u3067\u306F 0xFFFFFFFF\uFF09",
               "name": "chunk_size",
               "value": 4,
               "hex": "0x4"
+            },
+            "body_size": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 44,
+              "size": 0,
+              "description": "\u4E2D\u8EAB\u306E\u672C\u5F53\u306E\u30D0\u30A4\u30C8\u6570\uFF080xFFFFFFFF \u306E data \u306F ds64 \u306E data_size\uFF09",
+              "name": "body_size",
+              "value": 4
             },
             "data": {
               "_type": "struct",
@@ -172,7 +208,7 @@
                   "type": "bytes",
                   "offset": 44,
                   "size": 4,
-                  "description": "\u30AA\u30FC\u30C7\u30A3\u30AA\u30B5\u30F3\u30D7\u30EB\u30C7\u30FC\u30BF",
+                  "description": "\u97F3\u58F0\u306E\u30B5\u30F3\u30D7\u30EB\uFF08fmt \u306E\u5F62\u5F0F\u3002PCM \u306A\u3089\u30C1\u30E3\u30F3\u30CD\u30EB\u3092\u4EA4\u4E92\u306B\u4E26\u3079\u305F\u30EA\u30C8\u30EB\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3\u306E\u6574\u6570\uFF09",
                   "name": "data",
                   "hex": "80 80 80 80"
                 }

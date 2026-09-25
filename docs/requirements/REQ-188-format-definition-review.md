@@ -176,7 +176,7 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | 画像 | png / jpeg / gif / bmp / tiff / webp / ico / heif / icc（先頭コメント・全フィールドの説明、PNG 第 3 版・APNG、BigTIFF と IFD チェーン、WebP の RFC 9649 照合、ICC の型ごとの分解、下記のバグ修正） | 済 |
 | アーカイブ・圧縮 | zip / gzip / tar / 7z / lz4（先頭コメント・全フィールドの説明、ZIP を Central Directory から読む形に変更・Zip64・拡張フィールド、7z のヘッダの分解、pax / GNU tar、LZ4 のフレームの種類と Block Checksum、下記のバグ修正。画像の BMP の条件式のバグもここで直した） | 済 |
 | 実行形式・バイトコード | elf / pe / macho / java-class / wasm（先頭コメント・全フィールドの説明、ELF のセクションの中身、PE のデータディレクトリ、Mach-O のユニバーサルバイナリ・シンボル・コード署名、Java のコンスタントプールの 2 スロットと属性、WASM 3.0 の全セクション、下記のバグ修正） | 済 |
-| 音声・映像 | mp3 / mp4 / wav / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff | 未着手 |
+| 音声・映像 | mp3 / mp4 / wav / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff（先頭コメント・全フィールドの説明、RF64 / BW64・WAVEFORMATEXTENSIBLE・BWF、OpenDML、MP4 のサンプルエントリ・フラグメント・iTunes のメタデータ、ID3v2.4 / ID3v1 / Xing、Opus・FLAC・Speex・Theora の Ogg、AMF0 と Enhanced FLV の FourCC、MIDI のランニングステータス、下記のバグ修正） | 済 |
 | データ・その他 | sqlite / parquet / pdf / pcap / dns / protobuf / msgpack / cbor / x509 / fat / otf | 未着手 |
 
 ### 実装中の設計変更
@@ -209,6 +209,16 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 | JavaClassParsingTests | WideConstants_TakeTwoSlotsAndNamesResolveThroughTheConstantPool | 4, 6 |
 | WasmParsingTests | Wasm3Module_DecodesGcTypesImportsConstantExpressionsAndNames | 4, 6 |
 | JsonSchemaTests | Schema_FieldTypeEnum_MatchesDslTypeNames（スキーマの型名に uleb128 / sleb128 / vlq と別名を追加）、Schema_ValidatesFormatFile に pe / macho / java-class / wasm を追加 | 7 |
+| WavParsingTests | PcmWith18ByteFmt_ReadsCbSize / Rf64_UsesDs64Sizes / Extensible_DecodesSubFormatAndChannelMask / OddSizedChunk_SkipsPaddingByte（既存は子を名前で引くよう更新） | 4, 6 |
+| AviParsingTests | OpenDml_DecodesSuperIndexAndStandardIndex / OpenDml_DecodesStreamNameAndExtendedHeader / OpenDml_DecodesAvixAndOddSizedChunk（既存は子を名前で引くよう更新） | 4, 6 |
+| Mp4ParsingTests | SampleEntries_DecodeAvcCAndEsds / Ilst_DecodesTextMetadata / Fragments_DecodeMoofAndTrun / Mvex_DecodesTrackExtends | 6 |
+| Mp3ParsingTests | Id3v24_DecodesSyncsafeFramesAndPadding / Frames_DecodeHeaderAndXing / Id3v1_DecodesAtEnd / WithoutTags_DecodesMpeg2Frames（既存は子を名前で引くよう更新） | 4, 6 |
+| FlacParsingTests | FirstFrameHeader_DecodesCorrectly（既存は子を名前で引くよう更新） | 6 |
+| OggParsingTests（新規） | MinimalVorbis_DecodesIdentificationHeader / Opus_DecodesHeadAndTags / PageBody_UsesSegmentTableEvenIfDataContainsCapturePattern | 6 |
+| FlvParsingTests | ScriptTag_DecodesOnMetaData / AvcTags_DecodePacketTypeAndCompositionTime / AacTag_DecodesPacketType / PreviousTagSize_IsValidated（既存は子を名前で引くよう更新） | 6 |
+| MidiParsingTests | UnknownChunk_IsSkipped / RunningStatus_ReusesPreviousStatus / MetaEvents_DecodeTempoAndTimeSignature（既存は子を名前で引くよう更新） | 6 |
+| JsonSchemaTests | Schema_ValidatesFormatFile に mp3 / mp4 / flac / ogg / avi / flv / midi / mkv / common/riff / common/isobmff を追加 | 7 |
+| SourceLocationTests / GuiImportTests | common/isobmff の dref の子を iso_box にしたことと、WAV の fmt のフィールド名の変更に合わせて更新 | — |
 
 ### 画像の見直し（PR: 画像）
 
@@ -311,6 +321,45 @@ DSL はその後の要望で表現力が増えた（REQ-137 のメンバーア�
 - Mach-O: dyld の情報（chained fixups など）の中身、要件と CMS の署名の中身
 - Java: バイトコードの逆アセンブル、StackMapTable・アノテーション・Module・Record の中身
 - WASM: 関数の本体の命令、コンポーネントモデル
+
+### 音声・映像の見直し（PR: 音声・映像）
+
+**直したバグ**
+
+- WAV: 大きさが奇数のチャンクの後ろの詰め物 1 バイトを読んでいなかった（次のチャンクから 1 バイトずれる）。cbSize を PCM 以外のときに必ず読んでいたため、16 バイトの fmt の非 PCM で範囲外になり、18 バイトの fmt の PCM では cbSize が表示されなかった（fmt の大きさで判定する）。RF64（ffmpeg の `-rf64` の出力）の data の大きさ 0xFFFFFFFF をそのまま使い、デコードエラーになっていた
+- MP3: ID3v2 タグを必須にしていたため、タグの無い MP3 でデコードエラーになっていた。ID3v2.4 のフレームの大きさ（シンクセーフ整数）を普通の整数として読み、範囲外になっていた。最初のフレームのヘッダしか読んでいなかった
+- Ogg: ページの中身の大きさを次の 'OggS' までとしていた（`until_marker`）ため、中身に 'OggS' のバイト列を含むページで分割を誤っていた。segment_table の合計で決める
+- MIDI: ランニングステータス（状態バイトを省いたイベント）に対応しておらず、実際のファイル（Am-s1-full.mid）で 1,351 個のイベントのうち途中から誤読していた（旧定義は 1,160 個として読んでいた）。MThd の後ろの未知のチャンク（XF の XFIH など）を MTrk として読んでいた
+- AVI: OpenDML（AVI 2.0）の RIFF 'AVIX'・indx / ix##・dmlh・strn を読めず、フラグも数値のままだった
+- common/isobmff: ftyp の互換ブランドと hdlr の名前をバイト列のまま表示していた（ブランドの並び・UTF-8 の文字列として読む）
+
+**足した構造**
+
+- WAV / common/riff: WAVEFORMATEX と WAVEFORMATEXTENSIBLE（有効ビット数・スピーカーの配置のフラグ・SubFormat）を common/riff に移し、AVI の音声の strf と共有した。RF64 / BW64 と ds64、BWF の bext、cue、smpl、iXML、LIST 'INFO'。WAV の fmt のフィールド名は WAVEFORMATEX の名前（`wFormatTag` など）に変わった
+- AVI: OpenDML のスーパーインデックスと標準インデックス（キーフレームの判定を含む）、RIFF 'AVIX'、dmlh、strn、avih / strh / idx1 のフラグ、rcFrame
+- MP4 / common/isobmff: サンプルエントリ（avc1 / hvc1 / mp4a など。映像・音声のエントリの中の子 box）、avcC・hvcC・esds（MPEG-4 の記述子と AudioSpecificConfig）・dOps・pasp・btrt・colr、フラグメント（mvex / trex / mehd・moof / mfhd / traf / tfhd / tfdt / trun・mfra / mfro・sidx・styp）、meta と iTunes のメタデータ（ilst・data）、ctts・co64・stss、tkhd / mdhd のフラグと言語、64 ビットの大きさと uuid
+- MP3: ID3v2.2〜2.4（拡張ヘッダ・テキスト・コメント・歌詞・画像・URL・PRIV・UFID のフレーム、文字コード 4 種、詰め物）、全フレームのヘッダとビットレート・サンプリング周波数・フレーム長、Xing / Info・VBRI ヘッダ、末尾の ID3v1 / ID3v1.1
+- FLAC: 最初の音声フレームのヘッダ（同期コードの検証）と音声フレームの範囲、メタデータブロックのヘッダのビットフィールド、STREAMINFO のチャンネル数・ビット数
+- Ogg: パケットの種類の判別、Vorbis の識別・コメントヘッダ、OpusHead / OpusTags、Ogg FLAC、Speex、Theora の識別ヘッダ
+- FLV: PreviousTagSize の検証（タグの大きさ + 11）、AMF0（onMetaData の連想配列・オブジェクト・配列・日付・長い文字列の再帰）、Enhanced RTMP の拡張ヘッダと FourCC、AVC の AVCPacketType と表示時刻のずれ（符号付き）、AAC の AACPacketType、タイムスタンプの拡張
+- MIDI: ランニングステータス（状態変数で直前の状態バイトを引き継ぐ）、イベントの種類とチャンネル、メタイベント（テキスト・テンポと BPM・拍子・調・SMPTE オフセット）、SMPTE の時間の単位
+- MKV: 先頭コメント・全フィールドの説明、Block（0xA1）と CRC-32 要素
+
+**実在のツールでの確認**: ffmpeg 9.0.2 で作った WAV（PCM・WAVEFORMATEXTENSIBLE・RF64・浮動小数点）、AVI（MJPEG + PCM）、MP4（H.264・HEVC・フラグメント・Opus）と M4A（ALAC）、MP3（ID3v2.4・VBR の Xing・タグなし・途中で切ったもの）、FLAC（画像とタグ付き・ステレオ）、Ogg（Vorbis・Opus・FLAC）、FLV（H.264 + AAC・古いコーデック）、MKV / WebM を読み、すべてエラーなく読めること、値が ffprobe と合うことを確かめた。MIDI は手元の実際のファイル 2 つ（ランニングステータスを含む）を読んだ。テスト用に組み立てたファイルも ffprobe で読め、コーデック・チャンネル・タグ（Opus の ARTIST、ID3v2.4 の UTF-8 / UTF-16 のタイトル、MP4 の ©nam、FLV の onMetaData）が意図どおりに表示されることを確かめた。旧定義では RF64・タグの無い MP3・ID3v2.4・中身に 'OggS' を含む Ogg がデコードエラーに、ランニングステータスの MIDI が ✗ になることも確かめた
+
+**出力の大きさ**: 9 件のゴールデン（JSON）は合計 319,881 → 407,068 バイト（+27%）。common/isobmff の変更で HEIF のゴールデンも 30,131 → 33,004 バイトになった。AVI のゴールデンの元（CreateMinimalAvi）は avih をわざと 52 バイトに切り詰めたサンプルで、エラーは以前と同じ
+
+**残した課題**（各定義の「対応していないもの」に記載）
+
+- MP4: サンプルの中身、avcC / hvcC の SPS・PPS の中身、QuickTime の古い形式、サンプルグループ・暗号化・HDR のメタデータの box
+- MP3: 音声データの分解、ID3v2 の非同期化の解除と圧縮・暗号化されたフレーム、APEv2・Lyrics3、フリーフォーマットのフレーム長
+- WAV: data 以外のチャンクの 64 ビットの大きさ（ds64 の表）、iXML 以外の XML・ADM のメタデータ、ID3 チャンクの中身
+- AVI: フレームの中身、vprp、フィールドの索引
+- FLAC: 2 つ目以降の音声フレームの分割とサブフレーム、CRC の検証、先頭の ID3v2
+- Ogg: ページの CRC の検証（Ogg の非反転の CRC-32 のアルゴリズムが無い）、複数ページにまたがるパケット、Vorbis の設定ヘッダ
+- FLV: Enhanced RTMP の FourCC より後ろ、暗号化されたタグ、AMF3
+- MIDI: RMID、テキストの文字コードの判定（Shift_JIS）、システムエクスクルーシブの中身
+- MKV: レーシングの分割、CRC-32 の検証、ContentEncoding の解除、サイズ不定の Cluster の連続
 
 ### 気づき・今後の課題
 

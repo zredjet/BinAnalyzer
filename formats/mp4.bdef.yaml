@@ -1,8 +1,150 @@
+# MP4 / M4A / MOV 系の動画・音声（.mp4 / .m4a / .m4v / .mov。フラグメント MP4 を含む）
+# 仕様: ISO/IEC 14496-12:2022（ISO Base Media File Format）、ISO/IEC 14496-14:2020（MP4）、ISO/IEC 14496-15:2022（AVC / HEVC の格納）、
+#   ISO/IEC 14496-1:2010（esds の記述子）、Opus in ISOBMFF 0.8.1（dOps）、Apple の QuickTime File Format（iTunes のメタデータの ilst）
+# 構造: box（大きさ 4 バイト + 種類 4 バイト + [64 ビットの大きさ] + ['uuid' の拡張型] + 中身）の並び。種類で switch し、コンテナは子 box を再帰的に読む。
+#   stsd のサンプルエントリは形式（avc1・hvc1・mp4a・Opus など）で映像・音声に分け、その後ろの子 box（avcC・hvcC・esds・pasp など）も読む。
+#   ftyp・hdlr・dref・コンテナは formats/common/isobmff.bdef.yaml を使う。
+# 対応していないもの: 映像・音声のサンプル（mdat はバイト列）、avcC / hvcC の SPS・PPS の中身（NAL ユニットはバイト列）、
+#   QuickTime の古い形式（version / flags の無い meta、音声のサンプルエントリの版 1 / 2 の追加フィールド、'wide' 以外の QuickTime 固有の atom）、
+#   サンプルグループ（sgpd / sbgp）・sdtp・fiel・tfra・暗号化（sinf / pssh / senc）・HDR のメタデータ box の分解、iTunes のメタデータの画像の中身
 name: MP4
 endianness: big
 root: mp4_file
 imports:
   - path: common/isobmff.bdef.yaml
+
+enums:
+  data_type:
+    - value: 0
+      label: implicit
+      description: "型は box の種類で決まる（バイト列）"
+    - value: 1
+      label: UTF-8
+      description: "UTF-8 の文字列"
+    - value: 2
+      label: UTF-16
+      description: "UTF-16BE の文字列"
+    - value: 13
+      label: JPEG
+      description: "JPEG 画像（カバーアート）"
+    - value: 14
+      label: PNG
+      description: "PNG 画像（カバーアート）"
+    - value: 21
+      label: BE_signed_integer
+      description: "ビッグエンディアンの符号付き整数（1〜8 バイト）"
+    - value: 22
+      label: BE_unsigned_integer
+      description: "ビッグエンディアンの符号なし整数（1〜8 バイト）"
+    - value: 23
+      label: BE_float32
+      description: "ビッグエンディアンの 32 ビット浮動小数点数"
+    - value: 24
+      label: BE_float64
+      description: "ビッグエンディアンの 64 ビット浮動小数点数"
+
+  descriptor_tag:
+    - value: 0x03
+      label: ES_DescrTag
+      description: "エレメンタリストリームの記述子"
+    - value: 0x04
+      label: DecoderConfigDescrTag
+      description: "デコーダの設定"
+    - value: 0x05
+      label: DecSpecificInfoTag
+      description: "デコーダ固有の情報（AAC なら AudioSpecificConfig）"
+    - value: 0x06
+      label: SLConfigDescrTag
+      description: "同期レイヤの設定"
+
+  object_type_indication:
+    - value: 0x20
+      label: MPEG4_Visual
+      description: "MPEG-4 Visual（Part 2）"
+    - value: 0x21
+      label: AVC
+      description: "H.264 / AVC"
+    - value: 0x23
+      label: HEVC
+      description: "H.265 / HEVC"
+    - value: 0x40
+      label: MPEG4_Audio
+      description: "MPEG-4 Audio（AAC など）"
+    - value: 0x66
+      label: MPEG2_AAC_Main
+      description: "MPEG-2 AAC Main"
+    - value: 0x67
+      label: MPEG2_AAC_LC
+      description: "MPEG-2 AAC LC"
+    - value: 0x69
+      label: MPEG2_Audio
+      description: "MPEG-2 Audio（Layer 3 を含む）"
+    - value: 0x6B
+      label: MPEG1_Audio
+      description: "MPEG-1 Audio（MP3 を含む）"
+    - value: 0x6C
+      label: JPEG
+      description: "JPEG"
+    - value: 0xA5
+      label: AC3
+      description: "Dolby AC-3"
+    - value: 0xA6
+      label: EAC3
+      description: "Dolby E-AC-3"
+    - value: 0xAD
+      label: Opus
+      description: "Opus"
+    - value: 0xDD
+      label: Vorbis
+      description: "Vorbis（非公式）"
+
+  stream_type:
+    - value: 0x04
+      label: VisualStream
+      description: "映像"
+    - value: 0x05
+      label: AudioStream
+      description: "音声"
+
+  audio_object_type:
+    - value: 1
+      label: AAC_MAIN
+      description: "AAC Main"
+    - value: 2
+      label: AAC_LC
+      description: "AAC LC（Low Complexity。最も一般的）"
+    - value: 3
+      label: AAC_SSR
+      description: "AAC SSR"
+    - value: 4
+      label: AAC_LTP
+      description: "AAC LTP"
+    - value: 5
+      label: SBR
+      description: "SBR（HE-AAC）"
+    - value: 29
+      label: PS
+      description: "Parametric Stereo（HE-AAC v2）"
+    - value: 42
+      label: USAC
+      description: "USAC（xHE-AAC）"
+
+  hevc_nal_type:
+    - value: 32
+      label: VPS
+      description: "ビデオパラメータセット"
+    - value: 33
+      label: SPS
+      description: "シーケンスパラメータセット"
+    - value: 34
+      label: PPS
+      description: "ピクチャパラメータセット"
+    - value: 39
+      label: PREFIX_SEI
+      description: "前置き SEI"
+    - value: 40
+      label: SUFFIX_SEI
+      description: "後置き SEI"
 
 structs:
   mp4_file:
@@ -10,22 +152,36 @@ structs:
       type: struct
       struct: iso_box
       repeat: eof
+      description: "最上位の box の並び（ftyp → moov → mdat、フラグメント MP4 では moov の後ろに moof + mdat が並ぶ）"
 
   iso_box:
     - name: box_size
       type: uint32
+      description: "box のバイト数（ヘッダを含む。1 なら extended_size、0 ならファイルの末尾まで）"
     - name: box_type
-      type: ascii
+      type: latin1
       size: "4"
+      description: "box の種類（4 文字。iTunes のメタデータは '©nam' のように 0xA9 で始まる）"
     - name: extended_size
       type: uint64
       if: "{box_size == 1}"
+      description: "64 ビットの box のバイト数（box_size が 1 のとき）"
+    - name: user_type
+      type: bytes
+      size: "16"
+      if: "{box_type == 'uuid'}"
+      description: "拡張型の UUID（box_type が 'uuid' のとき）"
+    - name: header_size
+      type: virtual
+      value: "{8 + (box_size == 1 ? 8 : 0) + (box_type == 'uuid' ? 16 : 0)}"
+      description: "box のヘッダのバイト数"
     - name: box_data
       type: switch
-      size: "{box_size == 0 ? remaining : (box_size == 1 ? extended_size - 16 : box_size - 8)}"
+      size: "{box_size == 0 ? remaining : (box_size == 1 ? extended_size - header_size : box_size - header_size)}"
       switch_on: "{box_type}"
       cases:
         "'ftyp'": ftyp_box
+        "'styp'": ftyp_box
         "'moov'": container_box
         "'trak'": container_box
         "'mdia'": container_box
@@ -34,6 +190,13 @@ structs:
         "'dinf'": container_box
         "'edts'": container_box
         "'udta'": container_box
+        "'mvex'": container_box
+        "'moof'": container_box
+        "'traf'": container_box
+        "'mfra'": container_box
+        "'meta'": meta_box
+        "'ilst'": ilst_box
+        "'data'": data_box
         "'mvhd'": mvhd_box
         "'tkhd'": tkhd_box
         "'mdhd'": mdhd_box
@@ -43,41 +206,71 @@ structs:
         "'dref'": dref_box
         "'stsd'": stsd_box
         "'stts'": stts_box
+        "'ctts'": ctts_box
         "'stsc'": stsc_box
         "'stsz'": stsz_box
         "'stco'": stco_box
+        "'co64'": co64_box
+        "'stss'": stss_box
         "'elst'": elst_box
+        "'avcC'": avcc_box
+        "'hvcC'": hvcc_box
+        "'esds'": esds_box
+        "'dOps'": dops_box
+        "'pasp'": pasp_box
+        "'btrt'": btrt_box
+        "'colr'": colr_box
+        "'mfhd'": mfhd_box
+        "'tfhd'": tfhd_box
+        "'tfdt'": tfdt_box
+        "'trun'": trun_box
+        "'trex'": trex_box
+        "'mehd'": mehd_box
+        "'mfro'": mfro_box
+        "'sidx'": sidx_box
         "'mdat'": raw_data
         "'free'": raw_data
         "'skip'": raw_data
+        "'wide'": raw_data
       default: raw_data
+      description: "box の中身（種類で振り分ける。mdat・free などと未対応の box はバイト列）"
 
+  # ===== 映像・音声の全体 =====
   mvhd_box:
     - name: version
       type: uint8
+      description: "box の版（0 = 32 ビットの時刻、1 = 64 ビットの時刻）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: creation_time
       type: uint32
       if: "{version == 0}"
+      description: "作成日時（1904-01-01 UTC からの秒）"
     - name: creation_time_v1
       type: uint64
       if: "{version == 1}"
+      description: "作成日時（1904-01-01 UTC からの秒。64 ビット）"
     - name: modification_time
       type: uint32
       if: "{version == 0}"
+      description: "更新日時（1904-01-01 UTC からの秒）"
     - name: modification_time_v1
       type: uint64
       if: "{version == 1}"
+      description: "更新日時（64 ビット）"
     - name: timescale
       type: uint32
+      description: "時間の単位（1 秒あたりの数。duration などの単位）"
     - name: duration
       type: uint32
       if: "{version == 0}"
+      description: "全体の長さ（timescale の単位。最も長いトラック）"
     - name: duration_v1
       type: uint64
       if: "{version == 1}"
+      description: "全体の長さ（64 ビット）"
     - name: rate
       type: uint32
       description: "再生速度（固定小数点 16.16、通常 0x00010000 = 1.0）"
@@ -87,254 +280,1330 @@ structs:
     - name: reserved
       type: bytes
       size: "10"
+      padding: true
+      description: "予約（0）"
     - name: matrix
       type: bytes
       size: "36"
-      description: "変換マトリクス（3x3 固定小数点）"
+      description: "映像の変換行列（3 × 3。16.16 と 2.30 の固定小数点。単位行列は 00010000 0 0 / 0 00010000 0 / 0 0 40000000）"
     - name: pre_defined
       type: bytes
       size: "24"
+      padding: true
+      description: "予約（0）"
     - name: next_track_id
       type: uint32
+      description: "次に追加するトラックの ID（使われている ID の最大 + 1）"
 
   tkhd_box:
     - name: version
       type: uint8
+      description: "box の版（0 = 32 ビットの時刻、1 = 64 ビットの時刻）"
     - name: flags
-      type: bytes
+      type: bitfield
       size: "3"
+      description: "トラックのフラグ"
+      fields:
+        - name: track_enabled
+          bits: "0"
+          description: "1 なら有効なトラック"
+        - name: track_in_movie
+          bits: "1"
+          description: "1 なら再生に使う"
+        - name: track_in_preview
+          bits: "2"
+          description: "1 ならプレビューに使う"
+        - name: track_size_is_aspect_ratio
+          bits: "3"
+          description: "1 なら width / height は縦横比だけを表す"
     - name: creation_time
       type: uint32
       if: "{version == 0}"
+      description: "作成日時（1904-01-01 UTC からの秒）"
     - name: creation_time_v1
       type: uint64
       if: "{version == 1}"
+      description: "作成日時（64 ビット）"
     - name: modification_time
       type: uint32
       if: "{version == 0}"
+      description: "更新日時（1904-01-01 UTC からの秒）"
     - name: modification_time_v1
       type: uint64
       if: "{version == 1}"
+      description: "更新日時（64 ビット）"
     - name: track_id
       type: uint32
+      description: "トラックの ID（1 から）"
     - name: reserved1
       type: bytes
       size: "4"
+      padding: true
+      description: "予約（0）"
     - name: duration
       type: uint32
       if: "{version == 0}"
+      description: "トラックの長さ（mvhd の timescale の単位）"
     - name: duration_v1
       type: uint64
       if: "{version == 1}"
+      description: "トラックの長さ（64 ビット）"
     - name: reserved2
       type: bytes
       size: "8"
+      padding: true
+      description: "予約（0）"
     - name: layer
       type: uint16
+      description: "重ねる順（小さいほど手前）"
     - name: alternate_group
       type: uint16
+      description: "代替のトラックのグループ（同じグループから 1 つを選ぶ。0 = グループなし）"
     - name: volume
       type: uint16
-      description: "音量（固定小数点 8.8）"
+      description: "音量（固定小数点 8.8。音声は 0x0100、映像は 0）"
     - name: reserved3
       type: bytes
       size: "2"
+      padding: true
+      description: "予約（0）"
     - name: matrix
       type: bytes
       size: "36"
-      description: "変換マトリクス（3x3 固定小数点）"
+      description: "映像の変換行列（3 × 3 の固定小数点。回転した動画はここで表す）"
     - name: width
       type: uint32
-      description: "幅（固定小数点 16.16）"
+      description: "表示の幅（固定小数点 16.16）"
+    - name: width_pixels
+      type: virtual
+      value: "{width >> 16}"
+      description: "表示の幅（ピクセル。width の整数部）"
     - name: height
       type: uint32
-      description: "高さ（固定小数点 16.16）"
+      description: "表示の高さ（固定小数点 16.16）"
+    - name: height_pixels
+      type: virtual
+      value: "{height >> 16}"
+      description: "表示の高さ（ピクセル。height の整数部）"
 
   mdhd_box:
     - name: version
       type: uint8
+      description: "box の版（0 = 32 ビットの時刻、1 = 64 ビットの時刻）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: creation_time
       type: uint32
       if: "{version == 0}"
+      description: "作成日時（1904-01-01 UTC からの秒）"
     - name: creation_time_v1
       type: uint64
       if: "{version == 1}"
+      description: "作成日時（64 ビット）"
     - name: modification_time
       type: uint32
       if: "{version == 0}"
+      description: "更新日時（1904-01-01 UTC からの秒）"
     - name: modification_time_v1
       type: uint64
       if: "{version == 1}"
+      description: "更新日時（64 ビット）"
     - name: timescale
       type: uint32
+      description: "このトラックの時間の単位（1 秒あたりの数。音声はサンプリング周波数のことが多い）"
     - name: duration
       type: uint32
       if: "{version == 0}"
+      description: "トラックの長さ（このトラックの timescale の単位）"
     - name: duration_v1
       type: uint64
       if: "{version == 1}"
+      description: "トラックの長さ（64 ビット）"
     - name: language
-      type: uint16
-      description: "言語コード（ISO-639-2/T パック形式）"
+      type: bitfield
+      size: "2"
+      description: "言語（ISO 639-2/T の 3 文字を 5 ビットずつ。各文字 = 値 + 0x60。'und' = 未定義）"
+      fields:
+        - name: pad
+          bits: "15"
+          description: "詰め物（0）"
+        - name: char1
+          bits: "14:10"
+          description: "1 文字目（+ 0x60 で ASCII の小文字）"
+        - name: char2
+          bits: "9:5"
+          description: "2 文字目（+ 0x60）"
+        - name: char3
+          bits: "4:0"
+          description: "3 文字目（+ 0x60）"
     - name: pre_defined
       type: uint16
+      description: "予約（0）"
 
   smhd_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: balance
-      type: uint16
-      description: "バランス（固定小数点 8.8）"
+      type: int16
+      description: "左右のバランス（固定小数点 8.8。0 = 中央、-1.0 = 左、1.0 = 右）"
     - name: reserved
       type: uint16
+      description: "予約（0）"
 
   vmhd_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（1）"
     - name: graphicsmode
       type: uint16
-      description: "グラフィックスモード"
+      description: "合成のモード（0 = コピー）"
     - name: opcolor
       type: bytes
       size: "6"
-      description: "オペレーションカラー（R, G, B 各 uint16）"
+      description: "合成に使う色（R・G・B の各 uint16）"
 
-  stsd_box:
+  meta_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
+    - name: children
+      type: struct
+      struct: iso_box
+      repeat: eof
+      description: "子 box（hdlr でメタデータの形式を示し、iTunes の形式（'mdir'）なら ilst が続く）"
+
+  ilst_box:
+    - name: items
+      type: struct
+      struct: ilst_item
+      repeat: eof
+      description: "メタデータの項目（'©nam' = 題名、'©ART' = アーティスト、'©too' = エンコーダ、'covr' = カバーアート など）"
+
+  ilst_item:
+    - name: item_size
+      type: uint32
+      description: "項目の box のバイト数（ヘッダを含む）"
+    - name: item_type
+      type: latin1
+      size: "4"
+      description: "項目の種類（4 文字。'©' で始まるものが多い。'----' は名前付きの独自項目）"
+    - name: values
+      type: struct
+      struct: iso_box
+      size: "{item_size - 8}"
+      repeat: eof
+      description: "項目の値（data box。'----' では mean / name box も入る）"
+
+  data_box:
+    - name: data_type
+      type: uint32
+      enum: data_type
+      description: "値の型（Well-known type。上位 8 ビットは型の集合で通常 0）"
+    - name: locale
+      type: uint32
+      description: "ロケール（0 = 既定）"
+    - name: value
+      type: switch
+      switch_on: "{data_type}"
+      size: remaining
+      cases:
+        "1": utf8_value
+      default: raw_data
+      description: "値（UTF-8 は文字列、それ以外はバイト列）"
+
+  utf8_value:
+    - name: text
+      type: utf8
+      size: remaining
+      description: "文字列の値"
+
+  # ===== サンプルの表 =====
+  stsd_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
     - name: entry_count
       type: uint32
+      description: "サンプルエントリの数（通常 1）"
     - name: entries
+      type: struct
+      struct: sample_entry
+      repeat_count: "{entry_count}"
+      description: "サンプルエントリ（コーデックと、その設定の box）"
+
+  sample_entry:
+    - name: entry_size
+      type: uint32
+      description: "エントリのバイト数（ヘッダを含む）"
+    - name: format
+      type: latin1
+      size: "4"
+      description: "コーデックの種類（'avc1' / 'avc3' = H.264、'hvc1' / 'hev1' = H.265、'av01' = AV1、'vp09' = VP9、'mp4a' = AAC など、'Opus'、'fLaC'、'alac'）"
+    - name: body
+      type: switch
+      switch_on: "{format}"
+      size: "{entry_size - 8}"
+      cases:
+        "'avc1'": visual_sample_entry
+        "'avc3'": visual_sample_entry
+        "'hvc1'": visual_sample_entry
+        "'hev1'": visual_sample_entry
+        "'mp4v'": visual_sample_entry
+        "'av01'": visual_sample_entry
+        "'vp08'": visual_sample_entry
+        "'vp09'": visual_sample_entry
+        "'dvh1'": visual_sample_entry
+        "'dvhe'": visual_sample_entry
+        "'encv'": visual_sample_entry
+        "'jpeg'": visual_sample_entry
+        "'mp4a'": audio_sample_entry
+        "'Opus'": audio_sample_entry
+        "'fLaC'": audio_sample_entry
+        "'alac'": audio_sample_entry
+        "'ac-3'": audio_sample_entry
+        "'ec-3'": audio_sample_entry
+        "'mp3 '": audio_sample_entry
+        "'.mp3'": audio_sample_entry
+        "'enca'": audio_sample_entry
+        "'samr'": audio_sample_entry
+      default: raw_data
+      description: "エントリの中身（映像・音声のサンプルエントリ。字幕などはバイト列）"
+
+  visual_sample_entry:
+    - name: reserved
       type: bytes
-      size: remaining
-      if: "{remaining > 0}"
-      description: "サンプル記述エントリ"
+      size: "6"
+      padding: true
+      description: "予約（0）"
+    - name: data_reference_index
+      type: uint16
+      description: "dref の中のデータ参照の番号（1 から）"
+    - name: pre_defined1
+      type: uint16
+      description: "予約（0）"
+    - name: reserved2
+      type: uint16
+      description: "予約（0）"
+    - name: pre_defined2
+      type: bytes
+      size: "12"
+      padding: true
+      description: "予約（0）"
+    - name: width
+      type: uint16
+      description: "映像の幅（ピクセル）"
+    - name: height
+      type: uint16
+      description: "映像の高さ（ピクセル）"
+    - name: horizresolution
+      type: uint32
+      description: "水平解像度（固定小数点 16.16。0x00480000 = 72 dpi）"
+    - name: vertresolution
+      type: uint32
+      description: "垂直解像度（固定小数点 16.16）"
+    - name: reserved3
+      type: uint32
+      description: "予約（0）"
+    - name: frame_count
+      type: uint16
+      description: "1 サンプルのフレーム数（1）"
+    - name: compressorname_length
+      type: uint8
+      description: "コンプレッサ名のバイト数（Pascal 文字列の長さ）"
+    - name: compressorname
+      type: latin1
+      size: "31"
+      description: "コンプレッサ名（例: 'Lavc libx264'。compressorname_length バイトの後ろは 0）"
+    - name: depth
+      type: uint16
+      description: "色の深さ（0x0018 = アルファなしの 24 ビット）"
+    - name: pre_defined3
+      type: int16
+      description: "予約（-1）"
+    - name: children
+      type: struct
+      struct: iso_box
+      repeat: eof
+      description: "コーデックの設定などの box（avcC・hvcC・av1C・pasp・colr・btrt など）"
+
+  audio_sample_entry:
+    - name: reserved
+      type: bytes
+      size: "6"
+      padding: true
+      description: "予約（0）"
+    - name: data_reference_index
+      type: uint16
+      description: "dref の中のデータ参照の番号（1 から）"
+    - name: entry_version
+      type: uint16
+      description: "エントリの版（ISO では 0。QuickTime では 1 / 2 で後ろにフィールドが増える）"
+    - name: reserved2
+      type: bytes
+      size: "6"
+      padding: true
+      description: "予約（0。QuickTime では改訂番号とベンダー）"
+    - name: channelcount
+      type: uint16
+      description: "チャンネル数"
+    - name: samplesize
+      type: uint16
+      description: "サンプルのビット数（16）"
+    - name: pre_defined
+      type: uint16
+      description: "予約（0）"
+    - name: reserved3
+      type: uint16
+      description: "予約（0）"
+    - name: samplerate
+      type: uint32
+      description: "サンプリング周波数（固定小数点 16.16）"
+    - name: samplerate_hz
+      type: virtual
+      value: "{samplerate >> 16}"
+      description: "サンプリング周波数（Hz。samplerate の整数部）"
+    - name: children
+      type: struct
+      struct: iso_box
+      repeat: eof
+      description: "コーデックの設定などの box（esds・dOps・dfLa・alac・btrt など）"
 
   stts_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: entry_count
       type: uint32
+      description: "エントリの数"
     - name: entries
       type: struct
       struct: stts_entry
       repeat_count: "{entry_count}"
+      description: "サンプルの長さの表（同じ長さの連続をまとめる）"
 
   stts_entry:
     - name: sample_count
       type: uint32
+      description: "同じ長さのサンプルの数"
     - name: sample_delta
       type: uint32
+      description: "1 サンプルの長さ（mdhd の timescale の単位）"
+
+  ctts_box:
+    - name: version
+      type: uint8
+      description: "box の版（0 = 符号なし、1 = 符号付きのオフセット）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: entry_count
+      type: uint32
+      description: "エントリの数"
+    - name: entries
+      type: struct
+      struct: ctts_entry
+      repeat_count: "{entry_count}"
+      description: "表示時刻のずれの表（B フレームのある映像）"
+
+  ctts_entry:
+    - name: sample_count
+      type: uint32
+      description: "同じずれのサンプルの数"
+    - name: sample_offset
+      type: int32
+      description: "表示時刻 − 復号時刻（timescale の単位。版 0 では符号なしとして書かれる）"
 
   stsc_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: entry_count
       type: uint32
+      description: "エントリの数"
     - name: entries
       type: struct
       struct: stsc_entry
       repeat_count: "{entry_count}"
+      description: "チャンクごとのサンプル数の表（同じ数の連続をまとめる）"
 
   stsc_entry:
     - name: first_chunk
       type: uint32
+      description: "このエントリが当てはまる最初のチャンクの番号（1 から）"
     - name: samples_per_chunk
       type: uint32
+      description: "1 チャンクのサンプル数"
     - name: sample_description_index
       type: uint32
+      description: "使うサンプルエントリの番号（1 から）"
 
   stsz_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: sample_size
       type: uint32
-      description: "共通サンプルサイズ（0の場合は個別サイズ）"
+      description: "全サンプル共通のバイト数（0 なら entry_sizes に個別の大きさ）"
     - name: sample_count
       type: uint32
+      description: "サンプルの数"
     - name: entry_sizes
       type: struct
       struct: stsz_entry
       repeat_count: "{sample_count}"
       if: "{sample_size == 0}"
+      description: "サンプルごとのバイト数"
 
   stsz_entry:
     - name: entry_size
       type: uint32
+      description: "サンプルのバイト数"
 
   stco_box:
     - name: version
       type: uint8
+      description: "box の版（0）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: entry_count
       type: uint32
+      description: "チャンクの数"
     - name: entries
       type: struct
       struct: stco_entry
       repeat_count: "{entry_count}"
+      description: "チャンクの位置の表"
 
   stco_entry:
     - name: chunk_offset
       type: uint32
+      description: "チャンクの位置（ファイル先頭から）"
+
+  co64_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: entry_count
+      type: uint32
+      description: "チャンクの数"
+    - name: entries
+      type: uint64
+      repeat_count: "{entry_count}"
+      description: "チャンクの位置（ファイル先頭から。64 ビット。4 GiB を超えるファイル）"
+
+  stss_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: entry_count
+      type: uint32
+      description: "同期サンプル（キーフレーム）の数"
+    - name: sample_numbers
+      type: uint32
+      repeat_count: "{entry_count}"
+      description: "同期サンプルの番号（1 から。この box が無ければ全サンプルが同期サンプル）"
 
   elst_box:
     - name: version
       type: uint8
+      description: "box の版（0 = 32 ビット、1 = 64 ビット）"
     - name: flags
       type: bytes
       size: "3"
+      description: "フラグ（0）"
     - name: entry_count
       type: uint32
+      description: "編集の数"
     - name: entries
       type: struct
       struct: elst_entry_v0
       repeat_count: "{entry_count}"
       if: "{version == 0}"
+      description: "編集の表（版 0）"
     - name: entries_v1
       type: struct
       struct: elst_entry_v1
       repeat_count: "{entry_count}"
       if: "{version == 1}"
+      description: "編集の表（版 1）"
 
   elst_entry_v0:
     - name: segment_duration
       type: uint32
+      description: "この編集の長さ（mvhd の timescale の単位）"
     - name: media_time
       type: int32
+      description: "メディアの開始時刻（mdhd の timescale の単位。-1 = 空の編集）"
     - name: media_rate_integer
       type: uint16
+      description: "再生速度の整数部（1）"
     - name: media_rate_fraction
       type: uint16
+      description: "再生速度の小数部（0）"
 
   elst_entry_v1:
     - name: segment_duration
       type: uint64
+      description: "この編集の長さ（mvhd の timescale の単位）"
     - name: media_time
       type: int64
+      description: "メディアの開始時刻（-1 = 空の編集）"
     - name: media_rate_integer
       type: uint16
+      description: "再生速度の整数部（1）"
     - name: media_rate_fraction
       type: uint16
+      description: "再生速度の小数部（0）"
+
+  # ===== コーデックの設定 =====
+  avcc_box:
+    - name: configuration_version
+      type: uint8
+      description: "設定の版（1）"
+    - name: avc_profile_indication
+      type: uint8
+      description: "プロファイル（66 = Baseline、77 = Main、100 = High など。SPS の profile_idc）"
+    - name: profile_compatibility
+      type: uint8
+      description: "プロファイルの互換性のフラグ（SPS の constraint_set のビット）"
+    - name: avc_level_indication
+      type: uint8
+      description: "レベル × 10（例: 31 = 3.1）"
+    - name: length_size
+      type: bitfield
+      size: "1"
+      description: "NAL ユニットの長さのバイト数"
+      fields:
+        - name: reserved1
+          bits: "7:2"
+          description: "予約（全ビット 1）"
+        - name: length_size_minus_one
+          bits: "1:0"
+          description: "サンプルの中の NAL ユニットの長さのバイト数 − 1（通常 3 = 4 バイト）"
+    - name: sps_count
+      type: bitfield
+      size: "1"
+      description: "SPS の数"
+      fields:
+        - name: reserved2
+          bits: "7:5"
+          description: "予約（全ビット 1）"
+        - name: num_of_sps
+          bits: "4:0"
+          description: "SPS の数"
+    - name: sps
+      type: struct
+      struct: parameter_set
+      repeat_count: "{num_of_sps}"
+      description: "シーケンスパラメータセット"
+    - name: num_of_pps
+      type: uint8
+      description: "PPS の数"
+    - name: pps
+      type: struct
+      struct: parameter_set
+      repeat_count: "{num_of_pps}"
+      description: "ピクチャパラメータセット"
+    - name: extension
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "High プロファイル以上の追加情報（色差の形式・ビット深度・SPS 拡張）"
+
+  parameter_set:
+    - name: length
+      type: uint16
+      description: "NAL ユニットのバイト数"
+    - name: nal_unit
+      type: bytes
+      size: "{length}"
+      description: "NAL ユニット（先頭 1 バイトが NAL ヘッダ）"
+
+  hvcc_box:
+    - name: configuration_version
+      type: uint8
+      description: "設定の版（1）"
+    - name: profile
+      type: bitfield
+      size: "1"
+      description: "プロファイルの情報"
+      fields:
+        - name: general_profile_space
+          bits: "7:6"
+          description: "プロファイルの空間（0）"
+        - name: general_tier_flag
+          bits: "5"
+          description: "ティア（0 = Main、1 = High）"
+        - name: general_profile_idc
+          bits: "4:0"
+          description: "プロファイル（1 = Main、2 = Main 10、3 = Main Still Picture、4 = Range Extensions）"
+    - name: general_profile_compatibility_flags
+      type: uint32
+      description: "互換のあるプロファイルのビット"
+    - name: general_constraint_indicator_flags
+      type: bytes
+      size: "6"
+      description: "制約のフラグ（48 ビット）"
+    - name: general_level_idc
+      type: uint8
+      description: "レベル × 30（例: 93 = 3.1）"
+    - name: min_spatial_segmentation
+      type: bitfield
+      size: "2"
+      description: "空間分割の最小値"
+      fields:
+        - name: reserved1
+          bits: "15:12"
+          description: "予約（全ビット 1）"
+        - name: min_spatial_segmentation_idc
+          bits: "11:0"
+          description: "空間分割の最小値"
+    - name: parallelism
+      type: bitfield
+      size: "1"
+      description: "並列処理の種類"
+      fields:
+        - name: reserved2
+          bits: "7:2"
+          description: "予約（全ビット 1）"
+        - name: parallelism_type
+          bits: "1:0"
+          description: "並列処理の種類（0 = 混在・不明、1 = スライス、2 = タイル、3 = WPP）"
+    - name: chroma
+      type: bitfield
+      size: "1"
+      description: "色差の形式"
+      fields:
+        - name: reserved3
+          bits: "7:2"
+          description: "予約（全ビット 1）"
+        - name: chroma_format_idc
+          bits: "1:0"
+          description: "色差の形式（0 = モノクロ、1 = 4:2:0、2 = 4:2:2、3 = 4:4:4）"
+    - name: luma_depth
+      type: bitfield
+      size: "1"
+      description: "輝度のビット深度"
+      fields:
+        - name: reserved4
+          bits: "7:3"
+          description: "予約（全ビット 1）"
+        - name: bit_depth_luma_minus8
+          bits: "2:0"
+          description: "輝度のビット深度 − 8"
+    - name: chroma_depth
+      type: bitfield
+      size: "1"
+      description: "色差のビット深度"
+      fields:
+        - name: reserved5
+          bits: "7:3"
+          description: "予約（全ビット 1）"
+        - name: bit_depth_chroma_minus8
+          bits: "2:0"
+          description: "色差のビット深度 − 8"
+    - name: avg_frame_rate
+      type: uint16
+      description: "平均フレームレート（フレーム / 256 秒。0 = 不明）"
+    - name: frame_info
+      type: bitfield
+      size: "1"
+      description: "フレームレートと時間レイヤ"
+      fields:
+        - name: constant_frame_rate
+          bits: "7:6"
+          description: "固定フレームレートか（0 = 不明、1 = 固定、2 = 各時間レイヤで固定）"
+        - name: num_temporal_layers
+          bits: "5:3"
+          description: "時間レイヤの数"
+        - name: temporal_id_nested
+          bits: "2"
+          description: "時間 ID の入れ子"
+        - name: length_size_minus_one
+          bits: "1:0"
+          description: "サンプルの中の NAL ユニットの長さのバイト数 − 1"
+    - name: num_of_arrays
+      type: uint8
+      description: "NAL ユニットの配列の数"
+    - name: arrays
+      type: struct
+      struct: hvcc_nal_array
+      repeat_count: "{num_of_arrays}"
+      description: "NAL ユニットの配列（VPS・SPS・PPS・SEI の種類ごと）"
+
+  hvcc_nal_array:
+    - name: array_header
+      type: bitfield
+      size: "1"
+      description: "配列の種類"
+      fields:
+        - name: array_completeness
+          bits: "7"
+          description: "1 ならこの種類の NAL ユニットはすべてここにある（ストリームの中には無い）"
+        - name: reserved
+          bits: "6"
+          description: "予約（0）"
+        - name: nal_unit_type
+          bits: "5:0"
+          enum: hevc_nal_type
+          description: "NAL ユニットの種類"
+    - name: num_nalus
+      type: uint16
+      description: "NAL ユニットの数"
+    - name: nalus
+      type: struct
+      struct: parameter_set
+      repeat_count: "{num_nalus}"
+      description: "NAL ユニット（長さ 2 バイト + 中身）"
+
+  esds_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: descriptors
+      type: struct
+      struct: mpeg4_descriptor
+      repeat: eof
+      description: "MPEG-4 の記述子（通常は ES_Descriptor 1 個）"
+
+  mpeg4_descriptor:
+    - name: tag
+      type: uint8
+      enum: descriptor_tag
+      description: "記述子の種類"
+    - name: length
+      type: vlq
+      description: "中身のバイト数（1〜4 バイトの可変長。各バイトの下位 7 ビット、最上位ビットは続きの印）"
+    - name: body
+      type: switch
+      switch_on: "{tag}"
+      size: "{length}"
+      cases:
+        "0x03": es_descriptor
+        "0x04": decoder_config_descriptor
+        "0x05": decoder_specific_info
+        "0x06": sl_config_descriptor
+      default: raw_data
+      description: "記述子の中身"
+
+  es_descriptor:
+    - name: es_id
+      type: uint16
+      description: "エレメンタリストリームの ID（MP4 では 0 のことが多い）"
+    - name: es_flags
+      type: bitfield
+      size: "1"
+      description: "フラグと優先度"
+      fields:
+        - name: stream_dependence_flag
+          bits: "7"
+          description: "1 なら depends_on_es_id がある"
+        - name: url_flag
+          bits: "6"
+          description: "1 なら URL がある"
+        - name: ocr_stream_flag
+          bits: "5"
+          description: "1 なら ocr_es_id がある"
+        - name: stream_priority
+          bits: "4:0"
+          description: "ストリームの優先度"
+    - name: depends_on_es_id
+      type: uint16
+      if: "{stream_dependence_flag == 1}"
+      description: "依存するストリームの ID"
+    - name: url_length
+      type: uint8
+      if: "{url_flag == 1}"
+      description: "URL のバイト数"
+    - name: url
+      type: ascii
+      size: "{url_length}"
+      if: "{url_flag == 1}"
+      description: "ストリームの URL"
+    - name: ocr_es_id
+      type: uint16
+      if: "{ocr_stream_flag == 1}"
+      description: "時刻の基準（OCR）のストリームの ID"
+    - name: descriptors
+      type: struct
+      struct: mpeg4_descriptor
+      repeat: eof
+      description: "子の記述子（DecoderConfigDescriptor・SLConfigDescriptor）"
+
+  decoder_config_descriptor:
+    - name: object_type_indication
+      type: uint8
+      enum: object_type_indication
+      description: "コーデックの種類"
+    - name: stream_info
+      type: bitfield
+      size: "1"
+      description: "ストリームの種類"
+      fields:
+        - name: stream_type
+          bits: "7:2"
+          enum: stream_type
+          description: "ストリームの種類"
+        - name: up_stream
+          bits: "1"
+          description: "上りのストリームか（0）"
+        - name: reserved
+          bits: "0"
+          description: "予約（1）"
+    - name: buffer_size_db
+      type: bitfield
+      size: "3"
+      description: "デコーダのバッファのバイト数"
+      fields:
+        - name: buffer_size
+          bits: "23:0"
+          description: "デコーダのバッファのバイト数"
+    - name: max_bitrate
+      type: uint32
+      description: "最大のビットレート（ビット / 秒）"
+    - name: avg_bitrate
+      type: uint32
+      description: "平均のビットレート（ビット / 秒。0 = 可変）"
+    - name: descriptors
+      type: struct
+      struct: mpeg4_descriptor
+      repeat: eof
+      description: "子の記述子（DecoderSpecificInfo）"
+
+  decoder_specific_info:
+    - name: audio_specific_config
+      type: bitfield
+      size: "2"
+      if: "{object_type_indication == 0x40 ? remaining >= 2 : 0}"
+      description: "AAC の AudioSpecificConfig の先頭 16 ビット（MPEG-4 Audio のとき）"
+      fields:
+        - name: audio_object_type
+          bits: "15:11"
+          enum: audio_object_type
+          description: "AAC の種類（31 なら後ろに拡張の 6 ビットが続く）"
+        - name: sampling_frequency_index
+          bits: "10:7"
+          description: "サンプリング周波数の番号（3 = 48000、4 = 44100、8 = 16000 など。15 なら 24 ビットの値が続く）"
+        - name: channel_configuration
+          bits: "6:3"
+          description: "チャンネルの構成（1 = モノラル、2 = ステレオ、6 = 5.1ch）"
+        - name: frame_length_flag
+          bits: "2"
+          description: "1 ならフレームが 960 サンプル（通常 0 = 1024）"
+        - name: depends_on_core_coder
+          bits: "1"
+          description: "コアのコーダに依存するか"
+        - name: extension_flag
+          bits: "0"
+          description: "拡張があるか"
+    - name: data
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "デコーダ固有の情報（AAC 以外、または AudioSpecificConfig の残り）"
+
+  sl_config_descriptor:
+    - name: predefined
+      type: uint8
+      description: "定義済みの設定（2 = MP4 ファイルで使う設定）"
+    - name: data
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "個別の設定（predefined が 0 のとき）"
+
+  dops_box:
+    - name: version
+      type: uint8
+      description: "版（0）"
+    - name: output_channel_count
+      type: uint8
+      description: "出力のチャンネル数"
+    - name: pre_skip
+      type: uint16
+      description: "先頭で捨てるサンプル数（48 kHz の単位）"
+    - name: input_sample_rate
+      type: uint32
+      description: "元の音声のサンプリング周波数（Hz。参考情報）"
+    - name: output_gain
+      type: int16
+      description: "出力のゲイン（dB × 256）"
+    - name: channel_mapping_family
+      type: uint8
+      description: "チャンネルの割り当ての方式（0 = モノラル / ステレオ、1 = Vorbis の順）"
+    - name: channel_mapping_table
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "チャンネルの割り当て（channel_mapping_family が 0 でないとき）"
+
+  pasp_box:
+    - name: h_spacing
+      type: uint32
+      description: "ピクセルの縦横比の横（h_spacing : v_spacing）"
+    - name: v_spacing
+      type: uint32
+      description: "ピクセルの縦横比の縦"
+
+  btrt_box:
+    - name: buffer_size_db
+      type: uint32
+      description: "デコーダのバッファのバイト数"
+    - name: max_bitrate
+      type: uint32
+      description: "最大のビットレート（ビット / 秒）"
+    - name: avg_bitrate
+      type: uint32
+      description: "平均のビットレート（ビット / 秒）"
+
+  colr_box:
+    - name: colour_type
+      type: ascii
+      size: "4"
+      description: "色の情報の種類（'nclx' = 数値、'nclc' = QuickTime の数値、'rICC' / 'prof' = ICC プロファイル）"
+    - name: colour_primaries
+      type: uint16
+      if: "{colour_type == 'nclx' or colour_type == 'nclc'}"
+      description: "原色（H.273 の番号。1 = BT.709、9 = BT.2020）"
+    - name: transfer_characteristics
+      type: uint16
+      if: "{colour_type == 'nclx' or colour_type == 'nclc'}"
+      description: "伝達特性（H.273。1 = BT.709、16 = PQ、18 = HLG）"
+    - name: matrix_coefficients
+      type: uint16
+      if: "{colour_type == 'nclx' or colour_type == 'nclc'}"
+      description: "行列の係数（H.273。1 = BT.709、9 = BT.2020 非定輝度）"
+    - name: full_range
+      type: bitfield
+      size: "1"
+      if: "{colour_type == 'nclx'}"
+      description: "値の範囲"
+      fields:
+        - name: full_range_flag
+          bits: "7"
+          description: "1 ならフルレンジ、0 ならリミテッドレンジ"
+        - name: reserved
+          bits: "6:0"
+          description: "予約（0）"
+    - name: icc_profile
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "ICC プロファイル（'rICC' / 'prof' のとき）"
+
+  # ===== フラグメント =====
+  mfhd_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: sequence_number
+      type: uint32
+      description: "フラグメントの通し番号（1 から増える）"
+
+  tfhd_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bitfield
+      size: "3"
+      description: "後ろにあるフィールドのフラグ"
+      fields:
+        - name: base_data_offset_present
+          bits: "0"
+          description: "1 なら base_data_offset がある"
+        - name: sample_description_index_present
+          bits: "1"
+          description: "1 なら sample_description_index がある"
+        - name: default_sample_duration_present
+          bits: "3"
+          description: "1 なら default_sample_duration がある"
+        - name: default_sample_size_present
+          bits: "4"
+          description: "1 なら default_sample_size がある"
+        - name: default_sample_flags_present
+          bits: "5"
+          description: "1 なら default_sample_flags がある"
+        - name: duration_is_empty
+          bits: "16"
+          description: "1 ならこのフラグメントにサンプルが無い"
+        - name: default_base_is_moof
+          bits: "17"
+          description: "1 ならデータの位置の基準は moof の先頭"
+    - name: track_id
+      type: uint32
+      description: "トラックの ID"
+    - name: base_data_offset
+      type: uint64
+      if: "{base_data_offset_present == 1}"
+      description: "データの位置の基準（ファイル先頭から）"
+    - name: sample_description_index
+      type: uint32
+      if: "{sample_description_index_present == 1}"
+      description: "使うサンプルエントリの番号"
+    - name: default_sample_duration
+      type: uint32
+      if: "{default_sample_duration_present == 1}"
+      description: "サンプルの既定の長さ"
+    - name: default_sample_size
+      type: uint32
+      if: "{default_sample_size_present == 1}"
+      description: "サンプルの既定のバイト数"
+    - name: default_sample_flags
+      type: uint32
+      if: "{default_sample_flags_present == 1}"
+      description: "サンプルの既定のフラグ（依存関係・同期サンプルでないか など）"
+
+  tfdt_box:
+    - name: version
+      type: uint8
+      description: "box の版（0 = 32 ビット、1 = 64 ビット）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: base_media_decode_time
+      type: uint32
+      if: "{version == 0}"
+      description: "このフラグメントの最初のサンプルの復号時刻（mdhd の timescale の単位）"
+    - name: base_media_decode_time_v1
+      type: uint64
+      if: "{version == 1}"
+      description: "このフラグメントの最初のサンプルの復号時刻（64 ビット）"
+
+  trun_box:
+    - name: version
+      type: uint8
+      description: "box の版（0 = composition_time_offset は符号なし、1 = 符号付き）"
+    - name: flags
+      type: bitfield
+      size: "3"
+      description: "後ろにあるフィールドのフラグ"
+      fields:
+        - name: data_offset_present
+          bits: "0"
+          description: "1 なら data_offset がある"
+        - name: first_sample_flags_present
+          bits: "2"
+          description: "1 なら first_sample_flags がある"
+        - name: sample_duration_present
+          bits: "8"
+          description: "1 なら各サンプルに sample_duration がある"
+        - name: sample_size_present
+          bits: "9"
+          description: "1 なら各サンプルに sample_size がある"
+        - name: sample_flags_present
+          bits: "10"
+          description: "1 なら各サンプルに sample_flags がある"
+        - name: sample_composition_time_offsets_present
+          bits: "11"
+          description: "1 なら各サンプルに sample_composition_time_offset がある"
+    - name: sample_count
+      type: uint32
+      description: "このランのサンプル数"
+    - name: data_offset
+      type: int32
+      if: "{data_offset_present == 1}"
+      description: "最初のサンプルの位置（tfhd の基準から）"
+    - name: first_sample_flags
+      type: uint32
+      if: "{first_sample_flags_present == 1}"
+      description: "最初のサンプルのフラグ（先頭のキーフレームを示すのに使う）"
+    - name: samples
+      type: struct
+      struct: trun_sample
+      repeat_count: "{sample_count}"
+      description: "サンプルごとの値（flags で有無が決まる）"
+
+  trun_sample:
+    - name: sample_duration
+      type: uint32
+      if: "{sample_duration_present == 1}"
+      description: "サンプルの長さ"
+    - name: sample_size
+      type: uint32
+      if: "{sample_size_present == 1}"
+      description: "サンプルのバイト数"
+    - name: sample_flags
+      type: uint32
+      if: "{sample_flags_present == 1}"
+      description: "サンプルのフラグ"
+    - name: sample_composition_time_offset
+      type: int32
+      if: "{sample_composition_time_offsets_present == 1}"
+      description: "表示時刻 − 復号時刻（版 0 では符号なしとして書かれる）"
+
+  trex_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: track_id
+      type: uint32
+      description: "トラックの ID"
+    - name: default_sample_description_index
+      type: uint32
+      description: "フラグメントで使うサンプルエントリの既定の番号"
+    - name: default_sample_duration
+      type: uint32
+      description: "フラグメントのサンプルの既定の長さ"
+    - name: default_sample_size
+      type: uint32
+      description: "フラグメントのサンプルの既定のバイト数"
+    - name: default_sample_flags
+      type: uint32
+      description: "フラグメントのサンプルの既定のフラグ"
+
+  mehd_box:
+    - name: version
+      type: uint8
+      description: "box の版（0 = 32 ビット、1 = 64 ビット）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: fragment_duration
+      type: uint32
+      if: "{version == 0}"
+      description: "フラグメントを含めた全体の長さ（mvhd の timescale の単位）"
+    - name: fragment_duration_v1
+      type: uint64
+      if: "{version == 1}"
+      description: "フラグメントを含めた全体の長さ（64 ビット）"
+
+  mfro_box:
+    - name: version
+      type: uint8
+      description: "box の版（0）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: mfra_size
+      type: uint32
+      description: "mfra box のバイト数（ファイルの末尾から mfra を探すのに使う）"
+
+  sidx_box:
+    - name: version
+      type: uint8
+      description: "box の版（0 = 32 ビット、1 = 64 ビットの時刻と位置）"
+    - name: flags
+      type: bytes
+      size: "3"
+      description: "フラグ（0）"
+    - name: reference_id
+      type: uint32
+      description: "参照するトラックの ID"
+    - name: timescale
+      type: uint32
+      description: "時間の単位"
+    - name: earliest_presentation_time
+      type: uint32
+      if: "{version == 0}"
+      description: "最初のサンプルの表示時刻"
+    - name: first_offset
+      type: uint32
+      if: "{version == 0}"
+      description: "この box の後ろから最初のセグメントまでのバイト数"
+    - name: earliest_presentation_time_v1
+      type: uint64
+      if: "{version == 1}"
+      description: "最初のサンプルの表示時刻（64 ビット）"
+    - name: first_offset_v1
+      type: uint64
+      if: "{version == 1}"
+      description: "この box の後ろから最初のセグメントまでのバイト数（64 ビット）"
+    - name: reserved
+      type: uint16
+      description: "予約（0）"
+    - name: reference_count
+      type: uint16
+      description: "参照の数"
+    - name: references
+      type: struct
+      struct: sidx_reference
+      repeat_count: "{reference_count}"
+      description: "セグメント（またはサブの sidx）への参照（12 バイトずつ）"
+
+  sidx_reference:
+    - name: reference
+      type: bitfield
+      size: "4"
+      description: "参照の種類と大きさ"
+      fields:
+        - name: reference_type
+          bits: "31"
+          description: "1 なら別の sidx、0 ならメディアのセグメント"
+        - name: referenced_size
+          bits: "30:0"
+          description: "参照先のバイト数"
+    - name: subsegment_duration
+      type: uint32
+      description: "サブセグメントの長さ（timescale の単位）"
+    - name: sap
+      type: bitfield
+      size: "4"
+      description: "ストリームアクセスポイントの情報"
+      fields:
+        - name: starts_with_sap
+          bits: "31"
+          description: "1 ならサブセグメントがアクセスポイントで始まる"
+        - name: sap_type
+          bits: "30:28"
+          description: "アクセスポイントの種類（1〜6）"
+        - name: sap_delta_time
+          bits: "27:0"
+          description: "アクセスポイントの表示時刻のずれ"

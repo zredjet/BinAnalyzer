@@ -10,7 +10,7 @@
       "type": "bytes",
       "offset": 0,
       "size": 4,
-      "description": "MThd",
+      "description": "\u30D8\u30C3\u30C0\u30C1\u30E3\u30F3\u30AF\u306E ID\uFF08\u0027MThd\u0027\uFF09",
       "name": "header_magic",
       "hex": "4D 54 68 64",
       "valid": true
@@ -20,10 +20,10 @@
       "type": "uint32",
       "offset": 4,
       "size": 4,
-      "description": "\u30D8\u30C3\u30C0\u30C7\u30FC\u30BF\u9577\uFF08\u5E38\u306B6\uFF09",
+      "description": "\u30D8\u30C3\u30C0\u306E\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF086\u3002\u5C06\u6765\u306E\u62E1\u5F35\u3067\u5927\u304D\u304F\u306A\u308A\u3046\u308B\uFF09",
       "_validation": {
         "passed": true,
-        "expression": "{header_length == 6}"
+        "expression": "{header_length \u003E= 6}"
       },
       "name": "header_length",
       "value": 6,
@@ -34,18 +34,19 @@
       "type": "uint16",
       "offset": 8,
       "size": 2,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u306E\u5F62\u5F0F",
       "name": "format",
       "value": 0,
       "hex": "0x0",
       "enum_label": "single_track",
-      "enum_description": "\u30B7\u30F3\u30B0\u30EB\u30C8\u30E9\u30C3\u30AF"
+      "enum_description": "\u5F62\u5F0F 0\uFF08\u5168\u30C1\u30E3\u30F3\u30CD\u30EB\u3092 1 \u30C8\u30E9\u30C3\u30AF\u306B\u5165\u308C\u308B\uFF09"
     },
     "ntrks": {
       "_type": "integer",
       "type": "uint16",
       "offset": 10,
       "size": 2,
-      "description": "\u30C8\u30E9\u30C3\u30AF\u6570",
+      "description": "\u30C8\u30E9\u30C3\u30AF\u30C1\u30E3\u30F3\u30AF\u306E\u6570\uFF08\u5F62\u5F0F 0 \u306F 1\uFF09",
       "name": "ntrks",
       "value": 1,
       "hex": "0x1"
@@ -55,7 +56,7 @@
       "type": "uint16",
       "offset": 12,
       "size": 2,
-      "description": "4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\uFF08PPQN\uFF09\u307E\u305F\u306FSMPTE\u30BF\u30A4\u30DF\u30F3\u30B0\u3002\u30D3\u30C3\u30C815\u304C\u30BF\u30A4\u30DF\u30F3\u30B0\u30E2\u30FC\u30C9\u3092\u9078\u629E: 0=PPQN\uFF084\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\uFF09\u30011=SMPTE\u3002PPQN\u30E2\u30FC\u30C9\u3067\u306F\u30D3\u30C3\u30C814:0\u304C4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u3092\u8868\u3059",
+      "description": "\u6642\u9593\u306E\u5358\u4F4D\uFF08\u6700\u4E0A\u4F4D\u30D3\u30C3\u30C8 0 = 4 \u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u30011 = SMPTE \u306E\u30D5\u30EC\u30FC\u30E0\u3068\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\uFF09",
       "name": "division",
       "value": 120,
       "hex": "0x78"
@@ -65,7 +66,7 @@
       "type": "virtual",
       "offset": 14,
       "size": 0,
-      "description": "\u30BF\u30A4\u30DF\u30F3\u30B0\u30E2\u30FC\u30C9\uFF080=PPQN 4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u30011=SMPTE\uFF09",
+      "description": "\u6642\u9593\u306E\u5358\u4F4D\u306E\u7A2E\u985E\uFF080 = 4 \u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u30011 = SMPTE\uFF09",
       "name": "timing_mode",
       "value": 0
     },
@@ -74,7 +75,7 @@
       "type": "virtual",
       "offset": 14,
       "size": 0,
-      "description": "PPQN\u30E2\u30FC\u30C9: 4\u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u3002SMPTE\u30E2\u30FC\u30C9: \u30D3\u30C3\u30C814:0\u306B\u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8\u3068\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\u304C\u30A8\u30F3\u30B3\u30FC\u30C9\u3055\u308C\u308B",
+      "description": "4 \u5206\u97F3\u7B26\u3042\u305F\u308A\u306E\u30C6\u30A3\u30C3\u30AF\u6570\uFF08\u30C7\u30EB\u30BF\u30BF\u30A4\u30E0\u306E\u5358\u4F4D\u3002480 \u306A\u3069\uFF09",
       "name": "ticks_per_quarter_note",
       "value": 120
     },
@@ -95,74 +96,104 @@
           "struct_type": "mtrk",
           "children": {
             "magic": {
-              "_type": "bytes",
-              "type": "bytes",
+              "_type": "string",
+              "type": "ascii",
               "offset": 14,
               "size": 4,
-              "description": "MTrk",
+              "description": "\u30C1\u30E3\u30F3\u30AF\u306E ID\uFF08\u0027MTrk\u0027\u3002\u305D\u308C\u4EE5\u5916\u306F\u672A\u77E5\u306E\u30C1\u30E3\u30F3\u30AF\uFF09",
               "name": "magic",
-              "hex": "4D 54 72 6B",
-              "valid": true
+              "value": "MTrk",
+              "encoding": "ascii"
             },
             "length": {
               "_type": "integer",
               "type": "uint32",
               "offset": 18,
               "size": 4,
+              "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570",
               "name": "length",
               "value": 4,
               "hex": "0x4"
             },
-            "events": {
-              "_type": "array",
-              "type": "struct",
+            "body": {
+              "_type": "struct",
+              "type": "switch",
               "offset": 22,
               "size": 4,
-              "name": "events",
-              "count": 1,
-              "elements": [
-                {
-                  "_type": "struct",
+              "name": "body",
+              "struct_type": "track_events",
+              "children": {
+                "events": {
+                  "_type": "array",
                   "type": "struct",
                   "offset": 22,
                   "size": 4,
                   "name": "events",
-                  "struct_type": "midi_event",
-                  "children": {
-                    "delta_time": {
-                      "_type": "integer",
-                      "type": "vlq",
-                      "offset": 22,
-                      "size": 1,
-                      "description": "\u30C7\u30EB\u30BF\u30BF\u30A4\u30E0\uFF08VLQ\u30A8\u30F3\u30B3\u30FC\u30C9\uFF09",
-                      "name": "delta_time",
-                      "value": 0,
-                      "hex": "0x0"
-                    },
-                    "status": {
-                      "_type": "integer",
-                      "type": "uint8",
-                      "offset": 23,
-                      "size": 1,
-                      "description": "\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30A4\u30C8",
-                      "name": "status",
-                      "value": 255,
-                      "hex": "0xFF"
-                    },
-                    "event_data": {
+                  "count": 1,
+                  "elements": [
+                    {
                       "_type": "struct",
-                      "type": "switch",
-                      "offset": 24,
-                      "size": 2,
-                      "name": "event_data",
-                      "struct_type": "system_event_data",
+                      "type": "struct",
+                      "offset": 22,
+                      "size": 4,
+                      "name": "events",
+                      "struct_type": "midi_event",
                       "children": {
-                        "system_body": {
+                        "delta_time": {
+                          "_type": "integer",
+                          "type": "vlq",
+                          "offset": 22,
+                          "size": 1,
+                          "description": "\u524D\u306E\u30A4\u30D9\u30F3\u30C8\u304B\u3089\u306E\u6642\u9593\uFF08\u30C6\u30A3\u30C3\u30AF\u3002\u53EF\u5909\u9577\u6574\u6570\uFF09",
+                          "name": "delta_time",
+                          "value": 0,
+                          "hex": "0x0"
+                        },
+                        "status_or_data": {
+                          "_type": "integer",
+                          "type": "uint8",
+                          "offset": 23,
+                          "size": 1,
+                          "description": "\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30A4\u30C8\uFF08\u6700\u4E0A\u4F4D\u30D3\u30C3\u30C8\u304C 1\uFF09\u30020 \u306A\u3089\u30E9\u30F3\u30CB\u30F3\u30B0\u30B9\u30C6\u30FC\u30BF\u30B9\u3067\u3001\u3053\u308C\u304C\u6700\u521D\u306E\u30C7\u30FC\u30BF\u30D0\u30A4\u30C8",
+                          "name": "status_or_data",
+                          "value": 255,
+                          "hex": "0xFF"
+                        },
+                        "is_running_status": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 24,
+                          "size": 0,
+                          "description": "\u30E9\u30F3\u30CB\u30F3\u30B0\u30B9\u30C6\u30FC\u30BF\u30B9\u304B\uFF081 \u306A\u3089\u76F4\u524D\u306E\u30C1\u30E3\u30F3\u30CD\u30EB\u30E1\u30C3\u30BB\u30FC\u30B8\u306E\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u4F7F\u3046\uFF09",
+                          "name": "is_running_status",
+                          "value": 0
+                        },
+                        "status": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 24,
+                          "size": 0,
+                          "description": "\u3053\u306E\u30A4\u30D9\u30F3\u30C8\u306E\u30B9\u30C6\u30FC\u30BF\u30B9",
+                          "name": "status",
+                          "value": 255
+                        },
+                        "event_type": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 24,
+                          "size": 0,
+                          "description": "\u30A4\u30D9\u30F3\u30C8\u306E\u7A2E\u985E\uFF08\u30B9\u30C6\u30FC\u30BF\u30B9\u306E\u4E0A\u4F4D 4 \u30D3\u30C3\u30C8\uFF09",
+                          "name": "event_type",
+                          "value": 15,
+                          "enum_label": "system",
+                          "enum_description": "\u30B7\u30B9\u30C6\u30E0\u30A8\u30AF\u30B9\u30AF\u30EB\u30FC\u30B7\u30D6\u30FB\u30E1\u30BF\u30A4\u30D9\u30F3\u30C8"
+                        },
+                        "event_data": {
                           "_type": "struct",
                           "type": "switch",
                           "offset": 24,
                           "size": 2,
-                          "name": "system_body",
+                          "name": "event_data",
                           "struct_type": "meta_event_body",
                           "children": {
                             "meta_type": {
@@ -170,35 +201,49 @@
                               "type": "uint8",
                               "offset": 24,
                               "size": 1,
-                              "description": "\u30E1\u30BF\u30A4\u30D9\u30F3\u30C8\u30BF\u30A4\u30D7\uFF080x2F=End of Track, 0x51=\u30C6\u30F3\u30DD, 0x58=\u62CD\u5B50\u8A18\u53F7\uFF09",
+                              "description": "\u30E1\u30BF\u30A4\u30D9\u30F3\u30C8\u306E\u7A2E\u985E",
                               "name": "meta_type",
                               "value": 47,
-                              "hex": "0x2F"
+                              "hex": "0x2F",
+                              "enum_label": "end_of_track",
+                              "enum_description": "\u30C8\u30E9\u30C3\u30AF\u306E\u7D42\u308F\u308A\uFF08\u5FC5\u9808\uFF09"
                             },
                             "meta_length": {
                               "_type": "integer",
                               "type": "vlq",
                               "offset": 25,
                               "size": 1,
+                              "description": "\u30C7\u30FC\u30BF\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u53EF\u5909\u9577\u6574\u6570\uFF09",
                               "name": "meta_length",
                               "value": 0,
                               "hex": "0x0"
                             },
                             "meta_data": {
-                              "_type": "bytes",
-                              "type": "bytes",
+                              "_type": "struct",
+                              "type": "switch",
                               "offset": 26,
                               "size": 0,
                               "name": "meta_data",
-                              "hex": ""
+                              "struct_type": "raw_event_data",
+                              "children": {
+                                "data": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 26,
+                                  "size": 0,
+                                  "description": "\u5206\u89E3\u3057\u306A\u3044\u30C7\u30FC\u30BF\uFF08\u672A\u77E5\u306E\u30C1\u30E3\u30F3\u30AF\u306E\u4E2D\u8EAB\u30FB\u672A\u77E5\u306E\u30A4\u30D9\u30F3\u30C8\u306E\u6B8B\u308A\uFF09",
+                                  "name": "data",
+                                  "hex": ""
+                                }
+                              }
                             }
                           }
                         }
                       }
                     }
-                  }
+                  ]
                 }
-              ]
+              }
             }
           }
         }
