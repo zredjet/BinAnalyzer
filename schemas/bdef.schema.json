@@ -171,6 +171,7 @@
             "int16", "i16",
             "int32", "i32",
             "int64", "i64",
+            "float16", "f16",
             "float32", "f32",
             "float64", "f64",
             "bytes",

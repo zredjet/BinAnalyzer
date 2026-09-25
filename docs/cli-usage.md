@@ -543,7 +543,7 @@ binanalyzer patch <file> -f <format> --set <path>=<value> [--set ...] -o <output
 - パスは出力フィルタや GUI の検索と同じ記法: struct は `.`、配列要素は `[i]`（例: `chunks[0].data.width`）。見つからない場合は末尾の名前が一致する候補を示す
 - 整数: 10 進または `0x` 16 進（`--set 'chunks[0].data.width=0x10'`）。型の範囲外（`uint8` に 300 等）はエラー
 - enum 参照付き整数: 数値のほかラベルも可（`--set 'chunks[0].data.color_type=truecolor_alpha'`）
-- 浮動小数点: `1.5` など
+- 浮動小数点: `1.5` など（`float16` / `float32` / `float64`）。型の範囲外（`float16` に 70000 等）はエラー。精度に合わせて丸める
 - 固定長文字列: エンコード後のバイト数がフィールドサイズ以下であること。不足分は `0x00` で埋める
 - バイト列: 16 進（`--set 'signature=89 50 4E 47 0D 0A 1A 0A'`）。サイズはフィールドと同じであること
 - 書き換えできないもの: 可変長整数（LEB128 / VLQ）、NUL 終端文字列、ビットストリームのフィールド、圧縮ストリーム内のフィールド、struct / array 自体

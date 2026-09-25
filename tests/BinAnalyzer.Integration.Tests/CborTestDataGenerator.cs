@@ -39,4 +39,11 @@ public static class CborTestDataGenerator
         "4401020304" + "6449455446" + "62c3bc" + "64f0908591" +
         "8301820203820405" + "a26161016162820203" +
         "5f42010243030405ff" + "7f657374726561646d696e67ff" + "9f018202039f0405ffff" + "83018202039f0405ff" + "bf61610161629f0203ffff");
+
+    /// <summary>
+    /// RFC 8949 付録 A の半精度の浮動小数点数の例（REQ-200）: 0.0・-0.0・1.0・1.5・65504.0・5.960464477539063e-8（最小の非正規化数）・
+    /// 0.00006103515625（最小の正規化数）・-4.0・Infinity・NaN・-Infinity。
+    /// </summary>
+    public static byte[] CreateCborHalfFloatExamples() => Convert.FromHexString(
+        "f90000" + "f98000" + "f93c00" + "f93e00" + "f97bff" + "f90001" + "f90400" + "f9c400" + "f97c00" + "f97e00" + "f9fc00");
 }

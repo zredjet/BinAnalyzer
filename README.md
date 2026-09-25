@@ -20,7 +20,7 @@
 
 ## 機能一覧
 
-- **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
+- **豊富なフィールド型** — 整数（u8〜u64, i8〜i64）、浮動小数点（float16, float32, float64）、文字列（ascii, utf8, asciiz, utf8z, utf16le/be, sjis, latin1）、バイト列、構造体、switch、計算フィールド（virtual）
 - **圧縮データ対応** — zlib / deflate / gzip / bzip2 / lzma / zstd / lz4 圧縮フィールドの展開・ネスト解析
 - **9種類の出力形式** — tree（デフォルト）, json, hexdump, html（検索機能付き）, map, csv, tsv, tui（対話型ターミナルUI）, gui（デスクトップGUI）
 - **出力フィルタ** — `--filter` でフィールドパスパターンを指定して出力を絞り込み（`*`, `**` ワイルドカード対応）

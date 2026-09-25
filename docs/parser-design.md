@@ -189,6 +189,7 @@ flags:
 "int16" | "i16"          →  FieldType.Int16
 "int32" | "i32"          →  FieldType.Int32
 "int64" | "i64"          →  FieldType.Int64
+"float16" | "f16"        →  FieldType.Float16
 "float32" | "f32"        →  FieldType.Float32
 "float64" | "f64"        →  FieldType.Float64
 "bytes"                  →  FieldType.Bytes

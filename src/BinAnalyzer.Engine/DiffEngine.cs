@@ -104,8 +104,8 @@ public static class DiffEngine
     private static void CompareFloat(DecodedFloat left, DecodedFloat right, string path, CompareContext context)
     {
         context.TotalLeafFields++;
-        // ReSharper disable once CompareOfFloatsByEqualityOperator
-        if (left.Value != right.Value)
+        // ビットの並びで比べる（== だと同じ NaN 同士を「変わった」とし、0.0 と -0.0 を「同じ」とする）
+        if (BitConverter.DoubleToInt64Bits(left.Value) != BitConverter.DoubleToInt64Bits(right.Value))
         {
             context.Entries.Add(new DiffEntry(DiffKind.Changed, path, left.Value.ToString("G"), right.Value.ToString("G")));
         }

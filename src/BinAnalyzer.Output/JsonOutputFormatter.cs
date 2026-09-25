@@ -209,7 +209,7 @@ public sealed class JsonOutputFormatter : IOutputFormatter
     private static void WriteFloatNode(Utf8JsonWriter writer, DecodedFloat node)
     {
         writer.WriteStartObject();
-        WriteCommonProperties(writer, node, node.IsSinglePrecision ? "float32" : "float64");
+        WriteCommonProperties(writer, node, node.FloatTypeName);
         writer.WriteString("name", node.Name);
         if (double.IsNaN(node.Value) || double.IsInfinity(node.Value))
             writer.WriteString("value", node.Value.ToString());

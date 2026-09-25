@@ -25,7 +25,7 @@ public class FloatDecoderTests
 
         var field = result.Children[0].Should().BeOfType<DecodedFloat>().Subject;
         field.Value.Should().BeApproximately(3.14, 0.001);
-        field.IsSinglePrecision.Should().BeTrue();
+        field.Precision.Should().Be(FloatPrecision.Single);
         field.Size.Should().Be(4);
     }
 
@@ -44,7 +44,7 @@ public class FloatDecoderTests
 
         var field = result.Children[0].Should().BeOfType<DecodedFloat>().Subject;
         field.Value.Should().BeApproximately(-1.5, 0.0001);
-        field.IsSinglePrecision.Should().BeTrue();
+        field.Precision.Should().Be(FloatPrecision.Single);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class FloatDecoderTests
 
         var field = result.Children[0].Should().BeOfType<DecodedFloat>().Subject;
         field.Value.Should().BeApproximately(2.718281828459045, 1e-10);
-        field.IsSinglePrecision.Should().BeFalse();
+        field.Precision.Should().Be(FloatPrecision.Double);
         field.Size.Should().Be(8);
     }
 
@@ -81,7 +81,7 @@ public class FloatDecoderTests
 
         var field = result.Children[0].Should().BeOfType<DecodedFloat>().Subject;
         field.Value.Should().BeApproximately(123456.789, 0.001);
-        field.IsSinglePrecision.Should().BeFalse();
+        field.Precision.Should().Be(FloatPrecision.Double);
     }
 
     [Fact]
@@ -159,12 +159,12 @@ public class FloatDecoderTests
         var left = new DecodedStruct
         {
             Name = "root", StructType = "root", Offset = 0, Size = 4,
-            Children = [new DecodedFloat { Name = "pi", Offset = 0, Size = 4, Value = 3.14, IsSinglePrecision = true }],
+            Children = [new DecodedFloat { Name = "pi", Offset = 0, Size = 4, Value = 3.14, Precision = FloatPrecision.Single }],
         };
         var right = new DecodedStruct
         {
             Name = "root", StructType = "root", Offset = 0, Size = 4,
-            Children = [new DecodedFloat { Name = "pi", Offset = 0, Size = 4, Value = 3.15, IsSinglePrecision = true }],
+            Children = [new DecodedFloat { Name = "pi", Offset = 0, Size = 4, Value = 3.15, Precision = FloatPrecision.Single }],
         };
 
         var result = DiffEngine.Compare(left, right);
@@ -182,17 +182,32 @@ public class FloatDecoderTests
         var left = new DecodedStruct
         {
             Name = "root", StructType = "root", Offset = 0, Size = 8,
-            Children = [new DecodedFloat { Name = "e", Offset = 0, Size = 8, Value = 2.71828, IsSinglePrecision = false }],
+            Children = [new DecodedFloat { Name = "e", Offset = 0, Size = 8, Value = 2.71828, Precision = FloatPrecision.Double }],
         };
         var right = new DecodedStruct
         {
             Name = "root", StructType = "root", Offset = 0, Size = 8,
-            Children = [new DecodedFloat { Name = "e", Offset = 0, Size = 8, Value = 2.71828, IsSinglePrecision = false }],
+            Children = [new DecodedFloat { Name = "e", Offset = 0, Size = 8, Value = 2.71828, Precision = FloatPrecision.Double }],
         };
 
         var result = DiffEngine.Compare(left, right);
 
         result.HasDifferences.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(double.NaN, double.NaN, false)]   // 同じ NaN は変わっていない（以前は == で比べて「変わった」になっていた）
+    [InlineData(0.0, -0.0, true)]                 // 符号の違う 0 はバイト列が違う
+    [InlineData(1.5, 1.5, false)]
+    public void Diff_ComparesTheBitPattern(double left, double right, bool changed)
+    {
+        static DecodedStruct Root(double v) => new()
+        {
+            Name = "root", StructType = "root", Offset = 0, Size = 2,
+            Children = [new DecodedFloat { Name = "h", Offset = 0, Size = 2, Value = v, Precision = FloatPrecision.Half }],
+        };
+
+        DiffEngine.Compare(Root(left), Root(right)).HasDifferences.Should().Be(changed);
     }
 
     private static FormatDefinition CreateFormat(string rootName, Endianness endianness, params FieldDefinition[] fields)

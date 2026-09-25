@@ -70,7 +70,7 @@ public sealed class FieldKindMapperTests
     [Fact]
     public void TypeDefaults()
     {
-        FieldKindMapper.Map(new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 1, IsSinglePrecision = true }, Parent).Should().Be(FieldKind.Num);
+        FieldKindMapper.Map(new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 1, Precision = FloatPrecision.Single }, Parent).Should().Be(FieldKind.Num);
         FieldKindMapper.Map(new DecodedFlags { Name = "f", Offset = 0, Size = 1, RawValue = 0, FlagStates = [] }, Parent).Should().Be(FieldKind.Flags);
         FieldKindMapper.Map(new DecodedBitfield { Name = "b", Offset = 0, Size = 1, RawValue = 0, Fields = [] }, Parent).Should().Be(FieldKind.Bitfield);
         FieldKindMapper.Map(new DecodedVirtual { Name = "v", Offset = 0, Size = 0, Value = 1 }, Parent).Should().Be(FieldKind.Virtual);

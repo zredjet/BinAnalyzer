@@ -3,7 +3,7 @@
 #   RFC 8949 付録 A の例で照合した
 # 構造: 値の並び（ファイルの中の複数の値を順に読む。CBOR シーケンス RFC 8742）。値は先頭の 1 バイト（主型 3 ビット + 追加情報 5 ビット）と引数
 #   （追加情報が 0〜23 ならその値、24〜27 なら後ろの 1・2・4・8 バイト）で、配列・マップ・タグは中に値を再帰的に持つ。追加情報 31 は不定長（0xFF の break まで）
-# 対応していないもの: 半精度の浮動小数点数の値（符号・指数・仮数に分けて表示）、8 バイトの引数の長さのバイト列・文字列（DSL の大きさの上限）、
+# 対応していないもの: 8 バイトの引数の長さのバイト列・文字列（DSL の大きさの上限）、
 #   タグ 24（CBOR の埋め込み）のバイト列の中身の分解・タグ 2 / 3（多倍長整数）の値、2^63 以上の符号なし整数・-2^63 より小さい負の整数（負の値・誤った値で表示）、
 #   正規形・決定的な符号化かの検査
 name: CBOR
@@ -266,21 +266,10 @@ structs:
       enum: simple_value
       if: "{additional_info <= 24}"
       description: "単純値（20 = false、21 = true、22 = null、23 = undefined、24 は後ろの 1 バイトの値）"
-    - name: half_float
-      type: bitfield
-      size: "2"
+    - name: float16_value
+      type: float16
       if: "{additional_info == 25}"
-      description: "半精度の浮動小数点数"
-      fields:
-        - name: sign
-          bits: "15"
-          description: "符号（1 は負）"
-        - name: exponent
-          bits: "14:10"
-          description: "指数（バイアス 15。31 は無限大・NaN）"
-        - name: fraction
-          bits: "9:0"
-          description: "仮数（暗黙の 1 を除く 10 ビット）"
+      description: "半精度の浮動小数点数（IEEE 754 binary16）"
     - name: float32_value
       type: float32
       if: "{additional_info == 26}"

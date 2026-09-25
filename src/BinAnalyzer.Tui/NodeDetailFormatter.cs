@@ -31,7 +31,7 @@ internal static class NodeDetailFormatter
                 break;
 
             case DecodedFloat floatNode:
-                details.Add(("Type", floatNode.IsSinglePrecision ? "float32" : "float64"));
+                details.Add(("Type", floatNode.FloatTypeName));
                 details.Add(("Value", floatNode.Value.ToString("G")));
                 break;
 

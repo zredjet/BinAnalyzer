@@ -62,7 +62,7 @@ public static class FieldEditRules
                     reason = "ビットストリームのフィールドは編集できません";
                     return EditKind.None;
                 }
-                if (f.Size != (f.IsSinglePrecision ? 4 : 8) || f.Endianness is null)
+                if (f.Size != (int)f.Precision || f.Endianness is null)
                 {
                     reason = "エンディアン情報が無いため編集できません";
                     return EditKind.None;

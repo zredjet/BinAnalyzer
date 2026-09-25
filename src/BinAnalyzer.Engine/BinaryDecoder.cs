@@ -347,7 +347,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             FieldType.Latin1 => DecodeStringField(field, context, Encoding.Latin1, "latin1"),
             FieldType.AsciiZ => DecodeNullTerminatedStringField(field, context, Encoding.ASCII, "asciiz"),
             FieldType.Utf8Z => DecodeNullTerminatedStringField(field, context, Encoding.UTF8, "utf8z"),
-            FieldType.Float32 or FieldType.Float64 => DecodeFloatField(field, context),
+            FieldType.Float16 or FieldType.Float32 or FieldType.Float64 => DecodeFloatField(field, context),
             var t when FieldTypeCategories.IsCompressed(t) => DecodeCompressedField(field, format, context),
             FieldType.Struct => DecodeStructField(field, format, context),
             FieldType.Switch => DecodeSwitchField(field, format, context),
@@ -673,8 +673,18 @@ public sealed class BinaryDecoder : IBinaryDecoder
         DecodeContext context)
     {
         var offset = context.Position;
-        var isSingle = field.Type == FieldType.Float32;
-        double value = isSingle ? context.ReadFloat32() : context.ReadFloat64();
+        var precision = field.Type switch
+        {
+            FieldType.Float16 => FloatPrecision.Half,
+            FieldType.Float32 => FloatPrecision.Single,
+            _ => FloatPrecision.Double,
+        };
+        double value = precision switch
+        {
+            FloatPrecision.Half => (double)context.ReadFloat16(),
+            FloatPrecision.Single => context.ReadFloat32(),
+            _ => context.ReadFloat64(),
+        };
         var size = context.Position - offset;
         context.SetVariable(field.Name, value);
 
@@ -684,7 +694,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             Offset = offset,
             Size = size,
             Value = value,
-            IsSinglePrecision = isSingle,
+            Precision = precision,
             Description = field.Description,
             DslType = field.Type,
             Endianness = context.Endianness,
@@ -1747,7 +1757,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         DecodedBytes b => new DecodedBytes { Name = b.Name, Offset = b.Offset, Size = b.Size, RawBytes = b.RawBytes, ValidationPassed = b.ValidationPassed, Description = b.Description, IsPadding = b.IsPadding, Validation = validation, ChecksumValid = b.ChecksumValid, ChecksumExpectedHex = b.ChecksumExpectedHex, ChecksumAlgorithm = b.ChecksumAlgorithm, ChecksumCoverage = b.ChecksumCoverage, DslType = b.DslType },
         DecodedInteger i => new DecodedInteger { Name = i.Name, Offset = i.Offset, Size = i.Size, BitOffset = i.BitOffset, Value = i.Value, EnumLabel = i.EnumLabel, EnumDescription = i.EnumDescription, ChecksumValid = i.ChecksumValid, ChecksumExpected = i.ChecksumExpected, ChecksumAlgorithm = i.ChecksumAlgorithm, ChecksumCoverage = i.ChecksumCoverage, StringTableValue = i.StringTableValue, Description = i.Description, IsPadding = i.IsPadding, Validation = validation, DslType = i.DslType, Endianness = i.Endianness, EnumRef = i.EnumRef },
         DecodedString s => new DecodedString { Name = s.Name, Offset = s.Offset, Size = s.Size, Value = s.Value, Encoding = s.Encoding, Flags = s.Flags, Description = s.Description, IsPadding = s.IsPadding, Validation = validation, DslType = s.DslType },
-        DecodedFloat f => new DecodedFloat { Name = f.Name, Offset = f.Offset, Size = f.Size, Value = f.Value, IsSinglePrecision = f.IsSinglePrecision, Description = f.Description, IsPadding = f.IsPadding, Validation = validation, DslType = f.DslType, Endianness = f.Endianness },
+        DecodedFloat f => new DecodedFloat { Name = f.Name, Offset = f.Offset, Size = f.Size, Value = f.Value, Precision = f.Precision, Description = f.Description, IsPadding = f.IsPadding, Validation = validation, DslType = f.DslType, Endianness = f.Endianness },
         DecodedFlags fl => new DecodedFlags { Name = fl.Name, Offset = fl.Offset, Size = fl.Size, RawValue = fl.RawValue, FlagStates = fl.FlagStates, Description = fl.Description, IsPadding = fl.IsPadding, Validation = validation, DslType = fl.DslType },
         _ => node, // struct/array/bitfield等はバリデーションをサポートしない
     };
@@ -1766,7 +1776,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         var knownSize = field.Type switch
         {
             FieldType.UInt8 or FieldType.Int8 => 1,
-            FieldType.UInt16 or FieldType.Int16 => 2,
+            FieldType.UInt16 or FieldType.Int16 or FieldType.Float16 => 2,
             FieldType.UInt32 or FieldType.Int32 or FieldType.Float32 => 4,
             FieldType.UInt64 or FieldType.Int64 or FieldType.Float64 => 8,
             _ => (int?)null,

@@ -58,7 +58,7 @@ public static class NodeDisplayText
             DecodedInteger i when i.ChecksumAlgorithm is not null => $"{IntegerBase(i)} ({i.ChecksumAlgorithm})",
             DecodedInteger i when i.EnumLabel is not null || i.EnumRef is not null => $"{IntegerBase(i)} (enum)",
             DecodedInteger i => IntegerBase(i),
-            DecodedFloat f => dsl is { } t ? FieldTypeNames.ShortLabel(t) : f.IsSinglePrecision ? "float32" : "float64",
+            DecodedFloat f => dsl is { } t ? FieldTypeNames.ShortLabel(t) : f.FloatTypeName,
             DecodedString s => $"{(dsl is { } t ? FieldTypeNames.ToDslName(t) : s.Encoding.ToLowerInvariant())}[{s.Size}]",
             DecodedBytes b when b.ChecksumAlgorithm is not null => $"bytes[{b.Size}] ({b.ChecksumAlgorithm})",
             DecodedBytes b => $"bytes[{b.Size}]",

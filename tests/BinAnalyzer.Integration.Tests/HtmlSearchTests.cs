@@ -165,7 +165,7 @@ public class HtmlSearchTests
             Name = "test", StructType = "test", Offset = 0, Size = 4,
             Children =
             [
-                new DecodedFloat { Name = "ratio", Offset = 0, Size = 4, Value = 3.14, IsSinglePrecision = true }
+                new DecodedFloat { Name = "ratio", Offset = 0, Size = 4, Value = 3.14, Precision = FloatPrecision.Single }
             ],
         };
         var formatter = new HtmlOutputFormatter();

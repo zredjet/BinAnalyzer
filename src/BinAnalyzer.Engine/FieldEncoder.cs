@@ -123,7 +123,17 @@ public sealed class FieldEncoder : IFieldEncoder
             return FieldEncodeResult.Fail($"数値として解釈できません: {text}");
 
         var endian = node.Endianness ?? Endianness.Big;
-        if (node.IsSinglePrecision)
+        if (node.Precision == FloatPrecision.Half)
+        {
+            var half = (Half)value;
+            if (Half.IsInfinity(half) && !double.IsInfinity(value))
+                return FieldEncodeResult.Fail("float16 の範囲外です（絶対値の最大は 65504）");
+            var bytes = new byte[2];
+            if (endian == Endianness.Big) BinaryPrimitives.WriteHalfBigEndian(bytes, half);
+            else BinaryPrimitives.WriteHalfLittleEndian(bytes, half);
+            return FieldEncodeResult.Ok(bytes);
+        }
+        if (node.Precision == FloatPrecision.Single)
         {
             var single = (float)value;
             if (float.IsInfinity(single) && !double.IsInfinity(value))
