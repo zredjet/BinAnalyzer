@@ -75,8 +75,19 @@ public class CborParsingTests
         var json = new JsonOutputFormatter().Format(root);
         json.Should().Contain("\"type\": \"float16\"");
         json.Should().Contain("65504");
-        var tree = new TreeOutputFormatter().Format(root);
-        tree.Should().Contain("float16_value: 65504").And.Contain("float16_value: -∞").And.Contain("float16_value: NaN");
+        // ツリーの数値は現在のカルチャで書く（ja-JP の無限大は「∞」、インバリアントは「Infinity」）ので、カルチャを固定して確かめる
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        string tree;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+            tree = new TreeOutputFormatter().Format(root);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+        tree.Should().Contain("float16_value: 65504").And.Contain("float16_value: -Infinity").And.Contain("float16_value: NaN");
         new CsvOutputFormatter().Format(root).Should().Contain("float16");
     }
 
