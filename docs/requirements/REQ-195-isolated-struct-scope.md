@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | draft |
+| ステータス | done |
 | 優先度 | 中 |
 | 依存 | なし（REQ-190 の値の昇格の扱いに関わる） |
 | 作成日 | 2026-09-25 |
@@ -30,13 +30,13 @@ AVI の strh の fccType を、兄弟の strf から引く（dsl-reference の�
 
 ### 追加する機能
 
-- [ ] **struct の定義に、独自の変数のスコープを持たせる指定を足す**（キーの名前は設計で決める。案: オブジェクトの形の `scope: isolated`）。指定した struct の中のフィールドの値は、その struct のスコープに束縛され、親のスコープに書かれない。外側の変数は今までどおり読める
-- [ ] **指定した struct の値は、繰り返しの要素の値の昇格でも親に届かない。** 昇格は指定した struct の中へ再帰しない（外からはメンバーアクセス `{child.field}` で引く）
-- [ ] 検証・JSON Schema・DSL の DTO で新しいキーを扱う
+- [x] **struct の定義に、独自の変数のスコープを持たせる指定を足す**（オブジェクトの形の `scope: isolated`）。指定した struct の中のフィールドの値は、その struct のスコープに束縛され、親のスコープに書かれない。外側の変数は今までどおり読める
+- [x] **指定した struct の値は、繰り返しの要素の値の昇格でも親に届かない。** 昇格は指定した struct の中へ再帰しない（外からはメンバーアクセス `{child.field}` で引く）
+- [x] 検証・JSON Schema・DSL の DTO で新しいキーを扱う
 
 ### 変更する既存機能
 
-- [ ] なし（指定しない struct の動作は変えない）
+- [x] なし（指定しない struct の動作は変えない）
 
 ### 変更しないもの（スコープ外）
 
@@ -45,12 +45,12 @@ AVI の strh の fccType を、兄弟の strf から引く（dsl-reference の�
 
 ## 受入条件
 
-1. [ ] 指定した struct を再帰させた定義で、入れ子の値が親の同じ名前の値を上書きしないこと（DNS の名前と同じ形: ラベル + 自分と同じ struct の入れ子 + 親の値を使う virtual）
-2. [ ] 指定した struct の中から、外側のスコープの変数を読めること
-3. [ ] 指定した struct を要素に持つ繰り返しで、昇格が指定した struct の中へ入らないこと（要素の直下の値は今までどおり昇格する）
-4. [ ] 外からメンバーアクセスで指定した struct の値を引けること
-5. [ ] 指定しない struct の動作（スコープの共有・昇格の再帰）が変わらないこと（ゴールデンが変わらない）
-6. [ ] 既存テストが全て通過すること（`dotnet test` 全通過）
+1. [x] 指定した struct を再帰させた定義で、入れ子の値が親の同じ名前の値を上書きしないこと（DNS の名前と同じ形: ラベル + 自分と同じ struct の入れ子 + 親の値を使う virtual）
+2. [x] 指定した struct の中から、外側のスコープの変数を読めること
+3. [x] 指定した struct を要素に持つ繰り返しで、昇格が指定した struct の中へ入らないこと（要素の直下の値は今までどおり昇格する）
+4. [x] 外からメンバーアクセスで指定した struct の値を引けること
+5. [x] 指定しない struct の動作（スコープの共有・昇格の再帰）が変わらないこと（ゴールデンが変わらない）
+6. [x] 既存テストが全て通過すること（`dotnet test` 全通過）
 
 ## 影響範囲
 
@@ -58,25 +58,26 @@ AVI の strh の fccType を、兄弟の strf から引く（dsl-reference の�
 
 | プロジェクト | 変更内容の概要 |
 |---|---|
-| BinAnalyzer.Core | `StructDefinition` に独自のスコープの指定 |
-| BinAnalyzer.Dsl | YAML のキー、DTO、変換 |
+| BinAnalyzer.Core | `StructDefinition.IsolatedScope`、`DecodedStruct.IsolatedScope` |
+| BinAnalyzer.Dsl | `YamlStructModel.Scope`（`scope:`）、変換と値の検査（`isolated` 以外は読み込みエラー） |
 | BinAnalyzer.Engine | `DecodeStruct` で変数のスコープを push、`PromoteDecodedValues` が指定した struct に入らない |
 | schemas/bdef.schema.json | 新しいキー |
-| tests/BinAnalyzer.Engine.Tests / Dsl.Tests | スコープと昇格のテスト |
+| tests/BinAnalyzer.Engine.Tests | `IsolatedScopeTests` |
+| tests/BinAnalyzer.Dsl.Tests | `IsolatedScopeParsingTests` |
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/dsl-reference.md — 構造体の定義の形、「兄弟スコープ参照」（昇格が入らない場合）
-- [ ] docs/format-authoring.md — 再帰する定義の書き方（エンディアンの形の回避策をやめる）
+- [x] docs/dsl-reference.md — 「変数のスコープ（scope: isolated）」、「兄弟スコープ参照」（昇格が入らない場合）
+- [x] docs/format-authoring.md — 「再帰する struct」
 
 ---
 
 ## 設計メモ
 
-### 設計方針（案）
+### 設計方針
 
 - スコープは `PushVariableScope`（テンプレートの引数と同じ、変数だけのオーバーレイ）で作る
-- 昇格で入らないようにするには、デコード結果（`DecodedStruct`）の側で「独自のスコープの struct だった」ことが分かる必要がある。ノードに印を持たせるか、`PromoteDecodedValues` に定義を引かせる
+- 昇格で入らないようにするため、デコード結果の `DecodedStruct` に `IsolatedScope` の印を持たせる（`PromoteDecodedValues` は定義を持たないので、ノードの側で分かるようにした）
 
 ### 代替案
 
@@ -85,4 +86,33 @@ AVI の strh の fccType を、兄弟の strf から引く（dsl-reference の�
 
 ### 懸念事項
 
-- 名前: `scope: isolated` / `isolated: true` / `own_scope: true` など。struct の定義のキー（今はオブジェクトの形の `endianness` / `fields` / `align` / `resync_marker` など）と揃える
+- 名前は `scope: isolated` にした。値を取るキーにして、`mode: bitstream` と同じく今後ほかのスコープの種類を足せるようにした
+
+---
+
+## 実装メモ
+
+### 実装中の設計変更
+
+- **スコープは `DecodeStruct` の先頭で push し、終わりで pop する**（エンディアンのスコープより外側）。中のエンディアンのスコープも変数を捕まえるが、どちらもこの struct の中で閉じるので、値が親に届かない点は同じ
+- **昇格は「入れ子の isolated の struct に入らない」とした。** `PromoteDecodedValues` に渡した要素そのもの（呼び出し元の繰り返しの要素）は、isolated でも直下の値を昇格する。要素の子（とその中）の `DecodedStruct` が isolated なら、そこで止める。switch のケースの struct も `DecodedStruct` なので同じ
+- 値の検査は `mode:` と同じく読み込み時に行う（`isolated` 以外は `InvalidOperationException`）。未知のキーの検査（VAL123）は DTO の別名から自動で既知になる
+
+### 追加したテスト
+
+| テストクラス | テスト名 | 対応する受入条件 |
+|---|---|---|
+| IsolatedScopeTests | Isolated_RecursiveStruct_KeepsItsOwnValues | 1 |
+| IsolatedScopeTests | NotIsolated_RecursiveStruct_IsOverwrittenByTheChild | 5 |
+| IsolatedScopeTests | Isolated_ReadsOuterVariables_AndMemberAccessReachesItsValues | 2, 4 |
+| IsolatedScopeTests | Isolated_ValueIsNotBoundInTheParentScope | 1 |
+| IsolatedScopeTests | Promotion_DoesNotEnterNestedIsolatedStructs | 3 |
+| IsolatedScopeTests | Promotion_OfAnIsolatedElement_KeepsItsDirectValues | 3 |
+| IsolatedScopeTests | Isolated_SwitchCase_IsNotEnteredByPromotion | 3 |
+| IsolatedScopeParsingTests | Load_ScopeIsolated_SetsIsolatedScope / Load_UnknownScope_ThrowsException | 機能要件（DSL） |
+
+### 気づき・今後の課題
+
+- 同梱定義の回避策（cbor・dns・fat・msgpack・otf・parquet・protobuf・x509 のエンディアンの形、Parquet の書き直しの virtual、FAT の 1 個の配列）の置き換えは、スコープ外として別の PR で行う
+- REQ-196（独自のスコープの要素の値を repeat_until の条件から見る）は、`scope: isolated` の要素でも同じ問題が起きる
+

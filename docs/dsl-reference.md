@@ -803,6 +803,7 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 - 新しい DSL 構文は不要 — 既存の `{variable_name}` 参照をそのまま利用
 - 同名のフィールドは後続の要素で上書き（通常の変数セマンティクス）。繰り返しの前にある同名の変数も、繰り返しの後ろでは最後の要素の値になる
 - 昇格した値は繰り返しの後ろのフィールドからも参照できる。`size` 付きの繰り返し（配列全体の境界）でも同じ（REQ-190）。値が届くのは最も近い変数のスコープ（`size` 付きの struct / switch の中など）までで、その外からはメンバーアクセス（`{wrapper.field}`）で引く
+- 要素の中の入れ子の struct の値も再帰的に昇格する（配列の中は走査しない）。ただし `scope: isolated` の struct の中へは入らない（[変数のスコープ](#変数のスコープscope-isolated)）
 
 ```yaml
 # ZIP の例: 拡張フィールドの中の Zip64 の値でヘッダの 0xFFFFFFFF を置き換える
@@ -815,6 +816,40 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
   type: virtual
   value: "{compressed_size == 0xFFFFFFFF ? zip64_compressed_size : compressed_size}"
 ```
+
+## 変数のスコープ（scope: isolated）
+
+struct のフィールドの値は、ふつうは **最も近い変数のスコープ** に束縛されます。`size` もエンディアンの指定もテンプレートの引数も無い struct は自分のスコープを作らないので、中の値は親のスコープに書かれ、親や兄弟から `{name}` で引けます。繰り返しの要素の値の昇格（[兄弟スコープ参照](#兄弟スコープ参照)）も、要素の中の struct の子まで再帰的に行います。
+
+**同じ struct を入れ子にする再帰的な定義**（DNS の名前の圧縮ポインタ・CBOR / MessagePack の値・DER の TLV など）では、入れ子の値が同じ名前で親の値を上書きします。`scope: isolated` を付けた struct は独自の変数のスコープを持ち、これを防ぎます（REQ-195）。
+
+```yaml
+structs:
+  # 名前: ラベルの並び。圧縮ポインタなら同じ struct（ポインタの先の名前）を入れ子にする
+  dns_name:
+    scope: isolated
+    fields:
+      - name: labels
+        type: struct
+        struct: dns_label
+        repeat_until: "{label_length == 0 or label_length >= 0xC0}"
+      - name: pointer_target
+        type: struct
+        struct: dns_name
+        seek: "{pointer_offset}"
+        seek_restore: true
+        if: "{is_pointer == 1}"
+      - name: full_name
+        type: virtual
+        # is_pointer はこの名前のラベルの値のまま（ポインタの先の dns_name の値に上書きされない）
+        value: "{is_pointer == 1 ? concat(name_acc, pointer_target.full_name) : name_acc}"
+```
+
+- 中のフィールドの値はその struct のスコープに束縛され、親のスコープに書かれない。外からはメンバーアクセス（`{pointer_target.full_name}`）で引く
+- 外側のスコープの変数は、今までどおり中から読める
+- 繰り返しの要素の値の昇格は、`scope: isolated` の入れ子の struct（switch のケースを含む）の中へ入らない。要素そのものが `scope: isolated` なら、要素の直下の値は昇格する（`repeat_while` の条件などで使える）
+- 値は `isolated` のみ。ほかの値は読み込みエラー
+- 以前はエンディアンを書いた形（`endianness:` + `fields:`）でスコープを作る回避策があったが、エンディアンの形の struct の値は昇格で親に届く。再帰する struct には `scope: isolated` を使う
 
 ## テンプレート構造体（パラメータ付きstruct）
 

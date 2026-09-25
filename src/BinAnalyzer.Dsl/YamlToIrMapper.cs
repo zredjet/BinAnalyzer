@@ -115,6 +115,15 @@ public static class YamlToIrMapper
                     $"bit_order is specified on struct '{name}' but mode is not 'bitstream'. " +
                     $"bit_order is only valid with mode: bitstream");
 
+            // scope パースとバリデーション（REQ-195）
+            var isolatedScope = structModel.Scope switch
+            {
+                null => false,
+                "isolated" => true,
+                _ => throw new InvalidOperationException(
+                    $"Unknown struct scope '{structModel.Scope}' in struct '{name}'. Supported values: isolated"),
+            };
+
             var fields = structModel.Fields.Select(MapField).ToList();
 
             // bitstream フィールド型バリデーション
@@ -141,6 +150,7 @@ public static class YamlToIrMapper
                 IsBitstream = isBitstream,
                 BitOrder = parsedBitOrder,
                 ResyncMarker = structModel.ResyncMarker?.Select(b => (byte)b).ToArray(),
+                IsolatedScope = isolatedScope,
                 SourceFile = structModel.SourceFile,
                 SourceLine = structModel.SourceLine,
             };

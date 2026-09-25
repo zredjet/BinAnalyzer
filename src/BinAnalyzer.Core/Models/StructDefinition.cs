@@ -25,6 +25,12 @@ public sealed class StructDefinition
     /// <summary>ビットストリームモードのビットオーダー。nullの場合はMSB-first（デフォルト）。</summary>
     public BitOrder? BitOrder { get; init; }
 
+    /// <summary>
+    /// true なら独自の変数のスコープを持つ（<c>scope: isolated</c>。REQ-195）。中のフィールドの値はこの struct のスコープに束縛され、親に書かれない。
+    /// 繰り返しの要素の値の昇格も、この struct の中へは入らない（要素そのものの直下の値は昇格する）。
+    /// </summary>
+    public bool IsolatedScope { get; init; }
+
     /// <summary>エラー回復時の再同期マーカーバイトパターン。</summary>
     public byte[]? ResyncMarker { get; init; }
 
