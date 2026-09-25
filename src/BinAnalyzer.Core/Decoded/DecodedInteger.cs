@@ -7,6 +7,12 @@ public sealed class DecodedInteger : DecodedNode
 {
     public required long Value { get; init; }
 
+    /// <summary>値の 10 進の表記。uint64 などの符号なし 64 ビットの型は 2^63 以上も正の値で書く（REQ-201）。</summary>
+    public string ValueText => IntegerText.Format(Value, DslType);
+
+    /// <summary>表示で 16 進を添えるか（絶対値が 16 以上。符号なし 64 ビットの型は符号なしで比べる）。</summary>
+    public bool ShowsHex => IntegerText.ShowsHex(Value, DslType);
+
     /// <summary>デコード時の実効エンディアン（書き戻しに使う）。ビットストリーム / 可変長整数では意味を持たない。</summary>
     public Endianness? Endianness { get; init; }
 

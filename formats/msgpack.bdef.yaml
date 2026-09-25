@@ -2,8 +2,7 @@
 # 仕様: MessagePack specification（msgpack/msgpack spec.md、2017 年のタイムスタンプの拡張型を含む） https://github.com/msgpack/msgpack/blob/master/spec.md 。
 #   Python の msgpack 1.1 が出力したデータで照合した
 # 構造: 値の並び（ファイルの中の複数の値を順に読む）。値は先頭の 1 バイト（形式）で型と長さが決まり、配列・マップは中に値を再帰的に持つ
-# 対応していないもの: タイムスタンプ以外の拡張型の中身（バイト列）、bin の中身の型の推測、マップのキーの重複の検査、
-#   2^63 以上の uint 64（DSL の整数が符号付き 64 ビットのため負の値で表示）
+# 対応していないもの: タイムスタンプ以外の拡張型の中身（バイト列）、bin の中身の型の推測、マップのキーの重複の検査
 name: MessagePack
 endianness: big
 root: msgpack_root

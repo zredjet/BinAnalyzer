@@ -39,13 +39,13 @@
                     @if (edit.Kind == EditKind.Enum && EnumEntries(node) is { Count: > 0 } entries)
                     {
                         <select id="gui-edit" class="edit mono" aria-label="値を選択" value="@_input" @onchange="OnInput">
-                            @if (entries.All(e => e.Value.ToString() != _input))
+                            @if (entries.All(e => IntegerText.Format(e.Value, node.DslType) != _input))
                             {
                                 <option value="@_input">@_input（未定義）</option>
                             }
                             @foreach (var e in entries)
                             {
-                                <option value="@e.Value">@e.Label (@e.Value)</option>
+                                <option value="@IntegerText.Format(e.Value, node.DslType)">@e.Label (@IntegerText.Format(e.Value, node.DslType))</option>
                             }
                         </select>
                     }
@@ -102,7 +102,7 @@
             @if (node is DecodedBitfield bf)
             {
                 <dt>ビット</dt><dd class="flags">@foreach (var f in bf.Fields)
-                    {<span>@f.Name=@f.Value@(f.EnumLabel is null ? "" : $" {f.EnumLabel}")</span>}</dd>
+                    {<span>@f.Name=@f.ValueText@(f.EnumLabel is null ? "" : $" {f.EnumLabel}")</span>}</dd>
             }
             @foreach (var r in rows.Where(r => r.Kind == DetailRowKind.Validation))
             {

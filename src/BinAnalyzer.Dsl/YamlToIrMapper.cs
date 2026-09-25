@@ -47,11 +47,18 @@ public static class YamlToIrMapper
             result[name] = new EnumDefinition
             {
                 Name = name,
-                Entries = entries.Select(e => new EnumEntry(e.Value, e.Label, e.Description)).ToList(),
+                Entries = entries.Select(e => new EnumEntry(ParseEnumValue(name, e), e.Label, e.Description)).ToList(),
             };
         }
         return result;
     }
+
+    /// <summary>enum の値。2^63 以上（uint64 のフィールド向け）は同じビットの負の long にする（REQ-201）。</summary>
+    private static long ParseEnumValue(string enumName, YamlEnumEntry entry) =>
+        IntegerText.TryParseLiteral(entry.Value, out var value)
+            ? value
+            : throw new InvalidOperationException(
+                $"Enum '{enumName}' entry '{entry.Label}' has an invalid value '{entry.Value}' (expected a decimal or 0x hexadecimal integer from -2^63 to 2^64 - 1)");
 
     private static IReadOnlyDictionary<string, FlagsDefinition> MapFlags(
         Dictionary<string, YamlFlagsModel>? yamlFlags)

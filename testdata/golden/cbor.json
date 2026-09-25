@@ -51,7 +51,7 @@
               "type": "virtual",
               "offset": 1,
               "size": 0,
-              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\uFF09",
+              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\u3002\u5F0F\u306E\u5024\u306A\u306E\u3067\u30018 \u30D0\u30A4\u30C8\u306E\u5F15\u6570\u306E 2^63 \u4EE5\u4E0A\u306F\u8CA0\u306E\u5024\u306B\u306A\u308B\u3002\u305D\u306E\u5024\u306F arg64 \u3092\u898B\u308B\uFF09",
               "name": "argument",
               "value": 1
             },
@@ -126,7 +126,7 @@
                               "type": "virtual",
                               "offset": 2,
                               "size": 0,
-                              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\uFF09",
+                              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\u3002\u5F0F\u306E\u5024\u306A\u306E\u3067\u30018 \u30D0\u30A4\u30C8\u306E\u5F15\u6570\u306E 2^63 \u4EE5\u4E0A\u306F\u8CA0\u306E\u5024\u306B\u306A\u308B\u3002\u305D\u306E\u5024\u306F arg64 \u3092\u898B\u308B\uFF09",
                               "name": "argument",
                               "value": 3
                             },
@@ -218,7 +218,7 @@
                               "type": "virtual",
                               "offset": 7,
                               "size": 0,
-                              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\uFF09",
+                              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\u3002\u5F0F\u306E\u5024\u306A\u306E\u3067\u30018 \u30D0\u30A4\u30C8\u306E\u5F15\u6570\u306E 2^63 \u4EE5\u4E0A\u306F\u8CA0\u306E\u5024\u306B\u306A\u308B\u3002\u305D\u306E\u5024\u306F arg64 \u3092\u898B\u308B\uFF09",
                               "name": "argument",
                               "value": 42
                             },

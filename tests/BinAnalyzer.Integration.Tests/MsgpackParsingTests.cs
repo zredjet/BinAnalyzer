@@ -2,6 +2,7 @@ using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl;
 using BinAnalyzer.Engine;
+using BinAnalyzer.Output;
 using FluentAssertions;
 using Xunit;
 
@@ -64,6 +65,19 @@ public class MsgpackParsingTests
         ts64.Bits("seconds34").Should().Be(1700000000);
         map["ts96"].Find("nanoseconds32").Int().Should().Be(999999999);
         map["ts96"].Find("seconds64").Int().Should().Be(-1);
+    }
+
+    [Fact]
+    public void MsgpackFormat_Uint64AboveInt64_IsShownUnsigned()
+    {
+        var root = new BinaryDecoder().Decode(MsgpackTestDataGenerator.CreateMsgpack64BitIntegers(), new YamlFormatLoader().Load(MsgpackFormatPath));
+        var items = Array(root.Child("values").Elements().Single()).Select(e => (DecodedInteger)e.Child("data").Child("value")).ToList();
+
+        items.Select(i => i.ValueText).Should().Equal("18446744073709551615", "9223372036854775808", "-9223372036854775808");
+        var json = new JsonOutputFormatter().Format(root);
+        json.Should().Contain("\"value\": 18446744073709551615").And.Contain("\"hex\": \"0xFFFFFFFFFFFFFFFF\"")
+            .And.Contain("\"value\": 9223372036854775808").And.Contain("\"value\": -9223372036854775808");
+        new TreeOutputFormatter().Format(root).Should().Contain("value: 18446744073709551615 (0xFFFFFFFFFFFFFFFF)");
     }
 
     private static IReadOnlyList<DecodedNode> Values(byte[] data) =>

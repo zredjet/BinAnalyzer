@@ -1,3 +1,4 @@
+using BinAnalyzer.Core.Models;
 using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Presentation;
 using FluentAssertions;
@@ -197,6 +198,18 @@ public sealed class NodeDetailFormatterTests
         var details = NodeDetailFormatter.Format(node);
 
         details.Should().ContainRow("Type", "float64");
+    }
+
+    [Fact]
+    public void Format_Uint64AboveInt64_ShowsUnsignedValueAndHex()
+    {
+        // REQ-201
+        var node = new DecodedInteger { Name = "size", Offset = 0, Size = 8, Value = -1, DslType = FieldType.UInt64 };
+
+        var details = NodeDetailFormatter.Format(node);
+
+        details.Should().ContainRow("Value", "18446744073709551615");
+        details.Should().ContainRow("Hex", "0xFFFFFFFFFFFFFFFF");
     }
 
     [Fact]

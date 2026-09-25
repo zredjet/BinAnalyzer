@@ -12,7 +12,7 @@ else
     var (validOk, validNg) = ValidationMarks(node);
     var value = NodeDisplayText.ValueOnly(node);
     var label = node is DecodedInteger { EnumLabel: { } l } ? l : null;
-    if (label is not null) value = ((DecodedInteger)node).Value.ToString();
+    if (label is not null) value = ((DecodedInteger)node).ValueText;
     var name = node is DecodedStruct s && s.StructType != s.Name ? $"{s.Name} → {s.StructType}" : node.Name;
     var meta = $"{node.Offset:X8}"[4..] + "  " + node.Size + " B";
     var id = Row.Id;

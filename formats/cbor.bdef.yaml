@@ -4,7 +4,7 @@
 # 構造: 値の並び（ファイルの中の複数の値を順に読む。CBOR シーケンス RFC 8742）。値は先頭の 1 バイト（主型 3 ビット + 追加情報 5 ビット）と引数
 #   （追加情報が 0〜23 ならその値、24〜27 なら後ろの 1・2・4・8 バイト）で、配列・マップ・タグは中に値を再帰的に持つ。追加情報 31 は不定長（0xFF の break まで）
 # 対応していないもの: 8 バイトの引数の長さのバイト列・文字列（DSL の大きさの上限）、
-#   タグ 24（CBOR の埋め込み）のバイト列の中身の分解・タグ 2 / 3（多倍長整数）の値、2^63 以上の符号なし整数・-2^63 より小さい負の整数（負の値・誤った値で表示）、
+#   タグ 24（CBOR の埋め込み）のバイト列の中身の分解・タグ 2 / 3（多倍長整数）の値、-2^63 より小さい負の整数の値（引数を argument_unsigned として表示する）、
 #   正規形・決定的な符号化かの検査
 name: CBOR
 endianness: big
@@ -159,7 +159,7 @@ structs:
       - name: argument
         type: virtual
         value: "{additional_info < 24 ? additional_info : (additional_info == 24 ? arg8 : (additional_info == 25 and major_type != 7 ? arg16 : (additional_info == 26 and major_type != 7 ? arg32 : (additional_info == 27 and major_type != 7 ? arg64 : 0))))}"
-        description: "引数（整数の値・長さ・要素数・タグの番号）"
+        description: "引数（整数の値・長さ・要素数・タグの番号。式の値なので、8 バイトの引数の 2^63 以上は負の値になる。その値は arg64 を見る）"
       - name: indefinite
         type: virtual
         value: "{additional_info == 31 ? 1 : 0}"
@@ -190,13 +190,27 @@ structs:
     - name: value
       type: virtual
       value: "{argument}"
+      if: "{additional_info != 27}"
       description: "符号なし整数"
+    - name: value
+      type: uint64
+      seek: "{_offset - 8}"
+      seek_restore: true
+      if: "{additional_info == 27}"
+      description: "符号なし整数（8 バイトの引数を uint64 として読み直す。2^63 以上も正の値で表示する）"
 
   cbor_negative:
     - name: value
       type: virtual
       value: "{-1 - argument}"
+      if: "{additional_info != 27 ? 1 : (arg64 >= 0 ? 1 : 0)}"
       description: "負の整数（-1 - 引数）"
+    - name: argument_unsigned
+      type: uint64
+      seek: "{_offset - 8}"
+      seek_restore: true
+      if: "{additional_info != 27 ? 0 : (arg64 < 0 ? 1 : 0)}"
+      description: "引数（2^63 以上。値は -1 - この値 で -2^64 〜 -2^63 - 1 になり、64 ビットの整数に収まらないので値としては表示しない）"
 
   cbor_bytes:
     - name: data

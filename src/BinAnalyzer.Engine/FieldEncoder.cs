@@ -33,8 +33,7 @@ public sealed class FieldEncoder : IFieldEncoder
 
     public string InitialText(DecodedNode node) => node switch
     {
-        DecodedInteger { DslType: FieldType.UInt64 } i => ((ulong)i.Value).ToString(CultureInfo.InvariantCulture),
-        DecodedInteger i => i.Value.ToString(CultureInfo.InvariantCulture),
+        DecodedInteger i => i.ValueText,
         DecodedFloat f => f.Value.ToString("R", CultureInfo.InvariantCulture),
         DecodedString s => s.Value.TrimEnd('\0'),
         DecodedBytes b => FormatHex(b.RawBytes.Span),

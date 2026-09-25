@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Interfaces;
+using BinAnalyzer.Core.Models;
 
 namespace BinAnalyzer.Output;
 
@@ -124,7 +125,11 @@ public sealed class JsonOutputFormatter : IOutputFormatter
         writer.WriteStartObject();
         WriteCommonProperties(writer, node, "integer");
         writer.WriteString("name", node.Name);
-        writer.WriteNumber("value", node.Value);
+        // uint64 などの 2^63 以上の値は符号なしの数値で書く（REQ-201。JavaScript の Number では精度が落ちるので、正確な値は hex を使う）
+        if (IntegerText.IsUnsigned64(node.DslType))
+            writer.WriteNumber("value", (ulong)node.Value);
+        else
+            writer.WriteNumber("value", node.Value);
         writer.WriteString("hex", $"0x{node.Value:X}");
 
         if (node.EnumLabel is not null)
@@ -254,7 +259,7 @@ public sealed class JsonOutputFormatter : IOutputFormatter
         {
             writer.WriteStartObject();
             writer.WriteString("name", field.Name);
-            writer.WriteNumber("value", field.Value);
+            writer.WriteNumber("value", (ulong)field.Value);
             writer.WriteNumber("bit_high", field.BitHigh);
             writer.WriteNumber("bit_low", field.BitLow);
 
