@@ -1012,6 +1012,9 @@ structs:
 | `xxhash64` | 整数系 | 8 bytes (64-bit) | uint64 |
 | `fletcher16` | 整数系 | 2 bytes (16-bit) | uint16 等の整数型 |
 | `fletcher32` | 整数系 | 4 bytes (32-bit) | uint32 等の整数型 |
+| `internet-checksum` | 整数系 | 2 bytes (16-bit) | uint16 等の整数型 |
+| `crc32-ogg` | 整数系 | 4 bytes (32-bit) | uint32 等の整数型 |
+| `sum32-be` | 整数系 | 4 bytes (32-bit) | uint32 等の整数型 |
 | `md5` | ハッシュ系 | 16 bytes | bytes |
 | `sha1` | ハッシュ系 | 20 bytes | bytes |
 | `sha256` | ハッシュ系 | 32 bytes | bytes |
@@ -1020,6 +1023,14 @@ structs:
 <!-- /doc-sync -->
 
 整数系アルゴリズムは整数型フィールドに、ハッシュ系アルゴリズムは bytes 型フィールドに指定します。
+
+語の和や、`crc32` と違うパラメータの CRC を使うアルゴリズム（REQ-199）:
+
+| アルゴリズム | 計算 | 使う例 |
+|---|---|---|
+| `internet-checksum` | RFC 1071。ビッグエンディアンの 16 ビットの語の 1 の補数の和の 1 の補数。長さが奇数なら最後に 0 のバイトを足す | IPv4 のヘッダ・ICMP（`exclude_self: true` でチェックサムの欄を 0 として計算） |
+| `crc32-ogg` | 多項式 0x04C11DB7 を反転せずに使う CRC-32。初期値 0・最後の XOR 無し（`crc32` は反転・初期値 0xFFFFFFFF・最後に反転） | Ogg のページ（`exclude_self: true`） |
+| `sum32-be` | ビッグエンディアンの uint32 の語の合計（2^32 で割った余り）。長さが 4 の倍数でなければ後ろを 0 で埋める | OpenType の表のチェックサム |
 
 表に無いアルゴリズム名（警告 VAL113）や、種類の合わない指定（整数型フィールドにハッシュ系: エラー VAL115 など）は検証されず、✓ も ✗ も表示されません。
 
@@ -1101,7 +1112,30 @@ structs:
     exclude_self: true
 ```
 
-`offset` と `size` には式（`{変数名}` や `{変数 + 4}` 等）を使用できます。デコード時に評価されます。
+`offset` と `size` には式（`{変数名}` や `{変数 + 4}` 等）を使用できます。式はチェックサムのフィールドを読んだ直後に評価されます。`_offset` はそのフィールドの直後の位置、`remaining` はその後ろの残りです（範囲の先頭をフィールドからの距離で書けます）。後ろのフィールドの値は参照できないので、範囲の大きさが後ろのフィールドで決まるときは `seek` + `seek_restore` で先に読んでおきます（REQ-199）。
+
+```yaml
+# Ogg のページの CRC（ページの先頭から 22 バイト目。範囲はこの後ろのセグメント表で決まる）
+- name: peek_num_segments
+  type: uint8
+  seek: "{_offset + 4}"
+  seek_restore: true
+  padding: true
+- name: peek_segment_table
+  type: uint8
+  repeat_count: "{peek_num_segments}"
+  seek: "{_offset + 5}"
+  seek_restore: true
+  padding: true
+- name: crc32
+  type: uint32
+  checksum:
+    algorithm: crc32-ogg
+    range:
+      offset: "{_offset - 26}"
+      size: "{27 + peek_num_segments + sum(peek_segment_table)}"
+    exclude_self: true
+```
 
 **排他制約:**
 - `fields` と `range`/`ranges` は同時に指定できません（VAL018）

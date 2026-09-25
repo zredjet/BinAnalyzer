@@ -34,6 +34,9 @@ public static class ChecksumAlgorithms
     public const string Fletcher32 = "fletcher32";
     public const string Sha384 = "sha384";
     public const string Sha512 = "sha512";
+    public const string InternetChecksum = "internet-checksum";
+    public const string Crc32Ogg = "crc32-ogg";
+    public const string Sum32Be = "sum32-be";
 
     /// <summary>全アルゴリズム（DSL リファレンスの対応アルゴリズム表と同じ順）。</summary>
     public static IReadOnlyList<ChecksumAlgorithmInfo> All { get; } =
@@ -50,6 +53,9 @@ public static class ChecksumAlgorithms
         new(XxHash64, ChecksumKind.Integer, "xxHash64"),
         new(Fletcher16, ChecksumKind.Integer, "Fletcher-16"),
         new(Fletcher32, ChecksumKind.Integer, "Fletcher-32"),
+        new(InternetChecksum, ChecksumKind.Integer, "Internet Checksum"),
+        new(Crc32Ogg, ChecksumKind.Integer, "CRC-32/Ogg"),
+        new(Sum32Be, ChecksumKind.Integer, "Sum-32/BE"),
         new(Md5, ChecksumKind.Hash, "MD5"),
         new(Sha1, ChecksumKind.Hash, "SHA-1"),
         new(Sha256, ChecksumKind.Hash, "SHA-256"),

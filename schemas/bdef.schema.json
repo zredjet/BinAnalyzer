@@ -387,8 +387,8 @@
       "properties": {
         "algorithm": {
           "type": "string",
-          "enum": ["crc32", "crc16-ccitt", "crc16-ibm", "adler32", "crc8", "crc8-maxim", "crc8-cdma2000", "crc64-ecma", "xxhash32", "xxhash64", "fletcher16", "fletcher32", "md5", "sha1", "sha256", "sha384", "sha512"],
-          "description": "チェックサムアルゴリズム。整数系: crc32, crc16-ccitt, crc16-ibm, adler32, crc8, crc8-maxim, crc8-cdma2000, crc64-ecma, xxhash32, xxhash64, fletcher16, fletcher32。ハッシュ系: md5, sha1, sha256, sha384, sha512。"
+          "enum": ["crc32", "crc16-ccitt", "crc16-ibm", "adler32", "crc8", "crc8-maxim", "crc8-cdma2000", "crc64-ecma", "xxhash32", "xxhash64", "fletcher16", "fletcher32", "internet-checksum", "crc32-ogg", "sum32-be", "md5", "sha1", "sha256", "sha384", "sha512"],
+          "description": "チェックサムアルゴリズム。整数系: crc32, crc16-ccitt, crc16-ibm, adler32, crc8, crc8-maxim, crc8-cdma2000, crc64-ecma, xxhash32, xxhash64, fletcher16, fletcher32, internet-checksum（RFC 1071 の 16 ビットの 1 の補数の和の 1 の補数）, crc32-ogg（Ogg のページの CRC-32。多項式 0x04C11DB7・非反転・初期値 0）, sum32-be（ビッグエンディアンの uint32 の合計。4 の倍数に 0 で埋める。OpenType の表のチェックサム）。ハッシュ系: md5, sha1, sha256, sha384, sha512。"
         },
         "fields": {
           "type": "array",

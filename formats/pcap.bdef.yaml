@@ -5,7 +5,7 @@
 # 構造: pcap はファイルヘッダ（マジック・版・スナップ長・リンク層の種類）→ パケット（時刻・キャプチャした長さ・元の長さ + データ）の並び。
 #   マジックでバイト順（0xA1B2C3D4 / 0xD4C3B2A1）と時刻の単位（マイクロ秒 / ナノ秒の 0xA1B23C4D）が決まる。
 #   pcapng はブロック（種類 + 長さ + 中身 + 長さ）の並びで、セクションヘッダ（SHB）のバイト順の印でバイト順が決まり、インタフェースの記述（IDB）がリンク層の種類を持つ
-# 対応していないもの: IPv4・TCP・UDP・ICMP のチェックサムの検証（インターネットチェックサムのアルゴリズムが無い）、IP のフラグメントの再組み立て・TCP のストリームの再構成、
+# 対応していないもの: TCP・UDP・ICMPv6 のチェックサムの検証（擬似ヘッダを含む。IPv4 のヘッダと ICMP のチェックサムは検証する）、IP のフラグメントの再組み立て・TCP のストリームの再構成、
 #   DNS 以外のアプリケーション層（HTTP・TLS・DHCP など。ペイロードはバイト列）と TCP の上の DNS、pcapng の複数のセクションでバイト順が違うファイル（最初の SHB のバイト順で読む）、
 #   複数のインタフェースでリンク層の種類が違う pcapng（最後に読んだ IDB の種類で EPB を分解する）、
 #   pcap の LinkType の上位ビット（FCS の長さ）の分解、802.11・Bluetooth など Ethernet 以外のリンク層の中身（バイト列）、IPv4 のオプションの分解
@@ -828,7 +828,14 @@ structs:
         description: "上位のプロトコル"
       - name: header_checksum
         type: uint16
-        description: "ヘッダのチェックサム（検証しない）"
+        checksum:
+          algorithm: internet-checksum
+          # この欄はヘッダの先頭から 10 バイト目なので、読んだ後の位置の 12 バイト前がヘッダの先頭。キャプチャが途中で切れていれば残りまで
+          range:
+            offset: "{_offset - 12}"
+            size: "{ihl * 4 - 12 <= remaining ? ihl * 4 : remaining + 12}"
+          exclude_self: true
+        description: "ヘッダのチェックサム（RFC 1071 のインターネットチェックサム。この欄を 0 としたヘッダ全体）"
       - name: src_address
         type: uint32
         padding: true
@@ -1023,7 +1030,7 @@ structs:
         description: "受信ウィンドウ（ウィンドウスケールの前の値）"
       - name: checksum
         type: uint16
-        description: "チェックサム（検証しない）"
+        description: "チェックサム（送信元・宛先のアドレスなどの擬似ヘッダを含むので検証しない）"
       - name: urgent_pointer
         type: uint16
         description: "緊急データの終わり（URG のとき）"
@@ -1090,7 +1097,7 @@ structs:
         description: "ヘッダを含むバイト数"
       - name: checksum
         type: uint16
-        description: "チェックサム（0 は無し。検証しない）"
+        description: "チェックサム（0 は無し。送信元・宛先のアドレスなどの擬似ヘッダを含むので検証しない）"
       - name: payload_size
         type: virtual
         value: "{length >= 8 and length - 8 <= remaining ? length - 8 : remaining}"
@@ -1129,7 +1136,19 @@ structs:
         description: "種類ごとの詳細の番号"
       - name: checksum
         type: uint16
-        description: "チェックサム（検証しない）"
+        checksum:
+          algorithm: internet-checksum
+          # この欄はメッセージの先頭から 2 バイト目なので、読んだ後の位置の 4 バイト前がメッセージの先頭。範囲はメッセージの終わりまで
+          range:
+            offset: "{_offset - 4}"
+            size: "{remaining + 4}"
+          exclude_self: true
+        if: "{version == 4}"
+        description: "チェックサム（ICMP。RFC 1071 のインターネットチェックサム。この欄を 0 としたメッセージ全体）"
+      - name: checksum
+        type: uint16
+        if: "{version != 4}"
+        description: "チェックサム（ICMPv6。送信元・宛先のアドレスなどの擬似ヘッダを含むので検証しない）"
       - name: identifier
         type: uint16
         if: "{(icmp_type == 0 or icmp_type == 8 or icmp_type == 128 or icmp_type == 129) and remaining >= 4}"

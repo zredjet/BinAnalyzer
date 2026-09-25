@@ -114,6 +114,38 @@ public class OtfParsingTests
         output.Should().NotContain("sfnt_tag");
     }
 
+    [Fact]
+    public void OtfFormat_TableChecksums_AreVerifiedExceptHead()
+    {
+        var records = Decode(OtfTestDataGenerator.CreateTtfWithTables()).Child("table_records").Elements();
+
+        var checksums = records.ToDictionary(r => r.Child("tag").Str(), r => (DecodedInteger)r.Child("checksum"));
+        checksums.Where(c => c.Key != "head").Should().OnlyContain(c => c.Value.ChecksumValid == true);
+        checksums["maxp"].ChecksumAlgorithm.Should().Be("sum32-be");
+        records.Single(r => r.Child("tag").Str() == "maxp").Child("length").Int().Should().Be(6);   // 4 の倍数でない表
+        checksums["head"].ChecksumValid.Should().BeNull("head は checksumAdjustment を 0 として計算するので検証しない");
+    }
+
+    [Fact]
+    public void OtfFormat_TableChecksum_FailsWhenATableByteChanges()
+    {
+        var data = OtfTestDataGenerator.CreateTtfWithTables();
+        data[Tables(Decode(data))["cmap"].Offset + 5] ^= 0x01;
+
+        var records = Decode(data).Child("table_records").Elements();
+        records.Where(r => ((DecodedInteger)r.Child("checksum")).ChecksumValid == false).Select(r => r.Child("tag").Str()).Should().Equal("cmap");
+    }
+
+    [Fact]
+    public void OtfFormat_Collection_VerifiesTheSharedTablesInEachFont()
+    {
+        var fonts = Decode(OtfTestDataGenerator.CreateTtc()).Child("collection").Child("fonts").Elements();
+
+        fonts.SelectMany(f => f.Child("table_records").Elements())
+            .Where(r => r.Child("tag").Str() != "head")
+            .Should().HaveCount(16).And.OnlyContain(r => ((DecodedInteger)r.Child("checksum")).ChecksumValid == true);
+    }
+
     private static DecodedStruct Decode(byte[] data) =>
         new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(OtfFormatPath));
 

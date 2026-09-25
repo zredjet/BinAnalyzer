@@ -110,15 +110,48 @@
               "value": 0,
               "hex": "0x0"
             },
+            "peek_num_segments": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 26,
+              "size": 1,
+              "description": "\u30BB\u30B0\u30E1\u30F3\u30C8\u8868\u306E\u30A8\u30F3\u30C8\u30EA\u6570\uFF08\u4F5C\u696D\u7528\u3002CRC \u306E\u7BC4\u56F2\u3092\u6C42\u3081\u308B\u305F\u3081\u306E\u5148\u8AAD\u307F\uFF09",
+              "name": "peek_num_segments",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "peek_segment_table": {
+              "_type": "array",
+              "type": "uint8",
+              "offset": 27,
+              "size": 1,
+              "name": "peek_segment_table",
+              "count": 1,
+              "elements": [
+                {
+                  "_type": "integer",
+                  "type": "uint8",
+                  "offset": 27,
+                  "size": 1,
+                  "description": "lacing \u5024\u306E\u4E26\u3073\uFF08\u4F5C\u696D\u7528\u3002CRC \u306E\u7BC4\u56F2\u3092\u6C42\u3081\u308B\u305F\u3081\u306E\u5148\u8AAD\u307F\uFF09",
+                  "name": "peek_segment_table",
+                  "value": 30,
+                  "hex": "0x1E"
+                }
+              ]
+            },
             "crc32": {
               "_type": "integer",
               "type": "uint32",
               "offset": 22,
               "size": 4,
-              "description": "\u30DA\u30FC\u30B8\u306E CRC-32\uFF08\u3053\u306E\u6B04\u3092 0 \u3068\u3057\u305F\u5168\u4F53\u3002\u591A\u9805\u5F0F 0x04C11DB7\u30FB\u975E\u53CD\u8EE2\u3002\u691C\u8A3C\u3057\u306A\u3044\uFF09",
+              "description": "\u30DA\u30FC\u30B8\u306E CRC-32\uFF08\u3053\u306E\u6B04\u3092 0 \u3068\u3057\u305F\u30DA\u30FC\u30B8\u5168\u4F53\u3002\u591A\u9805\u5F0F 0x04C11DB7\u30FB\u975E\u53CD\u8EE2\u30FB\u521D\u671F\u5024 0\uFF09",
               "name": "crc32",
               "value": 0,
-              "hex": "0x0"
+              "hex": "0x0",
+              "checksum_valid": false,
+              "checksum_expected": "0x4544B60F",
+              "checksum_algorithm": "crc32-ogg"
             },
             "num_segments": {
               "_type": "integer",
@@ -417,15 +450,37 @@
               "value": 1,
               "hex": "0x1"
             },
+            "peek_num_segments": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 84,
+              "size": 1,
+              "description": "\u30BB\u30B0\u30E1\u30F3\u30C8\u8868\u306E\u30A8\u30F3\u30C8\u30EA\u6570\uFF08\u4F5C\u696D\u7528\u3002CRC \u306E\u7BC4\u56F2\u3092\u6C42\u3081\u308B\u305F\u3081\u306E\u5148\u8AAD\u307F\uFF09",
+              "name": "peek_num_segments",
+              "value": 1,
+              "hex": "0x1"
+            },
+            "peek_segment_table": {
+              "_type": "array",
+              "type": "uint8",
+              "offset": 85,
+              "size": 0,
+              "name": "peek_segment_table",
+              "count": 0,
+              "elements": []
+            },
             "crc32": {
               "_type": "integer",
               "type": "uint32",
               "offset": 80,
               "size": 4,
-              "description": "\u30DA\u30FC\u30B8\u306E CRC-32\uFF08\u3053\u306E\u6B04\u3092 0 \u3068\u3057\u305F\u5168\u4F53\u3002\u591A\u9805\u5F0F 0x04C11DB7\u30FB\u975E\u53CD\u8EE2\u3002\u691C\u8A3C\u3057\u306A\u3044\uFF09",
+              "description": "\u30DA\u30FC\u30B8\u306E CRC-32\uFF08\u3053\u306E\u6B04\u3092 0 \u3068\u3057\u305F\u30DA\u30FC\u30B8\u5168\u4F53\u3002\u591A\u9805\u5F0F 0x04C11DB7\u30FB\u975E\u53CD\u8EE2\u30FB\u521D\u671F\u5024 0\uFF09",
               "name": "crc32",
               "value": 0,
-              "hex": "0x0"
+              "hex": "0x0",
+              "checksum_valid": false,
+              "checksum_expected": "0x4A1947E",
+              "checksum_algorithm": "crc32-ogg"
             },
             "num_segments": {
               "_type": "integer",

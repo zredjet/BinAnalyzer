@@ -206,6 +206,42 @@ public class PcapParsingTests
     }
 
     [Fact]
+    public void PcapFormat_Ipv4HeaderAndIcmpChecksums_AreVerified()
+    {
+        var root = Decode(PcapTestDataGenerator.CreateEthernetMixPcap());
+
+        var headers = root.FindAll("header_checksum").Cast<DecodedInteger>().ToList();
+        headers.Should().HaveCount(2).And.OnlyContain(h => h.ChecksumValid == true && h.ChecksumAlgorithm == "internet-checksum");
+        var icmp = root.OfStruct("icmp_message").Single().Child("checksum");
+        ((DecodedInteger)icmp).ChecksumValid.Should().BeTrue();
+
+        // TCP・UDP は擬似ヘッダを含むので検証しない
+        root.OfStruct("udp_datagram").Select(u => ((DecodedInteger)u.Child("checksum")).ChecksumValid).Should().OnlyContain(v => v == null);
+    }
+
+    [Fact]
+    public void PcapFormat_ChangedByte_FailsOnlyTheChecksumThatCoversIt()
+    {
+        var data = PcapTestDataGenerator.CreateEthernetMixPcap();
+        var icmp = Decode(data).OfStruct("icmp_message").Single();
+        data[icmp.Child("rest").Offset] ^= 0x01;                               // ICMP のエコーのデータ
+        data[Decode(data).FindAll("ttl").First().Offset] ^= 0x01;              // 1 つ目の IPv4 のヘッダの TTL
+
+        var root = Decode(data);
+        root.FindAll("header_checksum").Select(h => ((DecodedInteger)h).ChecksumValid).Should().Equal(false, true);
+        ((DecodedInteger)root.OfStruct("icmp_message").Single().Child("checksum")).ChecksumValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PcapFormat_Icmpv6Checksum_IsNotVerified()
+    {
+        var icmp6 = Decode(PcapTestDataGenerator.CreateIcmpv6Pcap()).OfStruct("icmp_message").Single();
+
+        icmp6.Child("icmp_type").Int().Should().Be(128);
+        ((DecodedInteger)icmp6.Child("checksum")).ChecksumValid.Should().BeNull();
+    }
+
+    [Fact]
     public void PcapFormat_TreeOutput_ContainsExpectedElements()
     {
         var output = new TreeOutputFormatter().Format(Decode(PcapTestDataGenerator.CreateEthernetMixPcap()));

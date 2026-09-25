@@ -5,8 +5,7 @@
 # 構造: ページ（'OggS' + 版 + フラグ + granule position + シリアル番号 + ページ番号 + CRC + セグメント表 + 中身）の並び。
 #   中身のバイト数はセグメント表（lacing 値）の合計。ページの先頭から始まるパケットを 8 バイト先読みしてコーデックの
 #   ヘッダパケット（Vorbis の識別・コメント、OpusHead・OpusTags、Ogg FLAC、Speex、Theora）を見分け、分解する。
-# 対応していないもの: ページの CRC の検証（Ogg の CRC は多項式 0x04C11DB7 の非反転の CRC-32 で、対応するアルゴリズムが無い）、
-#   パケットへの分割（複数ページにまたがるパケット・1 ページの 2 つ目以降のパケット）、Vorbis の設定ヘッダ・音声パケットの中身、
+# 対応していないもの: パケットへの分割（複数ページにまたがるパケット・1 ページの 2 つ目以降のパケット）、Vorbis の設定ヘッダ・音声パケットの中身、
 #   Skeleton（fishead / fisbone）・Theora の設定ヘッダの分解
 name: OGG
 endianness: little
@@ -68,9 +67,30 @@ structs:
     - name: page_sequence_number
       type: uint32
       description: "論理ストリームの中のページ番号（0 から）"
+    # CRC の範囲（ページ全体）はこの後ろのセグメント表で決まるので、先に覗いておく
+    - name: peek_num_segments
+      type: uint8
+      seek: "{_offset + 4}"
+      seek_restore: true
+      padding: true
+      description: "セグメント表のエントリ数（作業用。CRC の範囲を求めるための先読み）"
+    - name: peek_segment_table
+      type: uint8
+      repeat_count: "{peek_num_segments <= remaining - 5 ? peek_num_segments : 0}"
+      seek: "{_offset + 5}"
+      seek_restore: true
+      padding: true
+      description: "lacing 値の並び（作業用。CRC の範囲を求めるための先読み）"
     - name: crc32
       type: uint32
-      description: "ページの CRC-32（この欄を 0 とした全体。多項式 0x04C11DB7・非反転。検証しない）"
+      checksum:
+        algorithm: crc32-ogg
+        # この欄はページの先頭から 22 バイト目なので、読んだ後の位置の 26 バイト前がページの先頭。ファイルが途中で切れていれば残りまで
+        range:
+          offset: "{_offset - 26}"
+          size: "{1 + peek_num_segments + sum(peek_segment_table) <= remaining ? 27 + peek_num_segments + sum(peek_segment_table) : remaining + 26}"
+        exclude_self: true
+      description: "ページの CRC-32（この欄を 0 としたページ全体。多項式 0x04C11DB7・非反転・初期値 0）"
     - name: num_segments
       type: uint8
       description: "セグメント表のエントリ数"

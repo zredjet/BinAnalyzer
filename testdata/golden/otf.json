@@ -103,12 +103,32 @@
               "value": "head",
               "encoding": "ascii"
             },
+            "peek_offset": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 20,
+              "size": 4,
+              "description": "\u8868\u306E\u4F4D\u7F6E\uFF08\u4F5C\u696D\u7528\u3002\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u306E\u7BC4\u56F2\u3092\u6C42\u3081\u308B\u305F\u3081\u306E offset \u306E\u5148\u8AAD\u307F\uFF09",
+              "name": "peek_offset",
+              "value": 28,
+              "hex": "0x1C"
+            },
+            "peek_length": {
+              "_type": "integer",
+              "type": "uint32",
+              "offset": 24,
+              "size": 4,
+              "description": "\u8868\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4F5C\u696D\u7528\u3002\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u306E\u7BC4\u56F2\u3092\u6C42\u3081\u308B\u305F\u3081\u306E length \u306E\u5148\u8AAD\u307F\uFF09",
+              "name": "peek_length",
+              "value": 54,
+              "hex": "0x36"
+            },
             "checksum": {
               "_type": "integer",
               "type": "uint32",
               "offset": 16,
               "size": 4,
-              "description": "\u8868\u306E\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08uint32 \u306E\u5408\u8A08\u3002\u691C\u8A3C\u3057\u306A\u3044\uFF09",
+              "description": "\u8868\u306E\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08head \u306F checksumAdjustment \u3092 0 \u3068\u3057\u3066\u8A08\u7B97\u3059\u308B\u306E\u3067\u691C\u8A3C\u3057\u306A\u3044\uFF09",
               "name": "checksum",
               "value": 0,
               "hex": "0x0"

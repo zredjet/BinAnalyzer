@@ -29,6 +29,9 @@ public static class ChecksumCalculators
             [ChecksumAlgorithms.XxHash64] = d => (long)XxHashCalculator.ComputeXxHash64(d),
             [ChecksumAlgorithms.Fletcher16] = d => FletcherCalculator.ComputeFletcher16(d),
             [ChecksumAlgorithms.Fletcher32] = d => FletcherCalculator.ComputeFletcher32(d),
+            [ChecksumAlgorithms.InternetChecksum] = d => SumChecksumCalculator.ComputeInternet(d),
+            [ChecksumAlgorithms.Crc32Ogg] = d => Crc32Calculator.ComputeOgg(d),
+            [ChecksumAlgorithms.Sum32Be] = d => SumChecksumCalculator.ComputeSum32BigEndian(d),
         };
 
     public static IReadOnlyDictionary<string, HashChecksum> Hash { get; } =

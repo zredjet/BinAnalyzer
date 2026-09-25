@@ -71,6 +71,25 @@ public class OggParsingTests
         ((DecodedInteger)Child(last, "granule_position")).Value.Should().Be(960);
     }
 
+    [Fact]
+    public void OggFormat_PageCrc_IsVerified()
+    {
+        var pages = Pages(Decode(OggTestDataGenerator.CreateOpusOgg()));
+
+        pages.Select(p => ((DecodedInteger)Child(p, "crc32")).ChecksumValid).Should().Equal(true, true, true);
+        ((DecodedInteger)Child(pages[0], "crc32")).ChecksumAlgorithm.Should().Be("crc32-ogg");
+    }
+
+    [Fact]
+    public void OggFormat_PageCrc_FailsWhenABodyByteChanges()
+    {
+        var data = OggTestDataGenerator.CreateOpusOgg();
+        var second = Pages(Decode(data))[1];
+        data[Child(second, "page_data").Offset + 3] ^= 0x01;   // 2 ページ目の OpusTags の中身
+
+        Pages(Decode(data)).Select(p => ((DecodedInteger)Child(p, "crc32")).ChecksumValid).Should().Equal(true, false, true);
+    }
+
     private static DecodedStruct Decode(byte[] data) =>
         new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(OggFormatPath));
 
