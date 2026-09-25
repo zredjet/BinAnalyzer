@@ -103,7 +103,7 @@ public sealed class CsvOutputFormatter : IOutputFormatter
     {
         DecodedInteger intNode => ("integer", intNode.Value.ToString()),
         DecodedString strNode => ("string", strNode.Value),
-        DecodedFloat floatNode => (floatNode.IsSinglePrecision ? "float32" : "float64", floatNode.Value.ToString("G")),
+        DecodedFloat floatNode => (floatNode.FloatTypeName, floatNode.Value.ToString("G")),
         DecodedBytes bytesNode => ("bytes", FormatBytes(bytesNode.RawBytes)),
         DecodedBitfield bitfieldNode => ("bitfield", $"0x{bitfieldNode.RawValue:X}"),
         DecodedFlags flagsNode => ("flags", $"0x{flagsNode.RawValue:X}"),

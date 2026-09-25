@@ -162,8 +162,10 @@ public sealed class NodeDisplayTextTests
     [Fact]
     public void TypeLabel_Float_String_Flags_Array_UseDslType()
     {
-        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0, IsSinglePrecision = true, DslType = FieldType.Float32 }).Should().Be("f32");
-        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 8, Value = 0, IsSinglePrecision = false }).Should().Be("float64");
+        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0, Precision = FloatPrecision.Single, DslType = FieldType.Float32 }).Should().Be("f32");
+        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 8, Value = 0, Precision = FloatPrecision.Double }).Should().Be("float64");
+        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 2, Value = 0, Precision = FloatPrecision.Half, DslType = FieldType.Float16 }).Should().Be("f16");
+        NodeDisplayText.TypeLabel(new DecodedFloat { Name = "f", Offset = 0, Size = 2, Value = 0, Precision = FloatPrecision.Half }).Should().Be("float16");
         NodeDisplayText.TypeLabel(new DecodedString { Name = "s", Offset = 0, Size = 6, Value = "ab", Encoding = "utf16le", DslType = FieldType.Utf16Le }).Should().Be("utf16le[6]");
         NodeDisplayText.TypeLabel(new DecodedString { Name = "s", Offset = 0, Size = 5, Value = "abcd", Encoding = "asciiz", DslType = FieldType.AsciiZ }).Should().Be("asciiz[5]");
         NodeDisplayText.TypeLabel(new DecodedFlags { Name = "fl", Offset = 0, Size = 4, RawValue = 1, FlagStates = [], DslType = FieldType.UInt32 }).Should().Be("u32 (flags)");

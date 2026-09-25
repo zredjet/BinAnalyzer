@@ -369,6 +369,17 @@ public sealed class DecodeContext
         return result;
     }
 
+    public Half ReadFloat16()
+    {
+        EnsureAvailable(2);
+        var span = _data.Span.Slice(_position, 2);
+        var value = Endianness == Endianness.Big
+            ? BinaryPrimitives.ReadHalfBigEndian(span)
+            : BinaryPrimitives.ReadHalfLittleEndian(span);
+        _position += 2;
+        return value;
+    }
+
     public float ReadFloat32()
     {
         EnsureAvailable(4);

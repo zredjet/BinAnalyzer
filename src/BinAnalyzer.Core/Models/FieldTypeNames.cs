@@ -26,6 +26,7 @@ public static class FieldTypeNames
         FieldType.Latin1 => "latin1",
         FieldType.AsciiZ => "asciiz",
         FieldType.Utf8Z => "utf8z",
+        FieldType.Float16 => "float16",
         FieldType.Float32 => "float32",
         FieldType.Float64 => "float64",
         FieldType.Struct => "struct",
@@ -45,7 +46,7 @@ public static class FieldTypeNames
         _ => type.ToString().ToLowerInvariant(),
     };
 
-    /// <summary>表示用の短いラベル。整数は <c>u32</c> / <c>i16</c>、浮動小数点は <c>f32</c> / <c>f64</c>、それ以外は正規名。</summary>
+    /// <summary>表示用の短いラベル。整数は <c>u32</c> / <c>i16</c>、浮動小数点は <c>f16</c> / <c>f32</c> / <c>f64</c>、それ以外は正規名。</summary>
     public static string ShortLabel(FieldType type) => type switch
     {
         FieldType.UInt8 => "u8",
@@ -56,6 +57,7 @@ public static class FieldTypeNames
         FieldType.Int16 => "i16",
         FieldType.Int32 => "i32",
         FieldType.Int64 => "i64",
+        FieldType.Float16 => "f16",
         FieldType.Float32 => "f32",
         FieldType.Float64 => "f64",
         _ => ToDslName(type),
@@ -83,6 +85,7 @@ public static class FieldTypeNames
             "latin1" or "iso-8859-1" => FieldType.Latin1,
             "asciiz" => FieldType.AsciiZ,
             "utf8z" => FieldType.Utf8Z,
+            "float16" or "f16" => FieldType.Float16,
             "float32" or "f32" => FieldType.Float32,
             "float64" or "f64" => FieldType.Float64,
             "struct" => FieldType.Struct,

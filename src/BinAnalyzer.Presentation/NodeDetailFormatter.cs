@@ -47,7 +47,7 @@ public static class NodeDetailFormatter
                 break;
 
             case DecodedFloat floatNode:
-                details.Add(new("Type", floatNode.TypeName ?? (floatNode.IsSinglePrecision ? "float32" : "float64")));
+                details.Add(new("Type", floatNode.TypeName ?? floatNode.FloatTypeName));
                 details.Add(new("Value", floatNode.Value.ToString("G"), DetailRowKind.Mono));
                 break;
 

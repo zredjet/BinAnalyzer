@@ -173,7 +173,7 @@ public sealed class NodeDetailFormatterTests
             Offset = 0,
             Size = 4,
             Value = 3.14,
-            IsSinglePrecision = true,
+            Precision = FloatPrecision.Single,
         };
 
         var details = NodeDetailFormatter.Format(node);
@@ -191,12 +191,24 @@ public sealed class NodeDetailFormatterTests
             Offset = 0,
             Size = 8,
             Value = 3.14,
-            IsSinglePrecision = false,
+            Precision = FloatPrecision.Double,
         };
 
         var details = NodeDetailFormatter.Format(node);
 
         details.Should().ContainRow("Type", "float64");
+    }
+
+    [Fact]
+    public void Format_Float16_ReturnsFloat16Type()
+    {
+        // REQ-200: DslType が無くても精度から型名を出す
+        var node = new DecodedFloat { Name = "h", Offset = 0, Size = 2, Value = 65504, Precision = FloatPrecision.Half };
+
+        var details = NodeDetailFormatter.Format(node);
+
+        details.Should().ContainRow("Type", "float16");
+        details.Should().ContainRow("Value", "65504");
     }
 
     [Fact]

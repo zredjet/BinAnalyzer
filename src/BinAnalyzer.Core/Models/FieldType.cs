@@ -19,6 +19,7 @@ public enum FieldType
     Latin1,
     AsciiZ,
     Utf8Z,
+    Float16,
     Float32,
     Float64,
     Struct,

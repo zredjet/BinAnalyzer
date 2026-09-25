@@ -2,6 +2,7 @@ using BinAnalyzer.Core.Decoded;
 using BinAnalyzer.Core.Validation;
 using BinAnalyzer.Dsl;
 using BinAnalyzer.Engine;
+using BinAnalyzer.Output;
 using FluentAssertions;
 using Xunit;
 
@@ -38,8 +39,8 @@ public class CborParsingTests
 
         values.Should().HaveCount(33);
         values.Take(8).Should().Equal(0L, 23L, 24L, 1000L, 1000000L, 1000000000000L, -1L, -1000L);
-        values[8].Should().Be("half(0, 15, 0)");                 // 1.0
-        values[9].Should().Be("half(1, 17, 0)");                 // -4.0
+        values[8].Should().Be(1.0);                              // 半精度（f9 3c00）
+        values[9].Should().Be(-4.0);                             // 半精度（f9 c400）
         values[10].Should().Be(100000.0);
         values[11].Should().Be(1.1);
         values.Skip(12).Take(5).Should().Equal("false", "true", "null", "undefined", "simple(24)");
@@ -51,6 +52,43 @@ public class CborParsingTests
         values.Skip(22).Take(4).Should().Equal("h'01020304'", "IETF", "ü", "𐅑");
         values[26].Should().Be("[1, [2, 3], [4, 5]]");
         values[27].Should().Be("{a: 1, b: [2, 3]}");
+    }
+
+    [Fact]
+    public void CborFormat_Rfc8949HalfFloatExamples_AreDecodedAsValues()
+    {
+        var floats = Values(CborTestDataGenerator.CreateCborHalfFloatExamples())
+            .Select(v => (DecodedFloat)v.Child("content").Child("float16_value")).ToList();
+
+        floats.Should().OnlyContain(f => f.Precision == FloatPrecision.Half && f.Size == 2);
+        floats.Select(f => f.Value).Should().Equal(
+            0.0, -0.0, 1.0, 1.5, 65504.0, 5.960464477539063e-8, 0.00006103515625, -4.0,
+            double.PositiveInfinity, double.NaN, double.NegativeInfinity);
+        double.IsNegative(floats[1].Value).Should().BeTrue("-0.0 の符号を保つ");
+    }
+
+    [Fact]
+    public void CborFormat_HalfFloat_IsShownAsFloat16InTheOutputs()
+    {
+        var root = new BinaryDecoder().Decode(CborTestDataGenerator.CreateCborHalfFloatExamples(), new YamlFormatLoader().Load(CborFormatPath));
+
+        var json = new JsonOutputFormatter().Format(root);
+        json.Should().Contain("\"type\": \"float16\"");
+        json.Should().Contain("65504");
+        // ツリーの数値は現在のカルチャで書く（ja-JP の無限大は「∞」、インバリアントは「Infinity」）ので、カルチャを固定して確かめる
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        string tree;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+            tree = new TreeOutputFormatter().Format(root);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+        tree.Should().Contain("float16_value: 65504").And.Contain("float16_value: -Infinity").And.Contain("float16_value: NaN");
+        new CsvOutputFormatter().Format(root).Should().Contain("float16");
     }
 
     [Fact]
@@ -89,8 +127,6 @@ public class CborParsingTests
             default:
                 if (content.Children.FirstOrDefault(c => c.Name == "simple") is DecodedVirtual simple)
                     return simple.EnumLabel ?? $"simple({simple.Value})";
-                if (content.Children.FirstOrDefault(c => c.Name == "half_float") is DecodedBitfield half)
-                    return $"half({string.Join(", ", half.Fields.Select(f => f.Value))})";
                 return ((DecodedFloat)content.Children.First(c => c is DecodedFloat)).Value;
         }
     }

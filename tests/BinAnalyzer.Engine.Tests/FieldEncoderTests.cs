@@ -68,8 +68,8 @@ public class FieldEncoderTests
     [Fact]
     public void Encode_Float32_BigAndLittle()
     {
-        var big = new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0, IsSinglePrecision = true, DslType = FieldType.Float32, Endianness = Endianness.Big };
-        var little = new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0, IsSinglePrecision = true, DslType = FieldType.Float32, Endianness = Endianness.Little };
+        var big = new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0, Precision = FloatPrecision.Single, DslType = FieldType.Float32, Endianness = Endianness.Big };
+        var little = new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0, Precision = FloatPrecision.Single, DslType = FieldType.Float32, Endianness = Endianness.Little };
         FieldEncoder.Instance.Encode(big, "1.5").Bytes.Should().Equal(new byte[] { 0x3F, 0xC0, 0, 0 });
         FieldEncoder.Instance.Encode(little, "1.5").Bytes.Should().Equal(new byte[] { 0, 0, 0xC0, 0x3F });
         FieldEncoder.Instance.Encode(big, "1e40").IsSuccess.Should().BeFalse("float32 の範囲外");
@@ -79,7 +79,7 @@ public class FieldEncoderTests
     [Fact]
     public void Encode_Float64_LittleEndian()
     {
-        var node = new DecodedFloat { Name = "f", Offset = 0, Size = 8, Value = 0, IsSinglePrecision = false, DslType = FieldType.Float64, Endianness = Endianness.Little };
+        var node = new DecodedFloat { Name = "f", Offset = 0, Size = 8, Value = 0, Precision = FloatPrecision.Double, DslType = FieldType.Float64, Endianness = Endianness.Little };
         FieldEncoder.Instance.Encode(node, "1.0").Bytes.Should().Equal(BitConverter.GetBytes(1.0));
     }
 
@@ -145,7 +145,7 @@ public class FieldEncoderTests
     {
         FieldEncoder.Instance.InitialText(Int(FieldType.Int16, 2, value: -5)).Should().Be("-5");
         FieldEncoder.Instance.InitialText(Int(FieldType.UInt64, 8, value: -1)).Should().Be("18446744073709551615");
-        FieldEncoder.Instance.InitialText(new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0.5, IsSinglePrecision = true }).Should().Be("0.5");
+        FieldEncoder.Instance.InitialText(new DecodedFloat { Name = "f", Offset = 0, Size = 4, Value = 0.5, Precision = FloatPrecision.Single }).Should().Be("0.5");
         FieldEncoder.Instance.InitialText(new DecodedString { Name = "s", Offset = 0, Size = 4, Value = "AB\0\0", Encoding = "ascii" }).Should().Be("AB");
         FieldEncoder.Instance.InitialText(new DecodedBytes { Name = "b", Offset = 0, Size = 2, RawBytes = new byte[] { 0xAB, 0x01 } }).Should().Be("AB 01");
     }

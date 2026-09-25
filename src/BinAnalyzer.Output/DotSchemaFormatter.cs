@@ -132,6 +132,7 @@ public class DotSchemaFormatter : ISchemaFormatter
             FieldType.Latin1 => "latin1",
             FieldType.AsciiZ => "asciiz",
             FieldType.Utf8Z => "utf8z",
+            FieldType.Float16 => "float16",
             FieldType.Float32 => "float32",
             FieldType.Float64 => "float64",
             FieldType.Struct => "struct",

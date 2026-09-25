@@ -31,7 +31,7 @@ public static class FormatCatalog
         // CreateMinimalAvi は avih を 52 バイトに切り詰めた「わざと不完全な」サンプルなので、完全なものだけを種にする
         ["avi.bdef.yaml"] = [AviTestDataGenerator.CreateAviWithStreamAndIndex, AviTestDataGenerator.CreateAviWithVideoStreamFormat, AviTestDataGenerator.CreateAviWithAudioStreamFormat, AviTestDataGenerator.CreateOpenDmlAvi],
         ["bmp.bdef.yaml"] = [BmpTestDataGenerator.CreateMinimalBmp, BmpTestDataGenerator.CreateV5HeaderWithPalette],
-        ["cbor.bdef.yaml"] = [CborTestDataGenerator.CreateMinimalCbor, CborTestDataGenerator.CreateCborRfc8949Examples],
+        ["cbor.bdef.yaml"] = [CborTestDataGenerator.CreateMinimalCbor, CborTestDataGenerator.CreateCborRfc8949Examples, CborTestDataGenerator.CreateCborHalfFloatExamples],
         ["dns.bdef.yaml"] = [DnsTestDataGenerator.CreateMinimalDns, DnsTestDataGenerator.CreateDnsResponse],
         ["elf.bdef.yaml"] = [ElfTestDataGenerator.CreateMinimalElf64, ElfTestDataGenerator.CreateMinimalElf64BigEndian, ElfTestDataGenerator.CreateElf64WithSections],
         ["fat.bdef.yaml"] = [FatTestDataGenerator.CreateMinimalFat16Image, FatTestDataGenerator.CreateMinimalFat32Image, FatTestDataGenerator.CreateFat12ImageWithLongNames],
