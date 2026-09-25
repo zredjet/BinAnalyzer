@@ -59,7 +59,7 @@ dotnet run --project src/BinAnalyzer.Cli -- broken.bin -f formats/png.bdef.yaml 
 
 検証の診断には定義元の位置が付きます（例: `エラー [VAL002]: ... (isobmff.bdef.yaml:9)`。インポートされた struct はインポート先のファイル名と行）。JSON 形式（`--error-format json`、`validate --format json`）では `file` / `line` として出ます。
 
-このほかエンジンには壊れた入力向けの固定の防御があります（REQ-160）: struct / switch の入れ子は 64 段で打ち切り（API では `DecodeOptions.MaxDepth` で変更可）、サイズ・オフセット式が 0〜2^31-1 の範囲外ならデコードエラー、エラー継続モードで位置が進まない要素は繰り返しを打ち切ります。
+このほかエンジンには壊れた入力向けの固定の防御があります（REQ-160）: struct / switch の入れ子は 64 段で打ち切り（API では `DecodeOptions.MaxDepth` で変更可）、サイズ・オフセット式が 0〜2^31-1 の範囲外ならデコードエラー、エラー継続モードで位置が進まない要素は繰り返しを打ち切ります。0 バイトで成功する要素が 65536 個続いた繰り返しも打ち切ります（REQ-197。API では `DecodeOptions.MaxZeroLengthElements` で変更可）。
 
 ```bash
 # 繰り返しを最大1000要素に制限

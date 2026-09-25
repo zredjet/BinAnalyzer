@@ -24,6 +24,10 @@ public sealed class BinaryDecoder : IBinaryDecoder
     /// Windows のメインスレッドや スレッドプールのスタックは 1 MB なので、余裕を見て 64 にしている。実在のフォーマットで 20 段を超えることはまず無い。
     /// </summary>
     public const int DefaultMaxDepth = 64;
+
+    /// <summary>0 バイトで成功した要素がこの数だけ続いたら繰り返しを打ち切る（REQ-197）。SQLite の列数の上限（32767）より大きい。</summary>
+    public const int DefaultMaxZeroLengthElements = 65536;
+    private int _maxZeroLengthElements = DefaultMaxZeroLengthElements;
     private int _maxDepth = DefaultMaxDepth;
     private int _depth;
 
@@ -36,6 +40,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errors = null;
         _globalMaxRepeat = options?.MaxRepeat;
         _maxDepth = options?.MaxDepth ?? DefaultMaxDepth;
+        _maxZeroLengthElements = options?.MaxZeroLengthElements ?? DefaultMaxZeroLengthElements;
         _depth = 0;
         var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
@@ -49,6 +54,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
         _errors = errorMode == ErrorMode.Continue ? new List<DecodeError>() : null;
         _globalMaxRepeat = options?.MaxRepeat;
         _maxDepth = options?.MaxDepth ?? DefaultMaxDepth;
+        _maxZeroLengthElements = options?.MaxZeroLengthElements ?? DefaultMaxZeroLengthElements;
         _depth = 0;
         var context = new DecodeContext(data, options?.Endianness ?? format.Endianness);
         var rootStruct = format.Structs[format.RootStruct];
@@ -929,6 +935,7 @@ public sealed class BinaryDecoder : IBinaryDecoder
             ? ExpressionEvaluator.EvaluateAsLong(field.RepeatErrorLimit, context)
             : null;
         var consecutiveErrors = 0;
+        var consecutiveZeroLength = 0;
         var truncated = false;
         string? truncationReason = null;
 
@@ -1026,6 +1033,22 @@ public sealed class BinaryDecoder : IBinaryDecoder
                                 truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
                                 break;
                             }
+
+                            // 0 バイトで成功する要素が壊れた要素数だけ続くと終わらないので、連続した数で打ち切る（REQ-197）。
+                            // 要素ごとの seek は位置が要素ごとに決まるので対象外
+                            if (!perElementSeek && context.Position == posBeforeElement)
+                            {
+                                if (++consecutiveZeroLength >= _maxZeroLengthElements)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"{_maxZeroLengthElements} consecutive elements consumed 0 bytes at offset 0x{posBeforeElement:X}";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                consecutiveZeroLength = 0;
+                            }
                         }
                     }
                     finally
@@ -1112,6 +1135,22 @@ public sealed class BinaryDecoder : IBinaryDecoder
                                 truncated = true;
                                 truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
                                 break;
+                            }
+
+                            // 0 バイトで成功する要素が壊れた要素数だけ続くと終わらないので、連続した数で打ち切る（REQ-197）。
+                            // 要素ごとの seek は位置が要素ごとに決まるので対象外
+                            if (!perElementSeek && context.Position == posBeforeElement)
+                            {
+                                if (++consecutiveZeroLength >= _maxZeroLengthElements)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"{_maxZeroLengthElements} consecutive elements consumed 0 bytes at offset 0x{posBeforeElement:X}";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                consecutiveZeroLength = 0;
                             }
                         }
                     }
@@ -1206,6 +1245,22 @@ public sealed class BinaryDecoder : IBinaryDecoder
                                 truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
                                 break;
                             }
+
+                            // 0 バイトで成功する要素が壊れた要素数だけ続くと終わらないので、連続した数で打ち切る（REQ-197）。
+                            // 要素ごとの seek は位置が要素ごとに決まるので対象外
+                            if (!perElementSeek && context.Position == posBeforeElement)
+                            {
+                                if (++consecutiveZeroLength >= _maxZeroLengthElements)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"{_maxZeroLengthElements} consecutive elements consumed 0 bytes at offset 0x{posBeforeElement:X}";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                consecutiveZeroLength = 0;
+                            }
                         }
                     }
                     finally
@@ -1289,6 +1344,22 @@ public sealed class BinaryDecoder : IBinaryDecoder
                                 truncated = true;
                                 truncationReason = $"no progress at offset 0x{posBeforeElement:X} (element consumed 0 bytes)";
                                 break;
+                            }
+
+                            // 0 バイトで成功する要素が壊れた要素数だけ続くと終わらないので、連続した数で打ち切る（REQ-197）。
+                            // 要素ごとの seek は位置が要素ごとに決まるので対象外
+                            if (!perElementSeek && context.Position == posBeforeElement)
+                            {
+                                if (++consecutiveZeroLength >= _maxZeroLengthElements)
+                                {
+                                    truncated = true;
+                                    truncationReason = $"{_maxZeroLengthElements} consecutive elements consumed 0 bytes at offset 0x{posBeforeElement:X}";
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                consecutiveZeroLength = 0;
                             }
                         }
                     }

@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |---|---|
-| ステータス | draft |
+| ステータス | done |
 | 優先度 | 中 |
 | 依存 | なし（REQ-160 の壊れた入力への防御の続き） |
 | 作成日 | 2026-09-25 |
@@ -25,9 +25,9 @@ REQ-188 の Parquet の見直しで、ファズ（変異した入力）がタイ
 
 ### 変更する既存機能
 
-- [ ] **0 バイトの要素が一定数続いたら、繰り返しを打ち切る**（`repeat_count` / `repeat: eof` / `repeat_until` / `repeat_while`）。打ち切った配列は既存のガードと同じく `truncated` と理由を持つ
-- [ ] 上限の既定値と、`DecodeOptions`（と CLI）で変える手段を設計で決める
-- [ ] 要素ごとの seek（`_index` を使う seek）の要素は対象外（位置は要素ごとに決まるので「進まない」とは言えない）
+- [x] **0 バイトの要素が一定数続いたら、繰り返しを打ち切る**（`repeat_count` / `repeat: eof` / `repeat_until` / `repeat_while`）。打ち切った配列は既存のガードと同じく `truncated` と理由を持つ
+- [x] 上限の既定値（65536）と、`DecodeOptions.MaxZeroLengthElements` で変える手段
+- [x] 要素ごとの seek（`_index` を使う seek）の要素は対象外（位置は要素ごとに決まるので「進まない」とは言えない）
 
 ### 変更しないもの（スコープ外）
 
@@ -36,12 +36,12 @@ REQ-188 の Parquet の見直しで、ファズ（変異した入力）がタイ
 
 ## 受入条件
 
-1. [ ] 0 バイトで成功する要素の `repeat_count: "{2000000000}"` が、上限の数で打ち切られ、`truncated` と理由を持つこと
-2. [ ] 上限より少ない 0 バイトの要素の繰り返し（SQLite の NULL の列が数十個など）は、打ち切られないこと
-3. [ ] 0 バイトの要素と 1 バイト以上の要素が交互なら、打ち切られないこと（連続した数で数える）
-4. [ ] 要素ごとの seek の繰り返しは対象外であること
-5. [ ] 同梱定義のゴールデンが変わらないこと
-6. [ ] 既存テストが全て通過すること（`dotnet test` 全通過。ファズを含む）
+1. [x] 0 バイトで成功する要素の `repeat_count: "{2000000000}"` が、上限の数で打ち切られ、`truncated` と理由を持つこと
+2. [x] 上限より少ない 0 バイトの要素の繰り返し（SQLite の NULL の列が数十個など）は、打ち切られないこと
+3. [x] 0 バイトの要素と 1 バイト以上の要素が交互なら、打ち切られないこと（連続した数で数える）
+4. [x] 要素ごとの seek の繰り返しは対象外であること
+5. [x] 同梱定義のゴールデンが変わらないこと
+6. [x] 既存テストが全て通過すること（`dotnet test` 全通過。ファズを含む）
 
 ## 影響範囲
 
@@ -49,22 +49,22 @@ REQ-188 の Parquet の見直しで、ファズ（変異した入力）がタイ
 
 | プロジェクト | 変更内容の概要 |
 |---|---|
-| BinAnalyzer.Core | `DecodeOptions` に上限（案: `MaxZeroLengthElements`） |
-| BinAnalyzer.Engine | `DecodeRepeatedField` の 4 つの繰り返しで、連続した 0 バイトの要素を数える |
-| BinAnalyzer.Cli | 上限を変えるオプション（必要なら） |
-| tests/BinAnalyzer.Engine.Tests | 打ち切りのテスト |
+| BinAnalyzer.Core | `DecodeOptions.MaxZeroLengthElements` |
+| BinAnalyzer.Engine | `DecodeRepeatedField` の 4 つの繰り返しで、連続した 0 バイトの要素を数える（`BinaryDecoder.DefaultMaxZeroLengthElements`） |
+| BinAnalyzer.Cli | 変更なし（実装メモ参照） |
+| tests/BinAnalyzer.Engine.Tests | `ZeroLengthRepeatGuardTests` |
 
 ### 変更が必要なドキュメント
 
-- [ ] docs/dsl-reference.md — 「繰り返しのガード条件」
-- [ ] docs/cli-usage.md — 壊れた入力向けの防御の説明
-- [ ] docs/architecture.md — 「壊れた入力への防御」
+- [x] docs/dsl-reference.md — 「繰り返しのガード条件」
+- [x] docs/cli-usage.md — 壊れた入力向けの防御の説明
+- [x] docs/architecture.md — 「壊れた入力への防御」
 
 ---
 
 ## 設計メモ
 
-### 設計方針（案）
+### 設計方針
 
 - 既定の上限は、正しいファイルで起きない大きさにする。SQLite の列数の上限（既定 2000、最大 32767）を超える 65536 など
 - 数えるのは「連続した 0 バイトの要素」。1 バイト以上の要素で数え直す
@@ -73,3 +73,25 @@ REQ-188 の Parquet の見直しで、ファズ（変異した入力）がタイ
 
 - **`repeat_count` の既定の上限を残りのバイト数にする**: 0 バイトの要素が正しく並ぶ定義（virtual だけの struct の配列など）が壊れる。不採用
 - **`--max-repeat` の既定値を付ける**: 正しい大きなファイル（数百万パケットの pcap）で打ち切ってしまう。不採用
+
+---
+
+## 実装メモ
+
+### 実装中の設計変更
+
+- 既存の「位置が進まないエラー要素で打ち切る」ガードの直後に、同じ条件（要素ごとの seek でない・位置が進んでいない）で連続した数を数える形にした。エラーの要素は既存のガードが 1 個で打ち切るので、数えるのは成功した 0 バイトの要素になる。エラー回復（`resync_marker`）の経路は既存の扱いのまま
+- 打ち切りの理由は `65536 consecutive elements consumed 0 bytes at offset 0x…`（既存の `no progress at offset …` と同じ書き方）
+- **`repeat: eof` / `repeat_until` / `repeat_while` も、今までは 0 バイトの要素で終わらなかった**（`repeat: eof` は位置が末尾に届かず、`repeat_until` / `repeat_while` は条件が変わらない限り回り続けた）。同じガードで止まる
+- CLI のオプションは足さなかった。正しいファイルで上限に達する例が無く、変える場面は API の利用者（テストなど）に限られるため。必要になれば `--max-repeat` と並べて足す
+
+### 追加したテスト
+
+| テストクラス | テスト名 | 対応する受入条件 |
+|---|---|---|
+| ZeroLengthRepeatGuardTests | ZeroLengthElements_WithAHugeCount_AreTruncatedAtTheDefaultLimit | 1 |
+| ZeroLengthRepeatGuardTests | ZeroLengthElements_InOtherRepeatModes_AreTruncated（eof・until・while） | 機能要件（全繰り返しモード） |
+| ZeroLengthRepeatGuardTests | ZeroLengthElements_BelowTheLimit_AreNotTruncated | 2 |
+| ZeroLengthRepeatGuardTests | AlternatingZeroLengthAndReadingElements_AreNotTruncated | 3 |
+| ZeroLengthRepeatGuardTests | PerElementSeek_IsNotCounted | 4 |
+
