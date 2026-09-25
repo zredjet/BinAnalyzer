@@ -29,7 +29,7 @@ public class FlacParsingTests
 
         decoded.Name.Should().Be("FLAC");
         // 音声フレームが無いので first_frame_header は無い
-        decoded.Children.Select(c => c.Name).Should().Equal("file_size", "magic", "metadata_blocks", "frames");
+        decoded.Children.Select(c => c.Name).Should().Equal("magic", "metadata_blocks", "frames");
         Child(decoded, "frames").Size.Should().Be(0);
     }
 

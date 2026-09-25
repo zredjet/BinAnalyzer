@@ -683,9 +683,9 @@ structs:
       size: "8"
       description: "フッタのバイト数と末尾のマジック"
 
-  # Thrift の構造体。エンディアンを書いた形にして独自の変数のスコープを持たせ、入れ子の構造体の値が親の値を上書きしないようにする
+  # Thrift の構造体。独自の変数のスコープを持たせる（入れ子の構造体の値が親の値を上書きせず、昇格もしない）
   thrift_struct:
-    endianness: little
+    scope: isolated
     fields:
       - name: struct_kind
         type: virtual
@@ -724,104 +724,99 @@ structs:
       type: virtual
       value: "{field_type == 0 ? 0 : (id_delta != 0 ? last_field_id + id_delta : ((explicit_id >> 1) ^ (0 - (explicit_id & 1))))}"
       description: "フィールドの番号"
-    - name: own_kind
-      type: virtual
-      value: "{struct_kind}"
-      description: "このフィールドを持つ構造体の種類（作業用）"
-      padding: true
     - name: field
       type: virtual
       value: "{field_id}"
       enum: filemetadata_field
-      if: "{field_type != 0 and own_kind == 1}"
+      if: "{field_type != 0 and struct_kind == 1}"
       description: "フィールドの名前（FileMetaData）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: schemaelement_field
-      if: "{field_type != 0 and own_kind == 2}"
+      if: "{field_type != 0 and struct_kind == 2}"
       description: "フィールドの名前（SchemaElement）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: rowgroup_field
-      if: "{field_type != 0 and own_kind == 3}"
+      if: "{field_type != 0 and struct_kind == 3}"
       description: "フィールドの名前（RowGroup）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: columnchunk_field
-      if: "{field_type != 0 and own_kind == 4}"
+      if: "{field_type != 0 and struct_kind == 4}"
       description: "フィールドの名前（ColumnChunk）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: columnmetadata_field
-      if: "{field_type != 0 and own_kind == 5}"
+      if: "{field_type != 0 and struct_kind == 5}"
       description: "フィールドの名前（ColumnMetaData）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: statistics_field
-      if: "{field_type != 0 and own_kind == 6}"
+      if: "{field_type != 0 and struct_kind == 6}"
       description: "フィールドの名前（Statistics）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: keyvalue_field
-      if: "{field_type != 0 and own_kind == 7}"
+      if: "{field_type != 0 and struct_kind == 7}"
       description: "フィールドの名前（KeyValue）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: pageheader_field
-      if: "{field_type != 0 and own_kind == 8}"
+      if: "{field_type != 0 and struct_kind == 8}"
       description: "フィールドの名前（PageHeader）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: datapageheader_field
-      if: "{field_type != 0 and own_kind == 9}"
+      if: "{field_type != 0 and struct_kind == 9}"
       description: "フィールドの名前（DataPageHeader）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: dictionarypageheader_field
-      if: "{field_type != 0 and own_kind == 10}"
+      if: "{field_type != 0 and struct_kind == 10}"
       description: "フィールドの名前（DictionaryPageHeader）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: datapageheaderv2_field
-      if: "{field_type != 0 and own_kind == 11}"
+      if: "{field_type != 0 and struct_kind == 11}"
       description: "フィールドの名前（DataPageHeaderV2）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: sortingcolumn_field
-      if: "{field_type != 0 and own_kind == 13}"
+      if: "{field_type != 0 and struct_kind == 13}"
       description: "フィールドの名前（SortingColumn）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: pageencodingstats_field
-      if: "{field_type != 0 and own_kind == 14}"
+      if: "{field_type != 0 and struct_kind == 14}"
       description: "フィールドの名前（PageEncodingStats）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: columnorder_field
-      if: "{field_type != 0 and own_kind == 15}"
+      if: "{field_type != 0 and struct_kind == 15}"
       description: "フィールドの名前（ColumnOrder）"
     - name: field
       type: virtual
       value: "{field_id}"
       enum: logicaltype_field
-      if: "{field_type != 0 and own_kind == 16}"
+      if: "{field_type != 0 and struct_kind == 16}"
       description: "フィールドの名前（LogicalType）"
     - name: next_kind
       type: virtual
-      value: "{own_kind == 1 and field_id == 2 ? 2 : own_kind == 1 and field_id == 4 ? 3 : own_kind == 1 and field_id == 5 ? 7 : own_kind == 1 and field_id == 7 ? 15 : own_kind == 2 and field_id == 10 ? 16 : own_kind == 3 and field_id == 1 ? 4 : own_kind == 3 and field_id == 4 ? 13 : own_kind == 4 and field_id == 3 ? 5 : own_kind == 5 and field_id == 8 ? 7 : own_kind == 5 and field_id == 12 ? 6 : own_kind == 5 and field_id == 13 ? 14 : own_kind == 8 and field_id == 5 ? 9 : own_kind == 8 and field_id == 7 ? 10 : own_kind == 8 and field_id == 8 ? 11 : own_kind == 9 and field_id == 5 ? 6 : own_kind == 11 and field_id == 8 ? 6 : 0}"
+      value: "{struct_kind == 1 and field_id == 2 ? 2 : struct_kind == 1 and field_id == 4 ? 3 : struct_kind == 1 and field_id == 5 ? 7 : struct_kind == 1 and field_id == 7 ? 15 : struct_kind == 2 and field_id == 10 ? 16 : struct_kind == 3 and field_id == 1 ? 4 : struct_kind == 3 and field_id == 4 ? 13 : struct_kind == 4 and field_id == 3 ? 5 : struct_kind == 5 and field_id == 8 ? 7 : struct_kind == 5 and field_id == 12 ? 6 : struct_kind == 5 and field_id == 13 ? 14 : struct_kind == 8 and field_id == 5 ? 9 : struct_kind == 8 and field_id == 7 ? 10 : struct_kind == 8 and field_id == 8 ? 11 : struct_kind == 9 and field_id == 5 ? 6 : struct_kind == 11 and field_id == 8 ? 6 : 0}"
       enum: struct_kind
       if: "{field_type == 9 or field_type == 10 or field_type == 12}"
       description: "値の構造体の種類（作業用）"
@@ -850,7 +845,7 @@ structs:
       type: virtual
       value: "{8}"
       enum: struct_kind
-      if: "{own_kind == 5 and (field_id == 9 or field_id == 11) and field_type == 6}"
+      if: "{struct_kind == 5 and (field_id == 9 or field_id == 11) and field_type == 6}"
       description: "ページヘッダの構造体の種類（作業用）"
       padding: true
     - name: page_header
@@ -858,17 +853,12 @@ structs:
       struct: thrift_struct
       seek: "{number}"
       seek_restore: true
-      if: "{own_kind == 5 and (field_id == 9 or field_id == 11) and field_type == 6}"
+      if: "{struct_kind == 5 and (field_id == 9 or field_id == 11) and field_type == 6}"
       description: "この位置にあるページのヘッダ（PageHeader）"
     - name: last_field_id
       type: virtual
       value: "{field_id}"
-      description: "次のフィールドの番号の基準（作業用。入れ子の値で上書きされた値を戻す）"
-      padding: true
-    - name: struct_kind
-      type: virtual
-      value: "{own_kind}"
-      description: "この構造体の種類（作業用。入れ子の値で上書きされた値を戻す）"
+      description: "次のフィールドの番号の基準（作業用）"
       padding: true
 
   thrift_bool_true:
@@ -900,37 +890,37 @@ structs:
       type: virtual
       value: "{number}"
       enum: parquet_type
-      if: "{(own_kind == 2 and field_id == 1) or (own_kind == 5 and field_id == 1)}"
+      if: "{(struct_kind == 2 and field_id == 1) or (struct_kind == 5 and field_id == 1)}"
       description: "物理型"
     - name: repetition
       type: virtual
       value: "{number}"
       enum: repetition_type
-      if: "{(own_kind == 2 and field_id == 3)}"
+      if: "{(struct_kind == 2 and field_id == 3)}"
       description: "繰り返しの種類"
     - name: converted
       type: virtual
       value: "{number}"
       enum: converted_type
-      if: "{(own_kind == 2 and field_id == 6)}"
+      if: "{(struct_kind == 2 and field_id == 6)}"
       description: "変換型"
     - name: encoding
       type: virtual
       value: "{number}"
       enum: encoding
-      if: "{(own_kind == 5 and field_id == 2) or (own_kind == 9 and field_id == 2) or (own_kind == 9 and field_id == 3) or (own_kind == 9 and field_id == 4) or (own_kind == 10 and field_id == 2) or (own_kind == 11 and field_id == 4) or (own_kind == 14 and field_id == 2)}"
+      if: "{(struct_kind == 5 and field_id == 2) or (struct_kind == 9 and field_id == 2) or (struct_kind == 9 and field_id == 3) or (struct_kind == 9 and field_id == 4) or (struct_kind == 10 and field_id == 2) or (struct_kind == 11 and field_id == 4) or (struct_kind == 14 and field_id == 2)}"
       description: "符号化"
     - name: codec
       type: virtual
       value: "{number}"
       enum: compression_codec
-      if: "{(own_kind == 5 and field_id == 4)}"
+      if: "{(struct_kind == 5 and field_id == 4)}"
       description: "圧縮方式"
     - name: page_type
       type: virtual
       value: "{number}"
       enum: page_type
-      if: "{(own_kind == 8 and field_id == 1) or (own_kind == 14 and field_id == 1)}"
+      if: "{(struct_kind == 8 and field_id == 1) or (struct_kind == 14 and field_id == 1)}"
       description: "ページの種類"
 
   thrift_double:
@@ -945,12 +935,12 @@ structs:
     - name: text
       type: utf8
       size: "{length}"
-      if: "{(own_kind == 1 and field_id == 6) or (own_kind == 2 and field_id == 4) or (own_kind == 4 and field_id == 1) or (own_kind == 5 and field_id == 3) or (own_kind == 7 and field_id == 1) or (own_kind == 7 and field_id == 2)}"
+      if: "{(struct_kind == 1 and field_id == 6) or (struct_kind == 2 and field_id == 4) or (struct_kind == 4 and field_id == 1) or (struct_kind == 5 and field_id == 3) or (struct_kind == 7 and field_id == 1) or (struct_kind == 7 and field_id == 2)}"
       description: "文字列（UTF-8）"
     - name: data
       type: bytes
       size: "{length}"
-      if: "{not ((own_kind == 1 and field_id == 6) or (own_kind == 2 and field_id == 4) or (own_kind == 4 and field_id == 1) or (own_kind == 5 and field_id == 3) or (own_kind == 7 and field_id == 1) or (own_kind == 7 and field_id == 2))}"
+      if: "{not ((struct_kind == 1 and field_id == 6) or (struct_kind == 2 and field_id == 4) or (struct_kind == 4 and field_id == 1) or (struct_kind == 5 and field_id == 3) or (struct_kind == 7 and field_id == 1) or (struct_kind == 7 and field_id == 2))}"
       description: "バイト列（統計の最小値・最大値などは列の物理型の表現）"
 
   thrift_uuid:

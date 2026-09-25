@@ -76,7 +76,7 @@ public class FatParsingTests
         var subDir = RootEntries(decoded).Where(e => e.Child("is_lfn").Int() == 0).Select(e => e.Child("short"))
             .Single(s => s.Child("short_name").Str() == "SUBDIR~1");
 
-        var chain = subDir.Child("subdirectory").Elements().Single();
+        var chain = subDir.Child("subdirectory");
         chain.Child("cluster").Int().Should().Be(4);
         chain.Child("next_in_chain").Int().Should().Be(5);
         chain.Child("chain_continues").Int().Should().Be(1);

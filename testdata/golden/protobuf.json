@@ -5,15 +5,6 @@
   "name": "Protobuf",
   "struct_type": "protobuf_message",
   "children": {
-    "file_size": {
-      "_type": "virtual",
-      "type": "virtual",
-      "offset": 0,
-      "size": 0,
-      "description": "\u30D5\u30A1\u30A4\u30EB\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4F5C\u696D\u7528\u3002\u5024\u306E\u5148\u982D\u306E\u4F4D\u7F6E\u3092\u6C42\u3081\u308B\u57FA\u6E96\uFF09",
-      "name": "file_size",
-      "value": 15
-    },
     "fields": {
       "_type": "array",
       "type": "struct",
@@ -59,15 +50,6 @@
               "value": 0,
               "enum_label": "VARINT",
               "enum_description": "\u53EF\u5909\u9577\u6574\u6570\uFF08int32\u30FBint64\u30FBuint32\u30FBuint64\u30FBsint32\u30FBsint64\u30FBbool\u30FBenum\uFF09"
-            },
-            "value_offset": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 1,
-              "size": 0,
-              "description": "\u5024\u306E\u5148\u982D\u306E\u4F4D\u7F6E\uFF08\u4F5C\u696D\u7528\u3002\u540C\u3058\u30D0\u30A4\u30C8\u3092\u5225\u306E\u578B\u3067\u8AAD\u307F\u76F4\u3059\uFF09",
-              "name": "value_offset",
-              "value": 1
             },
             "varint": {
               "_type": "integer",
@@ -127,15 +109,6 @@
               "value": 2,
               "enum_label": "LEN",
               "enum_description": "\u9577\u3055 \u002B \u30D0\u30A4\u30C8\u5217\uFF08string\u30FBbytes\u30FB\u5165\u308C\u5B50\u306E\u30E1\u30C3\u30BB\u30FC\u30B8\u30FB\u30D1\u30C3\u30AF\u3055\u308C\u305F\u7E70\u308A\u8FD4\u3057\uFF09"
-            },
-            "value_offset": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 4,
-              "size": 0,
-              "description": "\u5024\u306E\u5148\u982D\u306E\u4F4D\u7F6E\uFF08\u4F5C\u696D\u7528\u3002\u540C\u3058\u30D0\u30A4\u30C8\u3092\u5225\u306E\u578B\u3067\u8AAD\u307F\u76F4\u3059\uFF09",
-              "name": "value_offset",
-              "value": 4
             },
             "length": {
               "_type": "integer",
@@ -205,15 +178,6 @@
               "value": 5,
               "enum_label": "I32",
               "enum_description": "4 \u30D0\u30A4\u30C8\uFF08fixed32\u30FBsfixed32\u30FBfloat\uFF09"
-            },
-            "value_offset": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 11,
-              "size": 0,
-              "description": "\u5024\u306E\u5148\u982D\u306E\u4F4D\u7F6E\uFF08\u4F5C\u696D\u7528\u3002\u540C\u3058\u30D0\u30A4\u30C8\u3092\u5225\u306E\u578B\u3067\u8AAD\u307F\u76F4\u3059\uFF09",
-              "name": "value_offset",
-              "value": 11
             },
             "float_value": {
               "_type": "float32",

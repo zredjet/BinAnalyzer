@@ -26,10 +26,6 @@ enums:
 
 structs:
   ogg_file:
-    - name: file_size
-      type: virtual
-      value: "{remaining}"
-      description: "ファイル全体のバイト数（今の位置 = file_size − remaining）"
     - name: pages
       type: struct
       struct: ogg_page
@@ -89,7 +85,7 @@ structs:
     - name: packet_magic
       type: latin1
       size: "8"
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       if: "{is_continuation == 0 ? body_size >= 8 : 0}"
       description: "ページの先頭のパケットの先頭 8 バイト（先読み。コーデックのヘッダを見分ける）"

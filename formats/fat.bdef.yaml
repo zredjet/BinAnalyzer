@@ -347,11 +347,6 @@ structs:
           description: "奇数番のクラスタのエントリ"
 
   fixed_root_directory:
-    - name: first_byte
-      type: virtual
-      value: "{0xFF}"
-      padding: true
-      description: "直前のエントリの先頭のバイト（作業用。0 ならディレクトリの終わり）"
     - name: lfn_acc
       type: virtual
       value: "{''}"
@@ -363,12 +358,12 @@ structs:
       seek: "{dir_base}"
       seek_restore: true
       size: "{root_entry_count * 32}"
-      repeat_while: "{first_byte != 0 and remaining >= 32}"
-      description: "エントリの並び（先頭のバイトが 0 のエントリで終わる）"
+      repeat_until: "{first_byte == 0}"
+      description: "エントリの並び（先頭のバイトが 0 のエントリか、領域の終わりまで）"
 
-  # ディレクトリのクラスタ。エンディアンを書いた形にして独自の変数のスコープを持たせ、連鎖の次のクラスタ・サブディレクトリの値が上書きしないようにする
+  # ディレクトリのクラスタ。独自の変数のスコープを持たせる（連鎖の次のクラスタ・サブディレクトリの値が、このクラスタの値を上書きしないように）
   dir_chain:
-    endianness: little
+    scope: isolated
     fields:
       - name: directory_number
         type: virtual
@@ -383,11 +378,6 @@ structs:
         type: virtual
         value: "{data_offset + (cluster - 2) * cluster_size}"
         description: "このクラスタの位置"
-      - name: first_byte
-        type: virtual
-        value: "{0xFF}"
-        padding: true
-        description: "直前のエントリの先頭のバイト（作業用。0 ならディレクトリの終わり）"
       - name: lfn_acc
         type: virtual
         value: "{chain_lfn}"
@@ -399,8 +389,8 @@ structs:
         seek: "{dir_base}"
         seek_restore: true
         size: "{cluster_size}"
-        repeat_while: "{first_byte != 0 and remaining >= 32}"
-        description: "エントリの並び"
+        repeat_until: "{first_byte == 0}"
+        description: "エントリの並び（先頭のバイトが 0 のエントリか、クラスタの終わりまで）"
       - name: fat_entry_raw
         type: uint32
         seek: "{fat_offset + cluster * 4}"
@@ -446,9 +436,9 @@ structs:
         if: "{chain_continues == 1}"
         description: "ディレクトリの続き（FAT の連鎖の次のクラスタ）"
 
-  # ディレクトリのエントリ。独自のスコープを持たせ、サブディレクトリの値の昇格がこのディレクトリの値を上書きしないようにする
+  # ディレクトリのエントリ。独自の変数のスコープを持たせる（サブディレクトリの値が、このディレクトリの値と混ざらないように）
   dir_entry:
-    endianness: little
+    scope: isolated
     fields:
       - name: entry_offset
         type: virtual
@@ -633,7 +623,7 @@ structs:
     - name: subdirectory
       type: struct
       struct: dir_chain
-      repeat_count: "{is_subdirectory}"
+      if: "{is_subdirectory == 1}"
       description: "サブディレクトリの中身（最初のクラスタから FAT の連鎖をたどる）"
     - name: content_preview
       type: bytes

@@ -138,10 +138,6 @@ enums:
 
 structs:
   flac:
-    - name: file_size
-      type: virtual
-      value: "{remaining}"
-      description: "ファイル全体のバイト数（今の位置 = file_size − remaining）"
     - name: magic
       type: bytes
       size: "4"
@@ -156,7 +152,7 @@ structs:
       type: struct
       struct: frame_header
       if: "{remaining >= 6}"
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       description: "最初の音声フレームのヘッダ（先読み。frames の先頭 4 バイト）"
     - name: frames

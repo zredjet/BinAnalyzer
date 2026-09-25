@@ -32,11 +32,6 @@ enums:
 
 structs:
   protobuf_message:
-    - name: file_size
-      type: virtual
-      value: "{remaining}"
-      padding: true
-      description: "ファイルのバイト数（作業用。値の先頭の位置を求める基準）"
     - name: fields
       type: struct
       struct: protobuf_field
@@ -56,11 +51,6 @@ structs:
       value: "{tag & 7}"
       enum: wire_type
       description: "ワイヤ型"
-    - name: value_offset
-      type: virtual
-      value: "{file_size - remaining}"
-      padding: true
-      description: "値の先頭の位置（作業用。同じバイトを別の型で読み直す）"
     - name: varint
       type: uleb128
       if: "{wire_type == 0}"
@@ -72,7 +62,7 @@ structs:
       description: "ジグザグ符号化として読んだ値（sint32 / sint64 のとき）"
     - name: double_value
       type: float64
-      seek: "{value_offset}"
+      seek: "{_offset}"
       seek_restore: true
       if: "{wire_type == 1 and remaining >= 8}"
       description: "倍精度の浮動小数点数として読んだ値（double のとき）"
@@ -87,7 +77,7 @@ structs:
     - name: text
       type: utf8
       size: "{length}"
-      seek: "{file_size - remaining}"
+      seek: "{_offset}"
       seek_restore: true
       if: "{wire_type == 2}"
       description: "UTF-8 の文字列として読んだ値（string のとき。入れ子のメッセージなら意味のない文字になる）"
@@ -103,7 +93,7 @@ structs:
       description: "グループの中のフィールド（同じ番号の EGROUP まで）"
     - name: float_value
       type: float32
-      seek: "{value_offset}"
+      seek: "{_offset}"
       seek_restore: true
       if: "{wire_type == 5 and remaining >= 4}"
       description: "単精度の浮動小数点数として読んだ値（float のとき）"
@@ -112,9 +102,9 @@ structs:
       if: "{wire_type == 5}"
       description: "4 バイトの整数（fixed32 / sfixed32）"
 
-  # グループ。エンディアンを書いた形にして独自の変数のスコープを持たせる（中のフィールドの値が外のフィールドを上書きしないように）
+  # グループ。独自の変数のスコープを持たせる（中のフィールドの値が外のフィールドを上書きしないように）
   protobuf_group:
-    endianness: little
+    scope: isolated
     fields:
       - name: fields
         type: struct
