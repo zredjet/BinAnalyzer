@@ -27,7 +27,7 @@ public class DnsParsingTests
     {
         var decoded = Decode(DnsTestDataGenerator.CreateMinimalDns());
 
-        decoded.Children.Select(c => c.Name).Should().Equal("header", "questions", "answers", "authorities", "additionals");
+        decoded.Children.Select(c => c.Name).Should().Equal("message_start", "header", "questions", "answers", "authorities", "additionals");
         var header = decoded.Child("header");
         header.Child("transaction_id").Int().Should().Be(0x1234);
         header.Child("flags").Bits("qr").Should().Be(0);

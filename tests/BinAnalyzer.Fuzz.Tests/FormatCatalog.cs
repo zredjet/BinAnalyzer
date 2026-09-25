@@ -54,7 +54,7 @@ public static class FormatCatalog
         ["ogg.bdef.yaml"] = [OggTestDataGenerator.CreateMinimalOgg, OggTestDataGenerator.CreateOpusOgg],
         ["otf.bdef.yaml"] = [OtfTestDataGenerator.CreateMinimalOtf, OtfTestDataGenerator.CreateMinimalTtf, OtfTestDataGenerator.CreateOtfWithCmapAndHhea, OtfTestDataGenerator.CreateTtfWithTables, OtfTestDataGenerator.CreateTtc],
         ["parquet.bdef.yaml"] = [ParquetTestDataGenerator.CreateTwoColumnParquet],
-        ["pcap.bdef.yaml"] = [PcapTestDataGenerator.CreateMinimalPcap, PcapTestDataGenerator.CreatePcapWithTcpOptions, PcapTestDataGenerator.CreateEthernetMixPcap, PcapTestDataGenerator.CreateBigEndianNanosecondPcap, PcapTestDataGenerator.CreateRawIpPcap, PcapTestDataGenerator.CreatePcapNg],
+        ["pcap.bdef.yaml"] = [PcapTestDataGenerator.CreateMinimalPcap, PcapTestDataGenerator.CreatePcapWithTcpOptions, PcapTestDataGenerator.CreateEthernetMixPcap, PcapTestDataGenerator.CreateBigEndianNanosecondPcap, PcapTestDataGenerator.CreateRawIpPcap, PcapTestDataGenerator.CreatePcapNg, PcapTestDataGenerator.CreateDnsPcap],
         ["pdf.bdef.yaml"] = [PdfTestDataGenerator.CreateMinimalPdf, PdfTestDataGenerator.CreatePdfWithIncrementalUpdate],
         ["pe.bdef.yaml"] = [PeTestDataGenerator.CreateMinimalPe, PeTestDataGenerator.CreatePe32PlusDll, PeTestDataGenerator.CreateManagedPe32],
         ["png.bdef.yaml"] = [PngTestDataGenerator.CreateMinimalPng, PngTestDataGenerator.CreatePngWithSrgb],

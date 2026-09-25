@@ -3,7 +3,7 @@
 #   RFC 4035（AD / CD ビット）、RFC 8659（CAA）、RFC 6762（mDNS のクラスの上位ビット）、IANA "Domain Name System (DNS) Parameters"（2025）の種類・クラス・RCODE・EDNS のオプション
 # 構造: ヘッダ（12 バイト）→ 質問（名前 + 種類 + クラス）× QDCOUNT → 回答・権威・追加のリソースレコード（名前 + 種類 + クラス + TTL + 長さ + データ）× 各個数。
 #   名前はラベル（長さ 1 バイト + 文字）の並びで、長さの上位 2 ビットが 11 なら圧縮ポインタ（メッセージの先頭からの位置 14 ビット）で終わる
-# 対応していないもの: TCP の 2 バイトの長さの前置き（ファイルの先頭がメッセージであること）、pcap の中の DNS（formats/pcap.bdef.yaml は UDP の中身をバイト列で表示）、
+# 対応していないもの: TCP の 2 バイトの長さの前置き（ファイルの先頭がメッセージであること。pcap の中の UDP の DNS は formats/pcap.bdef.yaml がこの定義をインポートして読む）、
 #   DNSSEC（RRSIG・DNSKEY・DS・NSEC・NSEC3）・SVCB / HTTPS・NAPTR・TLSA のデータの分解（バイト列）、EDNS のオプションの中身、
 #   ラベルの中の非 ASCII・'.' のエスケープ、前方を指す圧縮ポインタのループ（入れ子の深さの上限でエラーになる）
 name: DNS
@@ -185,6 +185,11 @@ enums:
 
 structs:
   dns:
+    - name: message_start
+      type: virtual
+      value: "{_offset}"
+      padding: true
+      description: "メッセージの先頭の位置（作業用。圧縮ポインタの基準。単独のファイルでは 0、pcap の中では UDP のペイロードの先頭）"
     - name: header
       type: struct
       struct: dns_header
@@ -345,7 +350,7 @@ structs:
         "39": rdata_name
         "99": rdata_txt
         "257": rdata_caa
-      default: raw_data
+      default: dns_raw_data
       description: "データ（種類で振り分ける）"
 
   opt_record:
@@ -414,10 +419,10 @@ structs:
       - name: pointer_target
         type: struct
         struct: dns_name
-        seek: "{pointer_offset}"
+        seek: "{message_start + pointer_offset}"
         seek_restore: true
         if: "{is_pointer == 1}"
-        description: "圧縮ポインタの指す名前（メッセージの先頭からの位置）"
+        description: "圧縮ポインタの指す名前（ポインタはメッセージの先頭からの位置）"
       - name: full_name
         type: virtual
         value: "{is_pointer == 1 ? concat(local_part, pointer_target.full_name) : (local_part == '' ? '.' : local_part)}"
@@ -577,7 +582,7 @@ structs:
       size: remaining
       description: "値（認証局のドメイン名・報告先の URL など）"
 
-  raw_data:
+  dns_raw_data:
     - name: data
       type: bytes
       size: remaining
