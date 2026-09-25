@@ -68,6 +68,9 @@ public static class ExpressionEvaluator
     {
         if (fieldName == "remaining")
             return (long)context.Remaining;
+        // 今の読み取り位置（今のデータの先頭から。seek: と同じ基準。REQ-194）
+        if (fieldName == "_offset")
+            return (long)context.ByteOffset;
 
         var value = context.GetVariable(fieldName);
         if (value is null)

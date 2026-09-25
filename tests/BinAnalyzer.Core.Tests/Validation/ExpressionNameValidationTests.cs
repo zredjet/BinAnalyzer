@@ -162,6 +162,7 @@ public class ExpressionNameValidationTests
                 Condition = E("{_index > 0 ? _prev.value < 10 : 1}"),
                 SeekExpression = E("{offsets[_index]}"),
             },
+            new FieldDefinition { Name = "position", Type = FieldType.Virtual, ValueExpression = E("{_offset}") },
         ]);
 
         Diagnostics(format, "VAL124").Should().BeEmpty();
