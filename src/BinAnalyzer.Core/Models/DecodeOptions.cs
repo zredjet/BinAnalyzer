@@ -19,4 +19,10 @@ public sealed class DecodeOptions
     /// null なら既定の 64。深くする場合はスタックサイズ（1 段あたり Debug で約 8 KB）に注意。
     /// </summary>
     public int? MaxDepth { get; init; }
+
+    /// <summary>
+    /// 0 バイトで成功した要素が連続してこの数に達したら、繰り返しを打ち切る（REQ-197。<c>truncated</c> と理由が付く）。
+    /// null なら既定の 65536。壊れた要素数で 0 バイトの要素（型の分からない値の後ろなど）が数十億回続くのを防ぐ。要素ごとの seek の繰り返しは対象外。
+    /// </summary>
+    public int? MaxZeroLengthElements { get; init; }
 }
