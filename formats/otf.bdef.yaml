@@ -1,3 +1,10 @@
+# OpenType / TrueType のフォント（.otf・.ttf・.ttc）
+# 仕様: Microsoft "OpenType Specification" 1.9.1（2024）と Apple "TrueType Reference Manual"。fontTools 4.63 と macOS のシステムのフォント
+#   （TTC・可変フォント・CFF）で照合した
+# 構造: オフセット表（sfntVersion + 表の数）→ 表のレコード（タグ・チェックサム・位置・長さ）の並び。表はそれぞれの位置にあり、タグで分解する。
+#   TTC（'ttcf'）は先頭の見出しに各フォントのオフセット表の位置が並ぶ
+# 対応していないもの: 表のチェックサムの検証（uint32 の単純な合計のアルゴリズムが無い）、WOFF / WOFF2、glyf・loca・hmtx・kern・CFF の中身・COLR / CPAL・sbix などの
+#   分解（バイト列）、GSUB / GPOS のルックアップ、cmap の形式 2・8・10、16.16 の固定小数点数の小数での表示（整数のまま表示）、Mac の文字コード（MacRoman を Latin-1 として表示）
 name: OTF
 endianness: big
 root: otf
@@ -6,86 +13,226 @@ enums:
   sf_version:
     - value: 0x00010000
       label: TrueType
+      description: "TrueType のアウトライン（glyf）"
     - value: 0x4F54544F
       label: CFF
-      description: "OTTO"
+      description: "CFF のアウトライン（'OTTO'）"
+    - value: 0x74727565
+      label: AppleTrue
+      description: "Apple の TrueType（'true'）"
+    - value: 0x74746366
+      label: Collection
+      description: "フォントのコレクション（'ttcf'）"
 
   name_id:
     - value: 0
       label: Copyright
+      description: "著作権"
     - value: 1
       label: FontFamily
+      description: "ファミリ名"
     - value: 2
       label: FontSubfamily
+      description: "サブファミリ名（Regular・Bold など）"
     - value: 3
       label: UniqueID
+      description: "一意の識別子"
     - value: 4
       label: FullName
+      description: "フルネーム"
     - value: 5
       label: VersionString
+      description: "版の文字列"
     - value: 6
       label: PostScriptName
+      description: "PostScript の名前"
     - value: 7
       label: Trademark
+      description: "商標"
     - value: 8
       label: Manufacturer
+      description: "製造者"
     - value: 9
       label: Designer
+      description: "デザイナ"
     - value: 10
       label: Description
+      description: "説明"
     - value: 11
       label: URLVendor
+      description: "製造者の URL"
     - value: 12
       label: URLDesigner
+      description: "デザイナの URL"
     - value: 13
       label: License
+      description: "ライセンス"
     - value: 14
       label: LicenseURL
+      description: "ライセンスの URL"
     - value: 16
-      label: PreferredFamily
+      label: TypographicFamily
+      description: "タイポグラフィのファミリ名"
     - value: 17
-      label: PreferredSubfamily
+      label: TypographicSubfamily
+      description: "タイポグラフィのサブファミリ名"
+    - value: 18
+      label: CompatibleFull
+      description: "Mac 互換のフルネーム"
     - value: 19
       label: SampleText
+      description: "見本の文字列"
+    - value: 20
+      label: PostScriptCIDFindfont
+      description: "PostScript の CID の findfont の名前"
+    - value: 21
+      label: WWSFamily
+      description: "WWS のファミリ名"
+    - value: 22
+      label: WWSSubfamily
+      description: "WWS のサブファミリ名"
+    - value: 23
+      label: LightBackgroundPalette
+      description: "明るい背景のパレット"
+    - value: 24
+      label: DarkBackgroundPalette
+      description: "暗い背景のパレット"
+    - value: 25
+      label: VariationsPostScriptNamePrefix
+      description: "バリエーションの PostScript の名前の接頭辞"
+
+  platform_id:
+    - value: 0
+      label: Unicode
+      description: "Unicode（UTF-16BE）"
+    - value: 1
+      label: Macintosh
+      description: "Macintosh（MacRoman など）"
+    - value: 2
+      label: ISO
+      description: "ISO（廃止）"
+    - value: 3
+      label: Windows
+      description: "Windows（encodingID 1 = BMP、10 = 全 Unicode。UTF-16BE）"
+    - value: 4
+      label: Custom
+      description: "独自"
 
 structs:
   otf:
+    - name: sfnt_tag
+      type: uint32
+      seek: "{0}"
+      seek_restore: true
+      padding: true
+      description: "先頭の 4 バイト（作業用。'ttcf' ならコレクション）"
+    - name: collection
+      type: struct
+      struct: ttc_header
+      if: "{sfnt_tag == 0x74746366}"
+      description: "TTC の見出しと各フォント"
     - name: offset_table
       type: struct
       struct: offset_table
+      if: "{sfnt_tag != 0x74746366}"
+      description: "オフセット表"
     - name: table_records
       type: struct
       struct: table_record
       repeat_count: "{numTables}"
+      if: "{sfnt_tag != 0x74746366}"
+      description: "表のレコードの並び（タグの昇順）"
+
+  ttc_header:
+    - name: ttc_tag
+      type: ascii
+      size: "4"
+      description: "コレクションのタグ（'ttcf'）"
+    - name: majorVersion
+      type: uint16
+      description: "主版（1 か 2）"
+    - name: minorVersion
+      type: uint16
+      description: "副版（0）"
+    - name: numFonts
+      type: uint32
+      description: "フォントの数"
+    - name: tableDirectoryOffsets
+      type: uint32
+      repeat_count: "{numFonts}"
+      description: "各フォントのオフセット表の位置"
+    - name: dsigTag
+      type: ascii
+      size: "4"
+      if: "{majorVersion >= 2}"
+      description: "DSIG 表のタグ（'DSIG'、無ければ 0）"
+    - name: dsigLength
+      type: uint32
+      if: "{majorVersion >= 2}"
+      description: "DSIG 表のバイト数"
+    - name: dsigOffset
+      type: uint32
+      if: "{majorVersion >= 2}"
+      description: "DSIG 表の位置"
+    - name: fonts
+      type: struct
+      struct: collection_font
+      repeat_count: "{numFonts}"
+      seek: "{tableDirectoryOffsets[_index]}"
+      seek_restore: true
+      description: "各フォント（表は複数のフォントで共有できる）"
+
+  # コレクションの中のフォント。独自のスコープを持たせ、表の数などが次のフォントの値と混ざらないようにする
+  collection_font:
+    endianness: big
+    fields:
+      - name: offset_table
+        type: struct
+        struct: offset_table
+        description: "オフセット表"
+      - name: table_records
+        type: struct
+        struct: table_record
+        repeat_count: "{numTables}"
+        description: "表のレコードの並び"
 
   offset_table:
     - name: sfVersion
       type: uint32
       enum: sf_version
-      description: "TrueType: 0x00010000、CFF: 'OTTO'"
+      description: "sfnt の版（0x00010000 = TrueType、'OTTO' = CFF）"
     - name: numTables
       type: uint16
-      description: "テーブル数"
+      description: "表の数"
     - name: searchRange
       type: uint16
+      description: "二分探索の範囲（(表の数以下の最大の 2 の累乗) × 16）"
     - name: entrySelector
       type: uint16
+      description: "log2(表の数以下の最大の 2 の累乗)"
     - name: rangeShift
       type: uint16
+      description: "表の数 × 16 - searchRange"
 
   table_record:
     - name: tag
       type: ascii
       size: "4"
-      description: "テーブル識別子（head, name, cmap等）"
+      description: "表のタグ（'head'・'cmap' など）"
     - name: checksum
       type: uint32
+      description: "表のチェックサム（uint32 の合計。検証しない）"
     - name: offset
       type: uint32
-      description: "フォントファイル先頭からのオフセット"
+      description: "表の位置（ファイルの先頭から）"
     - name: length
       type: uint32
-      description: "テーブルデータの長さ"
+      description: "表のバイト数（4 バイト境界への詰め物を含まない）"
+    - name: table_offset
+      type: virtual
+      value: "{offset}"
+      padding: true
+      description: "表の位置（作業用。表の中の位置の基準）"
     - name: table_data
       type: switch
       size: "{length}"
@@ -94,266 +241,941 @@ structs:
       switch_on: "{tag}"
       cases:
         "'head'": head_table
+        "'hhea'": hhea_table
+        "'vhea'": hhea_table
+        "'maxp'": maxp_table
         "'name'": name_table
         "'cmap'": cmap_table
         "'OS/2'": os2_table
         "'post'": post_table
-        "'hhea'": hhea_table
+        "'fvar'": fvar_table
+        "'GSUB'": layout_table
+        "'GPOS'": layout_table
+        "'CFF '": cff_header
+        "'CFF2'": cff_header
+        "'DSIG'": dsig_table
       default: raw_data
+      description: "表の中身（タグで分解する）"
 
   head_table:
     - name: majorVersion
       type: uint16
+      description: "主版（1）"
     - name: minorVersion
       type: uint16
+      description: "副版（0）"
     - name: fontRevision
-      type: uint32
-      description: "フォントリビジョン（Fixed 16.16）"
+      type: int32
+      description: "フォントの改訂（16.16 の固定小数点数）"
     - name: checksumAdjustment
       type: uint32
+      description: "ファイル全体のチェックサムを 0xB1B0AFBA にする調整値"
     - name: magicNumber
       type: uint32
-      expected: [0x5F, 0x0F, 0x3C, 0xF5]
-      description: "マジックナンバー 0x5F0F3CF5"
+      validate: "{magicNumber == 0x5F0F3CF5}"
+      description: "マジック（0x5F0F3CF5）"
     - name: flags
-      type: uint16
+      type: bitfield
+      size: "2"
+      description: "フラグ"
+      fields:
+        - name: baseline_at_y0
+          bits: "0"
+          description: "ベースラインが y = 0"
+        - name: lsb_at_x0
+          bits: "1"
+          description: "左のサイドベアリングが x = 0"
+        - name: instructions_depend_on_size
+          bits: "2"
+          description: "ヒントの命令が大きさによる"
+        - name: force_integer_ppem
+          bits: "3"
+          description: "ppem を整数に丸める"
+        - name: instructions_alter_advance
+          bits: "4"
+          description: "命令が送り幅を変える"
+        - name: lossless_compressed
+          bits: "11"
+          description: "可逆の圧縮（MicroType Express）で変換された"
+        - name: font_converted
+          bits: "12"
+          description: "変換された（互換のメトリクス）"
+        - name: cleartype_optimized
+          bits: "13"
+          description: "ClearType 向けに最適化"
+        - name: last_resort
+          bits: "14"
+          description: "最後の手段のフォント"
     - name: unitsPerEm
       type: uint16
+      description: "1 em のユニット数（16〜16384。TrueType は 2 の累乗を推奨）"
     - name: created
       type: int64
-      description: "作成日時（1904-01-01 00:00:00からの秒数）"
+      description: "作成日時（1904-01-01 からの秒）"
+    - name: created_unix
+      type: virtual
+      value: "{created - 2082844800}"
+      description: "作成日時（1970-01-01 からの秒）"
     - name: modified
       type: int64
-      description: "更新日時（1904-01-01 00:00:00からの秒数）"
+      description: "更新日時（1904-01-01 からの秒）"
+    - name: modified_unix
+      type: virtual
+      value: "{modified - 2082844800}"
+      description: "更新日時（1970-01-01 からの秒）"
     - name: xMin
       type: int16
+      description: "全グリフの外接矩形の x の最小"
     - name: yMin
       type: int16
+      description: "全グリフの外接矩形の y の最小"
     - name: xMax
       type: int16
+      description: "全グリフの外接矩形の x の最大"
     - name: yMax
       type: int16
+      description: "全グリフの外接矩形の y の最大"
     - name: macStyle
       type: bitfield
       size: "2"
+      description: "スタイル（OS/2 の fsSelection と合わせる）"
       fields:
         - name: Bold
           bits: "0"
+          description: "太字"
         - name: Italic
           bits: "1"
+          description: "斜体"
         - name: Underline
           bits: "2"
+          description: "下線"
         - name: Outline
           bits: "3"
+          description: "中抜き"
         - name: Shadow
           bits: "4"
+          description: "影付き"
         - name: Condensed
           bits: "5"
+          description: "幅の狭い"
         - name: Extended
           bits: "6"
+          description: "幅の広い"
     - name: lowestRecPPEM
       type: uint16
-      description: "最小可読サイズ（ピクセル）"
+      description: "読める最小の大きさ（ピクセル / em）"
     - name: fontDirectionHint
       type: int16
+      description: "書字方向のヒント（非推奨。2）"
     - name: indexToLocFormat
       type: int16
-      description: "0=短いオフセット、1=長いオフセット"
+      description: "loca の形式（0 = 16 ビット、1 = 32 ビット）"
     - name: glyphDataFormat
       type: int16
-
-  name_table:
-    - name: format
-      type: uint16
-    - name: count
-      type: uint16
-      description: "ネームレコード数"
-    - name: stringOffset
-      type: uint16
-      description: "テーブル先頭からの文字列ストレージオフセット"
-    - name: records
-      type: struct
-      struct: name_record
-      repeat_count: "{count}"
-
-  name_record:
-    - name: platformID
-      type: uint16
-    - name: encodingID
-      type: uint16
-    - name: languageID
-      type: uint16
-    - name: nameID
-      type: uint16
-      enum: name_id
-    - name: length
-      type: uint16
-    - name: offset
-      type: uint16
-      description: "文字列ストレージ先頭からのオフセット"
-
-  cmap_table:
-    - name: version
-      type: uint16
-    - name: numTables
-      type: uint16
-      description: "エンコーディングレコード数"
-    - name: encoding_records
-      type: struct
-      struct: cmap_encoding_record
-      repeat_count: "{numTables}"
-
-  cmap_encoding_record:
-    - name: platformID
-      type: uint16
-      description: "プラットフォームID（0=Unicode, 1=Macintosh, 3=Windows）"
-    - name: encodingID
-      type: uint16
-    - name: offset
-      type: uint32
-      description: "cmapテーブル先頭からのサブテーブルオフセット"
-
-  os2_table:
-    - name: version
-      type: uint16
-    - name: xAvgCharWidth
-      type: int16
-    - name: usWeightClass
-      type: uint16
-      description: "フォントウェイト（400=Regular, 700=Bold）"
-    - name: usWidthClass
-      type: uint16
-    - name: fsType
-      type: uint16
-      description: "埋め込み制限フラグ"
-    - name: ySubscriptXSize
-      type: int16
-    - name: ySubscriptYSize
-      type: int16
-    - name: ySubscriptXOffset
-      type: int16
-    - name: ySubscriptYOffset
-      type: int16
-    - name: ySuperscriptXSize
-      type: int16
-    - name: ySuperscriptYSize
-      type: int16
-    - name: ySuperscriptXOffset
-      type: int16
-    - name: ySuperscriptYOffset
-      type: int16
-    - name: yStrikeoutSize
-      type: int16
-    - name: yStrikeoutPosition
-      type: int16
-    - name: sFamilyClass
-      type: int16
-    - name: panose
-      type: bytes
-      size: "10"
-      description: "PANOSEクラス分類"
-    - name: ulUnicodeRange1
-      type: uint32
-    - name: ulUnicodeRange2
-      type: uint32
-    - name: ulUnicodeRange3
-      type: uint32
-    - name: ulUnicodeRange4
-      type: uint32
-    - name: achVendID
-      type: ascii
-      size: "4"
-      description: "ベンダーID"
-    - name: fsSelection
-      type: uint16
-    - name: usFirstCharIndex
-      type: uint16
-    - name: usLastCharIndex
-      type: uint16
-    - name: sTypoAscender
-      type: int16
-    - name: sTypoDescender
-      type: int16
-    - name: sTypoLineGap
-      type: int16
-    - name: usWinAscent
-      type: uint16
-    - name: usWinDescent
-      type: uint16
-    - name: extra_data
-      type: bytes
-      size: remaining
-      description: "バージョン依存の追加フィールド"
-
-  post_table:
-    - name: version
-      type: uint32
-      description: "PostScriptテーブルバージョン（Fixed 16.16）"
-    - name: italicAngle
-      type: int32
-      description: "イタリック角度（Fixed 16.16）"
-    - name: underlinePosition
-      type: int16
-    - name: underlineThickness
-      type: int16
-    - name: isFixedPitch
-      type: uint32
-      description: "等幅フォントの場合は非ゼロ"
-    - name: minMemType42
-      type: uint32
-    - name: maxMemType42
-      type: uint32
-    - name: minMemType1
-      type: uint32
-    - name: maxMemType1
-      type: uint32
-    - name: extra_data
-      type: bytes
-      size: remaining
-      description: "バージョン依存の追加データ"
+      description: "glyf の形式（0）"
 
   hhea_table:
     - name: majorVersion
       type: uint16
+      description: "主版（1）"
     - name: minorVersion
       type: uint16
+      description: "副版（0。vhea は 1.1 もある）"
     - name: ascender
       type: int16
-      description: "アセンダー"
+      description: "アセンダ（vhea は縦の中心から右端）"
     - name: descender
       type: int16
-      description: "ディセンダー"
+      description: "ディセンダ（負の値）"
     - name: lineGap
       type: int16
+      description: "行間"
     - name: advanceWidthMax
       type: uint16
+      description: "送り幅の最大"
     - name: minLeftSideBearing
       type: int16
+      description: "左のサイドベアリングの最小"
     - name: minRightSideBearing
       type: int16
+      description: "右のサイドベアリングの最小"
     - name: xMaxExtent
       type: int16
+      description: "左のサイドベアリング + グリフの幅の最大（max(lsb + (xMax - xMin))）"
     - name: caretSlopeRise
       type: int16
+      description: "カーソルの傾きの縦（直立は 1）"
     - name: caretSlopeRun
       type: int16
+      description: "カーソルの傾きの横（直立は 0）"
     - name: caretOffset
       type: int16
+      description: "斜体のカーソルのずれ"
     - name: reserved1
       type: int16
+      description: "予約（0）"
     - name: reserved2
       type: int16
+      description: "予約（0）"
     - name: reserved3
       type: int16
+      description: "予約（0）"
     - name: reserved4
       type: int16
+      description: "予約（0）"
     - name: metricDataFormat
       type: int16
+      description: "メトリクスの形式（0）"
     - name: numberOfHMetrics
       type: uint16
-      description: "水平メトリクス数"
+      description: "hmtx の送り幅の数（vhea は vmtx の数）"
+
+  maxp_table:
+    - name: version
+      type: uint32
+      description: "版（0x00005000 = CFF 用の 0.5、0x00010000 = TrueType 用の 1.0）"
+    - name: numGlyphs
+      type: uint16
+      description: "グリフの数"
+    - name: maxPoints
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "複合でないグリフの点の最大数"
+    - name: maxContours
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "複合でないグリフの輪郭の最大数"
+    - name: maxCompositePoints
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "複合グリフの点の最大数"
+    - name: maxCompositeContours
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "複合グリフの輪郭の最大数"
+    - name: maxZones
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "ゾーンの数（1 か 2）"
+    - name: maxTwilightPoints
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "Z0 のトワイライトゾーンの点の最大数"
+    - name: maxStorage
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "ストレージ領域の数"
+    - name: maxFunctionDefs
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "FDEF の数"
+    - name: maxInstructionDefs
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "IDEF の数"
+    - name: maxStackElements
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "スタックの深さの最大"
+    - name: maxSizeOfInstructions
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "グリフの命令のバイト数の最大"
+    - name: maxComponentElements
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "複合グリフの部品の数の最大"
+    - name: maxComponentDepth
+      type: uint16
+      if: "{version == 0x00010000}"
+      description: "複合グリフの入れ子の深さの最大"
+
+  name_table:
+    - name: format
+      type: uint16
+      description: "形式（0 か 1。1 は言語タグを持つ）"
+    - name: count
+      type: uint16
+      description: "名前のレコードの数"
+    - name: stringOffset
+      type: uint16
+      description: "文字列の領域の位置（表の先頭から）"
+    - name: records
+      type: struct
+      struct: name_record
+      repeat_count: "{count}"
+      description: "名前のレコードの並び"
+    - name: langTagCount
+      type: uint16
+      if: "{format == 1}"
+      description: "言語タグの数"
+    - name: langTagRecords
+      type: struct
+      struct: lang_tag_record
+      repeat_count: "{langTagCount}"
+      if: "{format == 1}"
+      description: "言語タグのレコード"
+
+  name_record:
+    - name: platformID
+      type: uint16
+      enum: platform_id
+      description: "プラットフォーム"
+    - name: encodingID
+      type: uint16
+      description: "文字コード（プラットフォームごと）"
+    - name: languageID
+      type: uint16
+      description: "言語（Windows 0x0409 = 英語、0x0411 = 日本語。0x8000 以上は言語タグの番号）"
+    - name: nameID
+      type: uint16
+      enum: name_id
+      description: "名前の種類"
+    - name: length
+      type: uint16
+      description: "文字列のバイト数"
+    - name: offset
+      type: uint16
+      description: "文字列の位置（文字列の領域の先頭から）"
+    - name: text
+      type: utf16be
+      size: "{length}"
+      seek: "{table_offset + stringOffset + offset}"
+      seek_restore: true
+      if: "{platformID == 0 or platformID == 3}"
+      description: "文字列（UTF-16BE）"
+    - name: text
+      type: latin1
+      size: "{length}"
+      seek: "{table_offset + stringOffset + offset}"
+      seek_restore: true
+      if: "{platformID != 0 and platformID != 3}"
+      description: "文字列（Macintosh などは 1 バイトの文字コード。Latin-1 として表示）"
+
+  lang_tag_record:
+    - name: length
+      type: uint16
+      description: "言語タグのバイト数"
+    - name: offset
+      type: uint16
+      description: "言語タグの位置（文字列の領域の先頭から）"
+    - name: tag
+      type: utf16be
+      size: "{length}"
+      seek: "{table_offset + stringOffset + offset}"
+      seek_restore: true
+      description: "言語タグ（BCP 47。UTF-16BE）"
+
+  cmap_table:
+    - name: version
+      type: uint16
+      description: "版（0）"
+    - name: numTables
+      type: uint16
+      description: "符号化のレコードの数"
+    - name: encoding_records
+      type: struct
+      struct: cmap_encoding_record
+      repeat_count: "{numTables}"
+      description: "符号化のレコードの並び"
+
+  cmap_encoding_record:
+    - name: platformID
+      type: uint16
+      enum: platform_id
+      description: "プラットフォーム"
+    - name: encodingID
+      type: uint16
+      description: "文字コード（Unicode 3 = BMP、4 = 全 Unicode、5 = 異体字セレクタ。Windows 1 = BMP、10 = 全 Unicode）"
+    - name: offset
+      type: uint32
+      description: "サブ表の位置（cmap の表の先頭から）"
+    - name: subtable
+      type: struct
+      struct: cmap_subtable
+      seek: "{table_offset + offset}"
+      seek_restore: true
+      description: "サブ表（複数のレコードが同じサブ表を指すことがある）"
+
+  cmap_subtable:
+    - name: format
+      type: uint16
+      description: "サブ表の形式（0・4・6・12・13・14 を分解）"
+    - name: body
+      type: switch
+      switch_on: "{format}"
+      cases:
+        "0": cmap_format0
+        "4": cmap_format4
+        "6": cmap_format6
+        "12": cmap_format12
+        "13": cmap_format12
+        "14": cmap_format14
+      default: raw_empty
+      description: "サブ表の中身"
+
+  cmap_format0:
+    - name: length
+      type: uint16
+      description: "サブ表のバイト数"
+    - name: language
+      type: uint16
+      description: "言語（Macintosh 以外は 0）"
+    - name: glyphIdArray
+      type: bytes
+      size: "256"
+      description: "文字コード 0〜255 のグリフ番号"
+
+  cmap_format4:
+    - name: length
+      type: uint16
+      description: "サブ表のバイト数"
+    - name: language
+      type: uint16
+      description: "言語"
+    - name: segCountX2
+      type: uint16
+      description: "区間の数 × 2"
+    - name: segCount
+      type: virtual
+      value: "{segCountX2 / 2}"
+      description: "区間の数"
+    - name: searchRange
+      type: uint16
+      description: "二分探索の範囲"
+    - name: entrySelector
+      type: uint16
+      description: "二分探索の回数（log2(searchRange / 2)）"
+    - name: rangeShift
+      type: uint16
+      description: "二分探索の残り（segCountX2 - searchRange）"
+    - name: endCode
+      type: uint16
+      repeat_count: "{segCount}"
+      description: "各区間の最後の文字コード（最後の区間は 0xFFFF）"
+    - name: reservedPad
+      type: uint16
+      description: "予約（0）"
+    - name: startCode
+      type: uint16
+      repeat_count: "{segCount}"
+      description: "各区間の最初の文字コード"
+    - name: idDelta
+      type: int16
+      repeat_count: "{segCount}"
+      description: "文字コードに足すとグリフ番号になる差（65536 で割った余り）"
+    - name: idRangeOffset
+      type: uint16
+      repeat_count: "{segCount}"
+      description: "glyphIdArray への位置（0 なら idDelta を使う）"
+    - name: glyphIdArray
+      type: bytes
+      size: "{length - 16 - segCount * 8}"
+      description: "グリフ番号の配列（uint16 の並び）"
+
+  cmap_format6:
+    - name: length
+      type: uint16
+      description: "サブ表のバイト数"
+    - name: language
+      type: uint16
+      description: "言語"
+    - name: firstCode
+      type: uint16
+      description: "最初の文字コード"
+    - name: entryCount
+      type: uint16
+      description: "文字コードの数"
+    - name: glyphIdArray
+      type: uint16
+      repeat_count: "{entryCount}"
+      description: "連続する文字コードのグリフ番号"
+
+  cmap_format12:
+    - name: reserved
+      type: uint16
+      description: "予約（0）"
+    - name: length
+      type: uint32
+      description: "サブ表のバイト数"
+    - name: language
+      type: uint32
+      description: "言語"
+    - name: numGroups
+      type: uint32
+      description: "グループの数"
+    - name: groups
+      type: struct
+      struct: cmap_group
+      repeat_count: "{numGroups}"
+      description: "連続する文字コードのグループ（形式 13 は全部を同じグリフに対応付ける）"
+
+  cmap_group:
+    - name: startCharCode
+      type: uint32
+      description: "最初の文字コード"
+    - name: endCharCode
+      type: uint32
+      description: "最後の文字コード"
+    - name: startGlyphID
+      type: uint32
+      description: "最初の文字コードのグリフ番号"
+
+  cmap_format14:
+    - name: length
+      type: uint32
+      description: "サブ表のバイト数"
+    - name: numVarSelectorRecords
+      type: uint32
+      description: "異体字セレクタのレコードの数"
+    - name: records
+      type: struct
+      struct: variation_selector_record
+      repeat_count: "{numVarSelectorRecords}"
+      description: "異体字セレクタのレコード"
+
+  variation_selector_record:
+    - name: varSelector
+      type: bitfield
+      size: "3"
+      description: "異体字セレクタ（U+FE00〜 / U+E0100〜）"
+      fields:
+        - name: codepoint
+          bits: "23:0"
+          description: "符号位置"
+    - name: defaultUVSOffset
+      type: uint32
+      description: "既定のグリフを使う符号位置の表の位置（0 なら無し）"
+    - name: nonDefaultUVSOffset
+      type: uint32
+      description: "既定と違うグリフの対応の表の位置（0 なら無し）"
+
+  os2_table:
+    - name: version
+      type: uint16
+      description: "版（0〜5）"
+    - name: xAvgCharWidth
+      type: int16
+      description: "平均の文字幅"
+    - name: usWeightClass
+      type: uint16
+      description: "太さ（100〜900。400 = Regular、700 = Bold）"
+    - name: usWidthClass
+      type: uint16
+      description: "幅（1〜9。5 = Normal）"
+    - name: fsType
+      type: bitfield
+      size: "2"
+      description: "埋め込みの許可"
+      fields:
+        - name: restricted_license
+          bits: "1"
+          description: "埋め込み禁止"
+        - name: preview_and_print
+          bits: "2"
+          description: "表示と印刷のみ"
+        - name: editable
+          bits: "3"
+          description: "編集可能"
+        - name: no_subsetting
+          bits: "8"
+          description: "サブセット化の禁止"
+        - name: bitmap_only
+          bits: "9"
+          description: "ビットマップのみ埋め込み可"
+    - name: ySubscriptXSize
+      type: int16
+      description: "下付き文字の横の大きさ"
+    - name: ySubscriptYSize
+      type: int16
+      description: "下付き文字の縦の大きさ"
+    - name: ySubscriptXOffset
+      type: int16
+      description: "下付き文字の横のずれ"
+    - name: ySubscriptYOffset
+      type: int16
+      description: "下付き文字の縦のずれ"
+    - name: ySuperscriptXSize
+      type: int16
+      description: "上付き文字の横の大きさ"
+    - name: ySuperscriptYSize
+      type: int16
+      description: "上付き文字の縦の大きさ"
+    - name: ySuperscriptXOffset
+      type: int16
+      description: "上付き文字の横のずれ"
+    - name: ySuperscriptYOffset
+      type: int16
+      description: "上付き文字の縦のずれ"
+    - name: yStrikeoutSize
+      type: int16
+      description: "取り消し線の太さ"
+    - name: yStrikeoutPosition
+      type: int16
+      description: "取り消し線の位置"
+    - name: sFamilyClass
+      type: int16
+      description: "IBM のフォントの分類（上位 8 ビット = 分類、下位 = 下位分類）"
+    - name: panose
+      type: bytes
+      size: "10"
+      description: "PANOSE の分類（10 バイト）"
+    - name: ulUnicodeRange1
+      type: uint32
+      description: "対応する Unicode の範囲（ビット 0〜31）"
+    - name: ulUnicodeRange2
+      type: uint32
+      description: "対応する Unicode の範囲（ビット 32〜63）"
+    - name: ulUnicodeRange3
+      type: uint32
+      description: "対応する Unicode の範囲（ビット 64〜95）"
+    - name: ulUnicodeRange4
+      type: uint32
+      description: "対応する Unicode の範囲（ビット 96〜127）"
+    - name: achVendID
+      type: ascii
+      size: "4"
+      description: "製造者の ID（4 文字）"
+    - name: fsSelection
+      type: bitfield
+      size: "2"
+      description: "スタイルの選択"
+      fields:
+        - name: ITALIC
+          bits: "0"
+          description: "斜体"
+        - name: UNDERSCORE
+          bits: "1"
+          description: "下線"
+        - name: NEGATIVE
+          bits: "2"
+          description: "反転"
+        - name: OUTLINED
+          bits: "3"
+          description: "中抜き"
+        - name: STRIKEOUT
+          bits: "4"
+          description: "取り消し線"
+        - name: BOLD
+          bits: "5"
+          description: "太字"
+        - name: REGULAR
+          bits: "6"
+          description: "標準"
+        - name: USE_TYPO_METRICS
+          bits: "7"
+          description: "sTypo の値を行送りに使う"
+        - name: WWS
+          bits: "8"
+          description: "名前が太さ・幅・傾きの分け方に従う"
+        - name: OBLIQUE
+          bits: "9"
+          description: "斜体でなく傾けた字形"
+    - name: usFirstCharIndex
+      type: uint16
+      description: "最小の文字コード（0xFFFF で打ち切り）"
+    - name: usLastCharIndex
+      type: uint16
+      description: "最大の文字コード（0xFFFF で打ち切り）"
+    - name: sTypoAscender
+      type: int16
+      if: "{remaining >= 2}"
+      description: "タイポグラフィのアセンダ"
+    - name: sTypoDescender
+      type: int16
+      if: "{remaining >= 2}"
+      description: "タイポグラフィのディセンダ"
+    - name: sTypoLineGap
+      type: int16
+      if: "{remaining >= 2}"
+      description: "タイポグラフィの行間"
+    - name: usWinAscent
+      type: uint16
+      if: "{remaining >= 2}"
+      description: "Windows のクリップ用のアセンダ"
+    - name: usWinDescent
+      type: uint16
+      if: "{remaining >= 2}"
+      description: "Windows のクリップ用のディセンダ（正の値）"
+    - name: ulCodePageRange1
+      type: uint32
+      if: "{version >= 1 and remaining >= 4}"
+      description: "対応するコードページ（ビット 0〜31。版 1 以降）"
+    - name: ulCodePageRange2
+      type: uint32
+      if: "{version >= 1 and remaining >= 4}"
+      description: "対応するコードページ（ビット 32〜63）"
+    - name: sxHeight
+      type: int16
+      if: "{version >= 2 and remaining >= 2}"
+      description: "x ハイト（版 2 以降）"
+    - name: sCapHeight
+      type: int16
+      if: "{version >= 2 and remaining >= 2}"
+      description: "大文字の高さ"
+    - name: usDefaultChar
+      type: uint16
+      if: "{version >= 2 and remaining >= 2}"
+      description: "グリフの無い文字に使う文字"
+    - name: usBreakChar
+      type: uint16
+      if: "{version >= 2 and remaining >= 2}"
+      description: "単語の区切りの文字（通常 0x20）"
+    - name: usMaxContext
+      type: uint16
+      if: "{version >= 2 and remaining >= 2}"
+      description: "合字などの文脈の最大の文字数"
+    - name: usLowerOpticalPointSize
+      type: uint16
+      if: "{version >= 5 and remaining >= 2}"
+      description: "想定する最小の大きさ（1/20 ポイント。版 5）"
+    - name: usUpperOpticalPointSize
+      type: uint16
+      if: "{version >= 5 and remaining >= 2}"
+      description: "想定する最大の大きさ（1/20 ポイント）"
+    - name: extra_data
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "版の想定より後ろのバイト列"
+
+  post_table:
+    - name: version
+      type: uint32
+      description: "版（0x00010000 = 1.0、0x00020000 = 2.0（グリフ名あり）、0x00025000 = 2.5、0x00030000 = 3.0（グリフ名なし））"
+    - name: italicAngle
+      type: int32
+      description: "斜体の角度（16.16 の固定小数点数。反時計回りの度数）"
+    - name: underlinePosition
+      type: int16
+      description: "下線の位置"
+    - name: underlineThickness
+      type: int16
+      description: "下線の太さ"
+    - name: isFixedPitch
+      type: uint32
+      description: "等幅か（0 以外なら等幅）"
+    - name: minMemType42
+      type: uint32
+      description: "Type 42 としてダウンロードするときの最小のメモリ"
+    - name: maxMemType42
+      type: uint32
+      description: "Type 42 の最大のメモリ"
+    - name: minMemType1
+      type: uint32
+      description: "Type 1 の最小のメモリ"
+    - name: maxMemType1
+      type: uint32
+      description: "Type 1 の最大のメモリ"
+    - name: numGlyphs
+      type: uint16
+      if: "{version == 0x00020000}"
+      description: "グリフの数（版 2.0）"
+    - name: glyphNameIndex
+      type: uint16
+      repeat_count: "{numGlyphs}"
+      if: "{version == 0x00020000}"
+      description: "各グリフの名前の番号（258 未満は Macintosh の標準の名前、それ以上は後ろの名前の並びの番号 + 258）"
+    - name: names
+      type: struct
+      struct: pascal_string
+      repeat: eof
+      if: "{version == 0x00020000}"
+      description: "独自のグリフの名前の並び（長さ 1 バイト + 文字）"
+    - name: extra_data
+      type: bytes
+      size: remaining
+      if: "{version != 0x00020000 and remaining > 0}"
+      description: "版ごとの残り"
+
+  pascal_string:
+    - name: length
+      type: uint8
+      description: "文字数"
+    - name: text
+      type: ascii
+      size: "{length}"
+      description: "グリフの名前"
+
+  fvar_table:
+    - name: majorVersion
+      type: uint16
+      description: "主版（1）"
+    - name: minorVersion
+      type: uint16
+      description: "副版（0）"
+    - name: axesArrayOffset
+      type: uint16
+      description: "軸の並びの位置（表の先頭から）"
+    - name: reserved
+      type: uint16
+      description: "予約（2）"
+    - name: axisCount
+      type: uint16
+      description: "軸の数"
+    - name: axisSize
+      type: uint16
+      description: "軸のレコードのバイト数（20）"
+    - name: instanceCount
+      type: uint16
+      description: "名前付きのインスタンスの数"
+    - name: instanceSize
+      type: uint16
+      description: "インスタンスのレコードのバイト数（axisCount × 4 + 4、PostScript の名前があれば + 2）"
+    - name: axes
+      type: struct
+      struct: variation_axis
+      repeat_count: "{axisCount}"
+      seek: "{table_offset + axesArrayOffset}"
+      seek_restore: true
+      description: "変化の軸（wght・wdth・opsz など）"
+    - name: instances
+      type: struct
+      struct: named_instance
+      repeat_count: "{instanceCount}"
+      seek: "{table_offset + axesArrayOffset + axisCount * axisSize}"
+      seek_restore: true
+      description: "名前付きのインスタンス（Regular・Bold など）"
+
+  variation_axis:
+    - name: axisTag
+      type: ascii
+      size: "4"
+      description: "軸のタグ（'wght' = 太さ、'wdth' = 幅、'opsz' = 光学的な大きさ、'ital' = 斜体、'slnt' = 傾き）"
+    - name: minValue
+      type: int32
+      description: "最小値（16.16 の固定小数点数）"
+    - name: defaultValue
+      type: int32
+      description: "既定値（16.16）"
+    - name: maxValue
+      type: int32
+      description: "最大値（16.16）"
+    - name: flags
+      type: uint16
+      description: "フラグ（0x0001 = 利用者に見せない）"
+    - name: axisNameID
+      type: uint16
+      description: "軸の名前の nameID"
+
+  named_instance:
+    - name: subfamilyNameID
+      type: uint16
+      description: "サブファミリ名の nameID"
+    - name: flags
+      type: uint16
+      description: "予約（0）"
+    - name: coordinates
+      type: int32
+      repeat_count: "{axisCount}"
+      description: "各軸の値（16.16 の固定小数点数）"
+    - name: postScriptNameID
+      type: uint16
+      if: "{instanceSize == axisCount * 4 + 6}"
+      description: "PostScript の名前の nameID"
+
+  layout_table:
+    - name: majorVersion
+      type: uint16
+      description: "主版（1）"
+    - name: minorVersion
+      type: uint16
+      description: "副版（0 か 1）"
+    - name: scriptListOffset
+      type: uint16
+      description: "スクリプトの一覧の位置（表の先頭から）"
+    - name: featureListOffset
+      type: uint16
+      description: "機能の一覧の位置"
+    - name: lookupListOffset
+      type: uint16
+      description: "ルックアップの一覧の位置"
+    - name: featureVariationsOffset
+      type: uint32
+      if: "{minorVersion >= 1}"
+      description: "機能のバリエーションの位置（版 1.1）"
+    - name: script_list
+      type: struct
+      struct: tag_list
+      seek: "{table_offset + scriptListOffset}"
+      seek_restore: true
+      if: "{scriptListOffset != 0}"
+      description: "スクリプトの一覧（'latn'・'kana' など）"
+    - name: feature_list
+      type: struct
+      struct: tag_list
+      seek: "{table_offset + featureListOffset}"
+      seek_restore: true
+      if: "{featureListOffset != 0}"
+      description: "機能の一覧（'liga'・'kern'・'vert' など）"
+    - name: lookup_count
+      type: uint16
+      seek: "{table_offset + lookupListOffset}"
+      seek_restore: true
+      if: "{lookupListOffset != 0}"
+      description: "ルックアップの数"
+
+  tag_list:
+    - name: count
+      type: uint16
+      description: "レコードの数"
+    - name: records
+      type: struct
+      struct: tag_record
+      repeat_count: "{count}"
+      description: "タグとオフセットのレコード"
+
+  tag_record:
+    - name: tag
+      type: ascii
+      size: "4"
+      description: "タグ"
+    - name: offset
+      type: uint16
+      description: "中身の位置（一覧の先頭から）"
+
+  cff_header:
+    - name: major
+      type: uint8
+      description: "主版（CFF = 1、CFF2 = 2）"
+    - name: minor
+      type: uint8
+      description: "副版（0）"
+    - name: hdrSize
+      type: uint8
+      description: "ヘッダのバイト数"
+    - name: offSize
+      type: uint8
+      if: "{major == 1}"
+      description: "オフセットのバイト数（CFF）"
+    - name: topDictLength
+      type: uint16
+      if: "{major == 2}"
+      description: "Top DICT のバイト数（CFF2）"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "CFF のデータ（Name INDEX・Top DICT・グリフの手続きなど。分解しない）"
+
+  dsig_table:
+    - name: version
+      type: uint32
+      description: "版（1）"
+    - name: numSignatures
+      type: uint16
+      description: "署名の数（0 は署名の無い空の表）"
+    - name: flags
+      type: uint16
+      description: "フラグ（ビット 0 = 再署名を禁止）"
+    - name: data
+      type: bytes
+      size: remaining
+      description: "署名のレコードと署名（PKCS#7）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しない表の中身"
+
+  raw_empty: []

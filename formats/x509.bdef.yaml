@@ -1,423 +1,511 @@
+# X.509 の証明書（DER）
+# 仕様: RFC 5280 Internet X.509 Public Key Infrastructure Certificate and CRL Profile（2008）、ITU-T X.690（2021）の DER、
+#   RFC 8410（Ed25519・X25519）・RFC 9881 / FIPS 204（ML-DSA）・CA/Browser Forum の OID。OpenSSL 3.6 が出力した証明書で照合した
+# 構造: Certificate ::= SEQUENCE { tbsCertificate, signatureAlgorithm, signatureValue }。tbsCertificate は版（[0]、省略可）・シリアル番号・署名の方式・発行者・
+#   有効期間・主体・公開鍵の情報・[1] / [2] の一意の ID・[3] の拡張の並び。各要素は DER の TLV（識別子 1 バイト + 長さ + 中身）で、構造型の中身は TLV の並び。
+#   拡張の値（extnValue の OCTET STRING）の中身も DER として分解する。ファイルの中の複数の証明書を順に読む
+# 対応していないもの: PEM（base64 のテキスト。openssl x509 -outform der で DER にする）、BER の不定長・31 以上のタグ番号、証明書以外の DER（CSR・CRL・秘密鍵・PKCS#7）の名前付きの分解、
+#   9 バイト以上の INTEGER の値（バイト列で表示）、UniversalString、署名の検証、表に無い OID の名前（数字のみ）、文脈固有のタグの暗黙の型（[1]・[2]・[6] は GeneralName の文字列として表示し、ほかはバイト列）
 name: X509
 endianness: big
-root: certificate
+root: x509_file
 
 enums:
-  asn1_tag:
-    - value: 0x01
+  asn1_class:
+    - value: 0
+      label: universal
+      description: "汎用"
+    - value: 1
+      label: application
+      description: "アプリケーション"
+    - value: 2
+      label: context_specific
+      description: "文脈固有（[n]）"
+    - value: 3
+      label: private
+      description: "私用"
+
+  universal_tag:
+    - value: 1
       label: BOOLEAN
-    - value: 0x02
+      description: "真偽値"
+    - value: 2
       label: INTEGER
-    - value: 0x03
+      description: "整数（2 の補数）"
+    - value: 3
       label: BIT_STRING
-    - value: 0x04
+      description: "ビット列（先頭 1 バイトが未使用のビット数）"
+    - value: 4
       label: OCTET_STRING
-    - value: 0x05
+      description: "バイト列"
+    - value: 5
       label: "NULL"
-    - value: 0x06
+      description: "空"
+    - value: 6
       label: OBJECT_IDENTIFIER
-    - value: 0x0C
+      description: "オブジェクト識別子"
+    - value: 10
+      label: ENUMERATED
+      description: "列挙"
+    - value: 12
       label: UTF8String
-    - value: 0x13
-      label: PrintableString
-    - value: 0x16
-      label: IA5String
-    - value: 0x17
-      label: UTCTime
-    - value: 0x18
-      label: GeneralizedTime
-    - value: 0x30
+      description: "UTF-8 の文字列"
+    - value: 16
       label: SEQUENCE
-    - value: 0x31
+      description: "順序付きの並び"
+    - value: 17
       label: SET
-    - value: 0xA0
-      label: CONTEXT_0
-      description: "[0] EXPLICIT (version)"
-    - value: 0xA3
-      label: CONTEXT_3
-      description: "[3] EXPLICIT (extensions)"
+      description: "順序の無い集合"
+    - value: 18
+      label: NumericString
+      description: "数字と空白の文字列"
+    - value: 19
+      label: PrintableString
+      description: "印字可能な文字列"
+    - value: 20
+      label: T61String
+      description: "T.61 の文字列（Latin-1 として表示）"
+    - value: 22
+      label: IA5String
+      description: "ASCII の文字列"
+    - value: 23
+      label: UTCTime
+      description: "日時（YYMMDDhhmmssZ）"
+    - value: 24
+      label: GeneralizedTime
+      description: "日時（YYYYMMDDhhmmssZ）"
+    - value: 26
+      label: VisibleString
+      description: "表示可能な ASCII の文字列"
+    - value: 28
+      label: UniversalString
+      description: "UCS-4 の文字列"
+    - value: 30
+      label: BMPString
+      description: "UCS-2（UTF-16BE）の文字列"
 
   x509_version:
     - value: 0
       label: v1
+      description: "版 1"
     - value: 1
       label: v2
+      description: "版 2（一意の ID を持てる）"
     - value: 2
       label: v3
+      description: "版 3（拡張を持てる）"
 
 structs:
-  # ============================================================
-  # Root: Certificate SEQUENCE
-  # ============================================================
-  certificate:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
+  x509_file:
+    - name: file_size
       type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
+      value: "{remaining}"
+      padding: true
+      description: "ファイルのバイト数（作業用。現在の位置を求める基準）"
+    - name: certificates
       type: struct
-      struct: certificate_content
-      size: "{length}"
+      struct: certificate
+      repeat: eof
+      description: "証明書の並び"
 
-  certificate_content:
+  # ================= 証明書の名前付きの層（大きさで区切らずに順に読み、次の要素の識別子を先読みする） =================
+  certificate:
+    - name: header
+      type: struct
+      struct: der_header
+      description: "Certificate の SEQUENCE の識別子と長さ"
     - name: tbs_certificate
       type: struct
       struct: tbs_certificate
-    - name: sig_algorithm
+      description: "署名の対象の証明書の中身（TBSCertificate）"
+    - name: signature_algorithm
       type: struct
-      struct: asn1_tlv_bytes
-    - name: signature
+      struct: der_tlv
+      description: "署名の方式（AlgorithmIdentifier）"
+    - name: signature_value
       type: struct
-      struct: signature_bitstring
+      struct: der_tlv
+      description: "署名（BIT STRING）"
 
-  # ============================================================
-  # TBS Certificate
-  # ============================================================
   tbs_certificate:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
+    - name: header
       type: struct
-      struct: tbs_content
-      size: "{length}"
-
-  tbs_content:
-    - name: version_explicit
+      struct: der_header
+      description: "TBSCertificate の SEQUENCE の識別子と長さ"
+    - name: next_tag1
+      type: uint8
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      padding: true
+      description: "次の要素の識別子（作業用。省略できる版の有無を見る）"
+    - name: version
       type: struct
-      struct: version_explicit
+      struct: explicit_version
+      if: "{next_tag1 == 0xA0}"
+      description: "版（[0] EXPLICIT。省略時は v1）"
     - name: serial_number
       type: struct
-      struct: asn1_tlv_bytes
-    - name: tbs_sig_algorithm
+      struct: der_tlv
+      description: "シリアル番号（INTEGER。発行者の中で一意）"
+    - name: signature
       type: struct
-      struct: asn1_tlv_bytes
+      struct: der_tlv
+      description: "署名の方式（signatureAlgorithm と同じ）"
     - name: issuer
       type: struct
-      struct: x509_name
+      struct: der_tlv
+      description: "発行者の名前（RDN の SET の並び）"
     - name: validity
       type: struct
-      struct: validity_sequence
+      struct: der_tlv
+      description: "有効期間（notBefore と notAfter）"
     - name: subject
       type: struct
-      struct: x509_name
-    - name: spki
+      struct: der_tlv
+      description: "主体の名前"
+    - name: subject_public_key_info
       type: struct
-      struct: asn1_tlv_bytes
-    - name: extensions_explicit
-      type: struct
-      struct: extensions_explicit
+      struct: subject_public_key_info
+      description: "主体の公開鍵の情報"
+    - name: next_tag2
+      type: uint8
+      seek: "{file_size - remaining}"
+      seek_restore: true
       if: "{remaining > 0}"
+      padding: true
+      description: "次の要素の識別子（作業用）"
+    - name: issuer_unique_id
+      type: struct
+      struct: der_tlv
+      if: "{remaining > 0 and next_tag2 == 0x81}"
+      description: "発行者の一意の ID（[1] IMPLICIT BIT STRING。v2 以降）"
+    - name: next_tag3
+      type: uint8
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      if: "{remaining > 0}"
+      padding: true
+      description: "次の要素の識別子（作業用）"
+    - name: subject_unique_id
+      type: struct
+      struct: der_tlv
+      if: "{remaining > 0 and next_tag3 == 0x82}"
+      description: "主体の一意の ID（[2] IMPLICIT BIT STRING。v2 以降）"
+    - name: next_tag4
+      type: uint8
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      if: "{remaining > 0}"
+      padding: true
+      description: "次の要素の識別子（作業用）"
+    - name: extensions
+      type: struct
+      struct: extensions
+      if: "{remaining > 0 and next_tag4 == 0xA3}"
+      description: "拡張（[3] EXPLICIT。v3）"
 
-  # ============================================================
-  # Version [0] EXPLICIT
-  # ============================================================
-  version_explicit:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: length
-      type: uint8
+  explicit_version:
+    - name: header
+      type: struct
+      struct: der_header
+      description: "[0] の識別子と長さ"
     - name: version_integer
       type: struct
-      struct: version_integer
-      size: "{length}"
-
-  version_integer:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: length
-      type: uint8
-    - name: value
-      type: uint8
+      struct: der_tlv
+      description: "版の INTEGER（0 = v1、1 = v2、2 = v3）"
+    - name: version
+      type: virtual
+      value: "{version_integer.content.int_value}"
       enum: x509_version
+      description: "版"
 
-  # ============================================================
-  # ASN.1 TLV with raw bytes (for INTEGER, SEQUENCE blobs, etc.)
-  # ============================================================
-  asn1_tlv_bytes:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: data
-      type: bytes
-      size: "{length}"
-
-  # ============================================================
-  # X.509 Name (Issuer / Subject)
-  # ============================================================
-  x509_name:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
+  subject_public_key_info:
+    - name: header
       type: struct
-      struct: name_content
-      size: "{length}"
-
-  name_content:
-    - name: rdn_sets
+      struct: der_header
+      description: "SubjectPublicKeyInfo の SEQUENCE の識別子と長さ"
+    - name: algorithm
       type: struct
-      struct: rdn_set
-      repeat: eof
-
-  rdn_set:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
+      struct: der_tlv
+      description: "公開鍵の方式（AlgorithmIdentifier。EC なら曲線の OID を引数に持つ）"
+    - name: public_key_header
       type: struct
-      struct: rdn_content
-      size: "{length}"
-
-  rdn_content:
-    - name: attrs
-      type: struct
-      struct: attr_sequence
-      repeat: eof
-
-  attr_sequence:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
-      type: struct
-      struct: attr_content
-      size: "{length}"
-
-  attr_content:
-    - name: oid_tag
-      type: uint8
-      enum: asn1_tag
-    - name: oid_length
-      type: uint8
-    - name: oid_value
-      type: bytes
-      size: "{oid_length}"
-    - name: value_tag
-      type: uint8
-      enum: asn1_tag
-    - name: value_length
-      type: uint8
-    - name: value
-      type: ascii
-      size: "{value_length}"
-
-  # ============================================================
-  # Validity (NotBefore / NotAfter)
-  # ============================================================
-  validity_sequence:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
-      type: struct
-      struct: validity_content
-      size: "{length}"
-
-  validity_content:
-    - name: not_before
-      type: struct
-      struct: asn1_time
-    - name: not_after
-      type: struct
-      struct: asn1_time
-
-  asn1_time:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: length
-      type: uint8
-    - name: value
-      type: ascii
-      size: "{length}"
-
-  # ============================================================
-  # Extensions [3] EXPLICIT
-  # ============================================================
-  extensions_explicit:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: extensions_seq
-      type: struct
-      struct: extensions_seq
-      size: "{length}"
-
-  extensions_seq:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
-      type: struct
-      struct: extensions_content
-      size: "{length}"
-
-  extensions_content:
-    - name: entries
-      type: struct
-      struct: extension
-      repeat: eof
-
-  extension:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
-      type: struct
-      struct: extension_content
-      size: "{length}"
-
-  extension_content:
-    - name: oid_tag
-      type: uint8
-      enum: asn1_tag
-    - name: oid_length
-      type: uint8
-    - name: oid_value
-      type: bytes
-      size: "{oid_length}"
-    - name: value_data
-      type: bytes
-      size: remaining
-
-  # ============================================================
-  # Signature BIT STRING
-  # ============================================================
-  signature_bitstring:
-    - name: tag
-      type: uint8
-      enum: asn1_tag
-    - name: len0
-      type: uint8
-    - name: len1
-      type: uint8
-      if: "{len0 == 0x81}"
-    - name: len2
-      type: uint16
-      if: "{len0 == 0x82}"
-    - name: length
-      type: virtual
-      value: "{len0 < 128 ? len0 : (len0 == 0x81 ? len1 : len2)}"
-    - name: content
-      type: struct
-      struct: signature_content
-      size: "{length}"
-
-  signature_content:
+      struct: der_header
+      description: "subjectPublicKey の BIT STRING の識別子と長さ"
     - name: unused_bits
       type: uint8
+      description: "未使用のビット数（0）"
+    - name: key_first_byte
+      type: uint8
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      padding: true
+      description: "鍵の先頭のバイト（作業用。0x30 なら RSA などの DER の鍵）"
+    - name: public_key
+      type: struct
+      struct: der_tlv
+      if: "{key_first_byte == 0x30}"
+      description: "公開鍵（RSAPublicKey ::= SEQUENCE { modulus, publicExponent } など）"
+    - name: public_key_bytes
+      type: bytes
+      size: "{der_length - 1}"
+      if: "{key_first_byte != 0x30}"
+      description: "公開鍵のバイト列（EC の点・Ed25519 の 32 バイト・ML-DSA の鍵など）"
+
+  extensions:
+    - name: header
+      type: struct
+      struct: der_header
+      description: "[3] の識別子と長さ"
+    - name: list_header
+      type: struct
+      struct: der_header
+      description: "Extensions の SEQUENCE の識別子と長さ"
+    - name: list_end
+      type: virtual
+      value: "{file_size - remaining + der_length}"
+      padding: true
+      description: "拡張の並びの終わりの位置（作業用）"
+    - name: extensions
+      type: struct
+      struct: extension
+      repeat_while: "{file_size - remaining < list_end}"
+      description: "拡張の並び"
+
+  extension:
+    - name: header
+      type: struct
+      struct: der_header
+      description: "Extension の SEQUENCE の識別子と長さ"
+    - name: extn_id
+      type: struct
+      struct: der_tlv
+      description: "拡張の種類（OID）"
+    - name: name
+      type: virtual
+      value: "{extn_id.content.name}"
+      description: "拡張の名前"
+    - name: next_tag
+      type: uint8
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      padding: true
+      description: "次の要素の識別子（作業用。省略できる critical の有無を見る）"
+    - name: critical
+      type: struct
+      struct: der_tlv
+      if: "{next_tag == 0x01}"
+      description: "重要か（BOOLEAN。省略時は偽。理解できない重要な拡張を持つ証明書は拒否する）"
+    - name: extn_value_header
+      type: struct
+      struct: der_header
+      description: "extnValue の OCTET STRING の識別子と長さ"
+    - name: extn_value
+      type: struct
+      struct: der_tlv
+      description: "拡張の値（OCTET STRING の中身の DER）"
+
+  # ================= DER の汎用の TLV =================
+  der_header:
+    - name: identifier
+      type: bitfield
+      size: "1"
+      description: "識別子"
+      fields:
+        - name: tag_class
+          bits: "7:6"
+          enum: asn1_class
+          description: "クラス"
+        - name: constructed
+          bits: "5"
+          description: "構造型か（中身が TLV の並び）"
+        - name: tag_number
+          bits: "4:0"
+          description: "タグの番号（31 はタグの番号が後ろに続く形。未対応）"
+    - name: length_first
+      type: uint8
+      description: "長さの先頭のバイト（128 未満なら長さ、それ以上なら下位 7 ビットが長さのバイト数）"
+    - name: length1
+      type: uint8
+      if: "{length_first == 0x81}"
+      description: "長さ（1 バイト）"
+    - name: length2
+      type: uint16
+      if: "{length_first == 0x82}"
+      description: "長さ（2 バイト）"
+    - name: length3
+      type: bitfield
+      size: "3"
+      if: "{length_first == 0x83}"
+      description: "長さ（3 バイト）"
+      fields:
+        - name: length3_value
+          bits: "23:0"
+          description: "長さ"
+    - name: length4
+      type: uint32
+      if: "{length_first == 0x84}"
+      description: "長さ（4 バイト）"
+    - name: der_length
+      type: virtual
+      value: "{length_first < 0x80 ? length_first : (length_first == 0x81 ? length1 : (length_first == 0x82 ? length2 : (length_first == 0x83 ? length3_value : (length_first == 0x84 ? length4 : 0))))}"
+      description: "中身のバイト数"
+
+  # 入れ子の TLV の値が親の値を上書きしないように、エンディアンを書いた形にして独自の変数のスコープを持たせる
+  der_tlv:
+    endianness: big
+    fields:
+      - name: header
+        type: struct
+        struct: der_header
+        description: "識別子と長さ"
+      - name: type_name
+        type: virtual
+        value: "{tag_class == 0 ? tag_number : 0}"
+        enum: universal_tag
+        if: "{tag_class == 0}"
+        description: "汎用のタグの型"
+      - name: context_tag
+        type: virtual
+        value: "{concat('[', tag_number, ']')}"
+        if: "{tag_class == 2}"
+        description: "文脈固有のタグ（[n]）"
+      - name: content
+        type: switch
+        size: "{der_length}"
+        switch_on: "{constructed == 1 ? 1000 : (tag_class == 0 ? tag_number : (tag_class == 2 and (tag_number == 1 or tag_number == 2 or tag_number == 6) ? 2000 : 3000))}"
+        cases:
+          "1": der_boolean
+          "2": der_integer
+          "3": der_bit_string
+          "4": der_octet_string
+          "5": der_null
+          "6": der_oid
+          "10": der_integer
+          "12": der_utf8
+          "18": der_ascii
+          "19": der_ascii
+          "20": der_latin1
+          "22": der_ascii
+          "23": der_ascii
+          "24": der_ascii
+          "26": der_ascii
+          "30": der_bmp
+          "1000": der_constructed
+          "2000": der_ascii
+        default: der_octet_string
+        description: "中身"
+
+  der_constructed:
+    - name: items
+      type: struct
+      struct: der_tlv
+      repeat: eof
+      description: "中の TLV の並び"
+
+  der_boolean:
+    - name: bool_value
+      type: uint8
+      description: "真偽値（0 = 偽、0xFF = 真）"
+
+  der_integer:
+    - name: int_value
+      type: int8
+      if: "{remaining == 1}"
+      description: "整数"
+    - name: int_value
+      type: int16
+      if: "{remaining == 2}"
+      description: "整数"
+    - name: int24
+      type: bitfield
+      size: "3"
+      if: "{remaining == 3}"
+      description: "24 ビットの整数"
+      fields:
+        - name: int24_bits
+          bits: "23:0"
+          description: "ビット列"
+    - name: int_value
+      type: virtual
+      value: "{int24_bits >= 0x800000 ? int24_bits - 0x1000000 : int24_bits}"
+      if: "{der_length == 3}"
+      description: "整数"
+    - name: int_value
+      type: int32
+      if: "{remaining == 4}"
+      description: "整数"
+    - name: int_value
+      type: int64
+      if: "{remaining == 8}"
+      description: "整数"
+    - name: int_bytes
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "整数のバイト列（2 の補数のビッグエンディアン。先頭の 0x00 は正の数の印）"
+
+  der_bit_string:
+    - name: unused_bits
+      type: uint8
+      description: "最後のバイトの未使用のビット数"
+    - name: bits
+      type: bytes
+      size: remaining
+      description: "ビット列（鍵用途などはビット 0 が先頭のバイトの最上位ビット）"
+
+  der_octet_string:
     - name: data
       type: bytes
       size: remaining
+      description: "バイト列"
+
+  der_null: []
+
+  der_oid:
+    - name: arcs
+      type: struct
+      struct: oid_arc
+      repeat: eof
+      description: "識別子の数（7 ビットずつの可変長整数の並び。先頭は 40 × 1 つ目 + 2 つ目）"
+    - name: oid
+      type: virtual
+      value: "{dotted}"
+      description: "ドット区切りの OID"
+    - name: name
+      type: virtual
+      value: "{oid == '1.2.840.113549.1.1.1' ? 'rsaEncryption' : oid == '1.2.840.113549.1.1.5' ? 'sha1WithRSAEncryption' : oid == '1.2.840.113549.1.1.10' ? 'RSASSA-PSS' : oid == '1.2.840.113549.1.1.11' ? 'sha256WithRSAEncryption' : oid == '1.2.840.113549.1.1.12' ? 'sha384WithRSAEncryption' : oid == '1.2.840.113549.1.1.13' ? 'sha512WithRSAEncryption' : oid == '1.2.840.10045.2.1' ? 'ecPublicKey' : oid == '1.2.840.10045.3.1.7' ? 'prime256v1' : oid == '1.3.132.0.34' ? 'secp384r1' : oid == '1.3.132.0.35' ? 'secp521r1' : oid == '1.2.840.10045.4.3.2' ? 'ecdsa-with-SHA256' : oid == '1.2.840.10045.4.3.3' ? 'ecdsa-with-SHA384' : oid == '1.2.840.10045.4.3.4' ? 'ecdsa-with-SHA512' : oid == '1.3.101.110' ? 'X25519' : oid == '1.3.101.112' ? 'Ed25519' : oid == '1.3.101.113' ? 'Ed448' : oid == '2.16.840.1.101.3.4.3.17' ? 'ML-DSA-44' : oid == '2.16.840.1.101.3.4.3.18' ? 'ML-DSA-65' : oid == '2.16.840.1.101.3.4.3.19' ? 'ML-DSA-87' : oid == '2.16.840.1.101.3.4.2.1' ? 'sha256' : oid == '2.16.840.1.101.3.4.2.2' ? 'sha384' : oid == '2.16.840.1.101.3.4.2.3' ? 'sha512' : oid == '1.3.14.3.2.26' ? 'sha1' : oid == '2.5.4.3' ? 'commonName' : oid == '2.5.4.4' ? 'surname' : oid == '2.5.4.5' ? 'serialNumber' : oid == '2.5.4.6' ? 'countryName' : oid == '2.5.4.7' ? 'localityName' : oid == '2.5.4.8' ? 'stateOrProvinceName' : oid == '2.5.4.9' ? 'streetAddress' : oid == '2.5.4.10' ? 'organizationName' : oid == '2.5.4.11' ? 'organizationalUnitName' : oid == '2.5.4.12' ? 'title' : oid == '2.5.4.42' ? 'givenName' : oid == '1.2.840.113549.1.9.1' ? 'emailAddress' : oid == '0.9.2342.19200300.100.1.25' ? 'domainComponent' : oid == '2.5.29.14' ? 'subjectKeyIdentifier' : oid == '2.5.29.15' ? 'keyUsage' : oid == '2.5.29.17' ? 'subjectAltName' : oid == '2.5.29.18' ? 'issuerAltName' : oid == '2.5.29.19' ? 'basicConstraints' : oid == '2.5.29.30' ? 'nameConstraints' : oid == '2.5.29.31' ? 'cRLDistributionPoints' : oid == '2.5.29.32' ? 'certificatePolicies' : oid == '2.5.29.32.0' ? 'anyPolicy' : oid == '2.5.29.35' ? 'authorityKeyIdentifier' : oid == '2.5.29.36' ? 'policyConstraints' : oid == '2.5.29.37' ? 'extKeyUsage' : oid == '2.5.29.54' ? 'inhibitAnyPolicy' : oid == '1.3.6.1.5.5.7.1.1' ? 'authorityInfoAccess' : oid == '1.3.6.1.4.1.11129.2.4.2' ? 'signedCertificateTimestampList' : oid == '1.3.6.1.4.1.11129.2.4.3' ? 'ctPrecertificatePoison' : oid == '1.3.6.1.5.5.7.3.1' ? 'serverAuth' : oid == '1.3.6.1.5.5.7.3.2' ? 'clientAuth' : oid == '1.3.6.1.5.5.7.3.3' ? 'codeSigning' : oid == '1.3.6.1.5.5.7.3.4' ? 'emailProtection' : oid == '1.3.6.1.5.5.7.3.8' ? 'timeStamping' : oid == '1.3.6.1.5.5.7.3.9' ? 'OCSPSigning' : oid == '1.3.6.1.5.5.7.48.1' ? 'ocsp' : oid == '1.3.6.1.5.5.7.48.2' ? 'caIssuers' : oid == '2.23.140.1.2.1' ? 'domain-validated' : oid == '2.23.140.1.2.2' ? 'organization-validated' : oid == '2.23.140.1.2.3' ? 'individual-validated' : oid == '2.23.140.1.1' ? 'extended-validation' : oid == '1.2.840.113549.1.9.14' ? 'extensionRequest' : oid == '1.2.840.113549.1.7.1' ? 'data' : oid == '1.2.840.113549.1.7.2' ? 'signedData' : ''}"
+      description: "OID の名前（表に無ければ空）"
+
+  oid_arc:
+    - name: arc
+      type: vlq
+      description: "識別子の数"
+    - name: dotted
+      type: virtual
+      value: "{_index == 0 ? (arc < 80 ? concat(arc / 40, '.', arc % 40) : concat(2, '.', arc - 80)) : concat(dotted, '.', arc)}"
+      description: "ここまでのドット区切りの OID"
+
+  der_utf8:
+    - name: text
+      type: utf8
+      size: remaining
+      description: "文字列（UTF-8）"
+
+  der_ascii:
+    - name: text
+      type: ascii
+      size: remaining
+      description: "文字列（ASCII。日時は YYMMDDhhmmssZ / YYYYMMDDhhmmssZ）"
+
+  der_latin1:
+    - name: text
+      type: latin1
+      size: remaining
+      description: "文字列（Latin-1 として表示）"
+
+  der_bmp:
+    - name: text
+      type: utf16be
+      size: remaining
+      description: "文字列（UTF-16BE）"

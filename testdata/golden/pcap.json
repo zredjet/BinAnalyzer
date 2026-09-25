@@ -3,35 +3,55 @@
   "offset": 0,
   "size": 94,
   "name": "PCAP",
-  "struct_type": "pcap",
+  "struct_type": "capture",
   "children": {
-    "header": {
-      "_type": "struct",
-      "type": "struct",
+    "magic_be": {
+      "_type": "integer",
+      "type": "uint32",
       "offset": 0,
-      "size": 24,
-      "name": "header",
-      "struct_type": "pcap_header",
+      "size": 4,
+      "description": "\u5148\u982D 4 \u30D0\u30A4\u30C8\uFF08\u4F5C\u696D\u7528\u3002\u30D3\u30C3\u30B0\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3\u3067\u8AAD\u3093\u3060\u30DE\u30B8\u30C3\u30AF\uFF09",
+      "name": "magic_be",
+      "value": 3569595041,
+      "hex": "0xD4C3B2A1"
+    },
+    "body": {
+      "_type": "struct",
+      "type": "switch",
+      "offset": 0,
+      "size": 94,
+      "name": "body",
+      "struct_type": "pcap_file",
       "children": {
         "magic": {
           "_type": "integer",
           "type": "uint32",
           "offset": 0,
           "size": 4,
-          "description": "PCAP\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC\uFF08\u30EA\u30C8\u30EB\u30A8\u30F3\u30C7\u30A3\u30A2\u30F3: 0xA1B2C3D4\uFF09",
+          "description": "\u30DE\u30B8\u30C3\u30AF\uFF080xA1B2C3D4 = \u30DE\u30A4\u30AF\u30ED\u79D2\u30010xA1B23C4D = \u30CA\u30CE\u79D2\u3002\u66F8\u3044\u305F\u6A5F\u68B0\u306E\u30D0\u30A4\u30C8\u9806\u3067\u66F8\u304B\u308C\u308B\uFF09",
           "_validation": {
             "passed": true,
-            "expression": "{magic == 0xA1B2C3D4}"
+            "expression": "{magic == 0xA1B2C3D4 or magic == 0xA1B23C4D}"
           },
           "name": "magic",
           "value": 2712847316,
           "hex": "0xA1B2C3D4"
+        },
+        "nanosecond": {
+          "_type": "virtual",
+          "type": "virtual",
+          "offset": 4,
+          "size": 0,
+          "description": "\u6642\u523B\u306E\u7AEF\u6570\u304C\u30CA\u30CE\u79D2\u304B\uFF080 \u306A\u3089\u30DE\u30A4\u30AF\u30ED\u79D2\uFF09",
+          "name": "nanosecond",
+          "value": 0
         },
         "version_major": {
           "_type": "integer",
           "type": "uint16",
           "offset": 4,
           "size": 2,
+          "description": "\u4E3B\u7248\uFF082\uFF09",
           "name": "version_major",
           "value": 2,
           "hex": "0x2"
@@ -41,6 +61,7 @@
           "type": "uint16",
           "offset": 6,
           "size": 2,
+          "description": "\u526F\u7248\uFF084\uFF09",
           "name": "version_minor",
           "value": 4,
           "hex": "0x4"
@@ -50,7 +71,7 @@
           "type": "int32",
           "offset": 8,
           "size": 4,
-          "description": "GMT\u304B\u3089\u30ED\u30FC\u30AB\u30EB\u30BF\u30A4\u30E0\u30BE\u30FC\u30F3\u3078\u306E\u88DC\u6B63",
+          "description": "\u6642\u523B\u306E\u88DC\u6B63\uFF08\u4E88\u7D04\u30020\uFF09",
           "name": "thiszone",
           "value": 0,
           "hex": "0x0"
@@ -60,7 +81,7 @@
           "type": "uint32",
           "offset": 12,
           "size": 4,
-          "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\u306E\u7CBE\u5EA6\uFF08\u901A\u5E380\uFF09",
+          "description": "\u6642\u523B\u306E\u7CBE\u5EA6\uFF08\u4E88\u7D04\u30020\uFF09",
           "name": "sigfigs",
           "value": 0,
           "hex": "0x0"
@@ -70,7 +91,7 @@
           "type": "uint32",
           "offset": 16,
           "size": 4,
-          "description": "\u30AD\u30E3\u30D7\u30C1\u30E3\u30D1\u30B1\u30C3\u30C8\u306E\u6700\u5927\u9577",
+          "description": "\u30D1\u30B1\u30C3\u30C8\u3054\u3068\u306B\u30AD\u30E3\u30D7\u30C1\u30E3\u3059\u308B\u6700\u5927\u30D0\u30A4\u30C8\u6570",
           "name": "snaplen",
           "value": 65535,
           "hex": "0xFFFF"
@@ -80,406 +101,528 @@
           "type": "uint32",
           "offset": 20,
           "size": 4,
+          "description": "\u30EA\u30F3\u30AF\u5C64\u306E\u7A2E\u985E\uFF08LINKTYPE_\uFF09",
           "name": "network",
           "value": 1,
           "hex": "0x1",
           "enum_label": "ETHERNET",
           "enum_description": "IEEE 802.3 Ethernet"
-        }
-      }
-    },
-    "packets": {
-      "_type": "array",
-      "type": "struct",
-      "offset": 24,
-      "size": 70,
-      "name": "packets",
-      "count": 1,
-      "elements": [
-        {
-          "_type": "struct",
+        },
+        "link": {
+          "_type": "virtual",
+          "type": "virtual",
+          "offset": 24,
+          "size": 0,
+          "description": "\u30EA\u30F3\u30AF\u5C64\u306E\u7A2E\u985E\uFF08\u4F5C\u696D\u7528\u3002\u4E0A\u4F4D 4 \u30D3\u30C3\u30C8\u306E FCS \u306E\u60C5\u5831\u3092\u9664\u304F\uFF09",
+          "name": "link",
+          "value": 1
+        },
+        "packets": {
+          "_type": "array",
           "type": "struct",
           "offset": 24,
           "size": 70,
           "name": "packets",
-          "struct_type": "pcap_packet",
-          "children": {
-            "ts_sec": {
-              "_type": "integer",
-              "type": "uint32",
-              "offset": 24,
-              "size": 4,
-              "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF08\u79D2\uFF09",
-              "name": "ts_sec",
-              "value": 1000000,
-              "hex": "0xF4240"
-            },
-            "ts_usec": {
-              "_type": "integer",
-              "type": "uint32",
-              "offset": 28,
-              "size": 4,
-              "description": "\u30BF\u30A4\u30E0\u30B9\u30BF\u30F3\u30D7\uFF08\u30DE\u30A4\u30AF\u30ED\u79D2\uFF09",
-              "name": "ts_usec",
-              "value": 0,
-              "hex": "0x0"
-            },
-            "incl_len": {
-              "_type": "integer",
-              "type": "uint32",
-              "offset": 32,
-              "size": 4,
-              "description": "\u30AD\u30E3\u30D7\u30C1\u30E3\u3055\u308C\u305F\u30D0\u30A4\u30C8\u6570",
-              "name": "incl_len",
-              "value": 54,
-              "hex": "0x36"
-            },
-            "orig_len": {
-              "_type": "integer",
-              "type": "uint32",
-              "offset": 36,
-              "size": 4,
-              "description": "\u5143\u306E\u30D1\u30B1\u30C3\u30C8\u9577",
-              "name": "orig_len",
-              "value": 54,
-              "hex": "0x36"
-            },
-            "data": {
+          "count": 1,
+          "elements": [
+            {
               "_type": "struct",
-              "type": "switch",
-              "offset": 40,
-              "size": 54,
-              "name": "data",
-              "struct_type": "ethernet_frame",
+              "type": "struct",
+              "offset": 24,
+              "size": 70,
+              "name": "packets",
+              "struct_type": "pcap_record",
               "children": {
-                "dst_mac": {
-                  "_type": "bytes",
-                  "type": "bytes",
-                  "offset": 40,
-                  "size": 6,
-                  "description": "\u5B9B\u5148MAC\u30A2\u30C9\u30EC\u30B9",
-                  "name": "dst_mac",
-                  "hex": "FF FF FF FF FF FF"
-                },
-                "src_mac": {
-                  "_type": "bytes",
-                  "type": "bytes",
-                  "offset": 46,
-                  "size": 6,
-                  "description": "\u9001\u4FE1\u5143MAC\u30A2\u30C9\u30EC\u30B9",
-                  "name": "src_mac",
-                  "hex": "00 11 22 33 44 55"
-                },
-                "ether_type": {
+                "ts_sec": {
                   "_type": "integer",
-                  "type": "uint16",
-                  "offset": 52,
-                  "size": 2,
-                  "description": "EtherType",
-                  "name": "ether_type",
-                  "value": 2048,
-                  "hex": "0x800",
-                  "enum_label": "IPv4",
-                  "enum_description": "\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u30D7\u30ED\u30C8\u30B3\u30EBv4"
+                  "type": "uint32",
+                  "offset": 24,
+                  "size": 4,
+                  "description": "\u6642\u523B\uFF081970-01-01 \u304B\u3089\u306E\u79D2\uFF09",
+                  "name": "ts_sec",
+                  "value": 1000000,
+                  "hex": "0xF4240"
                 },
-                "payload": {
+                "ts_frac": {
+                  "_type": "integer",
+                  "type": "uint32",
+                  "offset": 28,
+                  "size": 4,
+                  "description": "\u6642\u523B\u306E\u7AEF\u6570\uFF08\u30D8\u30C3\u30C0\u306E\u30DE\u30B8\u30C3\u30AF\u3067\u30DE\u30A4\u30AF\u30ED\u79D2\u304B\u30CA\u30CE\u79D2\uFF09",
+                  "name": "ts_frac",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "incl_len": {
+                  "_type": "integer",
+                  "type": "uint32",
+                  "offset": 32,
+                  "size": 4,
+                  "description": "\u30AD\u30E3\u30D7\u30C1\u30E3\u3057\u305F\u30D0\u30A4\u30C8\u6570",
+                  "name": "incl_len",
+                  "value": 54,
+                  "hex": "0x36"
+                },
+                "orig_len": {
+                  "_type": "integer",
+                  "type": "uint32",
+                  "offset": 36,
+                  "size": 4,
+                  "description": "\u5143\u306E\u30D1\u30B1\u30C3\u30C8\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30B9\u30CA\u30C3\u30D7\u9577\u3067\u5207\u308A\u8A70\u3081\u308B\u524D\uFF09",
+                  "name": "orig_len",
+                  "value": 54,
+                  "hex": "0x36"
+                },
+                "data": {
                   "_type": "struct",
                   "type": "switch",
-                  "offset": 54,
-                  "size": 40,
-                  "name": "payload",
-                  "struct_type": "ipv4_packet",
+                  "offset": 40,
+                  "size": 54,
+                  "name": "data",
+                  "struct_type": "ethernet_frame",
                   "children": {
-                    "version_ihl": {
+                    "dst_mac_hi": {
                       "_type": "integer",
-                      "type": "uint8",
+                      "type": "uint16",
+                      "offset": 40,
+                      "size": 2,
+                      "description": "\u5B9B\u5148\u306E MAC \u30A2\u30C9\u30EC\u30B9\u306E\u4E0A\u4F4D 2 \u30D0\u30A4\u30C8\uFF08\u4F5C\u696D\u7528\uFF09",
+                      "name": "dst_mac_hi",
+                      "value": 65535,
+                      "hex": "0xFFFF"
+                    },
+                    "dst_mac_lo": {
+                      "_type": "integer",
+                      "type": "uint32",
+                      "offset": 42,
+                      "size": 4,
+                      "description": "\u5B9B\u5148\u306E MAC \u30A2\u30C9\u30EC\u30B9\u306E\u4E0B\u4F4D 4 \u30D0\u30A4\u30C8\uFF08\u4F5C\u696D\u7528\uFF09",
+                      "name": "dst_mac_lo",
+                      "value": 4294967295,
+                      "hex": "0xFFFFFFFF"
+                    },
+                    "dst_mac": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 46,
+                      "size": 0,
+                      "description": "\u5B9B\u5148\u306E MAC \u30A2\u30C9\u30EC\u30B9\uFF08\u30B3\u30ED\u30F3\u533A\u5207\u308A\uFF09",
+                      "name": "dst_mac",
+                      "value": "ff:ff:ff:ff:ff:ff"
+                    },
+                    "src_mac_hi": {
+                      "_type": "integer",
+                      "type": "uint16",
+                      "offset": 46,
+                      "size": 2,
+                      "description": "\u9001\u4FE1\u5143\u306E MAC \u30A2\u30C9\u30EC\u30B9\u306E\u4E0A\u4F4D 2 \u30D0\u30A4\u30C8\uFF08\u4F5C\u696D\u7528\uFF09",
+                      "name": "src_mac_hi",
+                      "value": 17,
+                      "hex": "0x11"
+                    },
+                    "src_mac_lo": {
+                      "_type": "integer",
+                      "type": "uint32",
+                      "offset": 48,
+                      "size": 4,
+                      "description": "\u9001\u4FE1\u5143\u306E MAC \u30A2\u30C9\u30EC\u30B9\u306E\u4E0B\u4F4D 4 \u30D0\u30A4\u30C8\uFF08\u4F5C\u696D\u7528\uFF09",
+                      "name": "src_mac_lo",
+                      "value": 573785173,
+                      "hex": "0x22334455"
+                    },
+                    "src_mac": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 52,
+                      "size": 0,
+                      "description": "\u9001\u4FE1\u5143\u306E MAC \u30A2\u30C9\u30EC\u30B9\uFF08\u30B3\u30ED\u30F3\u533A\u5207\u308A\uFF09",
+                      "name": "src_mac",
+                      "value": "00:11:22:33:44:55"
+                    },
+                    "ether_type": {
+                      "_type": "integer",
+                      "type": "uint16",
+                      "offset": 52,
+                      "size": 2,
+                      "description": "\u4E0A\u4F4D\u306E\u30D7\u30ED\u30C8\u30B3\u30EB\uFF081536 \u4EE5\u4E0A\uFF09\u304B\u3001IEEE 802.3 \u306E\u9577\u3055\uFF081500 \u4EE5\u4E0B\uFF09",
+                      "name": "ether_type",
+                      "value": 2048,
+                      "hex": "0x800",
+                      "enum_label": "IPv4",
+                      "enum_description": "IPv4"
+                    },
+                    "vlan_tags": {
+                      "_type": "array",
+                      "type": "struct",
                       "offset": 54,
-                      "size": 1,
-                      "description": "\u30D0\u30FC\u30B8\u30E7\u30F3\uFF084\u30D3\u30C3\u30C8\uFF09\u002B IHL\uFF084\u30D3\u30C3\u30C8\uFF09",
-                      "name": "version_ihl",
-                      "value": 69,
-                      "hex": "0x45"
-                    },
-                    "version": {
-                      "_type": "virtual",
-                      "type": "virtual",
-                      "offset": 55,
                       "size": 0,
-                      "description": "IP\u30D0\u30FC\u30B8\u30E7\u30F3\uFF084 = IPv4\uFF09",
-                      "name": "version",
-                      "value": 4
+                      "name": "vlan_tags",
+                      "count": 0,
+                      "elements": []
                     },
-                    "ihl": {
-                      "_type": "virtual",
-                      "type": "virtual",
-                      "offset": 55,
-                      "size": 0,
-                      "description": "\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u30D8\u30C3\u30C0\u9577\uFF0832\u30D3\u30C3\u30C8\u30EF\u30FC\u30C9\u5358\u4F4D\uFF09",
-                      "name": "ihl",
-                      "value": 5
-                    },
-                    "tos": {
-                      "_type": "integer",
-                      "type": "uint8",
-                      "offset": 55,
-                      "size": 1,
-                      "description": "\u30B5\u30FC\u30D3\u30B9\u30BF\u30A4\u30D7",
-                      "name": "tos",
-                      "value": 0,
-                      "hex": "0x0"
-                    },
-                    "total_length": {
-                      "_type": "integer",
-                      "type": "uint16",
-                      "offset": 56,
-                      "size": 2,
-                      "description": "\u30D1\u30B1\u30C3\u30C8\u5168\u9577",
-                      "name": "total_length",
-                      "value": 40,
-                      "hex": "0x28"
-                    },
-                    "identification": {
-                      "_type": "integer",
-                      "type": "uint16",
-                      "offset": 58,
-                      "size": 2,
-                      "description": "\u8B58\u5225\u5B50",
-                      "name": "identification",
-                      "value": 1,
-                      "hex": "0x1"
-                    },
-                    "flags_fragment": {
-                      "_type": "integer",
-                      "type": "uint16",
-                      "offset": 60,
-                      "size": 2,
-                      "description": "\u30D5\u30E9\u30B0\uFF083\u30D3\u30C3\u30C8\uFF09\u002B \u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u30AA\u30D5\u30BB\u30C3\u30C8\uFF0813\u30D3\u30C3\u30C8\uFF09",
-                      "name": "flags_fragment",
-                      "value": 16384,
-                      "hex": "0x4000"
-                    },
-                    "flags": {
-                      "_type": "virtual",
-                      "type": "virtual",
-                      "offset": 62,
-                      "size": 0,
-                      "description": "\u30D5\u30E9\u30B0\uFF08bit 0=\u4E88\u7D04\u3001bit 1=DF\u3001bit 2=MF\uFF09",
-                      "name": "flags",
-                      "value": 2
-                    },
-                    "fragment_offset": {
-                      "_type": "virtual",
-                      "type": "virtual",
-                      "offset": 62,
-                      "size": 0,
-                      "description": "\u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u30AA\u30D5\u30BB\u30C3\u30C8\uFF088\u30D0\u30A4\u30C8\u5358\u4F4D\uFF09",
-                      "name": "fragment_offset",
-                      "value": 0
-                    },
-                    "ttl": {
-                      "_type": "integer",
-                      "type": "uint8",
-                      "offset": 62,
-                      "size": 1,
-                      "description": "\u751F\u5B58\u6642\u9593",
-                      "name": "ttl",
-                      "value": 64,
-                      "hex": "0x40"
-                    },
-                    "protocol": {
-                      "_type": "integer",
-                      "type": "uint8",
-                      "offset": 63,
-                      "size": 1,
-                      "description": "\u30D7\u30ED\u30C8\u30B3\u30EB\u756A\u53F7",
-                      "name": "protocol",
-                      "value": 6,
-                      "hex": "0x6",
-                      "enum_label": "TCP",
-                      "enum_description": "\u4F1D\u9001\u5236\u5FA1\u30D7\u30ED\u30C8\u30B3\u30EB"
-                    },
-                    "header_checksum": {
-                      "_type": "integer",
-                      "type": "uint16",
-                      "offset": 64,
-                      "size": 2,
-                      "description": "\u30D8\u30C3\u30C0\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0",
-                      "name": "header_checksum",
-                      "value": 0,
-                      "hex": "0x0"
-                    },
-                    "src_ip": {
-                      "_type": "bytes",
-                      "type": "bytes",
-                      "offset": 66,
-                      "size": 4,
-                      "description": "\u9001\u4FE1\u5143IP\u30A2\u30C9\u30EC\u30B9",
-                      "name": "src_ip",
-                      "hex": "C0 A8 01 01"
-                    },
-                    "dst_ip": {
-                      "_type": "bytes",
-                      "type": "bytes",
-                      "offset": 70,
-                      "size": 4,
-                      "description": "\u5B9B\u5148IP\u30A2\u30C9\u30EC\u30B9",
-                      "name": "dst_ip",
-                      "hex": "C0 A8 01 02"
-                    },
-                    "body": {
+                    "payload": {
                       "_type": "struct",
                       "type": "switch",
-                      "offset": 74,
-                      "size": 20,
-                      "name": "body",
-                      "struct_type": "tcp_segment",
+                      "offset": 54,
+                      "size": 40,
+                      "name": "payload",
+                      "struct_type": "ip_packet",
                       "children": {
-                        "src_port": {
-                          "_type": "integer",
-                          "type": "uint16",
-                          "offset": 74,
-                          "size": 2,
-                          "name": "src_port",
-                          "value": 80,
-                          "hex": "0x50"
-                        },
-                        "dst_port": {
-                          "_type": "integer",
-                          "type": "uint16",
-                          "offset": 76,
-                          "size": 2,
-                          "name": "dst_port",
-                          "value": 12345,
-                          "hex": "0x3039"
-                        },
-                        "seq_number": {
-                          "_type": "integer",
-                          "type": "uint32",
-                          "offset": 78,
-                          "size": 4,
-                          "name": "seq_number",
-                          "value": 1,
-                          "hex": "0x1"
-                        },
-                        "ack_number": {
-                          "_type": "integer",
-                          "type": "uint32",
-                          "offset": 82,
-                          "size": 4,
-                          "name": "ack_number",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "data_offset_flags": {
+                        "version_byte": {
                           "_type": "bitfield",
                           "type": "bitfield",
-                          "offset": 86,
-                          "size": 2,
-                          "name": "data_offset_flags",
-                          "raw_value": "0x5002",
+                          "offset": 54,
+                          "size": 1,
+                          "description": "\u5148\u982D\u306E\u30D0\u30A4\u30C8",
+                          "name": "version_byte",
+                          "raw_value": "0x45",
                           "fields": [
                             {
-                              "name": "data_offset",
-                              "value": 5,
-                              "bit_high": 15,
-                              "bit_low": 12
-                            },
-                            {
-                              "name": "reserved",
-                              "value": 0,
-                              "bit_high": 11,
-                              "bit_low": 9
-                            },
-                            {
-                              "name": "ns",
-                              "value": 0,
-                              "bit_high": 8,
-                              "bit_low": 8
-                            },
-                            {
-                              "name": "cwr",
-                              "value": 0,
+                              "name": "version",
+                              "value": 4,
                               "bit_high": 7,
-                              "bit_low": 7
-                            },
-                            {
-                              "name": "ece",
-                              "value": 0,
-                              "bit_high": 6,
-                              "bit_low": 6
-                            },
-                            {
-                              "name": "urg",
-                              "value": 0,
-                              "bit_high": 5,
-                              "bit_low": 5
-                            },
-                            {
-                              "name": "ack",
-                              "value": 0,
-                              "bit_high": 4,
                               "bit_low": 4
                             },
                             {
-                              "name": "psh",
-                              "value": 0,
+                              "name": "low_nibble",
+                              "value": 5,
                               "bit_high": 3,
-                              "bit_low": 3
-                            },
-                            {
-                              "name": "rst",
-                              "value": 0,
-                              "bit_high": 2,
-                              "bit_low": 2
-                            },
-                            {
-                              "name": "syn",
-                              "value": 1,
-                              "bit_high": 1,
-                              "bit_low": 1
-                            },
-                            {
-                              "name": "fin",
-                              "value": 0,
-                              "bit_high": 0,
                               "bit_low": 0
                             }
                           ]
                         },
-                        "window_size": {
-                          "_type": "integer",
-                          "type": "uint16",
-                          "offset": 88,
-                          "size": 2,
-                          "name": "window_size",
-                          "value": 65535,
-                          "hex": "0xFFFF"
-                        },
-                        "checksum": {
-                          "_type": "integer",
-                          "type": "uint16",
-                          "offset": 90,
-                          "size": 2,
-                          "name": "checksum",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "urgent_pointer": {
-                          "_type": "integer",
-                          "type": "uint16",
-                          "offset": 92,
-                          "size": 2,
-                          "name": "urgent_pointer",
-                          "value": 0,
-                          "hex": "0x0"
-                        },
-                        "payload": {
-                          "_type": "bytes",
-                          "type": "bytes",
-                          "offset": 94,
-                          "size": 0,
-                          "name": "payload",
-                          "hex": ""
+                        "packet": {
+                          "_type": "struct",
+                          "type": "switch",
+                          "offset": 55,
+                          "size": 39,
+                          "name": "packet",
+                          "struct_type": "ipv4_packet",
+                          "children": {
+                            "ihl": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 55,
+                              "size": 0,
+                              "description": "\u30D8\u30C3\u30C0\u9577\uFF084 \u30D0\u30A4\u30C8\u5358\u4F4D\u30025\u301C15\uFF09",
+                              "name": "ihl",
+                              "value": 5
+                            },
+                            "dscp_ecn": {
+                              "_type": "bitfield",
+                              "type": "bitfield",
+                              "offset": 55,
+                              "size": 1,
+                              "description": "\u30B5\u30FC\u30D3\u30B9\u306E\u7A2E\u985E",
+                              "name": "dscp_ecn",
+                              "raw_value": "0x0",
+                              "fields": [
+                                {
+                                  "name": "dscp",
+                                  "value": 0,
+                                  "bit_high": 7,
+                                  "bit_low": 2
+                                },
+                                {
+                                  "name": "ecn",
+                                  "value": 0,
+                                  "bit_high": 1,
+                                  "bit_low": 0
+                                }
+                              ]
+                            },
+                            "total_length": {
+                              "_type": "integer",
+                              "type": "uint16",
+                              "offset": 56,
+                              "size": 2,
+                              "description": "\u30D1\u30B1\u30C3\u30C8\u5168\u4F53\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30D8\u30C3\u30C0\u3092\u542B\u3080\uFF09",
+                              "name": "total_length",
+                              "value": 40,
+                              "hex": "0x28"
+                            },
+                            "identification": {
+                              "_type": "integer",
+                              "type": "uint16",
+                              "offset": 58,
+                              "size": 2,
+                              "description": "\u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u306E\u8B58\u5225\u5B50",
+                              "name": "identification",
+                              "value": 1,
+                              "hex": "0x1"
+                            },
+                            "flags_fragment": {
+                              "_type": "bitfield",
+                              "type": "bitfield",
+                              "offset": 60,
+                              "size": 2,
+                              "description": "\u30D5\u30E9\u30B0\u3068\u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u306E\u4F4D\u7F6E",
+                              "name": "flags_fragment",
+                              "raw_value": "0x4000",
+                              "fields": [
+                                {
+                                  "name": "reserved_flag",
+                                  "value": 0,
+                                  "bit_high": 15,
+                                  "bit_low": 15
+                                },
+                                {
+                                  "name": "dont_fragment",
+                                  "value": 1,
+                                  "bit_high": 14,
+                                  "bit_low": 14
+                                },
+                                {
+                                  "name": "more_fragments",
+                                  "value": 0,
+                                  "bit_high": 13,
+                                  "bit_low": 13
+                                },
+                                {
+                                  "name": "fragment_offset",
+                                  "value": 0,
+                                  "bit_high": 12,
+                                  "bit_low": 0
+                                }
+                              ]
+                            },
+                            "ttl": {
+                              "_type": "integer",
+                              "type": "uint8",
+                              "offset": 62,
+                              "size": 1,
+                              "description": "\u751F\u5B58\u6642\u9593\uFF08\u30DB\u30C3\u30D7\u6570\u306E\u4E0A\u9650\uFF09",
+                              "name": "ttl",
+                              "value": 64,
+                              "hex": "0x40"
+                            },
+                            "protocol": {
+                              "_type": "integer",
+                              "type": "uint8",
+                              "offset": 63,
+                              "size": 1,
+                              "description": "\u4E0A\u4F4D\u306E\u30D7\u30ED\u30C8\u30B3\u30EB",
+                              "name": "protocol",
+                              "value": 6,
+                              "hex": "0x6",
+                              "enum_label": "TCP",
+                              "enum_description": "TCP"
+                            },
+                            "header_checksum": {
+                              "_type": "integer",
+                              "type": "uint16",
+                              "offset": 64,
+                              "size": 2,
+                              "description": "\u30D8\u30C3\u30C0\u306E\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08\u691C\u8A3C\u3057\u306A\u3044\uFF09",
+                              "name": "header_checksum",
+                              "value": 0,
+                              "hex": "0x0"
+                            },
+                            "src_address": {
+                              "_type": "integer",
+                              "type": "uint32",
+                              "offset": 66,
+                              "size": 4,
+                              "description": "\u9001\u4FE1\u5143\u306E IP \u30A2\u30C9\u30EC\u30B9\uFF08\u4F5C\u696D\u7528\uFF09",
+                              "name": "src_address",
+                              "value": 3232235777,
+                              "hex": "0xC0A80101"
+                            },
+                            "src_ip": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 70,
+                              "size": 0,
+                              "description": "\u9001\u4FE1\u5143\u306E IP \u30A2\u30C9\u30EC\u30B9\uFF08\u30C9\u30C3\u30C8\u533A\u5207\u308A\uFF09",
+                              "name": "src_ip",
+                              "value": "192.168.1.1"
+                            },
+                            "dst_address": {
+                              "_type": "integer",
+                              "type": "uint32",
+                              "offset": 70,
+                              "size": 4,
+                              "description": "\u5B9B\u5148\u306E IP \u30A2\u30C9\u30EC\u30B9\uFF08\u4F5C\u696D\u7528\uFF09",
+                              "name": "dst_address",
+                              "value": 3232235778,
+                              "hex": "0xC0A80102"
+                            },
+                            "dst_ip": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 74,
+                              "size": 0,
+                              "description": "\u5B9B\u5148\u306E IP \u30A2\u30C9\u30EC\u30B9\uFF08\u30C9\u30C3\u30C8\u533A\u5207\u308A\uFF09",
+                              "name": "dst_ip",
+                              "value": "192.168.1.2"
+                            },
+                            "body": {
+                              "_type": "struct",
+                              "type": "switch",
+                              "offset": 74,
+                              "size": 20,
+                              "name": "body",
+                              "struct_type": "tcp_segment",
+                              "children": {
+                                "src_port": {
+                                  "_type": "integer",
+                                  "type": "uint16",
+                                  "offset": 74,
+                                  "size": 2,
+                                  "description": "\u9001\u4FE1\u5143\u306E\u30DD\u30FC\u30C8\u756A\u53F7",
+                                  "name": "src_port",
+                                  "value": 80,
+                                  "hex": "0x50"
+                                },
+                                "dst_port": {
+                                  "_type": "integer",
+                                  "type": "uint16",
+                                  "offset": 76,
+                                  "size": 2,
+                                  "description": "\u5B9B\u5148\u306E\u30DD\u30FC\u30C8\u756A\u53F7",
+                                  "name": "dst_port",
+                                  "value": 12345,
+                                  "hex": "0x3039"
+                                },
+                                "seq_number": {
+                                  "_type": "integer",
+                                  "type": "uint32",
+                                  "offset": 78,
+                                  "size": 4,
+                                  "description": "\u30B7\u30FC\u30B1\u30F3\u30B9\u756A\u53F7",
+                                  "name": "seq_number",
+                                  "value": 1,
+                                  "hex": "0x1"
+                                },
+                                "ack_number": {
+                                  "_type": "integer",
+                                  "type": "uint32",
+                                  "offset": 82,
+                                  "size": 4,
+                                  "description": "\u78BA\u8A8D\u5FDC\u7B54\u756A\u53F7",
+                                  "name": "ack_number",
+                                  "value": 0,
+                                  "hex": "0x0"
+                                },
+                                "data_offset_flags": {
+                                  "_type": "bitfield",
+                                  "type": "bitfield",
+                                  "offset": 86,
+                                  "size": 2,
+                                  "description": "\u30D8\u30C3\u30C0\u9577\u3068\u30D5\u30E9\u30B0",
+                                  "name": "data_offset_flags",
+                                  "raw_value": "0x5002",
+                                  "fields": [
+                                    {
+                                      "name": "data_offset",
+                                      "value": 5,
+                                      "bit_high": 15,
+                                      "bit_low": 12
+                                    },
+                                    {
+                                      "name": "reserved",
+                                      "value": 0,
+                                      "bit_high": 11,
+                                      "bit_low": 9
+                                    },
+                                    {
+                                      "name": "ae",
+                                      "value": 0,
+                                      "bit_high": 8,
+                                      "bit_low": 8
+                                    },
+                                    {
+                                      "name": "cwr",
+                                      "value": 0,
+                                      "bit_high": 7,
+                                      "bit_low": 7
+                                    },
+                                    {
+                                      "name": "ece",
+                                      "value": 0,
+                                      "bit_high": 6,
+                                      "bit_low": 6
+                                    },
+                                    {
+                                      "name": "urg",
+                                      "value": 0,
+                                      "bit_high": 5,
+                                      "bit_low": 5
+                                    },
+                                    {
+                                      "name": "ack",
+                                      "value": 0,
+                                      "bit_high": 4,
+                                      "bit_low": 4
+                                    },
+                                    {
+                                      "name": "psh",
+                                      "value": 0,
+                                      "bit_high": 3,
+                                      "bit_low": 3
+                                    },
+                                    {
+                                      "name": "rst",
+                                      "value": 0,
+                                      "bit_high": 2,
+                                      "bit_low": 2
+                                    },
+                                    {
+                                      "name": "syn",
+                                      "value": 1,
+                                      "bit_high": 1,
+                                      "bit_low": 1
+                                    },
+                                    {
+                                      "name": "fin",
+                                      "value": 0,
+                                      "bit_high": 0,
+                                      "bit_low": 0
+                                    }
+                                  ]
+                                },
+                                "window_size": {
+                                  "_type": "integer",
+                                  "type": "uint16",
+                                  "offset": 88,
+                                  "size": 2,
+                                  "description": "\u53D7\u4FE1\u30A6\u30A3\u30F3\u30C9\u30A6\uFF08\u30A6\u30A3\u30F3\u30C9\u30A6\u30B9\u30B1\u30FC\u30EB\u306E\u524D\u306E\u5024\uFF09",
+                                  "name": "window_size",
+                                  "value": 65535,
+                                  "hex": "0xFFFF"
+                                },
+                                "checksum": {
+                                  "_type": "integer",
+                                  "type": "uint16",
+                                  "offset": 90,
+                                  "size": 2,
+                                  "description": "\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08\u691C\u8A3C\u3057\u306A\u3044\uFF09",
+                                  "name": "checksum",
+                                  "value": 0,
+                                  "hex": "0x0"
+                                },
+                                "urgent_pointer": {
+                                  "_type": "integer",
+                                  "type": "uint16",
+                                  "offset": 92,
+                                  "size": 2,
+                                  "description": "\u7DCA\u6025\u30C7\u30FC\u30BF\u306E\u7D42\u308F\u308A\uFF08URG \u306E\u3068\u304D\uFF09",
+                                  "name": "urgent_pointer",
+                                  "value": 0,
+                                  "hex": "0x0"
+                                },
+                                "payload": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 94,
+                                  "size": 0,
+                                  "description": "\u30DA\u30A4\u30ED\u30FC\u30C9",
+                                  "name": "payload",
+                                  "hex": ""
+                                }
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -487,9 +630,9 @@
                 }
               }
             }
-          }
+          ]
         }
-      ]
+      }
     }
   }
 }

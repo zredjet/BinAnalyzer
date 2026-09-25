@@ -5,196 +5,280 @@
   "name": "CBOR",
   "struct_type": "cbor_root",
   "children": {
-    "value": {
-      "_type": "struct",
+    "values": {
+      "_type": "array",
       "type": "struct",
       "offset": 0,
       "size": 7,
-      "name": "value",
-      "struct_type": "cbor_value",
-      "children": {
-        "initial_byte": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 0,
-          "size": 1,
-          "description": "CBOR \u521D\u671F\u30D0\u30A4\u30C8: \u4E0A\u4F4D3\u30D3\u30C3\u30C8=major type, \u4E0B\u4F4D5\u30D3\u30C3\u30C8=additional info",
-          "name": "initial_byte",
-          "value": 161,
-          "hex": "0xA1"
-        },
-        "major_type": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 1,
-          "size": 0,
-          "description": "\u30E1\u30B8\u30E3\u30FC\u30BF\u30A4\u30D7 (0-7)",
-          "name": "major_type",
-          "value": 5
-        },
-        "additional_info": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 1,
-          "size": 0,
-          "description": "\u8FFD\u52A0\u60C5\u5831 (0-31)",
-          "name": "additional_info",
-          "value": 1
-        },
-        "data": {
+      "name": "values",
+      "count": 1,
+      "elements": [
+        {
           "_type": "struct",
-          "type": "switch",
-          "offset": 1,
-          "size": 6,
-          "name": "data",
-          "struct_type": "map_data",
+          "type": "struct",
+          "offset": 0,
+          "size": 7,
+          "name": "values",
+          "struct_type": "cbor_value",
           "children": {
-            "ai": {
+            "initial_byte": {
+              "_type": "bitfield",
+              "type": "bitfield",
+              "offset": 0,
+              "size": 1,
+              "description": "\u5148\u982D\u306E\u30D0\u30A4\u30C8",
+              "name": "initial_byte",
+              "raw_value": "0xA1",
+              "fields": [
+                {
+                  "name": "major_type",
+                  "value": 5,
+                  "bit_high": 7,
+                  "bit_low": 5,
+                  "enum_label": "map",
+                  "enum_description": "\u30DE\u30C3\u30D7"
+                },
+                {
+                  "name": "additional_info",
+                  "value": 1,
+                  "bit_high": 4,
+                  "bit_low": 0
+                }
+              ]
+            },
+            "argument": {
               "_type": "virtual",
               "type": "virtual",
               "offset": 1,
               "size": 0,
-              "name": "ai",
+              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\uFF09",
+              "name": "argument",
               "value": 1
             },
-            "short_entries": {
-              "_type": "array",
-              "type": "struct",
+            "indefinite": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 1,
+              "size": 0,
+              "description": "\u4E0D\u5B9A\u9577\u304B\uFF08\u30D0\u30A4\u30C8\u5217\u30FB\u6587\u5B57\u5217\u30FB\u914D\u5217\u30FB\u30DE\u30C3\u30D7\u3002\u4E3B\u578B 7 \u3067\u306F break\uFF09",
+              "name": "indefinite",
+              "value": 0
+            },
+            "content": {
+              "_type": "struct",
+              "type": "switch",
               "offset": 1,
               "size": 6,
-              "name": "short_entries",
-              "count": 1,
-              "elements": [
-                {
-                  "_type": "struct",
+              "name": "content",
+              "struct_type": "cbor_map",
+              "children": {
+                "entries": {
+                  "_type": "array",
                   "type": "struct",
                   "offset": 1,
                   "size": 6,
-                  "name": "short_entries",
-                  "struct_type": "cbor_kv_pair",
-                  "children": {
-                    "key": {
+                  "name": "entries",
+                  "count": 1,
+                  "elements": [
+                    {
                       "_type": "struct",
                       "type": "struct",
                       "offset": 1,
-                      "size": 4,
-                      "name": "key",
-                      "struct_type": "cbor_value",
+                      "size": 6,
+                      "name": "entries",
+                      "struct_type": "cbor_map_entry",
                       "children": {
-                        "initial_byte": {
-                          "_type": "integer",
-                          "type": "uint8",
-                          "offset": 1,
-                          "size": 1,
-                          "description": "CBOR \u521D\u671F\u30D0\u30A4\u30C8: \u4E0A\u4F4D3\u30D3\u30C3\u30C8=major type, \u4E0B\u4F4D5\u30D3\u30C3\u30C8=additional info",
-                          "name": "initial_byte",
-                          "value": 99,
-                          "hex": "0x63"
-                        },
-                        "major_type": {
-                          "_type": "virtual",
-                          "type": "virtual",
-                          "offset": 2,
-                          "size": 0,
-                          "description": "\u30E1\u30B8\u30E3\u30FC\u30BF\u30A4\u30D7 (0-7)",
-                          "name": "major_type",
-                          "value": 3
-                        },
-                        "additional_info": {
-                          "_type": "virtual",
-                          "type": "virtual",
-                          "offset": 2,
-                          "size": 0,
-                          "description": "\u8FFD\u52A0\u60C5\u5831 (0-31)",
-                          "name": "additional_info",
-                          "value": 3
-                        },
-                        "data": {
+                        "key": {
                           "_type": "struct",
-                          "type": "switch",
-                          "offset": 2,
-                          "size": 3,
-                          "name": "data",
-                          "struct_type": "text_string_data",
+                          "type": "struct",
+                          "offset": 1,
+                          "size": 4,
+                          "name": "key",
+                          "struct_type": "cbor_value",
                           "children": {
-                            "short_data": {
-                              "_type": "bytes",
-                              "type": "bytes",
+                            "initial_byte": {
+                              "_type": "bitfield",
+                              "type": "bitfield",
+                              "offset": 1,
+                              "size": 1,
+                              "description": "\u5148\u982D\u306E\u30D0\u30A4\u30C8",
+                              "name": "initial_byte",
+                              "raw_value": "0x63",
+                              "fields": [
+                                {
+                                  "name": "major_type",
+                                  "value": 3,
+                                  "bit_high": 7,
+                                  "bit_low": 5,
+                                  "enum_label": "text_string",
+                                  "enum_description": "\u6587\u5B57\u5217\uFF08UTF-8\uFF09"
+                                },
+                                {
+                                  "name": "additional_info",
+                                  "value": 3,
+                                  "bit_high": 4,
+                                  "bit_low": 0
+                                }
+                              ]
+                            },
+                            "argument": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 2,
+                              "size": 0,
+                              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\uFF09",
+                              "name": "argument",
+                              "value": 3
+                            },
+                            "indefinite": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 2,
+                              "size": 0,
+                              "description": "\u4E0D\u5B9A\u9577\u304B\uFF08\u30D0\u30A4\u30C8\u5217\u30FB\u6587\u5B57\u5217\u30FB\u914D\u5217\u30FB\u30DE\u30C3\u30D7\u3002\u4E3B\u578B 7 \u3067\u306F break\uFF09",
+                              "name": "indefinite",
+                              "value": 0
+                            },
+                            "content": {
+                              "_type": "struct",
+                              "type": "switch",
                               "offset": 2,
                               "size": 3,
-                              "description": "\u77ED\u3044\u30C6\u30AD\u30B9\u30C8\uFF08\u9577\u3055 = additional_info\uFF09",
-                              "name": "short_data",
-                              "hex": "6B 65 79"
+                              "name": "content",
+                              "struct_type": "cbor_text",
+                              "children": {
+                                "text": {
+                                  "_type": "string",
+                                  "type": "utf8",
+                                  "offset": 2,
+                                  "size": 3,
+                                  "description": "\u6587\u5B57\u5217\uFF08UTF-8\uFF09",
+                                  "name": "text",
+                                  "value": "key",
+                                  "encoding": "utf8"
+                                }
+                              }
+                            },
+                            "is_break": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 5,
+                              "size": 0,
+                              "description": "\u4E0D\u5B9A\u9577\u306E\u7D42\u308F\u308A\u306E\u5370\uFF08break\u30010xFF\uFF09\u304B",
+                              "name": "is_break",
+                              "value": 0
                             }
                           }
-                        }
-                      }
-                    },
-                    "value": {
-                      "_type": "struct",
-                      "type": "struct",
-                      "offset": 5,
-                      "size": 2,
-                      "name": "value",
-                      "struct_type": "cbor_value",
-                      "children": {
-                        "initial_byte": {
-                          "_type": "integer",
-                          "type": "uint8",
-                          "offset": 5,
-                          "size": 1,
-                          "description": "CBOR \u521D\u671F\u30D0\u30A4\u30C8: \u4E0A\u4F4D3\u30D3\u30C3\u30C8=major type, \u4E0B\u4F4D5\u30D3\u30C3\u30C8=additional info",
-                          "name": "initial_byte",
-                          "value": 24,
-                          "hex": "0x18"
                         },
-                        "major_type": {
-                          "_type": "virtual",
-                          "type": "virtual",
-                          "offset": 6,
-                          "size": 0,
-                          "description": "\u30E1\u30B8\u30E3\u30FC\u30BF\u30A4\u30D7 (0-7)",
-                          "name": "major_type",
-                          "value": 0
-                        },
-                        "additional_info": {
-                          "_type": "virtual",
-                          "type": "virtual",
-                          "offset": 6,
-                          "size": 0,
-                          "description": "\u8FFD\u52A0\u60C5\u5831 (0-31)",
-                          "name": "additional_info",
-                          "value": 24
-                        },
-                        "data": {
+                        "value": {
                           "_type": "struct",
-                          "type": "switch",
-                          "offset": 6,
-                          "size": 1,
-                          "name": "data",
-                          "struct_type": "unsigned_int_data",
+                          "type": "struct",
+                          "offset": 5,
+                          "size": 2,
+                          "name": "value",
+                          "struct_type": "cbor_value",
                           "children": {
-                            "extra_1byte": {
+                            "initial_byte": {
+                              "_type": "bitfield",
+                              "type": "bitfield",
+                              "offset": 5,
+                              "size": 1,
+                              "description": "\u5148\u982D\u306E\u30D0\u30A4\u30C8",
+                              "name": "initial_byte",
+                              "raw_value": "0x18",
+                              "fields": [
+                                {
+                                  "name": "major_type",
+                                  "value": 0,
+                                  "bit_high": 7,
+                                  "bit_low": 5,
+                                  "enum_label": "unsigned_integer",
+                                  "enum_description": "\u7B26\u53F7\u306A\u3057\u6574\u6570"
+                                },
+                                {
+                                  "name": "additional_info",
+                                  "value": 24,
+                                  "bit_high": 4,
+                                  "bit_low": 0
+                                }
+                              ]
+                            },
+                            "arg8": {
                               "_type": "integer",
                               "type": "uint8",
                               "offset": 6,
                               "size": 1,
-                              "description": "1\u30D0\u30A4\u30C8\u8FFD\u52A0\u5024",
-                              "name": "extra_1byte",
+                              "description": "1 \u30D0\u30A4\u30C8\u306E\u5F15\u6570",
+                              "name": "arg8",
                               "value": 42,
                               "hex": "0x2A"
+                            },
+                            "argument": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 7,
+                              "size": 0,
+                              "description": "\u5F15\u6570\uFF08\u6574\u6570\u306E\u5024\u30FB\u9577\u3055\u30FB\u8981\u7D20\u6570\u30FB\u30BF\u30B0\u306E\u756A\u53F7\uFF09",
+                              "name": "argument",
+                              "value": 42
+                            },
+                            "indefinite": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 7,
+                              "size": 0,
+                              "description": "\u4E0D\u5B9A\u9577\u304B\uFF08\u30D0\u30A4\u30C8\u5217\u30FB\u6587\u5B57\u5217\u30FB\u914D\u5217\u30FB\u30DE\u30C3\u30D7\u3002\u4E3B\u578B 7 \u3067\u306F break\uFF09",
+                              "name": "indefinite",
+                              "value": 0
+                            },
+                            "content": {
+                              "_type": "struct",
+                              "type": "switch",
+                              "offset": 7,
+                              "size": 0,
+                              "name": "content",
+                              "struct_type": "cbor_unsigned",
+                              "children": {
+                                "value": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 7,
+                                  "size": 0,
+                                  "description": "\u7B26\u53F7\u306A\u3057\u6574\u6570",
+                                  "name": "value",
+                                  "value": 42
+                                }
+                              }
+                            },
+                            "is_break": {
+                              "_type": "virtual",
+                              "type": "virtual",
+                              "offset": 7,
+                              "size": 0,
+                              "description": "\u4E0D\u5B9A\u9577\u306E\u7D42\u308F\u308A\u306E\u5370\uFF08break\u30010xFF\uFF09\u304B",
+                              "name": "is_break",
+                              "value": 0
                             }
                           }
                         }
                       }
                     }
-                  }
+                  ]
                 }
-              ]
+              }
+            },
+            "is_break": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 7,
+              "size": 0,
+              "description": "\u4E0D\u5B9A\u9577\u306E\u7D42\u308F\u308A\u306E\u5370\uFF08break\u30010xFF\uFF09\u304B",
+              "name": "is_break",
+              "value": 0
             }
           }
         }
-      }
+      ]
     }
   }
 }

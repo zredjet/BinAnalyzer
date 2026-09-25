@@ -1,3 +1,13 @@
+# FAT12 / FAT16 / FAT32 のファイルシステムのイメージ
+# 仕様: Microsoft "FAT32 File System Specification"（Microsoft Extensible Firmware Initiative FAT32 File System Specification 1.03、2000）と
+#   長いファイル名（VFAT）、ECMA-107（第 2 版）。macOS の newfs_msdos が作った FAT12・FAT16・FAT32 のイメージで照合した
+# 構造: 予約領域（ブートセクタ = BPB + 拡張 BPB、FAT32 は FSInfo とバックアップ）→ FAT（クラスタの連鎖の表）× 個数 → [ルートディレクトリの固定の領域（FAT12 / 16）]
+#   → データ領域（クラスタの並び）。ディレクトリは 32 バイトのエントリの並びで、長いファイル名はエントリの前に逆順に並ぶ LFN エントリに UTF-16 で入る。
+#   FAT の種類は仕様どおりクラスタ数で決め（4085 未満 = FAT12、65525 未満 = FAT16、それ以上 = FAT32。BPB_FATSz16 が 0 なら FAT32）、ディレクトリは FAT の連鎖をたどって読む
+# 対応していないもの: パーティション表（MBR・GPT）で始まるディスクのイメージ（ボリュームの先頭から始まること）、exFAT、ファイルの中身の 2 つ目以降のクラスタ
+#   （最初のクラスタの先頭 64 バイトまでを表示）、FAT の表の全エントリ（先頭 512 個まで）、2 つ目以降の FAT とバックアップのブートセクタの比較、
+#   LFN のチェックサムの検証、削除されたエントリの長いファイル名の復元、ループした FAT の連鎖（入れ子の深さの上限でエラーになる）、
+#   1024 個を超えるディレクトリのクラスタ（それ以降のサブディレクトリと連鎖はたどらない）、入れ子の深さの上限（64）を超える深いディレクトリ・長い連鎖
 name: FAT
 endianness: little
 root: fat_image
@@ -5,17 +15,28 @@ root: fat_image
 enums:
   media_type:
     - value: 0xF0
-      label: REMOVABLE
-      description: "リムーバブルメディア"
+      label: removable
+      description: "取り外せる媒体（3.5 インチのフロッピーなど）"
     - value: 0xF8
-      label: FIXED_DISK
+      label: fixed
       description: "固定ディスク"
     - value: 0xF9
-      label: FLOPPY_3_5_HD
-      description: "3.5インチ 1.44MB"
+      label: floppy_720k
+      description: "3.5 インチ 720 KB / 5.25 インチ 1.2 MB のフロッピー"
     - value: 0xFD
-      label: FLOPPY_5_25_DD
-      description: "5.25インチ 360KB"
+      label: floppy_360k
+      description: "5.25 インチ 360 KB のフロッピー"
+
+  entry_status:
+    - value: 0x00
+      label: end_of_directory
+      description: "ここから後ろは空き（ディレクトリの終わり）"
+    - value: 0x2E
+      label: dot_entry
+      description: "'.' か '..'（自分・親のディレクトリ）"
+    - value: 0xE5
+      label: deleted
+      description: "削除されたエントリ"
 
 flags:
   dir_attributes:
@@ -27,7 +48,7 @@ flags:
         bit: 1
       - name: SYSTEM
         bit: 2
-      - name: VOLUME_LABEL
+      - name: VOLUME_ID
         bit: 3
       - name: DIRECTORY
         bit: 4
@@ -35,234 +56,700 @@ flags:
         bit: 5
 
 structs:
-  # ============================================================
-  # Root: FAT Image
-  # ============================================================
   fat_image:
+    - name: dirs_visited_init
+      type: virtual
+      value: "{0}"
+      state: dirs_visited
+      padding: true
+      description: "読んだディレクトリのクラスタの数の初期値（作業用。状態変数 dirs_visited）"
     - name: boot_sector
       type: struct
       struct: boot_sector
+      description: "ブートセクタ（BPB と拡張 BPB）"
+    - name: fat_size
+      type: virtual
+      value: "{fat_size_16 != 0 ? fat_size_16 : extended_bpb.fat_size_32}"
+      description: "1 つの FAT のセクタ数"
+    - name: total_sectors
+      type: virtual
+      value: "{total_sectors_16 != 0 ? total_sectors_16 : total_sectors_32}"
+      description: "ボリュームのセクタ数"
+    - name: root_dir_sectors
+      type: virtual
+      value: "{(root_entry_count * 32 + bytes_per_sector - 1) / bytes_per_sector}"
+      description: "ルートディレクトリの固定の領域のセクタ数（FAT32 は 0）"
+    - name: first_data_sector
+      type: virtual
+      value: "{reserved_sector_count + num_fats * fat_size + root_dir_sectors}"
+      description: "データ領域の最初のセクタ"
+    - name: cluster_count
+      type: virtual
+      value: "{sectors_per_cluster == 0 ? 0 : (total_sectors - first_data_sector) / sectors_per_cluster}"
+      description: "データ領域のクラスタ数"
+    - name: fat_type
+      type: virtual
+      value: "{fat_size_16 == 0 ? 32 : (cluster_count < 4085 ? 12 : (cluster_count < 65525 ? 16 : 32))}"
+      description: "FAT の種類（クラスタ数で決まる。12・16・32。BPB_FATSz16 が 0 の FAT32 の形は、クラスタ数が少なくても Linux と同じく FAT32 とする）"
+    - name: cluster_size
+      type: virtual
+      value: "{sectors_per_cluster * bytes_per_sector}"
+      description: "クラスタのバイト数"
+    - name: fat_offset
+      type: virtual
+      value: "{reserved_sector_count * bytes_per_sector}"
+      description: "最初の FAT の位置"
+    - name: data_offset
+      type: virtual
+      value: "{first_data_sector * bytes_per_sector}"
+      description: "データ領域（クラスタ 2）の位置"
+    - name: fsinfo
+      type: struct
+      struct: fsinfo_sector
+      seek: "{extended_bpb.fs_info_sector * bytes_per_sector}"
+      seek_restore: true
+      if: "{fat_size_16 == 0 ? (extended_bpb.fs_info_sector != 0 and extended_bpb.fs_info_sector != 0xFFFF) : 0}"
+      description: "FSInfo（FAT32。空きクラスタの数の目安）"
+    - name: fat_table
+      type: struct
+      struct: fat_table
+      seek: "{fat_offset}"
+      seek_restore: true
+      description: "最初の FAT（先頭 512 エントリまで）"
+    - name: dir_base
+      type: virtual
+      value: "{(reserved_sector_count + num_fats * fat_size) * bytes_per_sector}"
+      padding: true
+      description: "ルートディレクトリの位置（作業用。FAT12 / 16 の固定の領域）"
     - name: root_directory
       type: struct
-      struct: root_directory
-      seek: "{(reserved_sector_count + num_fats * fat_size_16) * bytes_per_sector}"
-      size: "{root_entry_count * 32}"
-      if: "{root_entry_count > 0}"
+      struct: fixed_root_directory
+      if: "{fat_type != 32 and root_entry_count > 0}"
+      description: "ルートディレクトリ（FAT12 / 16 の固定の領域）"
+    - name: next_cluster_arg
+      type: virtual
+      value: "{fat_type == 32 ? extended_bpb.root_cluster : 0}"
+      padding: true
+      description: "次に読むディレクトリのクラスタ（作業用）"
+    - name: chain_lfn
+      type: virtual
+      value: "{''}"
+      padding: true
+      description: "ディレクトリに引き継ぐ組み立て中の長いファイル名（作業用。空）"
+    - name: root_directory_chain
+      type: struct
+      struct: dir_chain
+      if: "{fat_type == 32}"
+      description: "ルートディレクトリ（FAT32。root_cluster から FAT の連鎖をたどる）"
 
-  # ============================================================
-  # Boot Sector: Common BPB (36 bytes) + Extended BPB (476 bytes)
-  # ============================================================
   boot_sector:
     - name: jump_boot
       type: bytes
       size: "3"
-      description: "ジャンプ命令"
+      description: "ブートコードへのジャンプ命令（EB xx 90 か E9 xx xx）"
     - name: oem_name
       type: ascii
       size: "8"
-      description: "OEM名"
+      description: "作ったシステムの名前（'MSWIN4.1'・'BSD  4.4' など）"
     - name: bytes_per_sector
       type: uint16
+      description: "セクタのバイト数（512・1024・2048・4096）"
     - name: sectors_per_cluster
       type: uint8
+      description: "クラスタのセクタ数（1〜128 の 2 の累乗）"
     - name: reserved_sector_count
       type: uint16
+      description: "予約領域のセクタ数（FAT12 / 16 は通常 1、FAT32 は通常 32）"
     - name: num_fats
       type: uint8
+      description: "FAT の個数（通常 2）"
     - name: root_entry_count
       type: uint16
+      description: "ルートディレクトリのエントリ数（FAT12 / 16。FAT32 は 0）"
     - name: total_sectors_16
       type: uint16
+      description: "ボリュームのセクタ数（0 なら total_sectors_32）"
     - name: media_type
       type: uint8
       enum: media_type
+      description: "媒体の種類（FAT[0] の下位 8 ビットと同じ）"
     - name: fat_size_16
       type: uint16
+      description: "1 つの FAT のセクタ数（FAT12 / 16。FAT32 は 0）"
     - name: sectors_per_track
       type: uint16
+      description: "トラックのセクタ数（INT 13h 用）"
     - name: num_heads
       type: uint16
+      description: "ヘッド数（INT 13h 用）"
     - name: hidden_sectors
       type: uint32
+      description: "パーティションの前にあるセクタ数"
     - name: total_sectors_32
       type: uint32
-    # --- Virtual fields ---
-    - name: fat_type_hint
-      type: virtual
-      value: "{root_entry_count == 0 ? 1 : 0}"
-      description: "0=FAT12/16, 1=FAT32"
-    - name: total_sectors
-      type: virtual
-      value: "{total_sectors_16 != 0 ? total_sectors_16 : total_sectors_32}"
-      description: "有効な総セクタ数"
-    # --- Extended BPB (switch) ---
+      description: "ボリュームのセクタ数（65536 以上のとき）"
     - name: extended_bpb
       type: switch
       size: "476"
-      switch_on: "{fat_type_hint}"
+      switch_on: "{fat_size_16 == 0 ? 32 : 16}"
       cases:
-        "0": fat16_extended_bpb
-        "1": fat32_extended_bpb
-      default: fat16_extended_bpb  # fat_type_hint は 0 / 1 しか取らないので到達しない
+        "32": fat32_extended_bpb
+      default: fat16_extended_bpb
+      description: "拡張 BPB（BPB_FATSz16 が 0 なら FAT32 の形）"
 
-  # ============================================================
-  # FAT12/16 Extended BPB (476 bytes)
-  # ============================================================
   fat16_extended_bpb:
     - name: drive_number
       type: uint8
+      description: "BIOS のドライブ番号（0x80 = 固定ディスク、0x00 = フロッピー）"
     - name: reserved1
       type: uint8
-      padding: true
+      description: "予約（0）"
     - name: boot_signature
       type: uint8
-      description: "拡張ブートシグネチャ（0x29）"
+      description: "拡張ブートシグネチャ（0x29 なら後ろの 3 つが有効）"
     - name: volume_id
       type: uint32
+      description: "ボリュームのシリアル番号"
     - name: volume_label
       type: ascii
       size: "11"
+      description: "ボリュームラベル"
     - name: fs_type_string
       type: ascii
       size: "8"
-      description: "FAT12/FAT16"
+      description: "'FAT12   '・'FAT16   ' など（表示用。FAT の種類の判定には使わない）"
     - name: boot_code
       type: bytes
       size: "448"
-      padding: true
+      description: "ブートコード"
     - name: boot_signature_word
       type: uint16
       validate: "{boot_signature_word == 0xAA55}"
-      description: "ブートセクタシグネチャ（0xAA55）"
+      description: "ブートセクタの印（0xAA55）"
 
-  # ============================================================
-  # FAT32 Extended BPB (476 bytes)
-  # ============================================================
   fat32_extended_bpb:
     - name: fat_size_32
       type: uint32
-      description: "FATあたりのセクタ数（FAT32）"
+      description: "1 つの FAT のセクタ数"
     - name: ext_flags
-      type: uint16
+      type: bitfield
+      size: "2"
+      description: "拡張フラグ"
+      fields:
+        - name: mirroring_disabled
+          bits: "7"
+          description: "1 なら FAT を複製せず active_fat だけを使う"
+        - name: active_fat
+          bits: "3:0"
+          description: "使う FAT の番号（複製しないとき）"
     - name: fs_version
       type: uint16
+      description: "FAT32 の版（0.0）"
     - name: root_cluster
       type: uint32
-      description: "ルートディレクトリの開始クラスタ"
+      description: "ルートディレクトリの最初のクラスタ（通常 2）"
     - name: fs_info_sector
       type: uint16
-      description: "FSInfoセクタ番号"
+      description: "FSInfo のセクタ番号（通常 1）"
     - name: backup_boot_sector
       type: uint16
-      description: "バックアップブートセクタ番号"
+      description: "バックアップのブートセクタのセクタ番号（通常 6）"
     - name: reserved
       type: bytes
       size: "12"
-      padding: true
+      description: "予約（0）"
     - name: drive_number
       type: uint8
+      description: "BIOS のドライブ番号"
     - name: reserved1
       type: uint8
-      padding: true
+      description: "予約（0）"
     - name: boot_signature
       type: uint8
       description: "拡張ブートシグネチャ（0x29）"
     - name: volume_id
       type: uint32
+      description: "ボリュームのシリアル番号"
     - name: volume_label
       type: ascii
       size: "11"
+      description: "ボリュームラベル"
     - name: fs_type_string
       type: ascii
       size: "8"
-      description: "FAT32"
+      description: "'FAT32   '（表示用）"
     - name: boot_code
       type: bytes
       size: "420"
-      padding: true
+      description: "ブートコード"
     - name: boot_signature_word
       type: uint16
       validate: "{boot_signature_word == 0xAA55}"
-      description: "ブートセクタシグネチャ（0xAA55）"
+      description: "ブートセクタの印（0xAA55）"
 
-  # ============================================================
-  # Root Directory (FAT12/16 only)
-  # ============================================================
-  root_directory:
+  fsinfo_sector:
+    - name: lead_signature
+      type: uint32
+      validate: "{lead_signature == 0x41615252}"
+      description: "先頭の印（'RRaA'）"
+    - name: reserved1
+      type: bytes
+      size: "480"
+      description: "予約（0）"
+    - name: struct_signature
+      type: uint32
+      validate: "{struct_signature == 0x61417272}"
+      description: "構造の印（'rrAa'）"
+    - name: free_count
+      type: uint32
+      description: "空きクラスタの数の目安（0xFFFFFFFF は不明）"
+    - name: next_free
+      type: uint32
+      description: "空きクラスタを探し始める位置の目安（0xFFFFFFFF は不明）"
+    - name: reserved2
+      type: bytes
+      size: "12"
+      description: "予約（0）"
+    - name: trail_signature
+      type: uint32
+      validate: "{trail_signature == 0xAA550000}"
+      description: "終わりの印"
+
+  fat_table:
+    - name: fat12_pairs
+      type: struct
+      struct: fat12_pair
+      repeat_count: "{(cluster_count + 3) / 2 < 256 ? (cluster_count + 3) / 2 : 256}"
+      if: "{fat_type == 12}"
+      description: "FAT12 のエントリ（12 ビット × 2 を 3 バイトに詰める。先頭 512 エントリまで）"
+    - name: fat16_entries
+      type: uint16
+      repeat_count: "{cluster_count + 2 < 512 ? cluster_count + 2 : 512}"
+      if: "{fat_type == 16}"
+      description: "FAT16 のエントリ（0 = 空き、0xFFF7 = 不良、0xFFF8 以上 = 連鎖の終わり、それ以外は次のクラスタ）"
+    - name: fat32_entries
+      type: uint32
+      repeat_count: "{cluster_count + 2 < 512 ? cluster_count + 2 : 512}"
+      if: "{fat_type == 32}"
+      description: "FAT32 のエントリ（下位 28 ビット。0x0FFFFFF8 以上 = 連鎖の終わり）"
+
+  fat12_pair:
+    - name: entries
+      type: bitfield
+      size: "3"
+      description: "2 つのエントリ（リトルエンディアンの 24 ビット）"
+      fields:
+        - name: even_entry
+          bits: "11:0"
+          description: "偶数番のクラスタのエントリ（0 = 空き、0xFF7 = 不良、0xFF8 以上 = 連鎖の終わり）"
+        - name: odd_entry
+          bits: "23:12"
+          description: "奇数番のクラスタのエントリ"
+
+  fixed_root_directory:
+    - name: first_byte
+      type: virtual
+      value: "{0xFF}"
+      padding: true
+      description: "直前のエントリの先頭のバイト（作業用。0 ならディレクトリの終わり）"
+    - name: lfn_acc
+      type: virtual
+      value: "{''}"
+      padding: true
+      description: "LFN エントリから組み立て中の長いファイル名（作業用）"
     - name: entries
       type: struct
       struct: dir_entry
-      repeat: eof
+      seek: "{dir_base}"
+      seek_restore: true
+      size: "{root_entry_count * 32}"
+      repeat_while: "{first_byte != 0 and remaining >= 32}"
+      description: "エントリの並び（先頭のバイトが 0 のエントリで終わる）"
 
-  # ============================================================
-  # Directory Entry (32 bytes)
-  # ============================================================
+  # ディレクトリのクラスタ。エンディアンを書いた形にして独自の変数のスコープを持たせ、連鎖の次のクラスタ・サブディレクトリの値が上書きしないようにする
+  dir_chain:
+    endianness: little
+    fields:
+      - name: directory_number
+        type: virtual
+        value: "{@dirs_visited + 1}"
+        state: dirs_visited
+        description: "読んだディレクトリのクラスタの通し番号（1024 個でたどるのをやめる。壊れた・細工したイメージで展開し続けないように）"
+      - name: cluster
+        type: virtual
+        value: "{next_cluster_arg}"
+        description: "このクラスタの番号"
+      - name: dir_base
+        type: virtual
+        value: "{data_offset + (cluster - 2) * cluster_size}"
+        description: "このクラスタの位置"
+      - name: first_byte
+        type: virtual
+        value: "{0xFF}"
+        padding: true
+        description: "直前のエントリの先頭のバイト（作業用。0 ならディレクトリの終わり）"
+      - name: lfn_acc
+        type: virtual
+        value: "{chain_lfn}"
+        padding: true
+        description: "LFN エントリから組み立て中の長いファイル名（作業用。前のクラスタから続く）"
+      - name: entries
+        type: struct
+        struct: dir_entry
+        seek: "{dir_base}"
+        seek_restore: true
+        size: "{cluster_size}"
+        repeat_while: "{first_byte != 0 and remaining >= 32}"
+        description: "エントリの並び"
+      - name: fat_entry_raw
+        type: uint32
+        seek: "{fat_offset + cluster * 4}"
+        seek_restore: true
+        if: "{fat_type == 32}"
+        padding: true
+        description: "このクラスタの FAT のエントリ（作業用。FAT32）"
+      - name: fat_entry_raw
+        type: uint16
+        seek: "{fat_offset + cluster * 2}"
+        seek_restore: true
+        if: "{fat_type == 16}"
+        padding: true
+        description: "このクラスタの FAT のエントリ（作業用。FAT16）"
+      - name: fat_entry_raw
+        type: uint16
+        seek: "{fat_offset + cluster * 3 / 2}"
+        seek_restore: true
+        if: "{fat_type == 12}"
+        padding: true
+        description: "このクラスタの FAT のエントリを含む 2 バイト（作業用。FAT12）"
+      - name: next_in_chain
+        type: virtual
+        value: "{fat_type == 32 ? fat_entry_raw & 0x0FFFFFFF : (fat_type == 16 ? fat_entry_raw : (cluster % 2 == 1 ? fat_entry_raw >> 4 : fat_entry_raw & 0xFFF))}"
+        description: "FAT の連鎖の次のクラスタ（連鎖の終わり・不良は大きな値）"
+      - name: chain_continues
+        type: virtual
+        value: "{@dirs_visited < 1024 and first_byte != 0 and next_in_chain >= 2 and next_in_chain < (fat_type == 32 ? 0x0FFFFFF7 : (fat_type == 16 ? 0xFFF7 : 0xFF7)) and next_in_chain < cluster_count + 2 ? 1 : 0}"
+        description: "次のクラスタに続くか（終わりのエントリが無く、連鎖が続く）"
+      - name: next_cluster_arg
+        type: virtual
+        value: "{next_in_chain}"
+        padding: true
+        description: "次に読むクラスタ（作業用）"
+      - name: chain_lfn
+        type: virtual
+        value: "{lfn_acc}"
+        padding: true
+        description: "次のクラスタに引き継ぐ組み立て中の長いファイル名（作業用）"
+      - name: next_cluster
+        type: struct
+        struct: dir_chain
+        if: "{chain_continues == 1}"
+        description: "ディレクトリの続き（FAT の連鎖の次のクラスタ）"
+
+  # ディレクトリのエントリ。独自のスコープを持たせ、サブディレクトリの値の昇格がこのディレクトリの値を上書きしないようにする
   dir_entry:
-    - name: filename
+    endianness: little
+    fields:
+      - name: entry_offset
+        type: virtual
+        value: "{dir_base + _index * 32}"
+        padding: true
+        description: "このエントリの位置（作業用）"
+      - name: first_byte
+        type: uint8
+        seek: "{entry_offset}"
+        seek_restore: true
+        enum: entry_status
+        description: "先頭のバイト（0 = 終わり、0xE5 = 削除、0x2E = '.'、0x05 = 先頭の文字が 0xE5）"
+      - name: attr_peek
+        type: uint8
+        seek: "{entry_offset + 11}"
+        seek_restore: true
+        padding: true
+        description: "属性のバイト（作業用。0x0F なら LFN エントリ）"
+      - name: is_lfn
+        type: virtual
+        value: "{attr_peek == 0x0F and first_byte != 0 ? 1 : 0}"
+        description: "長いファイル名（LFN）のエントリか"
+      - name: short
+        type: struct
+        struct: short_entry
+        if: "{is_lfn == 0}"
+        description: "短いファイル名（8.3）のエントリ"
+      - name: lfn
+        type: struct
+        struct: lfn_entry
+        if: "{is_lfn == 1}"
+        description: "長いファイル名のエントリ（13 文字分）"
+      - name: lfn_acc
+        type: virtual
+        value: "{is_lfn == 1 and first_byte != 0xE5 ? new_lfn_acc : ''}"
+        padding: true
+        description: "組み立て中の長いファイル名（作業用。短いエントリで使い終わる）"
+
+  short_entry:
+    - name: name
       type: ascii
       size: "8"
+      description: "名前（空白で詰める。大文字）"
     - name: extension
       type: ascii
       size: "3"
+      description: "拡張子（空白で詰める）"
     - name: attributes
       type: uint8
       flags: dir_attributes
-    - name: reserved_nt
-      type: uint8
-      padding: true
+      description: "属性"
+    - name: nt_reserved
+      type: bitfield
+      size: "1"
+      description: "Windows NT の大文字・小文字の情報"
+      fields:
+        - name: lowercase_extension
+          bits: "4"
+          description: "拡張子を小文字で表示する"
+        - name: lowercase_base
+          bits: "3"
+          description: "名前を小文字で表示する"
     - name: creation_time_tenths
       type: uint8
+      description: "作成時刻の 10 ミリ秒単位の端数（0〜199）"
     - name: creation_time
-      type: uint16
+      type: bitfield
+      size: "2"
+      description: "作成時刻"
+      fields:
+        - name: ctime_hour
+          bits: "15:11"
+          description: "時（0〜23）"
+        - name: ctime_minute
+          bits: "10:5"
+          description: "分（0〜59）"
+        - name: ctime_second2
+          bits: "4:0"
+          description: "秒 / 2（0〜29）"
     - name: creation_date
-      type: uint16
+      type: bitfield
+      size: "2"
+      description: "作成日"
+      fields:
+        - name: cdate_year
+          bits: "15:9"
+          description: "年 - 1980"
+        - name: cdate_month
+          bits: "8:5"
+          description: "月（1〜12）"
+        - name: cdate_day
+          bits: "4:0"
+          description: "日（1〜31）"
     - name: last_access_date
-      type: uint16
+      type: bitfield
+      size: "2"
+      description: "最終アクセス日"
+      fields:
+        - name: adate_year
+          bits: "15:9"
+          description: "年 - 1980"
+        - name: adate_month
+          bits: "8:5"
+          description: "月（1〜12）"
+        - name: adate_day
+          bits: "4:0"
+          description: "日（1〜31）"
     - name: first_cluster_high
       type: uint16
-    - name: modification_time
-      type: uint16
-    - name: modification_date
-      type: uint16
+      description: "最初のクラスタの上位 16 ビット（FAT32）"
+    - name: write_time
+      type: bitfield
+      size: "2"
+      description: "更新時刻"
+      fields:
+        - name: wtime_hour
+          bits: "15:11"
+          description: "時（0〜23）"
+        - name: wtime_minute
+          bits: "10:5"
+          description: "分（0〜59）"
+        - name: wtime_second2
+          bits: "4:0"
+          description: "秒 / 2（0〜29）"
+    - name: write_date
+      type: bitfield
+      size: "2"
+      description: "更新日"
+      fields:
+        - name: wdate_year
+          bits: "15:9"
+          description: "年 - 1980"
+        - name: wdate_month
+          bits: "8:5"
+          description: "月（1〜12）"
+        - name: wdate_day
+          bits: "4:0"
+          description: "日（1〜31）"
     - name: first_cluster_low
       type: uint16
+      description: "最初のクラスタの下位 16 ビット"
     - name: file_size
       type: uint32
-    # --- Modification timestamp decode ---
-    - name: mod_year
+      description: "ファイルのバイト数（ディレクトリは 0）"
+    - name: short_name
       type: virtual
-      value: "{((modification_date >> 9) & 0x7F) + 1980}"
-    - name: mod_month
+      value: "{trim(extension) == '' ? trim(name) : concat(trim(name), '.', trim(extension))}"
+      description: "短いファイル名（8.3）"
+    - name: long_name
       type: virtual
-      value: "{(modification_date >> 5) & 0x0F}"
-    - name: mod_day
+      value: "{lfn_acc}"
+      if: "{lfn_acc != '' and first_byte != 0xE5}"
+      description: "長いファイル名（直前の LFN エントリから組み立てた名前。削除されたエントリは除く）"
+    - name: first_cluster
       type: virtual
-      value: "{modification_date & 0x1F}"
-    - name: mod_hour
+      value: "{(first_cluster_high << 16) | first_cluster_low}"
+      description: "最初のクラスタ"
+    - name: created
       type: virtual
-      value: "{(modification_time >> 11) & 0x1F}"
-    - name: mod_minute
+      value: "{concat(concat(cdate_year + 1980, '-', cdate_month < 10 ? concat('0', cdate_month) : cdate_month, '-', cdate_day < 10 ? concat('0', cdate_day) : cdate_day), ' ', concat(ctime_hour < 10 ? concat('0', ctime_hour) : ctime_hour, ':', ctime_minute < 10 ? concat('0', ctime_minute) : ctime_minute, ':', ctime_second2 * 2 < 10 ? concat('0', ctime_second2 * 2) : ctime_second2 * 2))}"
+      if: "{cdate_month != 0}"
+      description: "作成日時"
+    - name: modified
       type: virtual
-      value: "{(modification_time >> 5) & 0x3F}"
-    - name: mod_second
+      value: "{concat(concat(wdate_year + 1980, '-', wdate_month < 10 ? concat('0', wdate_month) : wdate_month, '-', wdate_day < 10 ? concat('0', wdate_day) : wdate_day), ' ', concat(wtime_hour < 10 ? concat('0', wtime_hour) : wtime_hour, ':', wtime_minute < 10 ? concat('0', wtime_minute) : wtime_minute, ':', wtime_second2 * 2 < 10 ? concat('0', wtime_second2 * 2) : wtime_second2 * 2))}"
+      if: "{wdate_month != 0}"
+      description: "更新日時"
+    - name: is_subdirectory
       type: virtual
-      value: "{(modification_time & 0x1F) * 2}"
-    # --- Creation timestamp decode ---
-    - name: create_year
+      value: "{@dirs_visited < 1024 and (attributes & 0x10) != 0 and (attributes & 0x08) == 0 and first_byte != 0x2E and first_byte != 0xE5 and first_byte != 0 and first_cluster >= 2 ? 1 : 0}"
+      description: "たどるサブディレクトリか（'.'・'..'・削除されたエントリを除く）"
+    - name: next_cluster_arg
       type: virtual
-      value: "{((creation_date >> 9) & 0x7F) + 1980}"
-    - name: create_month
+      value: "{first_cluster}"
+      padding: true
+      description: "サブディレクトリの最初のクラスタ（作業用）"
+    - name: chain_lfn
       type: virtual
-      value: "{(creation_date >> 5) & 0x0F}"
-    - name: create_day
+      value: "{''}"
+      padding: true
+      description: "サブディレクトリに引き継ぐ長いファイル名（作業用。空）"
+    - name: subdirectory
+      type: struct
+      struct: dir_chain
+      repeat_count: "{is_subdirectory}"
+      description: "サブディレクトリの中身（最初のクラスタから FAT の連鎖をたどる）"
+    - name: content_preview
+      type: bytes
+      seek: "{data_offset + (first_cluster - 2) * cluster_size}"
+      seek_restore: true
+      size: "{file_size < 64 ? file_size : 64}"
+      if: "{(attributes & 0x18) == 0 and first_byte != 0xE5 and first_byte != 0 and first_cluster >= 2 and file_size > 0}"
+      description: "ファイルの中身の先頭（最初のクラスタの 64 バイトまで）"
+
+  lfn_entry:
+    - name: sequence
+      type: bitfield
+      size: "1"
+      description: "順番"
+      fields:
+        - name: last_entry
+          bits: "6"
+          description: "最後（名前の末尾を持つ。ディレクトリでは最初に現れる）"
+        - name: order
+          bits: "4:0"
+          description: "名前の中の位置（1 から。1 が名前の先頭）"
+    - name: c0
+      type: uint16
+      padding: true
+      description: "1 文字目（作業用）"
+    - name: c1
+      type: uint16
+      padding: true
+      description: "2 文字目（作業用）"
+    - name: c2
+      type: uint16
+      padding: true
+      description: "3 文字目（作業用）"
+    - name: c3
+      type: uint16
+      padding: true
+      description: "4 文字目（作業用）"
+    - name: c4
+      type: uint16
+      padding: true
+      description: "5 文字目（作業用）"
+    - name: lfn_attributes
+      type: uint8
+      description: "属性（0x0F）"
+    - name: entry_type
+      type: uint8
+      description: "種類（0）"
+    - name: checksum
+      type: uint8
+      description: "短いファイル名のチェックサム"
+    - name: c5
+      type: uint16
+      padding: true
+      description: "6 文字目（作業用）"
+    - name: c6
+      type: uint16
+      padding: true
+      description: "7 文字目（作業用）"
+    - name: c7
+      type: uint16
+      padding: true
+      description: "8 文字目（作業用）"
+    - name: c8
+      type: uint16
+      padding: true
+      description: "9 文字目（作業用）"
+    - name: c9
+      type: uint16
+      padding: true
+      description: "10 文字目（作業用）"
+    - name: c10
+      type: uint16
+      padding: true
+      description: "11 文字目（作業用）"
+    - name: first_cluster_low
+      type: uint16
+      description: "最初のクラスタ（LFN では常に 0）"
+    - name: c11
+      type: uint16
+      padding: true
+      description: "12 文字目（作業用）"
+    - name: c12
+      type: uint16
+      padding: true
+      description: "13 文字目（作業用）"
+    - name: valid_length
       type: virtual
-      value: "{creation_date & 0x1F}"
-    - name: create_hour
+      value: "{(c0 == 0 or c0 == 0xFFFF ? 0 : (c1 == 0 or c1 == 0xFFFF ? 1 : (c2 == 0 or c2 == 0xFFFF ? 2 : (c3 == 0 or c3 == 0xFFFF ? 3 : (c4 == 0 or c4 == 0xFFFF ? 4 : (c5 == 0 or c5 == 0xFFFF ? 5 : (c6 == 0 or c6 == 0xFFFF ? 6 : (c7 == 0 or c7 == 0xFFFF ? 7 : (c8 == 0 or c8 == 0xFFFF ? 8 : (c9 == 0 or c9 == 0xFFFF ? 9 : (c10 == 0 or c10 == 0xFFFF ? 10 : (c11 == 0 or c11 == 0xFFFF ? 11 : (c12 == 0 or c12 == 0xFFFF ? 12 : 13)))))))))))))}"
+      description: "このエントリの文字数（NUL か 0xFFFF の手前まで）"
+    - name: part1
+      type: utf16le
+      seek: "{entry_offset + 1}"
+      seek_restore: true
+      size: "{(valid_length < 5 ? valid_length : 5) * 2}"
+      padding: true
+      description: "名前の 1〜5 文字目（作業用）"
+    - name: part2
+      type: utf16le
+      seek: "{entry_offset + 14}"
+      seek_restore: true
+      size: "{(valid_length <= 5 ? 0 : (valid_length < 11 ? valid_length - 5 : 6)) * 2}"
+      padding: true
+      description: "名前の 6〜11 文字目（作業用）"
+    - name: part3
+      type: utf16le
+      seek: "{entry_offset + 28}"
+      seek_restore: true
+      size: "{(valid_length <= 11 ? 0 : valid_length - 11) * 2}"
+      padding: true
+      description: "名前の 12〜13 文字目（作業用）"
+    - name: name_part
       type: virtual
-      value: "{(creation_time >> 11) & 0x1F}"
-    - name: create_minute
+      value: "{concat(part1, part2, part3)}"
+      description: "このエントリの名前の部分"
+    - name: new_lfn_acc
       type: virtual
-      value: "{(creation_time >> 5) & 0x3F}"
-    - name: create_second
-      type: virtual
-      value: "{(creation_time & 0x1F) * 2}"
+      value: "{last_entry == 1 ? name_part : concat(name_part, lfn_acc)}"
+      padding: true
+      description: "組み立て中の長いファイル名（作業用。逆順に並ぶので前に付ける）"

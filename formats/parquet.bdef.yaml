@@ -1,15 +1,1078 @@
+# Apache Parquet（列指向のデータファイル）
+# 仕様: Apache Parquet Format 2.12.0（parquet.thrift、2025） https://github.com/apache/parquet-format 、
+#   Apache Thrift Compact Protocol https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md 。pyarrow 22.0（parquet-cpp-arrow）が出力したファイルで照合した
+# 構造: 'PAR1' → 列チャンク（ページの並び）→ フッタ（Thrift Compact Protocol の FileMetaData）→ フッタのバイト数（4 バイト）→ 'PAR1'。
+#   Thrift の構造体はフィールド（ヘッダ 1 バイト = 前のフィールドとの番号の差 4 ビット + 型 4 ビット、[番号] + 値）の並びで、型 0（STOP）で終わる。
+#   構造体の種類（FileMetaData・SchemaElement・RowGroup・ColumnChunk・ColumnMetaData など）を親のフィールドの番号から決め、フィールドの名前と値の列挙型を付ける
+# 対応していないもの: ページのデータ（圧縮・符号化された値。バイト列）、2 つ目以降のページのヘッダ（各列の最初のデータページと辞書ページだけ読む）、
+#   暗号化されたフッタ（'PARE'）、オフセットインデックス・列インデックス・ブルームフィルタの中身、INT96 などの統計の値の型に応じた表示（バイト列）、
+#   Thrift の bool のリストの値の表示（1 バイトの整数）、表に無いフィールドの名前（番号のみ）
 name: Parquet
 endianness: little
 root: parquet
 
+enums:
+  thrift_type:
+    - value: 0
+      label: STOP
+      description: "構造体の終わり"
+    - value: 1
+      label: BOOLEAN_TRUE
+      description: "真（値のバイト無し。リストの要素の型では真偽値）"
+    - value: 2
+      label: BOOLEAN_FALSE
+      description: "偽（値のバイト無し）"
+    - value: 3
+      label: I8
+      description: "8 ビット整数"
+    - value: 4
+      label: I16
+      description: "16 ビット整数（ジグザグ符号化の可変長整数）"
+    - value: 5
+      label: I32
+      description: "32 ビット整数（ジグザグ符号化の可変長整数）"
+    - value: 6
+      label: I64
+      description: "64 ビット整数（ジグザグ符号化の可変長整数）"
+    - value: 7
+      label: DOUBLE
+      description: "倍精度の浮動小数点数（8 バイト、リトルエンディアン）"
+    - value: 8
+      label: BINARY
+      description: "バイト列（長さの可変長整数 + バイト列。文字列にも使う）"
+    - value: 9
+      label: LIST
+      description: "リスト"
+    - value: 10
+      label: SET
+      description: "集合"
+    - value: 11
+      label: MAP
+      description: "マップ"
+    - value: 12
+      label: STRUCT
+      description: "構造体"
+    - value: 13
+      label: UUID
+      description: "UUID（16 バイト）"
+
+  struct_kind:
+    - value: 0
+      label: unknown
+      description: "種類の分からない構造体（フィールドは番号のみ）"
+    - value: 1
+      label: FileMetaData
+      description: "ファイルのメタデータ（フッタ）"
+    - value: 2
+      label: SchemaElement
+      description: "スキーマの要素"
+    - value: 3
+      label: RowGroup
+      description: "行グループ"
+    - value: 4
+      label: ColumnChunk
+      description: "列チャンク"
+    - value: 5
+      label: ColumnMetaData
+      description: "列のメタデータ"
+    - value: 6
+      label: Statistics
+      description: "統計"
+    - value: 7
+      label: KeyValue
+      description: "キーと値"
+    - value: 8
+      label: PageHeader
+      description: "ページヘッダ"
+    - value: 9
+      label: DataPageHeader
+      description: "データページのヘッダ"
+    - value: 10
+      label: DictionaryPageHeader
+      description: "辞書ページのヘッダ"
+    - value: 11
+      label: DataPageHeaderV2
+      description: "データページ（版 2）のヘッダ"
+    - value: 13
+      label: SortingColumn
+      description: "並べ替えの列"
+    - value: 14
+      label: PageEncodingStats
+      description: "ページの符号化の統計"
+    - value: 15
+      label: ColumnOrder
+      description: "列の値の順序（共用体）"
+    - value: 16
+      label: LogicalType
+      description: "論理型（共用体）"
+
+  parquet_type:
+    - value: 0
+      label: BOOLEAN
+      description: "真偽値（1 ビット）"
+    - value: 1
+      label: INT32
+      description: "32 ビット整数"
+    - value: 2
+      label: INT64
+      description: "64 ビット整数"
+    - value: 3
+      label: INT96
+      description: "96 ビット整数（旧形式の日時。非推奨）"
+    - value: 4
+      label: FLOAT
+      description: "単精度の浮動小数点数"
+    - value: 5
+      label: DOUBLE
+      description: "倍精度の浮動小数点数"
+    - value: 6
+      label: BYTE_ARRAY
+      description: "可変長のバイト列"
+    - value: 7
+      label: FIXED_LEN_BYTE_ARRAY
+      description: "固定長のバイト列"
+
+  repetition_type:
+    - value: 0
+      label: REQUIRED
+      description: "必須（ちょうど 1 個）"
+    - value: 1
+      label: OPTIONAL
+      description: "省略可能（0 個か 1 個）"
+    - value: 2
+      label: REPEATED
+      description: "繰り返し（0 個以上）"
+
+  converted_type:
+    - value: 0
+      label: UTF8
+      description: "UTF-8 の文字列"
+    - value: 1
+      label: MAP
+      description: "マップ"
+    - value: 2
+      label: MAP_KEY_VALUE
+      description: "マップのキーと値"
+    - value: 3
+      label: LIST
+      description: "リスト"
+    - value: 4
+      label: ENUM
+      description: "列挙"
+    - value: 5
+      label: DECIMAL
+      description: "10 進数"
+    - value: 6
+      label: DATE
+      description: "日付（1970-01-01 からの日数）"
+    - value: 7
+      label: TIME_MILLIS
+      description: "時刻（ミリ秒）"
+    - value: 8
+      label: TIME_MICROS
+      description: "時刻（マイクロ秒）"
+    - value: 9
+      label: TIMESTAMP_MILLIS
+      description: "日時（ミリ秒）"
+    - value: 10
+      label: TIMESTAMP_MICROS
+      description: "日時（マイクロ秒）"
+    - value: 11
+      label: UINT_8
+      description: "符号なし 8 ビット"
+    - value: 12
+      label: UINT_16
+      description: "符号なし 16 ビット"
+    - value: 13
+      label: UINT_32
+      description: "符号なし 32 ビット"
+    - value: 14
+      label: UINT_64
+      description: "符号なし 64 ビット"
+    - value: 15
+      label: INT_8
+      description: "符号付き 8 ビット"
+    - value: 16
+      label: INT_16
+      description: "符号付き 16 ビット"
+    - value: 17
+      label: INT_32
+      description: "符号付き 32 ビット"
+    - value: 18
+      label: INT_64
+      description: "符号付き 64 ビット"
+    - value: 19
+      label: JSON
+      description: "JSON"
+    - value: 20
+      label: BSON
+      description: "BSON"
+    - value: 21
+      label: INTERVAL
+      description: "期間（月・日・ミリ秒）"
+
+  encoding:
+    - value: 0
+      label: PLAIN
+      description: "そのまま並べる"
+    - value: 2
+      label: PLAIN_DICTIONARY
+      description: "辞書（旧形式。辞書ページは PLAIN、データページは RLE_DICTIONARY と同じ）"
+    - value: 3
+      label: RLE
+      description: "ランレングスとビットパッキングの混成"
+    - value: 4
+      label: BIT_PACKED
+      description: "ビットパッキング（非推奨）"
+    - value: 5
+      label: DELTA_BINARY_PACKED
+      description: "差分のビットパッキング"
+    - value: 6
+      label: DELTA_LENGTH_BYTE_ARRAY
+      description: "長さを差分で符号化したバイト列"
+    - value: 7
+      label: DELTA_BYTE_ARRAY
+      description: "前の値との共通部分を省いたバイト列"
+    - value: 8
+      label: RLE_DICTIONARY
+      description: "辞書の番号を RLE で符号化"
+    - value: 9
+      label: BYTE_STREAM_SPLIT
+      description: "値のバイトを位置ごとの流れに分ける"
+
+  compression_codec:
+    - value: 0
+      label: UNCOMPRESSED
+      description: "圧縮なし"
+    - value: 1
+      label: SNAPPY
+      description: "Snappy"
+    - value: 2
+      label: GZIP
+      description: "gzip"
+    - value: 3
+      label: LZO
+      description: "LZO"
+    - value: 4
+      label: BROTLI
+      description: "Brotli"
+    - value: 5
+      label: LZ4
+      description: "LZ4（Hadoop の枠付き。非推奨）"
+    - value: 6
+      label: ZSTD
+      description: "Zstandard"
+    - value: 7
+      label: LZ4_RAW
+      description: "LZ4（ブロック形式）"
+
+  page_type:
+    - value: 0
+      label: DATA_PAGE
+      description: "データページ"
+    - value: 1
+      label: INDEX_PAGE
+      description: "インデックスページ（未使用）"
+    - value: 2
+      label: DICTIONARY_PAGE
+      description: "辞書ページ"
+    - value: 3
+      label: DATA_PAGE_V2
+      description: "データページ（版 2）"
+
+  filemetadata_field:
+    - value: 1
+      label: version
+      description: "形式の版"
+    - value: 2
+      label: schema
+      description: "スキーマ（木を前順に並べた要素）"
+    - value: 3
+      label: num_rows
+      description: "行数"
+    - value: 4
+      label: row_groups
+      description: "行グループ"
+    - value: 5
+      label: key_value_metadata
+      description: "キーと値のメタデータ"
+    - value: 6
+      label: created_by
+      description: "書き出したソフトウェア"
+    - value: 7
+      label: column_orders
+      description: "列ごとの値の順序"
+    - value: 8
+      label: encryption_algorithm
+      description: "暗号化の方式（暗号化されたフッタが平文のとき）"
+    - value: 9
+      label: footer_signing_key_metadata
+      description: "フッタの署名の鍵のメタデータ"
+
+  schemaelement_field:
+    - value: 1
+      label: type
+      description: "物理型（葉のみ）"
+    - value: 2
+      label: type_length
+      description: "固定長のバイト数（FIXED_LEN_BYTE_ARRAY）"
+    - value: 3
+      label: repetition_type
+      description: "繰り返しの種類"
+    - value: 4
+      label: name
+      description: "名前"
+    - value: 5
+      label: num_children
+      description: "子の数（グループのみ）"
+    - value: 6
+      label: converted_type
+      description: "変換型（旧形式の論理型）"
+    - value: 7
+      label: scale
+      description: "10 進数の小数点以下の桁数"
+    - value: 8
+      label: precision
+      description: "10 進数の桁数"
+    - value: 9
+      label: field_id
+      description: "フィールド ID"
+    - value: 10
+      label: logicalType
+      description: "論理型"
+
+  rowgroup_field:
+    - value: 1
+      label: columns
+      description: "列チャンク"
+    - value: 2
+      label: total_byte_size
+      description: "展開後の合計バイト数"
+    - value: 3
+      label: num_rows
+      description: "行数"
+    - value: 4
+      label: sorting_columns
+      description: "並べ替えの列"
+    - value: 5
+      label: file_offset
+      description: "最初のページの位置"
+    - value: 6
+      label: total_compressed_size
+      description: "圧縮後の合計バイト数"
+    - value: 7
+      label: ordinal
+      description: "行グループの番号"
+
+  columnchunk_field:
+    - value: 1
+      label: file_path
+      description: "データのあるファイル（別ファイルのとき）"
+    - value: 2
+      label: file_offset
+      description: "列のメタデータの位置（非推奨）"
+    - value: 3
+      label: meta_data
+      description: "列のメタデータ"
+    - value: 4
+      label: offset_index_offset
+      description: "オフセットインデックスの位置"
+    - value: 5
+      label: offset_index_length
+      description: "オフセットインデックスのバイト数"
+    - value: 6
+      label: column_index_offset
+      description: "列インデックスの位置"
+    - value: 7
+      label: column_index_length
+      description: "列インデックスのバイト数"
+    - value: 8
+      label: crypto_metadata
+      description: "列の暗号化のメタデータ"
+    - value: 9
+      label: encrypted_column_metadata
+      description: "暗号化された列のメタデータ"
+
+  columnmetadata_field:
+    - value: 1
+      label: type
+      description: "物理型"
+    - value: 2
+      label: encodings
+      description: "使われている符号化"
+    - value: 3
+      label: path_in_schema
+      description: "スキーマの中の列のパス"
+    - value: 4
+      label: codec
+      description: "圧縮方式"
+    - value: 5
+      label: num_values
+      description: "値の数（null を含む）"
+    - value: 6
+      label: total_uncompressed_size
+      description: "展開後のバイト数（ページヘッダを含む）"
+    - value: 7
+      label: total_compressed_size
+      description: "圧縮後のバイト数（ページヘッダを含む）"
+    - value: 8
+      label: key_value_metadata
+      description: "キーと値のメタデータ"
+    - value: 9
+      label: data_page_offset
+      description: "最初のデータページの位置"
+    - value: 10
+      label: index_page_offset
+      description: "最初のインデックスページの位置"
+    - value: 11
+      label: dictionary_page_offset
+      description: "辞書ページの位置"
+    - value: 12
+      label: statistics
+      description: "統計"
+    - value: 13
+      label: encoding_stats
+      description: "ページの種類と符号化ごとの数"
+    - value: 14
+      label: bloom_filter_offset
+      description: "ブルームフィルタの位置"
+    - value: 15
+      label: bloom_filter_length
+      description: "ブルームフィルタのバイト数"
+    - value: 16
+      label: size_statistics
+      description: "大きさの統計"
+    - value: 17
+      label: geospatial_statistics
+      description: "地理空間の統計"
+
+  statistics_field:
+    - value: 1
+      label: max
+      description: "最大値（旧形式。符号付きの順序）"
+    - value: 2
+      label: min
+      description: "最小値（旧形式）"
+    - value: 3
+      label: null_count
+      description: "null の数"
+    - value: 4
+      label: distinct_count
+      description: "異なる値の数"
+    - value: 5
+      label: max_value
+      description: "最大値（列の順序による）"
+    - value: 6
+      label: min_value
+      description: "最小値（列の順序による）"
+    - value: 7
+      label: is_max_value_exact
+      description: "最大値が正確か"
+    - value: 8
+      label: is_min_value_exact
+      description: "最小値が正確か"
+
+  keyvalue_field:
+    - value: 1
+      label: key
+      description: "キー"
+    - value: 2
+      label: value
+      description: "値"
+
+  pageheader_field:
+    - value: 1
+      label: type
+      description: "ページの種類"
+    - value: 2
+      label: uncompressed_page_size
+      description: "展開後のページのバイト数（ヘッダを除く）"
+    - value: 3
+      label: compressed_page_size
+      description: "圧縮後のページのバイト数（ヘッダを除く）"
+    - value: 4
+      label: crc
+      description: "ページの CRC-32"
+    - value: 5
+      label: data_page_header
+      description: "データページのヘッダ"
+    - value: 6
+      label: index_page_header
+      description: "インデックスページのヘッダ"
+    - value: 7
+      label: dictionary_page_header
+      description: "辞書ページのヘッダ"
+    - value: 8
+      label: data_page_header_v2
+      description: "データページ（版 2）のヘッダ"
+
+  datapageheader_field:
+    - value: 1
+      label: num_values
+      description: "値の数（null を含む）"
+    - value: 2
+      label: encoding
+      description: "値の符号化"
+    - value: 3
+      label: definition_level_encoding
+      description: "定義レベルの符号化"
+    - value: 4
+      label: repetition_level_encoding
+      description: "繰り返しレベルの符号化"
+    - value: 5
+      label: statistics
+      description: "ページの統計"
+
+  dictionarypageheader_field:
+    - value: 1
+      label: num_values
+      description: "辞書の値の数"
+    - value: 2
+      label: encoding
+      description: "辞書の符号化"
+    - value: 3
+      label: is_sorted
+      description: "辞書が並べ替え済みか"
+
+  datapageheaderv2_field:
+    - value: 1
+      label: num_values
+      description: "値の数（null を含む）"
+    - value: 2
+      label: num_nulls
+      description: "null の数"
+    - value: 3
+      label: num_rows
+      description: "行数"
+    - value: 4
+      label: encoding
+      description: "値の符号化"
+    - value: 5
+      label: definition_levels_byte_length
+      description: "定義レベルのバイト数"
+    - value: 6
+      label: repetition_levels_byte_length
+      description: "繰り返しレベルのバイト数"
+    - value: 7
+      label: is_compressed
+      description: "値が圧縮されているか"
+    - value: 8
+      label: statistics
+      description: "ページの統計"
+
+  sortingcolumn_field:
+    - value: 1
+      label: column_idx
+      description: "列の番号"
+    - value: 2
+      label: descending
+      description: "降順か"
+    - value: 3
+      label: nulls_first
+      description: "null を先に置くか"
+
+  pageencodingstats_field:
+    - value: 1
+      label: page_type
+      description: "ページの種類"
+    - value: 2
+      label: encoding
+      description: "符号化"
+    - value: 3
+      label: count
+      description: "ページの数"
+
+  columnorder_field:
+    - value: 1
+      label: TYPE_ORDER
+      description: "型で決まる順序"
+
+  logicaltype_field:
+    - value: 1
+      label: STRING
+      description: "UTF-8 の文字列"
+    - value: 2
+      label: MAP
+      description: "マップ"
+    - value: 3
+      label: LIST
+      description: "リスト"
+    - value: 4
+      label: ENUM
+      description: "列挙"
+    - value: 5
+      label: DECIMAL
+      description: "10 進数"
+    - value: 6
+      label: DATE
+      description: "日付"
+    - value: 7
+      label: TIME
+      description: "時刻"
+    - value: 8
+      label: TIMESTAMP
+      description: "日時"
+    - value: 10
+      label: INTEGER
+      description: "整数（ビット数と符号）"
+    - value: 11
+      label: UNKNOWN
+      description: "常に null"
+    - value: 12
+      label: JSON
+      description: "JSON"
+    - value: 13
+      label: BSON
+      description: "BSON"
+    - value: 14
+      label: UUID
+      description: "UUID（16 バイト）"
+    - value: 15
+      label: FLOAT16
+      description: "半精度の浮動小数点数"
+    - value: 16
+      label: VARIANT
+      description: "バリアント"
+    - value: 17
+      label: GEOMETRY
+      description: "幾何"
+    - value: 18
+      label: GEOGRAPHY
+      description: "地理"
+
 structs:
   parquet:
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      description: "ファイルのバイト数"
     - name: magic
       type: ascii
       size: "4"
-      expected: [0x50, 0x41, 0x52, 0x31]
-      description: "Parquetマジック（'PAR1'）"
-    - name: row_groups
+      validate: "{magic == 'PAR1'}"
+      description: "先頭のマジック（'PAR1'）"
+    - name: footer_length
+      type: uint32
+      seek: "{file_size - 8}"
+      seek_restore: true
+      description: "フッタ（FileMetaData）のバイト数（末尾から 8 バイト目）"
+    - name: footer_magic
+      type: ascii
+      size: "4"
+      seek: "{file_size - 4}"
+      seek_restore: true
+      validate: "{footer_magic == 'PAR1'}"
+      description: "末尾のマジック（'PAR1'。暗号化されたフッタは 'PARE'）"
+    - name: column_chunks
+      type: bytes
+      size: "{file_size - 12 - footer_length}"
+      description: "列チャンクの並び（各列のページ。フッタの ColumnMetaData から位置を引く）"
+    - name: next_kind
+      type: virtual
+      value: "{1}"
+      description: "次に読む Thrift の構造体の種類（作業用。フッタは FileMetaData）"
+      padding: true
+      enum: struct_kind
+    - name: footer
+      type: struct
+      struct: thrift_struct
+      size: "{footer_length}"
+      description: "フッタ（FileMetaData）"
+    - name: trailer
+      type: bytes
+      size: "8"
+      description: "フッタのバイト数と末尾のマジック"
+
+  # Thrift の構造体。エンディアンを書いた形にして独自の変数のスコープを持たせ、入れ子の構造体の値が親の値を上書きしないようにする
+  thrift_struct:
+    endianness: little
+    fields:
+      - name: struct_kind
+        type: virtual
+        value: "{next_kind}"
+        enum: struct_kind
+        description: "構造体の種類（親のフィールドの番号で決まる）"
+      - name: last_field_id
+        type: virtual
+        value: "{0}"
+        description: "直前のフィールドの番号（作業用。番号の差の基準）"
+        padding: true
+      - name: fields
+        type: struct
+        struct: thrift_field
+        repeat_until: "{field_type == 0}"
+        description: "フィールドの並び（STOP で終わる）"
+
+  thrift_field:
+    - name: field_header
+      type: bitfield
+      size: "1"
+      description: "フィールドのヘッダ"
+      fields:
+        - name: id_delta
+          bits: "7:4"
+          description: "直前のフィールドとの番号の差（0 なら番号が後ろに続く）"
+        - name: field_type
+          bits: "3:0"
+          enum: thrift_type
+          description: "値の型"
+    - name: explicit_id
+      type: uleb128
+      if: "{id_delta == 0 and field_type != 0}"
+      description: "フィールドの番号（ジグザグ符号化。番号の差が 15 を超えるとき）"
+    - name: field_id
+      type: virtual
+      value: "{field_type == 0 ? 0 : (id_delta != 0 ? last_field_id + id_delta : ((explicit_id >> 1) ^ (0 - (explicit_id & 1))))}"
+      description: "フィールドの番号"
+    - name: own_kind
+      type: virtual
+      value: "{struct_kind}"
+      description: "このフィールドを持つ構造体の種類（作業用）"
+      padding: true
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: filemetadata_field
+      if: "{field_type != 0 and own_kind == 1}"
+      description: "フィールドの名前（FileMetaData）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: schemaelement_field
+      if: "{field_type != 0 and own_kind == 2}"
+      description: "フィールドの名前（SchemaElement）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: rowgroup_field
+      if: "{field_type != 0 and own_kind == 3}"
+      description: "フィールドの名前（RowGroup）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: columnchunk_field
+      if: "{field_type != 0 and own_kind == 4}"
+      description: "フィールドの名前（ColumnChunk）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: columnmetadata_field
+      if: "{field_type != 0 and own_kind == 5}"
+      description: "フィールドの名前（ColumnMetaData）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: statistics_field
+      if: "{field_type != 0 and own_kind == 6}"
+      description: "フィールドの名前（Statistics）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: keyvalue_field
+      if: "{field_type != 0 and own_kind == 7}"
+      description: "フィールドの名前（KeyValue）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: pageheader_field
+      if: "{field_type != 0 and own_kind == 8}"
+      description: "フィールドの名前（PageHeader）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: datapageheader_field
+      if: "{field_type != 0 and own_kind == 9}"
+      description: "フィールドの名前（DataPageHeader）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: dictionarypageheader_field
+      if: "{field_type != 0 and own_kind == 10}"
+      description: "フィールドの名前（DictionaryPageHeader）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: datapageheaderv2_field
+      if: "{field_type != 0 and own_kind == 11}"
+      description: "フィールドの名前（DataPageHeaderV2）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: sortingcolumn_field
+      if: "{field_type != 0 and own_kind == 13}"
+      description: "フィールドの名前（SortingColumn）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: pageencodingstats_field
+      if: "{field_type != 0 and own_kind == 14}"
+      description: "フィールドの名前（PageEncodingStats）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: columnorder_field
+      if: "{field_type != 0 and own_kind == 15}"
+      description: "フィールドの名前（ColumnOrder）"
+    - name: field
+      type: virtual
+      value: "{field_id}"
+      enum: logicaltype_field
+      if: "{field_type != 0 and own_kind == 16}"
+      description: "フィールドの名前（LogicalType）"
+    - name: next_kind
+      type: virtual
+      value: "{own_kind == 1 and field_id == 2 ? 2 : own_kind == 1 and field_id == 4 ? 3 : own_kind == 1 and field_id == 5 ? 7 : own_kind == 1 and field_id == 7 ? 15 : own_kind == 2 and field_id == 10 ? 16 : own_kind == 3 and field_id == 1 ? 4 : own_kind == 3 and field_id == 4 ? 13 : own_kind == 4 and field_id == 3 ? 5 : own_kind == 5 and field_id == 8 ? 7 : own_kind == 5 and field_id == 12 ? 6 : own_kind == 5 and field_id == 13 ? 14 : own_kind == 8 and field_id == 5 ? 9 : own_kind == 8 and field_id == 7 ? 10 : own_kind == 8 and field_id == 8 ? 11 : own_kind == 9 and field_id == 5 ? 6 : own_kind == 11 and field_id == 8 ? 6 : 0}"
+      enum: struct_kind
+      if: "{field_type == 9 or field_type == 10 or field_type == 12}"
+      description: "値の構造体の種類（作業用）"
+      padding: true
+    - name: value
+      type: switch
+      switch_on: "{field_type}"
+      if: "{field_type != 0}"
+      cases:
+        "1": thrift_bool_true
+        "2": thrift_bool_false
+        "3": thrift_i8
+        "4": thrift_varint
+        "5": thrift_varint
+        "6": thrift_varint
+        "7": thrift_double
+        "8": thrift_binary
+        "9": thrift_list
+        "10": thrift_list
+        "11": thrift_map
+        "12": thrift_struct
+        "13": thrift_uuid
+      default: thrift_unknown
+      description: "値"
+    - name: next_kind
+      type: virtual
+      value: "{8}"
+      enum: struct_kind
+      if: "{own_kind == 5 and (field_id == 9 or field_id == 11) and field_type == 6}"
+      description: "ページヘッダの構造体の種類（作業用）"
+      padding: true
+    - name: page_header
+      type: struct
+      struct: thrift_struct
+      seek: "{number}"
+      seek_restore: true
+      if: "{own_kind == 5 and (field_id == 9 or field_id == 11) and field_type == 6}"
+      description: "この位置にあるページのヘッダ（PageHeader）"
+    - name: last_field_id
+      type: virtual
+      value: "{field_id}"
+      description: "次のフィールドの番号の基準（作業用。入れ子の値で上書きされた値を戻す）"
+      padding: true
+    - name: struct_kind
+      type: virtual
+      value: "{own_kind}"
+      description: "この構造体の種類（作業用。入れ子の値で上書きされた値を戻す）"
+      padding: true
+
+  thrift_bool_true:
+    - name: boolean
+      type: virtual
+      value: "{1}"
+      description: "真偽値（真）"
+
+  thrift_bool_false:
+    - name: boolean
+      type: virtual
+      value: "{0}"
+      description: "真偽値（偽）"
+
+  thrift_i8:
+    - name: number
+      type: int8
+      description: "8 ビット整数"
+
+  thrift_varint:
+    - name: zigzag
+      type: uleb128
+      description: "ジグザグ符号化した可変長整数"
+    - name: number
+      type: virtual
+      value: "{(zigzag >> 1) ^ (0 - (zigzag & 1))}"
+      description: "整数"
+    - name: parquet_type
+      type: virtual
+      value: "{number}"
+      enum: parquet_type
+      if: "{(own_kind == 2 and field_id == 1) or (own_kind == 5 and field_id == 1)}"
+      description: "物理型"
+    - name: repetition
+      type: virtual
+      value: "{number}"
+      enum: repetition_type
+      if: "{(own_kind == 2 and field_id == 3)}"
+      description: "繰り返しの種類"
+    - name: converted
+      type: virtual
+      value: "{number}"
+      enum: converted_type
+      if: "{(own_kind == 2 and field_id == 6)}"
+      description: "変換型"
+    - name: encoding
+      type: virtual
+      value: "{number}"
+      enum: encoding
+      if: "{(own_kind == 5 and field_id == 2) or (own_kind == 9 and field_id == 2) or (own_kind == 9 and field_id == 3) or (own_kind == 9 and field_id == 4) or (own_kind == 10 and field_id == 2) or (own_kind == 11 and field_id == 4) or (own_kind == 14 and field_id == 2)}"
+      description: "符号化"
+    - name: codec
+      type: virtual
+      value: "{number}"
+      enum: compression_codec
+      if: "{(own_kind == 5 and field_id == 4)}"
+      description: "圧縮方式"
+    - name: page_type
+      type: virtual
+      value: "{number}"
+      enum: page_type
+      if: "{(own_kind == 8 and field_id == 1) or (own_kind == 14 and field_id == 1)}"
+      description: "ページの種類"
+
+  thrift_double:
+    - name: number
+      type: float64
+      description: "倍精度の浮動小数点数"
+
+  thrift_binary:
+    - name: length
+      type: uleb128
+      description: "バイト数"
+    - name: text
+      type: utf8
+      size: "{length}"
+      if: "{(own_kind == 1 and field_id == 6) or (own_kind == 2 and field_id == 4) or (own_kind == 4 and field_id == 1) or (own_kind == 5 and field_id == 3) or (own_kind == 7 and field_id == 1) or (own_kind == 7 and field_id == 2)}"
+      description: "文字列（UTF-8）"
+    - name: data
+      type: bytes
+      size: "{length}"
+      if: "{not ((own_kind == 1 and field_id == 6) or (own_kind == 2 and field_id == 4) or (own_kind == 4 and field_id == 1) or (own_kind == 5 and field_id == 3) or (own_kind == 7 and field_id == 1) or (own_kind == 7 and field_id == 2))}"
+      description: "バイト列（統計の最小値・最大値などは列の物理型の表現）"
+
+  thrift_uuid:
+    - name: uuid
+      type: bytes
+      size: "16"
+      description: "UUID（16 バイト）"
+
+  thrift_list:
+    - name: list_header
+      type: bitfield
+      size: "1"
+      description: "リストのヘッダ"
+      fields:
+        - name: short_count
+          bits: "7:4"
+          description: "要素数（15 なら要素数が後ろに続く）"
+        - name: element_type
+          bits: "3:0"
+          enum: thrift_type
+          description: "要素の型"
+    - name: long_count
+      type: uleb128
+      if: "{short_count == 15}"
+      description: "要素数（15 以上のとき）"
+    - name: count
+      type: virtual
+      value: "{short_count == 15 ? long_count : short_count}"
+      description: "要素数"
+    - name: elements
+      type: struct
+      struct: thrift_element
+      repeat_count: "{count <= remaining ? count : remaining}"
+      description: "要素の並び（壊れた要素数で止まらないよう、残りのバイト数を上限にする。要素は 1 バイト以上）"
+
+  thrift_element:
+    - name: item
+      type: switch
+      switch_on: "{element_type}"
+      cases:
+        "1": thrift_i8
+        "2": thrift_i8
+        "3": thrift_i8
+        "4": thrift_varint
+        "5": thrift_varint
+        "6": thrift_varint
+        "7": thrift_double
+        "8": thrift_binary
+        "9": thrift_list
+        "10": thrift_list
+        "11": thrift_map
+        "12": thrift_struct
+        "13": thrift_uuid
+      default: thrift_unknown
+      description: "要素（真偽値の要素は 1 バイト）"
+
+  thrift_map:
+    - name: count
+      type: uleb128
+      description: "エントリ数"
+    - name: kv_types
+      type: bitfield
+      size: "1"
+      if: "{count > 0}"
+      description: "キーと値の型"
+      fields:
+        - name: key_type
+          bits: "7:4"
+          enum: thrift_type
+          description: "キーの型"
+        - name: value_type
+          bits: "3:0"
+          enum: thrift_type
+          description: "値の型"
+    - name: entries
+      type: struct
+      struct: thrift_map_entry
+      repeat_count: "{count <= remaining ? count : remaining}"
+      description: "エントリの並び（残りのバイト数を上限にする）"
+
+  thrift_map_entry:
+    - name: key
+      type: switch
+      switch_on: "{key_type}"
+      cases:
+        "1": thrift_i8
+        "2": thrift_i8
+        "3": thrift_i8
+        "4": thrift_varint
+        "5": thrift_varint
+        "6": thrift_varint
+        "7": thrift_double
+        "8": thrift_binary
+        "9": thrift_list
+        "10": thrift_list
+        "11": thrift_map
+        "12": thrift_struct
+        "13": thrift_uuid
+      default: thrift_unknown
+      description: "キー"
+    - name: map_value
+      type: switch
+      switch_on: "{value_type}"
+      cases:
+        "1": thrift_i8
+        "2": thrift_i8
+        "3": thrift_i8
+        "4": thrift_varint
+        "5": thrift_varint
+        "6": thrift_varint
+        "7": thrift_double
+        "8": thrift_binary
+        "9": thrift_list
+        "10": thrift_list
+        "11": thrift_map
+        "12": thrift_struct
+        "13": thrift_uuid
+      default: thrift_unknown
+      description: "値"
+
+  thrift_unknown:
+    - name: data
       type: bytes
       size: remaining
-      description: "Row Groups（カラムチャンク群）。内部メタデータはApache Thriftコンパクトプロトコルでエンコードされており、DSLの表現力を超えるため構造化不可。末尾にThriftエンコードされたフッタメタデータ + 4バイトフッタサイズ + 'PAR1'マジックを含む"
+      description: "型の分からない値（以降は読めない）"

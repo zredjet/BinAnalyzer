@@ -197,4 +197,121 @@ public static class OtfTestDataGenerator
 
         return data;
     }
+
+    // ===== REQ-188: 主な表と TTC =====
+    private static byte[] U16(params int[] v) => v.SelectMany(x => new[] { (byte)(x >> 8), (byte)x }).ToArray();
+    private static byte[] U32(params long[] v) => v.SelectMany(x => new[] { (byte)(x >> 24), (byte)(x >> 16), (byte)(x >> 8), (byte)x }).ToArray();
+    private static byte[] Cat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
+
+    private static byte[] HeadTable() => Cat(U16(1, 0), U32(0x00010000, 0, 0x5F0F3CF5), U16(0x000B, 1000),
+        U32(0, 3786825600L, 0, 3786825600L), U16(0, 0xFFE0 - 0x10000 + 0x10000, 500, 800, 0x0001, 8, 2, 0, 0));
+
+    private static byte[] NameTable()
+    {
+        (int Platform, int Encoding, int Language, int NameId, byte[] Text)[] records =
+        [
+            (1, 0, 0, 1, System.Text.Encoding.Latin1.GetBytes("Test Sans")),
+            (3, 1, 0x0409, 1, System.Text.Encoding.BigEndianUnicode.GetBytes("Test Sans")),
+            (3, 1, 0x0409, 2, System.Text.Encoding.BigEndianUnicode.GetBytes("Regular")),
+            (3, 1, 0x0411, 4, System.Text.Encoding.BigEndianUnicode.GetBytes("テスト サンス")),
+            (3, 1, 0x0409, 256, System.Text.Encoding.BigEndianUnicode.GetBytes("Weight")),
+        ];
+        var strings = new MemoryStream();
+        var recordBytes = new MemoryStream();
+        foreach (var r in records)
+        {
+            recordBytes.Write(U16(r.Platform, r.Encoding, r.Language, r.NameId, r.Text.Length, (int)strings.Position));
+            strings.Write(r.Text);
+        }
+        return Cat(U16(0, records.Length, 6 + records.Length * 12), recordBytes.ToArray(), strings.ToArray());
+    }
+
+    private static byte[] CmapTable()
+    {
+        // 形式 4: 'A'〜'C'（0x41〜0x43）→ グリフ 1〜3、最後の区間 0xFFFF
+        var format4 = Cat(U16(4, 32, 0, 4, 4, 1, 0), U16(0x0043, 0xFFFF), U16(0), U16(0x0041, 0xFFFF), U16(0x10000 - 0x40, 1), U16(0, 0));
+        // 形式 12: U+1F600 → グリフ 4
+        var format12 = Cat(U16(12, 0), U32(28, 0, 1), U32(0x1F600, 0x1F600, 4));
+        var header = Cat(U16(0, 2), U16(3, 1), U32(20), U16(3, 10), U32(20 + format4.Length));
+        return Cat(header, format4, format12);
+    }
+
+    private static byte[] Os2Table() => Cat(U16(4, 500, 400, 5, 0x0008), U16(650, 700, 0, 140, 650, 700, 0, 480, 50, 250, 0),
+        new byte[] { 2, 11, 6, 3, 3, 5, 4, 2, 2, 4 }, U32(1, 0, 0, 0), "TEST"u8.ToArray(), U16(0x0040, 0x0041, 0xFFFF),
+        U16(800, 0x10000 - 200, 90, 1000, 200), U32(1, 0), U16(500, 700, 0, 0x20, 2));
+
+    private static byte[] PostTable() => Cat(U32(0x00020000, 0), U16(0x10000 - 100, 50), U32(0, 0, 0, 0, 0),
+        U16(5), U16(0, 36, 37, 38, 258), new byte[] { 8 }, "smileyfc"u8.ToArray());
+
+    private static byte[] FvarTable() => Cat(U16(1, 0, 16, 2, 1, 20, 2, 10),
+        "wght"u8.ToArray(), U32(100L << 16, 400L << 16, 900L << 16), U16(0, 256),
+        U16(2, 0), U32(400L << 16), U16(0xFFFF),
+        U16(2, 0), U32(700L << 16), U16(0xFFFF));
+
+    // GSUB: ScriptList（10: latn → 既定の LangSys が機能 0）、FeatureList（30: liga、ルックアップ無し）、LookupList（42: 0 個）
+    private static byte[] GsubTable() => Cat(U16(1, 0, 10, 30, 42),
+        U16(1), "latn"u8.ToArray(), U16(8), U16(4, 0), U16(0, 0xFFFF, 1, 0),
+        U16(1), "liga"u8.ToArray(), U16(8), U16(0, 0),
+        U16(0));
+
+    private static byte[] Sfnt(uint sfVersion, (string Tag, byte[] Data)[] tables, int baseOffset = 0, IReadOnlyList<int>? sharedOffsets = null)
+    {
+        var directory = new MemoryStream();
+        var body = new MemoryStream();
+        var headerSize = 12 + tables.Length * 16;
+        directory.Write(U32(sfVersion));
+        var power = 1; var log = 0;
+        while (power * 2 <= tables.Length) { power *= 2; log++; }
+        directory.Write(U16(tables.Length, power * 16, log, tables.Length * 16 - power * 16));
+        for (var i = 0; i < tables.Length; i++)
+        {
+            var offset = sharedOffsets?[i] ?? baseOffset + headerSize + (int)body.Position;
+            directory.Write(System.Text.Encoding.ASCII.GetBytes(tables[i].Tag));
+            directory.Write(U32(0, offset, tables[i].Data.Length));
+            if (sharedOffsets is null)
+            {
+                body.Write(tables[i].Data);
+                while (body.Position % 4 != 0) body.WriteByte(0);
+            }
+        }
+        return Cat(directory.ToArray(), body.ToArray());
+    }
+
+    private static (string, byte[])[] SampleTables() =>
+    [
+        ("GSUB", GsubTable()),
+        ("OS/2", Os2Table()),
+        ("cmap", CmapTable()),
+        ("fvar", FvarTable()),
+        ("head", HeadTable()),
+        ("hhea", Cat(U16(1, 0, 800, 0x10000 - 200, 90, 1000, 0, 0, 900, 1, 0, 0, 0, 0, 0, 0, 0, 5))),
+        ("maxp", Cat(U32(0x00005000), U16(5))),
+        ("name", NameTable()),
+        ("post", PostTable()),
+    ];
+
+    /// <summary>
+    /// 主な表を持つ TrueType のフォント（REQ-188）: GSUB（latn・liga）・OS/2（版 4）・cmap（形式 4 = 'A'〜'C'、形式 12 = U+1F600）・fvar（wght 100〜900、インスタンス 2）・
+    /// head・hhea・maxp（版 0.5、グリフ 5）・name（Mac の Latin-1、Windows の英語と日本語の UTF-16BE）・post（版 2.0、独自のグリフ名 1 つ）。
+    /// fontTools 4.63 で各表を読んで値が一致することを確かめた。
+    /// </summary>
+    public static byte[] CreateTtfWithTables() => Sfnt(0x00010000, SampleTables());
+
+    /// <summary>
+    /// 2 つのフォントの TTC（版 2.0、REQ-188）。2 つ目のフォントは 1 つ目の表を共有する（表のレコードが同じ位置を指す）。DSIG は無し。
+    /// fontTools の TTCollection で 2 つのフォントとして読めることを確かめた。
+    /// </summary>
+    public static byte[] CreateTtc()
+    {
+        var tables = SampleTables();
+        const int ttcHeader = 12 + 4 * 2 + 12;
+        var first = Sfnt(0x00010000, tables, baseOffset: ttcHeader);
+        var directorySize = 12 + tables.Length * 16;
+        var offsets = new List<int>();
+        var position = ttcHeader + directorySize;
+        foreach (var (_, data) in tables) { offsets.Add(position); position += (data.Length + 3) / 4 * 4; }
+        var second = Sfnt(0x00010000, tables, sharedOffsets: offsets);
+        var header = Cat("ttcf"u8.ToArray(), U16(2, 0), U32(2, ttcHeader, ttcHeader + first.Length), U32(0, 0, 0));
+        return Cat(header, first, second);
+    }
 }

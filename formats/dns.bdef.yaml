@@ -1,73 +1,584 @@
+# DNS（Domain Name System）のメッセージ
+# 仕様: RFC 1035 Domain Names - Implementation and Specification（1987）、RFC 3596（AAAA）、RFC 2782（SRV）、RFC 6891（EDNS(0) の OPT）、
+#   RFC 4035（AD / CD ビット）、RFC 8659（CAA）、RFC 6762（mDNS のクラスの上位ビット）、IANA "Domain Name System (DNS) Parameters"（2025）の種類・クラス・RCODE・EDNS のオプション
+# 構造: ヘッダ（12 バイト）→ 質問（名前 + 種類 + クラス）× QDCOUNT → 回答・権威・追加のリソースレコード（名前 + 種類 + クラス + TTL + 長さ + データ）× 各個数。
+#   名前はラベル（長さ 1 バイト + 文字）の並びで、長さの上位 2 ビットが 11 なら圧縮ポインタ（メッセージの先頭からの位置 14 ビット）で終わる
+# 対応していないもの: TCP の 2 バイトの長さの前置き（ファイルの先頭がメッセージであること）、pcap の中の DNS（formats/pcap.bdef.yaml は UDP の中身をバイト列で表示）、
+#   DNSSEC（RRSIG・DNSKEY・DS・NSEC・NSEC3）・SVCB / HTTPS・NAPTR・TLSA のデータの分解（バイト列）、EDNS のオプションの中身、
+#   ラベルの中の非 ASCII・'.' のエスケープ、前方を指す圧縮ポインタのループ（入れ子の深さの上限でエラーになる）
 name: DNS
 endianness: big
 root: dns
 
 enums:
+  opcode:
+    - value: 0
+      label: QUERY
+      description: "標準の問い合わせ"
+    - value: 1
+      label: IQUERY
+      description: "逆問い合わせ（廃止。RFC 3425）"
+    - value: 2
+      label: STATUS
+      description: "サーバの状態の問い合わせ"
+    - value: 4
+      label: NOTIFY
+      description: "ゾーンの変更の通知（RFC 1996）"
+    - value: 5
+      label: UPDATE
+      description: "動的更新（RFC 2136）"
+    - value: 6
+      label: DSO
+      description: "DNS ステートフルオペレーション（RFC 8490）"
+
   rcode:
     - value: 0
       label: NoError
+      description: "エラーなし"
     - value: 1
       label: FormErr
+      description: "問い合わせの形式の誤り"
     - value: 2
       label: ServFail
+      description: "サーバの失敗"
     - value: 3
       label: NXDomain
+      description: "名前が存在しない"
     - value: 4
       label: NotImp
+      description: "未実装の問い合わせ"
     - value: 5
       label: Refused
+      description: "拒否"
+    - value: 6
+      label: YXDomain
+      description: "存在してはならない名前が存在する（RFC 2136）"
+    - value: 7
+      label: YXRRSet
+      description: "存在してはならない RR の集合が存在する"
+    - value: 8
+      label: NXRRSet
+      description: "存在すべき RR の集合が無い"
+    - value: 9
+      label: NotAuth
+      description: "権威が無い・認証されていない"
+    - value: 10
+      label: NotZone
+      description: "名前がゾーンの中に無い"
+
+  rr_type:
+    - value: 1
+      label: A
+      description: "IPv4 アドレス"
+    - value: 2
+      label: NS
+      description: "権威ネームサーバ"
+    - value: 5
+      label: CNAME
+      description: "別名の正式名"
+    - value: 6
+      label: SOA
+      description: "ゾーンの権威の開始"
+    - value: 12
+      label: PTR
+      description: "ドメイン名へのポインタ（逆引き）"
+    - value: 13
+      label: HINFO
+      description: "ホストの情報"
+    - value: 15
+      label: MX
+      description: "メール交換"
+    - value: 16
+      label: TXT
+      description: "テキスト"
+    - value: 28
+      label: AAAA
+      description: "IPv6 アドレス（RFC 3596）"
+    - value: 33
+      label: SRV
+      description: "サービスの場所（RFC 2782）"
+    - value: 35
+      label: NAPTR
+      description: "名前付け権威ポインタ（RFC 3403）"
+    - value: 39
+      label: DNAME
+      description: "部分木の別名（RFC 6672）"
+    - value: 41
+      label: OPT
+      description: "EDNS(0) の疑似 RR（RFC 6891）"
+    - value: 43
+      label: DS
+      description: "委任の署名者（DNSSEC）"
+    - value: 46
+      label: RRSIG
+      description: "RR の集合の署名（DNSSEC）"
+    - value: 47
+      label: NSEC
+      description: "次のセキュアな名前（DNSSEC）"
+    - value: 48
+      label: DNSKEY
+      description: "DNS の鍵（DNSSEC）"
+    - value: 50
+      label: NSEC3
+      description: "ハッシュした名前での NSEC（RFC 5155）"
+    - value: 52
+      label: TLSA
+      description: "TLS の証明書の関連付け（DANE、RFC 6698）"
+    - value: 64
+      label: SVCB
+      description: "サービスの結び付け（RFC 9460）"
+    - value: 65
+      label: HTTPS
+      description: "HTTPS のサービスの結び付け（RFC 9460）"
+    - value: 99
+      label: SPF
+      description: "SPF（廃止。TXT を使う）"
+    - value: 251
+      label: IXFR
+      description: "差分のゾーン転送（質問のみ）"
+    - value: 252
+      label: AXFR
+      description: "ゾーン全体の転送（質問のみ）"
+    - value: 255
+      label: ANY
+      description: "すべての種類（質問のみ）"
+    - value: 257
+      label: CAA
+      description: "証明書の発行を許す認証局（RFC 8659）"
+
+  dns_class:
+    - value: 1
+      label: IN
+      description: "インターネット"
+    - value: 3
+      label: CH
+      description: "Chaos"
+    - value: 4
+      label: HS
+      description: "Hesiod"
+    - value: 254
+      label: NONE
+      description: "なし（動的更新）"
+    - value: 255
+      label: ANY
+      description: "すべてのクラス（質問のみ）"
+
+  edns_option_code:
+    - value: 3
+      label: NSID
+      description: "ネームサーバの識別子（RFC 5001）"
+    - value: 8
+      label: CLIENT_SUBNET
+      description: "クライアントのサブネット（RFC 7871）"
+    - value: 10
+      label: COOKIE
+      description: "DNS クッキー（RFC 7873）"
+    - value: 11
+      label: TCP_KEEPALIVE
+      description: "TCP の接続の維持（RFC 7828）"
+    - value: 12
+      label: PADDING
+      description: "詰め物（RFC 7830）"
+    - value: 15
+      label: EXTENDED_DNS_ERROR
+      description: "拡張エラー（RFC 8914）"
 
 structs:
   dns:
     - name: header
       type: struct
       struct: dns_header
-    - name: payload
+      description: "ヘッダ（識別子・フラグ・4 つのセクションの個数）"
+    - name: questions
+      type: struct
+      struct: question
+      repeat_count: "{qd_count}"
+      description: "質問セクション"
+    - name: answers
+      type: struct
+      struct: resource_record
+      repeat_count: "{an_count}"
+      description: "回答セクション"
+    - name: authorities
+      type: struct
+      struct: resource_record
+      repeat_count: "{ns_count}"
+      description: "権威セクション（権威ネームサーバの NS・SOA など）"
+    - name: additionals
+      type: struct
+      struct: resource_record
+      repeat_count: "{ar_count}"
+      description: "追加セクション（グルーレコード・EDNS の OPT など）"
+    - name: trailing_data
       type: bytes
       size: remaining
-      description: "Questions、Answers、Authority、Additionalセクション。DNS名エンコーディング（長さプレフィックス付きラベル + 0xC0xx圧縮ポインタ）はDSLの表現力を超えるため構造化不可"
+      if: "{remaining > 0}"
+      description: "メッセージの後ろの余りのバイト列"
 
   dns_header:
     - name: transaction_id
       type: uint16
-      description: "トランザクションID"
+      description: "トランザクション ID（問い合わせと応答を対応付ける）"
     - name: flags
       type: bitfield
       size: "2"
+      description: "フラグ"
       fields:
         - name: qr
           bits: "15"
-          description: "クエリ(0) / レスポンス(1)"
+          description: "問い合わせ（0）か応答（1）か"
         - name: opcode
           bits: "14:11"
-          description: "標準クエリ(0)、逆クエリ(1)、ステータス(2)"
+          enum: opcode
+          description: "問い合わせの種類"
         - name: aa
           bits: "10"
-          description: "権威ある応答"
+          description: "権威のある応答"
         - name: tc
           bits: "9"
-          description: "切り捨て"
+          description: "切り詰められた（UDP に収まらなかった）"
         - name: rd
           bits: "8"
-          description: "再帰要求"
+          description: "再帰の要求"
         - name: ra
           bits: "7"
-          description: "再帰利用可能"
+          description: "再帰が使える"
         - name: z
-          bits: "6:4"
-          description: "予約（常に0）"
+          bits: "6"
+          description: "予約（0）"
+        - name: ad
+          bits: "5"
+          description: "検証済みのデータ（DNSSEC、RFC 4035）"
+        - name: cd
+          bits: "4"
+          description: "検証をしない（DNSSEC、RFC 4035）"
         - name: rcode
           bits: "3:0"
           enum: rcode
+          description: "応答コード（EDNS では OPT の上位 8 ビットと合わせて 12 ビット）"
     - name: qd_count
       type: uint16
-      description: "Questionセクションのエントリ数"
+      description: "質問セクションのエントリ数"
     - name: an_count
       type: uint16
-      description: "Answerセクションのエントリ数"
+      description: "回答セクションのエントリ数"
     - name: ns_count
       type: uint16
-      description: "Authorityセクションのエントリ数"
+      description: "権威セクションのエントリ数"
     - name: ar_count
       type: uint16
-      description: "Additionalセクションのエントリ数"
+      description: "追加セクションのエントリ数"
+
+  question:
+    - name: qname
+      type: struct
+      struct: dns_name
+      description: "問い合わせる名前"
+    - name: qtype
+      type: uint16
+      enum: rr_type
+      description: "問い合わせる種類"
+    - name: qclass_field
+      type: bitfield
+      size: "2"
+      description: "クラス"
+      fields:
+        - name: unicast_response
+          bits: "15"
+          description: "ユニキャストの応答を求める（mDNS のみ。RFC 6762）"
+        - name: qclass
+          bits: "14:0"
+          enum: dns_class
+          description: "問い合わせるクラス"
+
+  resource_record:
+    - name: name
+      type: struct
+      struct: dns_name
+      description: "所有者の名前"
+    - name: type
+      type: uint16
+      enum: rr_type
+      description: "種類"
+    - name: body
+      type: switch
+      switch_on: "{type}"
+      cases:
+        "41": opt_record
+      default: standard_record
+      description: "クラス・TTL・データ（OPT はクラスと TTL の位置を別の意味に使う）"
+
+  standard_record:
+    - name: class_field
+      type: bitfield
+      size: "2"
+      description: "クラス"
+      fields:
+        - name: cache_flush
+          bits: "15"
+          description: "キャッシュを置き換える（mDNS のみ。RFC 6762）"
+        - name: rr_class
+          bits: "14:0"
+          enum: dns_class
+          description: "クラス"
+    - name: ttl
+      type: uint32
+      description: "キャッシュしてよい秒数"
+    - name: rdlength
+      type: uint16
+      description: "データのバイト数"
+    - name: rdata
+      type: switch
+      size: "{rdlength}"
+      switch_on: "{type}"
+      cases:
+        "1": rdata_a
+        "2": rdata_name
+        "5": rdata_name
+        "6": rdata_soa
+        "12": rdata_name
+        "13": rdata_hinfo
+        "15": rdata_mx
+        "16": rdata_txt
+        "28": rdata_aaaa
+        "33": rdata_srv
+        "39": rdata_name
+        "99": rdata_txt
+        "257": rdata_caa
+      default: raw_data
+      description: "データ（種類で振り分ける）"
+
+  opt_record:
+    - name: udp_payload_size
+      type: uint16
+      description: "送信側が受け取れる UDP のペイロードの最大バイト数（クラスの位置）"
+    - name: extended_rcode
+      type: uint8
+      description: "応答コードの上位 8 ビット（ヘッダの RCODE と合わせて 12 ビット）"
+    - name: edns_version
+      type: uint8
+      description: "EDNS の版（0）"
+    - name: edns_flags
+      type: bitfield
+      size: "2"
+      description: "EDNS のフラグ"
+      fields:
+        - name: do
+          bits: "15"
+          description: "DNSSEC の RR を受け取れる（DNSSEC OK、RFC 3225）"
+        - name: z
+          bits: "14:0"
+          description: "予約（0）"
+    - name: rdlength
+      type: uint16
+      description: "オプションの並びのバイト数"
+    - name: options
+      type: struct
+      struct: edns_option
+      size: "{rdlength}"
+      repeat: eof
+      description: "EDNS のオプション"
+
+  edns_option:
+    - name: code
+      type: uint16
+      enum: edns_option_code
+      description: "オプションの種類"
+    - name: length
+      type: uint16
+      description: "オプションのデータのバイト数"
+    - name: data
+      type: bytes
+      size: "{length}"
+      description: "オプションのデータ"
+
+  # 名前: ラベルの並び。長さ 0 のラベル（ルート）か圧縮ポインタで終わる。
+  # エンディアンを書いた形にして独自の変数のスコープを持たせる（ポインタの先の dns_name の値が、同じ名前でこの名前の値を上書きしないように）
+  dns_name:
+    endianness: big
+    fields:
+      - name: name_acc
+        type: virtual
+        value: "{''}"
+        description: "ラベルを連ねた途中の名前（作業用）"
+        padding: true
+      - name: labels
+        type: struct
+        struct: dns_label
+        repeat_until: "{label_length == 0 or label_length >= 0xC0}"
+        description: "ラベルの並び"
+      - name: local_part
+        type: virtual
+        value: "{name_acc}"
+        description: "このメッセージの位置に書かれた部分の名前（ポインタの先を含まない）"
+      - name: pointer_target
+        type: struct
+        struct: dns_name
+        seek: "{pointer_offset}"
+        seek_restore: true
+        if: "{is_pointer == 1}"
+        description: "圧縮ポインタの指す名前（メッセージの先頭からの位置）"
+      - name: full_name
+        type: virtual
+        value: "{is_pointer == 1 ? concat(local_part, pointer_target.full_name) : (local_part == '' ? '.' : local_part)}"
+        description: "名前の全体（末尾の '.' はルート）"
+
+  dns_label:
+    - name: label_length
+      type: uint8
+      description: "ラベルの長さ（0 はルート。上位 2 ビットが 11 なら圧縮ポインタの上位 6 ビット）"
+    - name: is_pointer
+      type: virtual
+      value: "{label_length >= 0xC0 ? 1 : 0}"
+      description: "圧縮ポインタか"
+    - name: pointer_low
+      type: uint8
+      if: "{label_length >= 0xC0}"
+      description: "圧縮ポインタの下位 8 ビット"
+    - name: pointer_offset
+      type: virtual
+      value: "{((label_length & 0x3F) << 8) | pointer_low}"
+      if: "{label_length >= 0xC0}"
+      description: "圧縮ポインタの指す位置（メッセージの先頭から）"
+    - name: text
+      type: ascii
+      size: "{label_length}"
+      if: "{label_length > 0 and label_length < 0x40}"
+      description: "ラベルの文字"
+    - name: name_acc
+      type: virtual
+      value: "{label_length > 0 and label_length < 0x40 ? concat(name_acc, text, '.') : name_acc}"
+      description: "ここまでのラベルを連ねた名前（作業用）"
+      padding: true
+
+  rdata_name:
+    - name: target
+      type: struct
+      struct: dns_name
+      description: "名前（NS のネームサーバ・CNAME の正式名・PTR の名前・DNAME の置き換え先）"
+
+  rdata_a:
+    - name: address_value
+      type: uint32
+      padding: true
+      description: "IPv4 アドレス（作業用）"
+    - name: address
+      type: virtual
+      value: "{concat(((address_value >> 24) & 255), '.', ((address_value >> 16) & 255), '.', ((address_value >> 8) & 255), '.', ((address_value >> 0) & 255))}"
+      description: "IPv4 アドレス（ドット区切りの 10 進）"
+
+  rdata_aaaa:
+    - name: address_hi
+      type: uint64
+      padding: true
+      description: "IPv6 アドレスの上位 8 バイト（作業用）"
+    - name: address_lo
+      type: uint64
+      padding: true
+      description: "IPv6 アドレスの下位 8 バイト（作業用）"
+    - name: address
+      type: virtual
+      value: "{concat(lower(substr(hex(((address_hi >> 48) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((address_hi >> 32) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((address_hi >> 16) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((address_hi >> 0) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((address_lo >> 48) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((address_lo >> 32) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((address_lo >> 16) & 0xFFFF)), 2, 4)), ':', lower(substr(hex(((address_lo >> 0) & 0xFFFF)), 2, 4)))}"
+      description: "IPv6 アドレス（コロン区切りの 16 進。0 の連続は省略しない）"
+
+  rdata_soa:
+    - name: mname
+      type: struct
+      struct: dns_name
+      description: "ゾーンの主ネームサーバ"
+    - name: rname
+      type: struct
+      struct: dns_name
+      description: "管理者のメールアドレス（最初の '.' が '@'）"
+    - name: serial
+      type: uint32
+      description: "ゾーンのシリアル番号"
+    - name: refresh
+      type: uint32
+      description: "副サーバが更新を確かめる間隔（秒）"
+    - name: retry
+      type: uint32
+      description: "更新に失敗したときに再試行する間隔（秒）"
+    - name: expire
+      type: uint32
+      description: "副サーバがゾーンを使い続けてよい上限（秒）"
+    - name: minimum
+      type: uint32
+      description: "否定応答をキャッシュする秒数（RFC 2308）"
+
+  rdata_mx:
+    - name: preference
+      type: uint16
+      description: "優先度（小さいほど優先）"
+    - name: exchange
+      type: struct
+      struct: dns_name
+      description: "メールサーバの名前"
+
+  rdata_srv:
+    - name: priority
+      type: uint16
+      description: "優先度（小さいほど優先）"
+    - name: weight
+      type: uint16
+      description: "同じ優先度の中での重み"
+    - name: port
+      type: uint16
+      description: "ポート番号"
+    - name: target
+      type: struct
+      struct: dns_name
+      description: "サービスを提供するホストの名前"
+
+  rdata_txt:
+    - name: strings
+      type: struct
+      struct: character_string
+      repeat: eof
+      description: "文字列（長さ 1 バイト + 文字）の並び"
+
+  rdata_hinfo:
+    - name: cpu
+      type: struct
+      struct: character_string
+      description: "CPU の種類（ANY の最小応答では 'RFC8482'）"
+    - name: os
+      type: struct
+      struct: character_string
+      description: "OS の種類"
+
+  character_string:
+    - name: length
+      type: uint8
+      description: "文字列のバイト数"
+    - name: text
+      type: utf8
+      size: "{length}"
+      description: "文字列"
+
+  rdata_caa:
+    - name: flags
+      type: bitfield
+      size: "1"
+      description: "フラグ"
+      fields:
+        - name: issuer_critical
+          bits: "7"
+          description: "理解できない認証局は発行してはならない"
+    - name: tag_length
+      type: uint8
+      description: "タグのバイト数"
+    - name: tag
+      type: ascii
+      size: "{tag_length}"
+      description: "タグ（'issue'・'issuewild'・'iodef' など）"
+    - name: value
+      type: utf8
+      size: remaining
+      description: "値（認証局のドメイン名・報告先の URL など）"
+
+  raw_data:
+    - name: data
+      type: bytes
+      size: remaining
+      description: "分解しないデータ"

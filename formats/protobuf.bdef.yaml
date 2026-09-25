@@ -1,3 +1,10 @@
+# Protocol Buffers（スキーマなしで読むワイヤ形式のメッセージ）
+# 仕様: Protocol Buffers "Encoding"（protobuf.dev、2025） https://protobuf.dev/programming-guides/encoding/ 。
+#   Python の protobuf 4.25 が出力したメッセージで照合した
+# 構造: フィールド（タグ = フィールド番号 << 3 | ワイヤ型 の可変長整数 + 値）の並び。
+#   値はワイヤ型で決まる（0 = 可変長整数、1 = 8 バイト、2 = 長さ + バイト列、3 / 4 = グループの始まりと終わり、5 = 4 バイト）
+# 対応していないもの: スキーマ（.proto）に基づくフィールド名・型の解決、長さ付きの値が入れ子のメッセージ・パックされた繰り返しのどちらか・文字列かの判別
+#   （UTF-8 として読んだ文字列とバイト列の両方を表示する）、ファイルの中の複数のメッセージの区切り（長さの前置きなど）
 name: Protobuf
 endianness: little
 root: protobuf_message
@@ -5,44 +12,112 @@ root: protobuf_message
 enums:
   wire_type:
     - value: 0
-      label: varint
+      label: VARINT
+      description: "可変長整数（int32・int64・uint32・uint64・sint32・sint64・bool・enum）"
     - value: 1
-      label: fixed64
+      label: I64
+      description: "8 バイト（fixed64・sfixed64・double）"
     - value: 2
-      label: length_delimited
+      label: LEN
+      description: "長さ + バイト列（string・bytes・入れ子のメッセージ・パックされた繰り返し）"
+    - value: 3
+      label: SGROUP
+      description: "グループの始まり（非推奨）"
+    - value: 4
+      label: EGROUP
+      description: "グループの終わり（非推奨）"
     - value: 5
-      label: fixed32
+      label: I32
+      description: "4 バイト（fixed32・sfixed32・float）"
 
 structs:
   protobuf_message:
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      padding: true
+      description: "ファイルのバイト数（作業用。値の先頭の位置を求める基準）"
     - name: fields
       type: struct
       struct: protobuf_field
       repeat: eof
+      description: "フィールドの並び"
 
   protobuf_field:
     - name: tag
       type: uleb128
+      description: "タグ（フィールド番号 << 3 | ワイヤ型）"
     - name: field_number
       type: virtual
       value: "{tag >> 3}"
+      description: "フィールド番号"
     - name: wire_type
       type: virtual
       value: "{tag & 7}"
       enum: wire_type
-    - name: varint_value
+      description: "ワイヤ型"
+    - name: value_offset
+      type: virtual
+      value: "{file_size - remaining}"
+      padding: true
+      description: "値の先頭の位置（作業用。同じバイトを別の型で読み直す）"
+    - name: varint
       type: uleb128
       if: "{wire_type == 0}"
+      description: "可変長整数（負の int32 / int64 は 10 バイトの 2 の補数で、そのまま負の値になる）"
+    - name: zigzag_value
+      type: virtual
+      value: "{(varint >> 1) ^ (0 - (varint & 1))}"
+      if: "{wire_type == 0}"
+      description: "ジグザグ符号化として読んだ値（sint32 / sint64 のとき）"
+    - name: double_value
+      type: float64
+      seek: "{value_offset}"
+      seek_restore: true
+      if: "{wire_type == 1 and remaining >= 8}"
+      description: "倍精度の浮動小数点数として読んだ値（double のとき）"
     - name: fixed64_value
       type: uint64
       if: "{wire_type == 1}"
+      description: "8 バイトの整数（fixed64 / sfixed64）"
     - name: length
       type: uleb128
       if: "{wire_type == 2}"
+      description: "値のバイト数"
+    - name: text
+      type: utf8
+      size: "{length}"
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      if: "{wire_type == 2}"
+      description: "UTF-8 の文字列として読んだ値（string のとき。入れ子のメッセージなら意味のない文字になる）"
     - name: delimited_data
       type: bytes
       size: "{length}"
       if: "{wire_type == 2}"
+      description: "値のバイト列（bytes・入れ子のメッセージ・パックされた繰り返し）"
+    - name: group
+      type: struct
+      struct: protobuf_group
+      if: "{wire_type == 3}"
+      description: "グループの中のフィールド（同じ番号の EGROUP まで）"
+    - name: float_value
+      type: float32
+      seek: "{value_offset}"
+      seek_restore: true
+      if: "{wire_type == 5 and remaining >= 4}"
+      description: "単精度の浮動小数点数として読んだ値（float のとき）"
     - name: fixed32_value
       type: uint32
       if: "{wire_type == 5}"
+      description: "4 バイトの整数（fixed32 / sfixed32）"
+
+  # グループ。エンディアンを書いた形にして独自の変数のスコープを持たせる（中のフィールドの値が外のフィールドを上書きしないように）
+  protobuf_group:
+    endianness: little
+    fields:
+      - name: fields
+        type: struct
+        struct: protobuf_field
+        repeat_until: "{wire_type == 4}"
+        description: "フィールドの並び（EGROUP で終わる）"

@@ -5,6 +5,16 @@
   "name": "OTF",
   "struct_type": "otf",
   "children": {
+    "sfnt_tag": {
+      "_type": "integer",
+      "type": "uint32",
+      "offset": 0,
+      "size": 4,
+      "description": "\u5148\u982D\u306E 4 \u30D0\u30A4\u30C8\uFF08\u4F5C\u696D\u7528\u3002\u0027ttcf\u0027 \u306A\u3089\u30B3\u30EC\u30AF\u30B7\u30E7\u30F3\uFF09",
+      "name": "sfnt_tag",
+      "value": 1330926671,
+      "hex": "0x4F54544F"
+    },
     "offset_table": {
       "_type": "struct",
       "type": "struct",
@@ -18,19 +28,19 @@
           "type": "uint32",
           "offset": 0,
           "size": 4,
-          "description": "TrueType: 0x00010000\u3001CFF: \u0027OTTO\u0027",
+          "description": "sfnt \u306E\u7248\uFF080x00010000 = TrueType\u3001\u0027OTTO\u0027 = CFF\uFF09",
           "name": "sfVersion",
           "value": 1330926671,
           "hex": "0x4F54544F",
           "enum_label": "CFF",
-          "enum_description": "OTTO"
+          "enum_description": "CFF \u306E\u30A2\u30A6\u30C8\u30E9\u30A4\u30F3\uFF08\u0027OTTO\u0027\uFF09"
         },
         "numTables": {
           "_type": "integer",
           "type": "uint16",
           "offset": 4,
           "size": 2,
-          "description": "\u30C6\u30FC\u30D6\u30EB\u6570",
+          "description": "\u8868\u306E\u6570",
           "name": "numTables",
           "value": 1,
           "hex": "0x1"
@@ -40,6 +50,7 @@
           "type": "uint16",
           "offset": 6,
           "size": 2,
+          "description": "\u4E8C\u5206\u63A2\u7D22\u306E\u7BC4\u56F2\uFF08(\u8868\u306E\u6570\u4EE5\u4E0B\u306E\u6700\u5927\u306E 2 \u306E\u7D2F\u4E57) \u00D7 16\uFF09",
           "name": "searchRange",
           "value": 16,
           "hex": "0x10"
@@ -49,6 +60,7 @@
           "type": "uint16",
           "offset": 8,
           "size": 2,
+          "description": "log2(\u8868\u306E\u6570\u4EE5\u4E0B\u306E\u6700\u5927\u306E 2 \u306E\u7D2F\u4E57)",
           "name": "entrySelector",
           "value": 0,
           "hex": "0x0"
@@ -58,6 +70,7 @@
           "type": "uint16",
           "offset": 10,
           "size": 2,
+          "description": "\u8868\u306E\u6570 \u00D7 16 - searchRange",
           "name": "rangeShift",
           "value": 0,
           "hex": "0x0"
@@ -85,7 +98,7 @@
               "type": "ascii",
               "offset": 12,
               "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u8B58\u5225\u5B50\uFF08head, name, cmap\u7B49\uFF09",
+              "description": "\u8868\u306E\u30BF\u30B0\uFF08\u0027head\u0027\u30FB\u0027cmap\u0027 \u306A\u3069\uFF09",
               "name": "tag",
               "value": "head",
               "encoding": "ascii"
@@ -95,6 +108,7 @@
               "type": "uint32",
               "offset": 16,
               "size": 4,
+              "description": "\u8868\u306E\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\uFF08uint32 \u306E\u5408\u8A08\u3002\u691C\u8A3C\u3057\u306A\u3044\uFF09",
               "name": "checksum",
               "value": 0,
               "hex": "0x0"
@@ -104,7 +118,7 @@
               "type": "uint32",
               "offset": 20,
               "size": 4,
-              "description": "\u30D5\u30A9\u30F3\u30C8\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\u306E\u30AA\u30D5\u30BB\u30C3\u30C8",
+              "description": "\u8868\u306E\u4F4D\u7F6E\uFF08\u30D5\u30A1\u30A4\u30EB\u306E\u5148\u982D\u304B\u3089\uFF09",
               "name": "offset",
               "value": 28,
               "hex": "0x1C"
@@ -114,10 +128,19 @@
               "type": "uint32",
               "offset": 24,
               "size": 4,
-              "description": "\u30C6\u30FC\u30D6\u30EB\u30C7\u30FC\u30BF\u306E\u9577\u3055",
+              "description": "\u8868\u306E\u30D0\u30A4\u30C8\u6570\uFF084 \u30D0\u30A4\u30C8\u5883\u754C\u3078\u306E\u8A70\u3081\u7269\u3092\u542B\u307E\u306A\u3044\uFF09",
               "name": "length",
               "value": 54,
               "hex": "0x36"
+            },
+            "table_offset": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 28,
+              "size": 0,
+              "description": "\u8868\u306E\u4F4D\u7F6E\uFF08\u4F5C\u696D\u7528\u3002\u8868\u306E\u4E2D\u306E\u4F4D\u7F6E\u306E\u57FA\u6E96\uFF09",
+              "name": "table_offset",
+              "value": 28
             },
             "table_data": {
               "_type": "struct",
@@ -132,6 +155,7 @@
                   "type": "uint16",
                   "offset": 28,
                   "size": 2,
+                  "description": "\u4E3B\u7248\uFF081\uFF09",
                   "name": "majorVersion",
                   "value": 1,
                   "hex": "0x1"
@@ -141,16 +165,17 @@
                   "type": "uint16",
                   "offset": 30,
                   "size": 2,
+                  "description": "\u526F\u7248\uFF080\uFF09",
                   "name": "minorVersion",
                   "value": 0,
                   "hex": "0x0"
                 },
                 "fontRevision": {
                   "_type": "integer",
-                  "type": "uint32",
+                  "type": "int32",
                   "offset": 32,
                   "size": 4,
-                  "description": "\u30D5\u30A9\u30F3\u30C8\u30EA\u30D3\u30B8\u30E7\u30F3\uFF08Fixed 16.16\uFF09",
+                  "description": "\u30D5\u30A9\u30F3\u30C8\u306E\u6539\u8A02\uFF0816.16 \u306E\u56FA\u5B9A\u5C0F\u6570\u70B9\u6570\uFF09",
                   "name": "fontRevision",
                   "value": 65536,
                   "hex": "0x10000"
@@ -160,6 +185,7 @@
                   "type": "uint32",
                   "offset": 36,
                   "size": 4,
+                  "description": "\u30D5\u30A1\u30A4\u30EB\u5168\u4F53\u306E\u30C1\u30A7\u30C3\u30AF\u30B5\u30E0\u3092 0xB1B0AFBA \u306B\u3059\u308B\u8ABF\u6574\u5024",
                   "name": "checksumAdjustment",
                   "value": 0,
                   "hex": "0x0"
@@ -169,25 +195,86 @@
                   "type": "uint32",
                   "offset": 40,
                   "size": 4,
-                  "description": "\u30DE\u30B8\u30C3\u30AF\u30CA\u30F3\u30D0\u30FC 0x5F0F3CF5",
+                  "description": "\u30DE\u30B8\u30C3\u30AF\uFF080x5F0F3CF5\uFF09",
+                  "_validation": {
+                    "passed": true,
+                    "expression": "{magicNumber == 0x5F0F3CF5}"
+                  },
                   "name": "magicNumber",
                   "value": 1594834165,
                   "hex": "0x5F0F3CF5"
                 },
                 "flags": {
-                  "_type": "integer",
-                  "type": "uint16",
+                  "_type": "bitfield",
+                  "type": "bitfield",
                   "offset": 44,
                   "size": 2,
+                  "description": "\u30D5\u30E9\u30B0",
                   "name": "flags",
-                  "value": 11,
-                  "hex": "0xB"
+                  "raw_value": "0xB",
+                  "fields": [
+                    {
+                      "name": "baseline_at_y0",
+                      "value": 1,
+                      "bit_high": 0,
+                      "bit_low": 0
+                    },
+                    {
+                      "name": "lsb_at_x0",
+                      "value": 1,
+                      "bit_high": 1,
+                      "bit_low": 1
+                    },
+                    {
+                      "name": "instructions_depend_on_size",
+                      "value": 0,
+                      "bit_high": 2,
+                      "bit_low": 2
+                    },
+                    {
+                      "name": "force_integer_ppem",
+                      "value": 1,
+                      "bit_high": 3,
+                      "bit_low": 3
+                    },
+                    {
+                      "name": "instructions_alter_advance",
+                      "value": 0,
+                      "bit_high": 4,
+                      "bit_low": 4
+                    },
+                    {
+                      "name": "lossless_compressed",
+                      "value": 0,
+                      "bit_high": 11,
+                      "bit_low": 11
+                    },
+                    {
+                      "name": "font_converted",
+                      "value": 0,
+                      "bit_high": 12,
+                      "bit_low": 12
+                    },
+                    {
+                      "name": "cleartype_optimized",
+                      "value": 0,
+                      "bit_high": 13,
+                      "bit_low": 13
+                    },
+                    {
+                      "name": "last_resort",
+                      "value": 0,
+                      "bit_high": 14,
+                      "bit_low": 14
+                    }
+                  ]
                 },
                 "unitsPerEm": {
                   "_type": "integer",
                   "type": "uint16",
                   "offset": 46,
                   "size": 2,
+                  "description": "1 em \u306E\u30E6\u30CB\u30C3\u30C8\u6570\uFF0816\u301C16384\u3002TrueType \u306F 2 \u306E\u7D2F\u4E57\u3092\u63A8\u5968\uFF09",
                   "name": "unitsPerEm",
                   "value": 1000,
                   "hex": "0x3E8"
@@ -197,26 +284,45 @@
                   "type": "int64",
                   "offset": 48,
                   "size": 8,
-                  "description": "\u4F5C\u6210\u65E5\u6642\uFF081904-01-01 00:00:00\u304B\u3089\u306E\u79D2\u6570\uFF09",
+                  "description": "\u4F5C\u6210\u65E5\u6642\uFF081904-01-01 \u304B\u3089\u306E\u79D2\uFF09",
                   "name": "created",
                   "value": 0,
                   "hex": "0x0"
+                },
+                "created_unix": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 56,
+                  "size": 0,
+                  "description": "\u4F5C\u6210\u65E5\u6642\uFF081970-01-01 \u304B\u3089\u306E\u79D2\uFF09",
+                  "name": "created_unix",
+                  "value": -2082844800
                 },
                 "modified": {
                   "_type": "integer",
                   "type": "int64",
                   "offset": 56,
                   "size": 8,
-                  "description": "\u66F4\u65B0\u65E5\u6642\uFF081904-01-01 00:00:00\u304B\u3089\u306E\u79D2\u6570\uFF09",
+                  "description": "\u66F4\u65B0\u65E5\u6642\uFF081904-01-01 \u304B\u3089\u306E\u79D2\uFF09",
                   "name": "modified",
                   "value": 0,
                   "hex": "0x0"
+                },
+                "modified_unix": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 64,
+                  "size": 0,
+                  "description": "\u66F4\u65B0\u65E5\u6642\uFF081970-01-01 \u304B\u3089\u306E\u79D2\uFF09",
+                  "name": "modified_unix",
+                  "value": -2082844800
                 },
                 "xMin": {
                   "_type": "integer",
                   "type": "int16",
                   "offset": 64,
                   "size": 2,
+                  "description": "\u5168\u30B0\u30EA\u30D5\u306E\u5916\u63A5\u77E9\u5F62\u306E x \u306E\u6700\u5C0F",
                   "name": "xMin",
                   "value": 0,
                   "hex": "0x0"
@@ -226,6 +332,7 @@
                   "type": "int16",
                   "offset": 66,
                   "size": 2,
+                  "description": "\u5168\u30B0\u30EA\u30D5\u306E\u5916\u63A5\u77E9\u5F62\u306E y \u306E\u6700\u5C0F",
                   "name": "yMin",
                   "value": 0,
                   "hex": "0x0"
@@ -235,6 +342,7 @@
                   "type": "int16",
                   "offset": 68,
                   "size": 2,
+                  "description": "\u5168\u30B0\u30EA\u30D5\u306E\u5916\u63A5\u77E9\u5F62\u306E x \u306E\u6700\u5927",
                   "name": "xMax",
                   "value": 100,
                   "hex": "0x64"
@@ -244,6 +352,7 @@
                   "type": "int16",
                   "offset": 70,
                   "size": 2,
+                  "description": "\u5168\u30B0\u30EA\u30D5\u306E\u5916\u63A5\u77E9\u5F62\u306E y \u306E\u6700\u5927",
                   "name": "yMax",
                   "value": 100,
                   "hex": "0x64"
@@ -253,6 +362,7 @@
                   "type": "bitfield",
                   "offset": 72,
                   "size": 2,
+                  "description": "\u30B9\u30BF\u30A4\u30EB\uFF08OS/2 \u306E fsSelection \u3068\u5408\u308F\u305B\u308B\uFF09",
                   "name": "macStyle",
                   "raw_value": "0x0",
                   "fields": [
@@ -305,7 +415,7 @@
                   "type": "uint16",
                   "offset": 74,
                   "size": 2,
-                  "description": "\u6700\u5C0F\u53EF\u8AAD\u30B5\u30A4\u30BA\uFF08\u30D4\u30AF\u30BB\u30EB\uFF09",
+                  "description": "\u8AAD\u3081\u308B\u6700\u5C0F\u306E\u5927\u304D\u3055\uFF08\u30D4\u30AF\u30BB\u30EB / em\uFF09",
                   "name": "lowestRecPPEM",
                   "value": 8,
                   "hex": "0x8"
@@ -315,6 +425,7 @@
                   "type": "int16",
                   "offset": 76,
                   "size": 2,
+                  "description": "\u66F8\u5B57\u65B9\u5411\u306E\u30D2\u30F3\u30C8\uFF08\u975E\u63A8\u5968\u30022\uFF09",
                   "name": "fontDirectionHint",
                   "value": 2,
                   "hex": "0x2"
@@ -324,7 +435,7 @@
                   "type": "int16",
                   "offset": 78,
                   "size": 2,
-                  "description": "0=\u77ED\u3044\u30AA\u30D5\u30BB\u30C3\u30C8\u30011=\u9577\u3044\u30AA\u30D5\u30BB\u30C3\u30C8",
+                  "description": "loca \u306E\u5F62\u5F0F\uFF080 = 16 \u30D3\u30C3\u30C8\u30011 = 32 \u30D3\u30C3\u30C8\uFF09",
                   "name": "indexToLocFormat",
                   "value": 0,
                   "hex": "0x0"
@@ -334,6 +445,7 @@
                   "type": "int16",
                   "offset": 80,
                   "size": 2,
+                  "description": "glyf \u306E\u5F62\u5F0F\uFF080\uFF09",
                   "name": "glyphDataFormat",
                   "value": 0,
                   "hex": "0x0"

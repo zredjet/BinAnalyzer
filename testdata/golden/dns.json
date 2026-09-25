@@ -1,7 +1,7 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 16,
+  "size": 33,
   "name": "DNS",
   "struct_type": "dns",
   "children": {
@@ -18,7 +18,7 @@
           "type": "uint16",
           "offset": 0,
           "size": 2,
-          "description": "\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3ID",
+          "description": "\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3 ID\uFF08\u554F\u3044\u5408\u308F\u305B\u3068\u5FDC\u7B54\u3092\u5BFE\u5FDC\u4ED8\u3051\u308B\uFF09",
           "name": "transaction_id",
           "value": 4660,
           "hex": "0x1234"
@@ -28,6 +28,7 @@
           "type": "bitfield",
           "offset": 2,
           "size": 2,
+          "description": "\u30D5\u30E9\u30B0",
           "name": "flags",
           "raw_value": "0x100",
           "fields": [
@@ -41,7 +42,9 @@
               "name": "opcode",
               "value": 0,
               "bit_high": 14,
-              "bit_low": 11
+              "bit_low": 11,
+              "enum_label": "QUERY",
+              "enum_description": "\u6A19\u6E96\u306E\u554F\u3044\u5408\u308F\u305B"
             },
             {
               "name": "aa",
@@ -71,6 +74,18 @@
               "name": "z",
               "value": 0,
               "bit_high": 6,
+              "bit_low": 6
+            },
+            {
+              "name": "ad",
+              "value": 0,
+              "bit_high": 5,
+              "bit_low": 5
+            },
+            {
+              "name": "cd",
+              "value": 0,
+              "bit_high": 4,
               "bit_low": 4
             },
             {
@@ -78,7 +93,8 @@
               "value": 0,
               "bit_high": 3,
               "bit_low": 0,
-              "enum_label": "NoError"
+              "enum_label": "NoError",
+              "enum_description": "\u30A8\u30E9\u30FC\u306A\u3057"
             }
           ]
         },
@@ -87,7 +103,7 @@
           "type": "uint16",
           "offset": 4,
           "size": 2,
-          "description": "Question\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
+          "description": "\u8CEA\u554F\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
           "name": "qd_count",
           "value": 1,
           "hex": "0x1"
@@ -97,7 +113,7 @@
           "type": "uint16",
           "offset": 6,
           "size": 2,
-          "description": "Answer\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
+          "description": "\u56DE\u7B54\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
           "name": "an_count",
           "value": 0,
           "hex": "0x0"
@@ -107,7 +123,7 @@
           "type": "uint16",
           "offset": 8,
           "size": 2,
-          "description": "Authority\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
+          "description": "\u6A29\u5A01\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
           "name": "ns_count",
           "value": 0,
           "hex": "0x0"
@@ -117,21 +133,325 @@
           "type": "uint16",
           "offset": 10,
           "size": 2,
-          "description": "Additional\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
+          "description": "\u8FFD\u52A0\u30BB\u30AF\u30B7\u30E7\u30F3\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
           "name": "ar_count",
           "value": 0,
           "hex": "0x0"
         }
       }
     },
-    "payload": {
-      "_type": "bytes",
-      "type": "bytes",
+    "questions": {
+      "_type": "array",
+      "type": "struct",
       "offset": 12,
-      "size": 4,
-      "description": "Questions\u3001Answers\u3001Authority\u3001Additional\u30BB\u30AF\u30B7\u30E7\u30F3\u3002DNS\u540D\u30A8\u30F3\u30B3\u30FC\u30C7\u30A3\u30F3\u30B0\uFF08\u9577\u3055\u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u4ED8\u304D\u30E9\u30D9\u30EB \u002B 0xC0xx\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\uFF09\u306FDSL\u306E\u8868\u73FE\u529B\u3092\u8D85\u3048\u308B\u305F\u3081\u69CB\u9020\u5316\u4E0D\u53EF",
-      "name": "payload",
-      "hex": "00 00 01 01"
+      "size": 21,
+      "name": "questions",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 12,
+          "size": 21,
+          "name": "questions",
+          "struct_type": "question",
+          "children": {
+            "qname": {
+              "_type": "struct",
+              "type": "struct",
+              "offset": 12,
+              "size": 17,
+              "name": "qname",
+              "struct_type": "dns_name",
+              "children": {
+                "name_acc": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 12,
+                  "size": 0,
+                  "description": "\u30E9\u30D9\u30EB\u3092\u9023\u306D\u305F\u9014\u4E2D\u306E\u540D\u524D\uFF08\u4F5C\u696D\u7528\uFF09",
+                  "name": "name_acc",
+                  "value": ""
+                },
+                "labels": {
+                  "_type": "array",
+                  "type": "struct",
+                  "offset": 12,
+                  "size": 17,
+                  "name": "labels",
+                  "count": 4,
+                  "elements": [
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 12,
+                      "size": 4,
+                      "name": "labels",
+                      "struct_type": "dns_label",
+                      "children": {
+                        "label_length": {
+                          "_type": "integer",
+                          "type": "uint8",
+                          "offset": 12,
+                          "size": 1,
+                          "description": "\u30E9\u30D9\u30EB\u306E\u9577\u3055\uFF080 \u306F\u30EB\u30FC\u30C8\u3002\u4E0A\u4F4D 2 \u30D3\u30C3\u30C8\u304C 11 \u306A\u3089\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u306E\u4E0A\u4F4D 6 \u30D3\u30C3\u30C8\uFF09",
+                          "name": "label_length",
+                          "value": 3,
+                          "hex": "0x3"
+                        },
+                        "is_pointer": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 13,
+                          "size": 0,
+                          "description": "\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u304B",
+                          "name": "is_pointer",
+                          "value": 0
+                        },
+                        "text": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 13,
+                          "size": 3,
+                          "description": "\u30E9\u30D9\u30EB\u306E\u6587\u5B57",
+                          "name": "text",
+                          "value": "www",
+                          "encoding": "ascii"
+                        },
+                        "name_acc": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 16,
+                          "size": 0,
+                          "description": "\u3053\u3053\u307E\u3067\u306E\u30E9\u30D9\u30EB\u3092\u9023\u306D\u305F\u540D\u524D\uFF08\u4F5C\u696D\u7528\uFF09",
+                          "name": "name_acc",
+                          "value": "www."
+                        }
+                      }
+                    },
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 16,
+                      "size": 8,
+                      "name": "labels",
+                      "struct_type": "dns_label",
+                      "children": {
+                        "label_length": {
+                          "_type": "integer",
+                          "type": "uint8",
+                          "offset": 16,
+                          "size": 1,
+                          "description": "\u30E9\u30D9\u30EB\u306E\u9577\u3055\uFF080 \u306F\u30EB\u30FC\u30C8\u3002\u4E0A\u4F4D 2 \u30D3\u30C3\u30C8\u304C 11 \u306A\u3089\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u306E\u4E0A\u4F4D 6 \u30D3\u30C3\u30C8\uFF09",
+                          "name": "label_length",
+                          "value": 7,
+                          "hex": "0x7"
+                        },
+                        "is_pointer": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 17,
+                          "size": 0,
+                          "description": "\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u304B",
+                          "name": "is_pointer",
+                          "value": 0
+                        },
+                        "text": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 17,
+                          "size": 7,
+                          "description": "\u30E9\u30D9\u30EB\u306E\u6587\u5B57",
+                          "name": "text",
+                          "value": "example",
+                          "encoding": "ascii"
+                        },
+                        "name_acc": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 24,
+                          "size": 0,
+                          "description": "\u3053\u3053\u307E\u3067\u306E\u30E9\u30D9\u30EB\u3092\u9023\u306D\u305F\u540D\u524D\uFF08\u4F5C\u696D\u7528\uFF09",
+                          "name": "name_acc",
+                          "value": "www.example."
+                        }
+                      }
+                    },
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 24,
+                      "size": 4,
+                      "name": "labels",
+                      "struct_type": "dns_label",
+                      "children": {
+                        "label_length": {
+                          "_type": "integer",
+                          "type": "uint8",
+                          "offset": 24,
+                          "size": 1,
+                          "description": "\u30E9\u30D9\u30EB\u306E\u9577\u3055\uFF080 \u306F\u30EB\u30FC\u30C8\u3002\u4E0A\u4F4D 2 \u30D3\u30C3\u30C8\u304C 11 \u306A\u3089\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u306E\u4E0A\u4F4D 6 \u30D3\u30C3\u30C8\uFF09",
+                          "name": "label_length",
+                          "value": 3,
+                          "hex": "0x3"
+                        },
+                        "is_pointer": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 25,
+                          "size": 0,
+                          "description": "\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u304B",
+                          "name": "is_pointer",
+                          "value": 0
+                        },
+                        "text": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 25,
+                          "size": 3,
+                          "description": "\u30E9\u30D9\u30EB\u306E\u6587\u5B57",
+                          "name": "text",
+                          "value": "com",
+                          "encoding": "ascii"
+                        },
+                        "name_acc": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 28,
+                          "size": 0,
+                          "description": "\u3053\u3053\u307E\u3067\u306E\u30E9\u30D9\u30EB\u3092\u9023\u306D\u305F\u540D\u524D\uFF08\u4F5C\u696D\u7528\uFF09",
+                          "name": "name_acc",
+                          "value": "www.example.com."
+                        }
+                      }
+                    },
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 28,
+                      "size": 1,
+                      "name": "labels",
+                      "struct_type": "dns_label",
+                      "children": {
+                        "label_length": {
+                          "_type": "integer",
+                          "type": "uint8",
+                          "offset": 28,
+                          "size": 1,
+                          "description": "\u30E9\u30D9\u30EB\u306E\u9577\u3055\uFF080 \u306F\u30EB\u30FC\u30C8\u3002\u4E0A\u4F4D 2 \u30D3\u30C3\u30C8\u304C 11 \u306A\u3089\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u306E\u4E0A\u4F4D 6 \u30D3\u30C3\u30C8\uFF09",
+                          "name": "label_length",
+                          "value": 0,
+                          "hex": "0x0"
+                        },
+                        "is_pointer": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 29,
+                          "size": 0,
+                          "description": "\u5727\u7E2E\u30DD\u30A4\u30F3\u30BF\u304B",
+                          "name": "is_pointer",
+                          "value": 0
+                        },
+                        "name_acc": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 29,
+                          "size": 0,
+                          "description": "\u3053\u3053\u307E\u3067\u306E\u30E9\u30D9\u30EB\u3092\u9023\u306D\u305F\u540D\u524D\uFF08\u4F5C\u696D\u7528\uFF09",
+                          "name": "name_acc",
+                          "value": "www.example.com."
+                        }
+                      }
+                    }
+                  ]
+                },
+                "local_part": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 29,
+                  "size": 0,
+                  "description": "\u3053\u306E\u30E1\u30C3\u30BB\u30FC\u30B8\u306E\u4F4D\u7F6E\u306B\u66F8\u304B\u308C\u305F\u90E8\u5206\u306E\u540D\u524D\uFF08\u30DD\u30A4\u30F3\u30BF\u306E\u5148\u3092\u542B\u307E\u306A\u3044\uFF09",
+                  "name": "local_part",
+                  "value": "www.example.com."
+                },
+                "full_name": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 29,
+                  "size": 0,
+                  "description": "\u540D\u524D\u306E\u5168\u4F53\uFF08\u672B\u5C3E\u306E \u0027.\u0027 \u306F\u30EB\u30FC\u30C8\uFF09",
+                  "name": "full_name",
+                  "value": "www.example.com."
+                }
+              }
+            },
+            "qtype": {
+              "_type": "integer",
+              "type": "uint16",
+              "offset": 29,
+              "size": 2,
+              "description": "\u554F\u3044\u5408\u308F\u305B\u308B\u7A2E\u985E",
+              "name": "qtype",
+              "value": 1,
+              "hex": "0x1",
+              "enum_label": "A",
+              "enum_description": "IPv4 \u30A2\u30C9\u30EC\u30B9"
+            },
+            "qclass_field": {
+              "_type": "bitfield",
+              "type": "bitfield",
+              "offset": 31,
+              "size": 2,
+              "description": "\u30AF\u30E9\u30B9",
+              "name": "qclass_field",
+              "raw_value": "0x1",
+              "fields": [
+                {
+                  "name": "unicast_response",
+                  "value": 0,
+                  "bit_high": 15,
+                  "bit_low": 15
+                },
+                {
+                  "name": "qclass",
+                  "value": 1,
+                  "bit_high": 14,
+                  "bit_low": 0,
+                  "enum_label": "IN",
+                  "enum_description": "\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "answers": {
+      "_type": "array",
+      "type": "struct",
+      "offset": 33,
+      "size": 0,
+      "name": "answers",
+      "count": 0,
+      "elements": []
+    },
+    "authorities": {
+      "_type": "array",
+      "type": "struct",
+      "offset": 33,
+      "size": 0,
+      "name": "authorities",
+      "count": 0,
+      "elements": []
+    },
+    "additionals": {
+      "_type": "array",
+      "type": "struct",
+      "offset": 33,
+      "size": 0,
+      "name": "additionals",
+      "count": 0,
+      "elements": []
     }
   }
 }

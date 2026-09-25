@@ -1,37 +1,1108 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 20,
+  "size": 352,
   "name": "PDF",
   "struct_type": "pdf",
   "children": {
-    "version": {
+    "file_end": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4F5C\u696D\u7528\uFF09",
+      "name": "file_end",
+      "value": 352
+    },
+    "is_encrypted": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u6697\u53F7\u5316\u3055\u308C\u3066\u3044\u308B\u304B\uFF08\u30D5\u30A1\u30A4\u30EB\u306E\u3069\u3053\u304B\u306B /Encrypt \u304C\u3042\u308B\u3002\u30B9\u30C8\u30EA\u30FC\u30E0\u3092\u5C55\u958B\u3057\u306A\u3044\uFF09",
+      "name": "is_encrypted",
+      "value": 0
+    },
+    "header": {
       "_type": "string",
       "type": "ascii",
       "offset": 0,
-      "size": 8,
-      "description": "PDF\u30D0\u30FC\u30B8\u30E7\u30F3\u30D8\u30C3\u30C0\uFF08\u4F8B: %PDF-1.7\uFF09",
-      "name": "version",
-      "value": "%PDF-1.4",
+      "size": 9,
+      "description": "\u30D8\u30C3\u30C0\u306E\u884C\uFF08\u0027%PDF-1.7\u0027 \u306A\u3069\u3002\u6539\u884C\u3092\u542B\u3080\uFF09",
+      "_validation": {
+        "passed": true,
+        "expression": "{substr(header, 0, 5) == \u0027%PDF-\u0027}"
+      },
+      "name": "header",
+      "value": "%PDF-1.4\n",
       "encoding": "ascii"
+    },
+    "version": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 9,
+      "size": 0,
+      "description": "PDF \u306E\u7248",
+      "name": "version",
+      "value": "1.4"
     },
     "binary_comment": {
       "_type": "bytes",
       "type": "bytes",
-      "offset": 8,
-      "size": 5,
-      "description": "\u30D0\u30A4\u30CA\u30EA\u30DE\u30FC\u30AB\u30FC: % \u306E\u5F8C\u306B127\u8D85\u306E4\u30D0\u30A4\u30C8\u304C\u7D9A\u304D\u3001\u30D0\u30A4\u30CA\u30EA\u30B3\u30F3\u30C6\u30F3\u30C4\u3092\u793A\u3059",
+      "offset": 9,
+      "size": 6,
+      "description": "\u30D0\u30A4\u30CA\u30EA\u3067\u3042\u308B\u3053\u3068\u3092\u793A\u3059\u30B3\u30E1\u30F3\u30C8\u884C\uFF08\u0027%\u0027 \u002B 128 \u4EE5\u4E0A\u306E\u30D0\u30A4\u30C8 4 \u500B\u4EE5\u4E0A\u3002\u8EE2\u9001\u3067\u30C6\u30AD\u30B9\u30C8\u6271\u3044\u3055\u308C\u306A\u3044\u3088\u3046\u306B\uFF09",
       "name": "binary_comment",
-      "hex": "25 E2 E3 CF D3"
+      "hex": "25 E2 E3 CF D3 0A"
     },
-    "body": {
+    "revisions": {
+      "_type": "array",
+      "type": "struct",
+      "offset": 15,
+      "size": 336,
+      "name": "revisions",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 15,
+          "size": 336,
+          "name": "revisions",
+          "struct_type": "revision",
+          "children": {
+            "objects": {
+              "_type": "array",
+              "type": "struct",
+              "offset": 15,
+              "size": 193,
+              "name": "objects",
+              "count": 3,
+              "elements": [
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 15,
+                  "size": 48,
+                  "name": "objects",
+                  "struct_type": "indirect_object",
+                  "children": {
+                    "object_header": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 15,
+                      "size": 7,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u898B\u51FA\u3057\uFF08\u524D\u306E\u6539\u884C\u30FB\u30B3\u30E1\u30F3\u30C8 \u002B \u0027\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7 \u4E16\u4EE3\u756A\u53F7 obj\u0027\uFF09",
+                      "name": "object_header",
+                      "value": "1 0 obj",
+                      "encoding": "latin1"
+                    },
+                    "object_id": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 22,
+                      "size": 0,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u756A\u53F7\u30FB\u4E16\u4EE3\u756A\u53F7\uFF08\u00271 0 obj\u0027 \u306E\u5F62\uFF09",
+                      "name": "object_id",
+                      "value": "1 0 obj"
+                    },
+                    "end_distance": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 22,
+                      "size": 0,
+                      "description": "endobj \u307E\u3067\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4F5C\u696D\u7528\uFF09",
+                      "name": "end_distance",
+                      "value": 35
+                    },
+                    "stream_search": {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 22,
+                      "size": 0,
+                      "name": "stream_search",
+                      "struct_type": "object_probe",
+                      "children": {
+                        "stream_distance": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 22,
+                          "size": 0,
+                          "description": "stream \u307E\u3067\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u7121\u3051\u308C\u3070\u7BC4\u56F2\u306E\u30D0\u30A4\u30C8\u6570\uFF09",
+                          "name": "stream_distance",
+                          "value": 35
+                        }
+                      }
+                    },
+                    "has_stream": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 22,
+                      "size": 0,
+                      "description": "\u30B9\u30C8\u30EA\u30FC\u30E0\u3092\u6301\u3064\u304B\uFF08endobj \u3088\u308A\u524D\u306B stream \u304C\u3042\u308B\uFF09",
+                      "name": "has_stream",
+                      "value": 0
+                    },
+                    "value": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 22,
+                      "size": 35,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u5024\uFF08\u8F9E\u66F8\u30FB\u914D\u5217\u30FB\u6570\u5024\u30FB\u6587\u5B57\u5217\u306A\u3069\u306E\u30C6\u30AD\u30B9\u30C8\u3002\u30B9\u30C8\u30EA\u30FC\u30E0\u306A\u3089\u76F4\u524D\u306E\u8F9E\u66F8\uFF09",
+                      "name": "value",
+                      "value": "\n\u003C\u003C /Type /Catalog /Pages 2 0 R \u003E\u003E\n",
+                      "encoding": "latin1"
+                    },
+                    "end_keyword": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 57,
+                      "size": 6,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u7D42\u308F\u308A\uFF08\u0027endobj\u0027\u3002\u524D\u306E\u7A7A\u767D\u3092\u542B\u3080\uFF09",
+                      "name": "end_keyword",
+                      "value": "endobj",
+                      "encoding": "latin1"
+                    },
+                    "peek0": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 63,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 1 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek0",
+                      "value": 10,
+                      "hex": "0xA"
+                    },
+                    "peek1": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 64,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 2 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek1",
+                      "value": 50,
+                      "hex": "0x32"
+                    },
+                    "peek2": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 65,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 3 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek2",
+                      "value": 32,
+                      "hex": "0x20"
+                    },
+                    "peek3": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 66,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 4 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek3",
+                      "value": 48,
+                      "hex": "0x30"
+                    },
+                    "next_char": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 63,
+                      "size": 0,
+                      "description": "\u5F8C\u308D\u306E\u6700\u521D\u306E\u7A7A\u767D\u3067\u306A\u3044\u6587\u5B57\uFF08\u4F5C\u696D\u7528\u30024 \u30D0\u30A4\u30C8\u306E\u4E2D\u306B\u7121\u3051\u308C\u3070 -1\uFF09",
+                      "name": "next_char",
+                      "value": 50
+                    },
+                    "more_objects": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 63,
+                      "size": 0,
+                      "description": "\u6B21\u3082\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\uFF08\u4F5C\u696D\u7528\u3002\u6570\u5B57\u304B\u3001\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u524D\u306E\u30B3\u30E1\u30F3\u30C8\u306E \u0027%\u0027 \u3067\u59CB\u307E\u308B\uFF09",
+                      "name": "more_objects",
+                      "value": 1
+                    }
+                  }
+                },
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 63,
+                  "size": 57,
+                  "name": "objects",
+                  "struct_type": "indirect_object",
+                  "children": {
+                    "object_header": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 63,
+                      "size": 8,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u898B\u51FA\u3057\uFF08\u524D\u306E\u6539\u884C\u30FB\u30B3\u30E1\u30F3\u30C8 \u002B \u0027\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7 \u4E16\u4EE3\u756A\u53F7 obj\u0027\uFF09",
+                      "name": "object_header",
+                      "value": "\n2 0 obj",
+                      "encoding": "latin1"
+                    },
+                    "object_id": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 71,
+                      "size": 0,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u756A\u53F7\u30FB\u4E16\u4EE3\u756A\u53F7\uFF08\u00271 0 obj\u0027 \u306E\u5F62\uFF09",
+                      "name": "object_id",
+                      "value": "2 0 obj"
+                    },
+                    "end_distance": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 71,
+                      "size": 0,
+                      "description": "endobj \u307E\u3067\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4F5C\u696D\u7528\uFF09",
+                      "name": "end_distance",
+                      "value": 43
+                    },
+                    "stream_search": {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 71,
+                      "size": 0,
+                      "name": "stream_search",
+                      "struct_type": "object_probe",
+                      "children": {
+                        "stream_distance": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 71,
+                          "size": 0,
+                          "description": "stream \u307E\u3067\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u7121\u3051\u308C\u3070\u7BC4\u56F2\u306E\u30D0\u30A4\u30C8\u6570\uFF09",
+                          "name": "stream_distance",
+                          "value": 43
+                        }
+                      }
+                    },
+                    "has_stream": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 71,
+                      "size": 0,
+                      "description": "\u30B9\u30C8\u30EA\u30FC\u30E0\u3092\u6301\u3064\u304B\uFF08endobj \u3088\u308A\u524D\u306B stream \u304C\u3042\u308B\uFF09",
+                      "name": "has_stream",
+                      "value": 0
+                    },
+                    "value": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 71,
+                      "size": 43,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u5024\uFF08\u8F9E\u66F8\u30FB\u914D\u5217\u30FB\u6570\u5024\u30FB\u6587\u5B57\u5217\u306A\u3069\u306E\u30C6\u30AD\u30B9\u30C8\u3002\u30B9\u30C8\u30EA\u30FC\u30E0\u306A\u3089\u76F4\u524D\u306E\u8F9E\u66F8\uFF09",
+                      "name": "value",
+                      "value": "\n\u003C\u003C /Type /Pages /Kids [3 0 R] /Count 1 \u003E\u003E\n",
+                      "encoding": "latin1"
+                    },
+                    "end_keyword": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 114,
+                      "size": 6,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u7D42\u308F\u308A\uFF08\u0027endobj\u0027\u3002\u524D\u306E\u7A7A\u767D\u3092\u542B\u3080\uFF09",
+                      "name": "end_keyword",
+                      "value": "endobj",
+                      "encoding": "latin1"
+                    },
+                    "peek0": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 120,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 1 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek0",
+                      "value": 10,
+                      "hex": "0xA"
+                    },
+                    "peek1": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 121,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 2 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek1",
+                      "value": 51,
+                      "hex": "0x33"
+                    },
+                    "peek2": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 122,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 3 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek2",
+                      "value": 32,
+                      "hex": "0x20"
+                    },
+                    "peek3": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 123,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 4 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek3",
+                      "value": 48,
+                      "hex": "0x30"
+                    },
+                    "next_char": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 120,
+                      "size": 0,
+                      "description": "\u5F8C\u308D\u306E\u6700\u521D\u306E\u7A7A\u767D\u3067\u306A\u3044\u6587\u5B57\uFF08\u4F5C\u696D\u7528\u30024 \u30D0\u30A4\u30C8\u306E\u4E2D\u306B\u7121\u3051\u308C\u3070 -1\uFF09",
+                      "name": "next_char",
+                      "value": 51
+                    },
+                    "more_objects": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 120,
+                      "size": 0,
+                      "description": "\u6B21\u3082\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\uFF08\u4F5C\u696D\u7528\u3002\u6570\u5B57\u304B\u3001\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u524D\u306E\u30B3\u30E1\u30F3\u30C8\u306E \u0027%\u0027 \u3067\u59CB\u307E\u308B\uFF09",
+                      "name": "more_objects",
+                      "value": 1
+                    }
+                  }
+                },
+                {
+                  "_type": "struct",
+                  "type": "struct",
+                  "offset": 120,
+                  "size": 88,
+                  "name": "objects",
+                  "struct_type": "indirect_object",
+                  "children": {
+                    "object_header": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 120,
+                      "size": 8,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u898B\u51FA\u3057\uFF08\u524D\u306E\u6539\u884C\u30FB\u30B3\u30E1\u30F3\u30C8 \u002B \u0027\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7 \u4E16\u4EE3\u756A\u53F7 obj\u0027\uFF09",
+                      "name": "object_header",
+                      "value": "\n3 0 obj",
+                      "encoding": "latin1"
+                    },
+                    "object_id": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 128,
+                      "size": 0,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u756A\u53F7\u30FB\u4E16\u4EE3\u756A\u53F7\uFF08\u00271 0 obj\u0027 \u306E\u5F62\uFF09",
+                      "name": "object_id",
+                      "value": "3 0 obj"
+                    },
+                    "end_distance": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 128,
+                      "size": 0,
+                      "description": "endobj \u307E\u3067\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4F5C\u696D\u7528\uFF09",
+                      "name": "end_distance",
+                      "value": 74
+                    },
+                    "stream_search": {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 128,
+                      "size": 0,
+                      "name": "stream_search",
+                      "struct_type": "object_probe",
+                      "children": {
+                        "stream_distance": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 128,
+                          "size": 0,
+                          "description": "stream \u307E\u3067\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u7121\u3051\u308C\u3070\u7BC4\u56F2\u306E\u30D0\u30A4\u30C8\u6570\uFF09",
+                          "name": "stream_distance",
+                          "value": 74
+                        }
+                      }
+                    },
+                    "has_stream": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 128,
+                      "size": 0,
+                      "description": "\u30B9\u30C8\u30EA\u30FC\u30E0\u3092\u6301\u3064\u304B\uFF08endobj \u3088\u308A\u524D\u306B stream \u304C\u3042\u308B\uFF09",
+                      "name": "has_stream",
+                      "value": 0
+                    },
+                    "value": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 128,
+                      "size": 74,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u5024\uFF08\u8F9E\u66F8\u30FB\u914D\u5217\u30FB\u6570\u5024\u30FB\u6587\u5B57\u5217\u306A\u3069\u306E\u30C6\u30AD\u30B9\u30C8\u3002\u30B9\u30C8\u30EA\u30FC\u30E0\u306A\u3089\u76F4\u524D\u306E\u8F9E\u66F8\uFF09",
+                      "name": "value",
+                      "value": "\n\u003C\u003C /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources \u003C\u003C \u003E\u003E \u003E\u003E\n",
+                      "encoding": "latin1"
+                    },
+                    "end_keyword": {
+                      "_type": "string",
+                      "type": "latin1",
+                      "offset": 202,
+                      "size": 6,
+                      "description": "\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u7D42\u308F\u308A\uFF08\u0027endobj\u0027\u3002\u524D\u306E\u7A7A\u767D\u3092\u542B\u3080\uFF09",
+                      "name": "end_keyword",
+                      "value": "endobj",
+                      "encoding": "latin1"
+                    },
+                    "peek0": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 208,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 1 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek0",
+                      "value": 10,
+                      "hex": "0xA"
+                    },
+                    "peek1": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 209,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 2 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek1",
+                      "value": 120,
+                      "hex": "0x78"
+                    },
+                    "peek2": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 210,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 3 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek2",
+                      "value": 114,
+                      "hex": "0x72"
+                    },
+                    "peek3": {
+                      "_type": "integer",
+                      "type": "uint8",
+                      "offset": 211,
+                      "size": 1,
+                      "description": "\u5F8C\u308D\u306E 4 \u30D0\u30A4\u30C8\u76EE\uFF08\u4F5C\u696D\u7528\u3002\u6B21\u304C\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\u3092\u898B\u308B\uFF09",
+                      "name": "peek3",
+                      "value": 101,
+                      "hex": "0x65"
+                    },
+                    "next_char": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 208,
+                      "size": 0,
+                      "description": "\u5F8C\u308D\u306E\u6700\u521D\u306E\u7A7A\u767D\u3067\u306A\u3044\u6587\u5B57\uFF08\u4F5C\u696D\u7528\u30024 \u30D0\u30A4\u30C8\u306E\u4E2D\u306B\u7121\u3051\u308C\u3070 -1\uFF09",
+                      "name": "next_char",
+                      "value": 120
+                    },
+                    "more_objects": {
+                      "_type": "virtual",
+                      "type": "virtual",
+                      "offset": 208,
+                      "size": 0,
+                      "description": "\u6B21\u3082\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u304B\uFF08\u4F5C\u696D\u7528\u3002\u6570\u5B57\u304B\u3001\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u524D\u306E\u30B3\u30E1\u30F3\u30C8\u306E \u0027%\u0027 \u3067\u59CB\u307E\u308B\uFF09",
+                      "name": "more_objects",
+                      "value": 0
+                    }
+                  }
+                }
+              ]
+            },
+            "xref_table": {
+              "_type": "struct",
+              "type": "struct",
+              "offset": 208,
+              "size": 90,
+              "name": "xref_table",
+              "struct_type": "xref_table",
+              "children": {
+                "keyword": {
+                  "_type": "string",
+                  "type": "latin1",
+                  "offset": 208,
+                  "size": 5,
+                  "description": "\u0027xref\u0027\uFF08\u524D\u306E\u7A7A\u767D\u3092\u542B\u3080\uFF09",
+                  "name": "keyword",
+                  "value": "\nxref",
+                  "encoding": "latin1"
+                },
+                "eol": {
+                  "_type": "bytes",
+                  "type": "bytes",
+                  "offset": 213,
+                  "size": 1,
+                  "description": "\u30AD\u30FC\u30EF\u30FC\u30C9\u306E\u5F8C\u308D\u306E\u6539\u884C",
+                  "name": "eol",
+                  "hex": "0A"
+                },
+                "subsections": {
+                  "_type": "array",
+                  "type": "struct",
+                  "offset": 214,
+                  "size": 84,
+                  "name": "subsections",
+                  "count": 1,
+                  "elements": [
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 214,
+                      "size": 84,
+                      "name": "subsections",
+                      "struct_type": "xref_subsection",
+                      "children": {
+                        "first_text": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 214,
+                          "size": 1,
+                          "description": "\u6700\u521D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF08\u30C6\u30AD\u30B9\u30C8\uFF09",
+                          "name": "first_text",
+                          "value": "0",
+                          "encoding": "ascii"
+                        },
+                        "separator": {
+                          "_type": "bytes",
+                          "type": "bytes",
+                          "offset": 215,
+                          "size": 1,
+                          "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                          "name": "separator",
+                          "hex": "20"
+                        },
+                        "count_text": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 216,
+                          "size": 2,
+                          "description": "\u30A8\u30F3\u30C8\u30EA\u6570\uFF08\u30C6\u30AD\u30B9\u30C8\u3002\u6539\u884C\u3092\u542B\u3080\uFF09",
+                          "name": "count_text",
+                          "value": "4\n",
+                          "encoding": "ascii"
+                        },
+                        "first_object": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 218,
+                          "size": 0,
+                          "description": "\u6700\u521D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7",
+                          "name": "first_object",
+                          "value": 0
+                        },
+                        "count": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 218,
+                          "size": 0,
+                          "description": "\u30A8\u30F3\u30C8\u30EA\u6570",
+                          "name": "count",
+                          "value": 4
+                        },
+                        "entries": {
+                          "_type": "array",
+                          "type": "struct",
+                          "offset": 218,
+                          "size": 80,
+                          "name": "entries",
+                          "count": 4,
+                          "elements": [
+                            {
+                              "_type": "struct",
+                              "type": "struct",
+                              "offset": 218,
+                              "size": 20,
+                              "name": "entries",
+                              "struct_type": "xref_entry",
+                              "children": {
+                                "offset_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 218,
+                                  "size": 10,
+                                  "description": "\u4F7F\u7528\u4E2D\u306A\u3089\u30D5\u30A1\u30A4\u30EB\u306E\u5148\u982D\u304B\u3089\u306E\u4F4D\u7F6E\u3001\u7A7A\u304D\u306A\u3089\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF0810 \u6841\uFF09",
+                                  "name": "offset_text",
+                                  "value": "0000000000",
+                                  "encoding": "ascii"
+                                },
+                                "separator1": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 228,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator1",
+                                  "hex": "20"
+                                },
+                                "generation_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 229,
+                                  "size": 5,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7\uFF085 \u6841\uFF09",
+                                  "name": "generation_text",
+                                  "value": "65535",
+                                  "encoding": "ascii"
+                                },
+                                "separator2": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 234,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator2",
+                                  "hex": "20"
+                                },
+                                "kind": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 235,
+                                  "size": 1,
+                                  "description": "\u0027n\u0027 = \u4F7F\u7528\u4E2D\u3001\u0027f\u0027 = \u7A7A\u304D",
+                                  "name": "kind",
+                                  "value": "f",
+                                  "encoding": "ascii"
+                                },
+                                "eol": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 236,
+                                  "size": 2,
+                                  "description": "\u884C\u306E\u7D42\u308F\u308A\uFF082 \u30D0\u30A4\u30C8: SP CR\u30FBSP LF\u30FBCR LF\uFF09",
+                                  "name": "eol",
+                                  "hex": "20 0A"
+                                },
+                                "offset": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 238,
+                                  "size": 0,
+                                  "description": "\u4F4D\u7F6E\uFF08\u4F7F\u7528\u4E2D\uFF09\u30FB\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF08\u7A7A\u304D\uFF09",
+                                  "name": "offset",
+                                  "value": 0
+                                },
+                                "generation": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 238,
+                                  "size": 0,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7",
+                                  "name": "generation",
+                                  "value": 65535
+                                }
+                              }
+                            },
+                            {
+                              "_type": "struct",
+                              "type": "struct",
+                              "offset": 238,
+                              "size": 20,
+                              "name": "entries",
+                              "struct_type": "xref_entry",
+                              "children": {
+                                "offset_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 238,
+                                  "size": 10,
+                                  "description": "\u4F7F\u7528\u4E2D\u306A\u3089\u30D5\u30A1\u30A4\u30EB\u306E\u5148\u982D\u304B\u3089\u306E\u4F4D\u7F6E\u3001\u7A7A\u304D\u306A\u3089\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF0810 \u6841\uFF09",
+                                  "name": "offset_text",
+                                  "value": "0000000015",
+                                  "encoding": "ascii"
+                                },
+                                "separator1": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 248,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator1",
+                                  "hex": "20"
+                                },
+                                "generation_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 249,
+                                  "size": 5,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7\uFF085 \u6841\uFF09",
+                                  "name": "generation_text",
+                                  "value": "00000",
+                                  "encoding": "ascii"
+                                },
+                                "separator2": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 254,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator2",
+                                  "hex": "20"
+                                },
+                                "kind": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 255,
+                                  "size": 1,
+                                  "description": "\u0027n\u0027 = \u4F7F\u7528\u4E2D\u3001\u0027f\u0027 = \u7A7A\u304D",
+                                  "name": "kind",
+                                  "value": "n",
+                                  "encoding": "ascii"
+                                },
+                                "eol": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 256,
+                                  "size": 2,
+                                  "description": "\u884C\u306E\u7D42\u308F\u308A\uFF082 \u30D0\u30A4\u30C8: SP CR\u30FBSP LF\u30FBCR LF\uFF09",
+                                  "name": "eol",
+                                  "hex": "20 0A"
+                                },
+                                "offset": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 258,
+                                  "size": 0,
+                                  "description": "\u4F4D\u7F6E\uFF08\u4F7F\u7528\u4E2D\uFF09\u30FB\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF08\u7A7A\u304D\uFF09",
+                                  "name": "offset",
+                                  "value": 15
+                                },
+                                "generation": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 258,
+                                  "size": 0,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7",
+                                  "name": "generation",
+                                  "value": 0
+                                },
+                                "object_at_offset": {
+                                  "_type": "string",
+                                  "type": "latin1",
+                                  "offset": 15,
+                                  "size": 7,
+                                  "description": "\u3053\u306E\u4F4D\u7F6E\u306B\u3042\u308B\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u898B\u51FA\u3057\uFF08\u76F8\u4E92\u53C2\u7167\u304C\u6B63\u3057\u3044\u304B\u306E\u78BA\u8A8D\uFF09",
+                                  "name": "object_at_offset",
+                                  "value": "1 0 obj",
+                                  "encoding": "latin1"
+                                }
+                              }
+                            },
+                            {
+                              "_type": "struct",
+                              "type": "struct",
+                              "offset": 258,
+                              "size": 20,
+                              "name": "entries",
+                              "struct_type": "xref_entry",
+                              "children": {
+                                "offset_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 258,
+                                  "size": 10,
+                                  "description": "\u4F7F\u7528\u4E2D\u306A\u3089\u30D5\u30A1\u30A4\u30EB\u306E\u5148\u982D\u304B\u3089\u306E\u4F4D\u7F6E\u3001\u7A7A\u304D\u306A\u3089\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF0810 \u6841\uFF09",
+                                  "name": "offset_text",
+                                  "value": "0000000064",
+                                  "encoding": "ascii"
+                                },
+                                "separator1": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 268,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator1",
+                                  "hex": "20"
+                                },
+                                "generation_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 269,
+                                  "size": 5,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7\uFF085 \u6841\uFF09",
+                                  "name": "generation_text",
+                                  "value": "00000",
+                                  "encoding": "ascii"
+                                },
+                                "separator2": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 274,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator2",
+                                  "hex": "20"
+                                },
+                                "kind": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 275,
+                                  "size": 1,
+                                  "description": "\u0027n\u0027 = \u4F7F\u7528\u4E2D\u3001\u0027f\u0027 = \u7A7A\u304D",
+                                  "name": "kind",
+                                  "value": "n",
+                                  "encoding": "ascii"
+                                },
+                                "eol": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 276,
+                                  "size": 2,
+                                  "description": "\u884C\u306E\u7D42\u308F\u308A\uFF082 \u30D0\u30A4\u30C8: SP CR\u30FBSP LF\u30FBCR LF\uFF09",
+                                  "name": "eol",
+                                  "hex": "20 0A"
+                                },
+                                "offset": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 278,
+                                  "size": 0,
+                                  "description": "\u4F4D\u7F6E\uFF08\u4F7F\u7528\u4E2D\uFF09\u30FB\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF08\u7A7A\u304D\uFF09",
+                                  "name": "offset",
+                                  "value": 64
+                                },
+                                "generation": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 278,
+                                  "size": 0,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7",
+                                  "name": "generation",
+                                  "value": 0
+                                },
+                                "object_at_offset": {
+                                  "_type": "string",
+                                  "type": "latin1",
+                                  "offset": 64,
+                                  "size": 7,
+                                  "description": "\u3053\u306E\u4F4D\u7F6E\u306B\u3042\u308B\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u898B\u51FA\u3057\uFF08\u76F8\u4E92\u53C2\u7167\u304C\u6B63\u3057\u3044\u304B\u306E\u78BA\u8A8D\uFF09",
+                                  "name": "object_at_offset",
+                                  "value": "2 0 obj",
+                                  "encoding": "latin1"
+                                }
+                              }
+                            },
+                            {
+                              "_type": "struct",
+                              "type": "struct",
+                              "offset": 278,
+                              "size": 20,
+                              "name": "entries",
+                              "struct_type": "xref_entry",
+                              "children": {
+                                "offset_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 278,
+                                  "size": 10,
+                                  "description": "\u4F7F\u7528\u4E2D\u306A\u3089\u30D5\u30A1\u30A4\u30EB\u306E\u5148\u982D\u304B\u3089\u306E\u4F4D\u7F6E\u3001\u7A7A\u304D\u306A\u3089\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF0810 \u6841\uFF09",
+                                  "name": "offset_text",
+                                  "value": "0000000121",
+                                  "encoding": "ascii"
+                                },
+                                "separator1": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 288,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator1",
+                                  "hex": "20"
+                                },
+                                "generation_text": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 289,
+                                  "size": 5,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7\uFF085 \u6841\uFF09",
+                                  "name": "generation_text",
+                                  "value": "00000",
+                                  "encoding": "ascii"
+                                },
+                                "separator2": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 294,
+                                  "size": 1,
+                                  "description": "\u533A\u5207\u308A\u306E\u7A7A\u767D",
+                                  "name": "separator2",
+                                  "hex": "20"
+                                },
+                                "kind": {
+                                  "_type": "string",
+                                  "type": "ascii",
+                                  "offset": 295,
+                                  "size": 1,
+                                  "description": "\u0027n\u0027 = \u4F7F\u7528\u4E2D\u3001\u0027f\u0027 = \u7A7A\u304D",
+                                  "name": "kind",
+                                  "value": "n",
+                                  "encoding": "ascii"
+                                },
+                                "eol": {
+                                  "_type": "bytes",
+                                  "type": "bytes",
+                                  "offset": 296,
+                                  "size": 2,
+                                  "description": "\u884C\u306E\u7D42\u308F\u308A\uFF082 \u30D0\u30A4\u30C8: SP CR\u30FBSP LF\u30FBCR LF\uFF09",
+                                  "name": "eol",
+                                  "hex": "20 0A"
+                                },
+                                "offset": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 298,
+                                  "size": 0,
+                                  "description": "\u4F4D\u7F6E\uFF08\u4F7F\u7528\u4E2D\uFF09\u30FB\u6B21\u306E\u7A7A\u304D\u306E\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u756A\u53F7\uFF08\u7A7A\u304D\uFF09",
+                                  "name": "offset",
+                                  "value": 121
+                                },
+                                "generation": {
+                                  "_type": "virtual",
+                                  "type": "virtual",
+                                  "offset": 298,
+                                  "size": 0,
+                                  "description": "\u4E16\u4EE3\u756A\u53F7",
+                                  "name": "generation",
+                                  "value": 0
+                                },
+                                "object_at_offset": {
+                                  "_type": "string",
+                                  "type": "latin1",
+                                  "offset": 121,
+                                  "size": 7,
+                                  "description": "\u3053\u306E\u4F4D\u7F6E\u306B\u3042\u308B\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u306E\u898B\u51FA\u3057\uFF08\u76F8\u4E92\u53C2\u7167\u304C\u6B63\u3057\u3044\u304B\u306E\u78BA\u8A8D\uFF09",
+                                  "name": "object_at_offset",
+                                  "value": "3 0 obj",
+                                  "encoding": "latin1"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "trailer": {
+              "_type": "struct",
+              "type": "struct",
+              "offset": 298,
+              "size": 34,
+              "name": "trailer",
+              "struct_type": "trailer",
+              "children": {
+                "keyword": {
+                  "_type": "string",
+                  "type": "latin1",
+                  "offset": 298,
+                  "size": 7,
+                  "description": "\u0027trailer\u0027\uFF08\u524D\u306E\u7A7A\u767D\u3092\u542B\u3080\uFF09",
+                  "name": "keyword",
+                  "value": "trailer",
+                  "encoding": "latin1"
+                },
+                "dictionary": {
+                  "_type": "string",
+                  "type": "latin1",
+                  "offset": 305,
+                  "size": 27,
+                  "description": "\u30C8\u30EC\u30FC\u30E9\u306E\u8F9E\u66F8\uFF08\u30C6\u30AD\u30B9\u30C8\uFF09",
+                  "name": "dictionary",
+                  "value": "\n\u003C\u003C /Size 4 /Root 1 0 R \u003E\u003E\n",
+                  "encoding": "latin1"
+                }
+              }
+            },
+            "startxref": {
+              "_type": "struct",
+              "type": "struct",
+              "offset": 332,
+              "size": 19,
+              "name": "startxref",
+              "struct_type": "startxref",
+              "children": {
+                "keyword": {
+                  "_type": "string",
+                  "type": "latin1",
+                  "offset": 332,
+                  "size": 9,
+                  "description": "\u0027startxref\u0027\uFF08\u524D\u306E\u7A7A\u767D\u3092\u542B\u3080\uFF09",
+                  "name": "keyword",
+                  "value": "startxref",
+                  "encoding": "latin1"
+                },
+                "eol": {
+                  "_type": "bytes",
+                  "type": "bytes",
+                  "offset": 341,
+                  "size": 1,
+                  "description": "\u30AD\u30FC\u30EF\u30FC\u30C9\u306E\u5F8C\u308D\u306E\u6539\u884C",
+                  "name": "eol",
+                  "hex": "0A"
+                },
+                "offset_text": {
+                  "_type": "string",
+                  "type": "ascii",
+                  "offset": 342,
+                  "size": 4,
+                  "description": "\u6700\u5F8C\u306E\u76F8\u4E92\u53C2\u7167\uFF08\u8868\u304B\u30B9\u30C8\u30EA\u30FC\u30E0\uFF09\u306E\u4F4D\u7F6E\uFF08\u30C6\u30AD\u30B9\u30C8\uFF09",
+                  "name": "offset_text",
+                  "value": "209\n",
+                  "encoding": "ascii"
+                },
+                "xref_offset": {
+                  "_type": "virtual",
+                  "type": "virtual",
+                  "offset": 346,
+                  "size": 0,
+                  "description": "\u6700\u5F8C\u306E\u76F8\u4E92\u53C2\u7167\u306E\u4F4D\u7F6E",
+                  "name": "xref_offset",
+                  "value": 209
+                },
+                "xref_at_offset": {
+                  "_type": "string",
+                  "type": "latin1",
+                  "offset": 209,
+                  "size": 4,
+                  "description": "\u305D\u306E\u4F4D\u7F6E\u306E\u884C\uFF08\u0027xref\u0027 \u304B\u76F8\u4E92\u53C2\u7167\u30B9\u30C8\u30EA\u30FC\u30E0\u306E \u0027n g obj\u0027\u3002\u4F4D\u7F6E\u304C\u6B63\u3057\u3044\u304B\u306E\u78BA\u8A8D\uFF09",
+                  "name": "xref_at_offset",
+                  "value": "xref",
+                  "encoding": "latin1"
+                },
+                "eof_marker": {
+                  "_type": "string",
+                  "type": "ascii",
+                  "offset": 346,
+                  "size": 5,
+                  "description": "\u30D5\u30A1\u30A4\u30EB\u306E\u7D42\u308F\u308A\u306E\u5370\uFF08\u0027%%EOF\u0027\uFF09",
+                  "_validation": {
+                    "passed": true,
+                    "expression": "{eof_marker == \u0027%%EOF\u0027}"
+                  },
+                  "name": "eof_marker",
+                  "value": "%%EOF",
+                  "encoding": "ascii"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "trailing_data": {
       "_type": "bytes",
       "type": "bytes",
-      "offset": 13,
-      "size": 7,
-      "description": "PDF\u672C\u4F53: \u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3001\u30B9\u30C8\u30EA\u30FC\u30E0\u3001xref\u3001\u30C8\u30EC\u30FC\u30E9\u3002\u30C6\u30AD\u30B9\u30C8\u30D9\u30FC\u30B9\u69CB\u9020\u306E\u305F\u3081\u30D0\u30A4\u30CA\u30EA\u30D5\u30A3\u30FC\u30EB\u30C9\u30EC\u30D9\u30EB\u306E\u89E3\u6790\u306B\u306F\u4E0D\u9069",
-      "name": "body",
-      "hex": "25 25 45 4F 46 0A 00"
+      "offset": 351,
+      "size": 1,
+      "description": "\u6700\u5F8C\u306E %%EOF \u306E\u5F8C\u308D\u306E\u30D0\u30A4\u30C8\u5217\uFF08\u6539\u884C\u306A\u3069\uFF09",
+      "name": "trailing_data",
+      "hex": "0A"
     }
   }
 }

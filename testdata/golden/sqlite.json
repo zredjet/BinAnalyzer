@@ -1,10 +1,19 @@
 {
   "_type": "struct",
   "offset": 0,
-  "size": 108,
+  "size": 100,
   "name": "SQLite",
   "struct_type": "sqlite",
   "children": {
+    "file_size": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4F5C\u696D\u7528\uFF09",
+      "name": "file_size",
+      "value": 4096
+    },
     "header": {
       "_type": "struct",
       "type": "struct",
@@ -18,7 +27,11 @@
           "type": "ascii",
           "offset": 0,
           "size": 16,
-          "description": "\u30D8\u30C3\u30C0\u6587\u5B57\u5217: \u0027SQLite format 3\\000\u0027",
+          "description": "\u30D8\u30C3\u30C0\u306E\u6587\u5B57\u5217\uFF08\u0027SQLite format 3\u0027 \u002B NUL\uFF09",
+          "_validation": {
+            "passed": true,
+            "expression": "{trim(magic) == \u0027SQLite format 3\u0027}"
+          },
           "name": "magic",
           "value": "SQLite format 3\u0000",
           "encoding": "ascii"
@@ -28,51 +41,69 @@
           "type": "uint16",
           "offset": 16,
           "size": 2,
-          "description": "\u30DA\u30FC\u30B8\u30B5\u30A4\u30BA\uFF08\u30D0\u30A4\u30C8\uFF09\u30021\u306E\u5834\u5408\u306F65536\u3092\u610F\u5473\u3059\u308B\u3002512\u304B\u308965536\u306E\u9593\u306E2\u306E\u7D2F\u4E57\u3067\u3042\u308B\u3053\u3068",
+          "description": "\u30DA\u30FC\u30B8\u306E\u30D0\u30A4\u30C8\u6570\uFF08512\u301C32768 \u306E 2 \u306E\u7D2F\u4E57\u30021 \u306F 65536\uFF09",
           "name": "page_size",
           "value": 4096,
           "hex": "0x1000"
+        },
+        "page_size_bytes": {
+          "_type": "virtual",
+          "type": "virtual",
+          "offset": 18,
+          "size": 0,
+          "description": "\u30DA\u30FC\u30B8\u306E\u30D0\u30A4\u30C8\u6570",
+          "name": "page_size_bytes",
+          "value": 4096
         },
         "write_version": {
           "_type": "integer",
           "type": "uint8",
           "offset": 18,
           "size": 1,
-          "description": "\u30D5\u30A1\u30A4\u30EB\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u66F8\u304D\u8FBC\u307F\u30D0\u30FC\u30B8\u30E7\u30F3\uFF081=\u30EC\u30AC\u30B7\u30FC\u30012=WAL\uFF09",
+          "description": "\u66F8\u304D\u8FBC\u307F\u306E\u7248\uFF081 = \u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB\u30012 = WAL\uFF09",
           "name": "write_version",
           "value": 1,
           "hex": "0x1",
           "enum_label": "legacy",
-          "enum_description": "\u30EC\u30AC\u30B7\u30FC\u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB"
+          "enum_description": "\u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB"
         },
         "read_version": {
           "_type": "integer",
           "type": "uint8",
           "offset": 19,
           "size": 1,
-          "description": "\u30D5\u30A1\u30A4\u30EB\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u8AAD\u307F\u53D6\u308A\u30D0\u30FC\u30B8\u30E7\u30F3\uFF081=\u30EC\u30AC\u30B7\u30FC\u30012=WAL\uFF09",
+          "description": "\u8AAD\u307F\u53D6\u308A\u306E\u7248\uFF081 = \u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB\u30012 = WAL\uFF09",
           "name": "read_version",
           "value": 1,
           "hex": "0x1",
           "enum_label": "legacy",
-          "enum_description": "\u30EC\u30AC\u30B7\u30FC\u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB"
+          "enum_description": "\u30ED\u30FC\u30EB\u30D0\u30C3\u30AF\u30B8\u30E3\u30FC\u30CA\u30EB"
         },
         "reserved_space": {
           "_type": "integer",
           "type": "uint8",
           "offset": 20,
           "size": 1,
-          "description": "\u5404\u30DA\u30FC\u30B8\u672B\u5C3E\u306E\u672A\u4F7F\u7528\u30D0\u30A4\u30C8\u6570",
+          "description": "\u5404\u30DA\u30FC\u30B8\u306E\u672B\u5C3E\u306E\u62E1\u5F35\u7528\u306B\u4E88\u7D04\u3057\u305F\u30D0\u30A4\u30C8\u6570\uFF08\u6697\u53F7\u5316\u306E\u62E1\u5F35\u306A\u3069\u304C\u4F7F\u3046\uFF09",
           "name": "reserved_space",
           "value": 0,
           "hex": "0x0"
+        },
+        "usable_size": {
+          "_type": "virtual",
+          "type": "virtual",
+          "offset": 21,
+          "size": 0,
+          "description": "\u30DA\u30FC\u30B8\u306E\u4F7F\u3048\u308B\u30D0\u30A4\u30C8\u6570",
+          "name": "usable_size",
+          "value": 4096
         },
         "max_embedded_payload_fraction": {
           "_type": "integer",
           "type": "uint8",
           "offset": 21,
           "size": 1,
-          "description": "Must be 64",
+          "description": "\u57CB\u3081\u8FBC\u3080\u30DA\u30A4\u30ED\u30FC\u30C9\u306E\u6700\u5927\u306E\u5272\u5408\uFF0864 \u3067\u306A\u3051\u308C\u3070\u306A\u3089\u306A\u3044\uFF09",
           "_validation": {
             "passed": true,
             "expression": "{max_embedded_payload_fraction == 64}"
@@ -86,7 +117,7 @@
           "type": "uint8",
           "offset": 22,
           "size": 1,
-          "description": "Must be 32",
+          "description": "\u57CB\u3081\u8FBC\u3080\u30DA\u30A4\u30ED\u30FC\u30C9\u306E\u6700\u5C0F\u306E\u5272\u5408\uFF0832 \u3067\u306A\u3051\u308C\u3070\u306A\u3089\u306A\u3044\uFF09",
           "_validation": {
             "passed": true,
             "expression": "{min_embedded_payload_fraction == 32}"
@@ -100,7 +131,7 @@
           "type": "uint8",
           "offset": 23,
           "size": 1,
-          "description": "Must be 32",
+          "description": "\u8449\u306E\u30DA\u30A4\u30ED\u30FC\u30C9\u306E\u5272\u5408\uFF0832 \u3067\u306A\u3051\u308C\u3070\u306A\u3089\u306A\u3044\uFF09",
           "_validation": {
             "passed": true,
             "expression": "{leaf_payload_fraction == 32}"
@@ -114,7 +145,7 @@
           "type": "uint32",
           "offset": 24,
           "size": 4,
-          "description": "\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3\u30B3\u30DF\u30C3\u30C8\u3054\u3068\u306B\u30A4\u30F3\u30AF\u30EA\u30E1\u30F3\u30C8\u3002\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u5909\u66F4\u306E\u691C\u51FA\u306B\u4F7F\u7528",
+          "description": "\u5909\u66F4\u306E\u56DE\u6570\uFF08\u30C8\u30E9\u30F3\u30B6\u30AF\u30B7\u30E7\u30F3\u306E\u30B3\u30DF\u30C3\u30C8\u3054\u3068\u306B\u5897\u3048\u308B\uFF09",
           "name": "file_change_counter",
           "value": 1,
           "hex": "0x1"
@@ -124,7 +155,7 @@
           "type": "uint32",
           "offset": 28,
           "size": 4,
-          "description": "\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u30B5\u30A4\u30BA\uFF08\u30DA\u30FC\u30B8\u6570\uFF09",
+          "description": "\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u306E\u30DA\u30FC\u30B8\u6570\uFF08version_valid_for \u304C file_change_counter \u3068\u7B49\u3057\u3044\u3068\u304D\u3060\u3051\u6709\u52B9\uFF09",
           "name": "database_size_pages",
           "value": 1,
           "hex": "0x1"
@@ -134,6 +165,7 @@
           "type": "uint32",
           "offset": 32,
           "size": 4,
+          "description": "\u6700\u521D\u306E\u7A7A\u304D\u30EA\u30B9\u30C8\u306E\u30C8\u30E9\u30F3\u30AF\u30DA\u30FC\u30B8\u306E\u756A\u53F7\uFF080 \u306A\u3089\u7A7A\u304D\u30DA\u30FC\u30B8\u7121\u3057\uFF09",
           "name": "first_freelist_trunk_page",
           "value": 0,
           "hex": "0x0"
@@ -143,6 +175,7 @@
           "type": "uint32",
           "offset": 36,
           "size": 4,
+          "description": "\u7A7A\u304D\u30DA\u30FC\u30B8\u306E\u7DCF\u6570",
           "name": "total_freelist_pages",
           "value": 0,
           "hex": "0x0"
@@ -152,6 +185,7 @@
           "type": "uint32",
           "offset": 40,
           "size": 4,
+          "description": "\u30B9\u30AD\u30FC\u30DE\u306E\u30AF\u30C3\u30AD\u30FC\uFF08\u30B9\u30AD\u30FC\u30DE\u304C\u5909\u308F\u308B\u305F\u3073\u306B\u5897\u3048\u308B\uFF09",
           "name": "schema_cookie",
           "value": 0,
           "hex": "0x0"
@@ -161,20 +195,23 @@
           "type": "uint32",
           "offset": 44,
           "size": 4,
-          "description": "1, 2, 3, or 4",
+          "description": "\u30B9\u30AD\u30FC\u30DE\u306E\u5F62\u5F0F\u306E\u756A\u53F7\uFF081\u301C4\uFF09",
           "_validation": {
             "passed": true,
             "expression": "{schema_format_number \u003E= 1 and schema_format_number \u003C= 4}"
           },
           "name": "schema_format_number",
           "value": 4,
-          "hex": "0x4"
+          "hex": "0x4",
+          "enum_label": "format_4",
+          "enum_description": "3.3.0 \u4EE5\u964D\uFF08DESC \u306E\u7D22\u5F15\u30FBboolean \u306E 0 / 1 \u306E\u30B7\u30EA\u30A2\u30EB\u578B\uFF09"
         },
         "default_page_cache_size": {
           "_type": "integer",
           "type": "uint32",
           "offset": 48,
           "size": 4,
+          "description": "\u65E2\u5B9A\u306E\u30DA\u30FC\u30B8\u30AD\u30E3\u30C3\u30B7\u30E5\u306E\u5927\u304D\u3055\uFF08PRAGMA default_cache_size\uFF09",
           "name": "default_page_cache_size",
           "value": 0,
           "hex": "0x0"
@@ -184,7 +221,7 @@
           "type": "uint32",
           "offset": 52,
           "size": 4,
-          "description": "\u6700\u5927\u30EB\u30FC\u30C8B-Tree\u30DA\u30FC\u30B8\u756A\u53F7\uFF08\u81EA\u52D5\u30D0\u30AD\u30E5\u30FC\u30E0/\u5897\u5206\u30D0\u30AD\u30E5\u30FC\u30E0\u30E2\u30FC\u30C9\uFF09",
+          "description": "\u6700\u5927\u306E\u30EB\u30FC\u30C8\u306E B \u6728\u306E\u30DA\u30FC\u30B8\u756A\u53F7\uFF08\u81EA\u52D5\u30D0\u30AD\u30E5\u30FC\u30E0\u30FB\u5897\u5206\u30D0\u30AD\u30E5\u30FC\u30E0\u306E\u3068\u304D\u3002\u305D\u308C\u4EE5\u5916\u306F 0\uFF09",
           "name": "largest_root_btree_page",
           "value": 0,
           "hex": "0x0"
@@ -194,16 +231,19 @@
           "type": "uint32",
           "offset": 56,
           "size": 4,
+          "description": "\u6587\u5B57\u5217\u306E\u7B26\u53F7\u5316",
           "name": "text_encoding",
           "value": 1,
           "hex": "0x1",
-          "enum_label": "UTF-8"
+          "enum_label": "UTF-8",
+          "enum_description": "UTF-8"
         },
         "user_version": {
           "_type": "integer",
           "type": "uint32",
           "offset": 60,
           "size": 4,
+          "description": "\u30E6\u30FC\u30B6\u306E\u7248\uFF08PRAGMA user_version\uFF09",
           "name": "user_version",
           "value": 0,
           "hex": "0x0"
@@ -213,7 +253,7 @@
           "type": "uint32",
           "offset": 64,
           "size": 4,
-          "description": "\u5897\u5206\u30D0\u30AD\u30E5\u30FC\u30E0\u30E2\u30FC\u30C9\u306E\u5834\u5408\u306F\u975E\u30BC\u30ED",
+          "description": "\u5897\u5206\u30D0\u30AD\u30E5\u30FC\u30E0\u306E\u30E2\u30FC\u30C9\u306A\u3089 0 \u4EE5\u5916",
           "name": "incremental_vacuum_mode",
           "value": 0,
           "hex": "0x0"
@@ -223,6 +263,7 @@
           "type": "uint32",
           "offset": 68,
           "size": 4,
+          "description": "\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3 ID\uFF08PRAGMA application_id\uFF09",
           "name": "application_id",
           "value": 0,
           "hex": "0x0"
@@ -232,7 +273,7 @@
           "type": "bytes",
           "offset": 72,
           "size": 20,
-          "description": "\u62E1\u5F35\u7528\u4E88\u7D04\u9818\u57DF\uFF08\u30BC\u30ED\u3067\u3042\u308B\u3053\u3068\uFF09",
+          "description": "\u62E1\u5F35\u7528\u306B\u4E88\u7D04\uFF080\uFF09",
           "name": "reserved_for_expansion",
           "hex": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
         },
@@ -241,6 +282,7 @@
           "type": "uint32",
           "offset": 92,
           "size": 4,
+          "description": "version_number \u3068 database_size_pages \u304C\u6709\u52B9\u306A\u5909\u66F4\u306E\u56DE\u6570",
           "name": "version_valid_for",
           "value": 1,
           "hex": "0x1"
@@ -250,88 +292,167 @@
           "type": "uint32",
           "offset": 96,
           "size": 4,
-          "description": "e.g. 3039004 for 3.39.4",
+          "description": "\u6700\u5F8C\u306B\u66F8\u304D\u8FBC\u3093\u3060 SQLite \u306E\u7248\uFF083.50.4 \u306A\u3089 3050004\uFF09",
           "name": "sqlite_version_number",
           "value": 3039004,
           "hex": "0x2E5F1C"
         }
       }
     },
-    "first_page": {
-      "_type": "struct",
+    "page_count": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 100,
+      "size": 0,
+      "description": "\u30DA\u30FC\u30B8\u6570\uFF08\u30D8\u30C3\u30C0\u306E\u5024\u304C\u6709\u52B9\u306A\u3089\u305D\u306E\u5024\u3001\u7121\u52B9\u306A\u3089\u30D5\u30A1\u30A4\u30EB\u306E\u5927\u304D\u3055\u304B\u3089\u6C42\u3081\u308B\uFF09",
+      "name": "page_count",
+      "value": 1
+    },
+    "pages": {
+      "_type": "array",
       "type": "struct",
       "offset": 100,
-      "size": 8,
-      "name": "first_page",
-      "struct_type": "btree_page_header",
-      "children": {
-        "page_type": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 100,
-          "size": 1,
-          "name": "page_type",
-          "value": 13,
-          "hex": "0xD",
-          "enum_label": "TABLE_LEAF",
-          "enum_description": "\u30EA\u30FC\u30D5\u30C6\u30FC\u30D6\u30EBB-Tree\u30DA\u30FC\u30B8"
-        },
-        "first_freeblock": {
-          "_type": "integer",
-          "type": "uint16",
-          "offset": 101,
-          "size": 2,
-          "name": "first_freeblock",
-          "value": 0,
-          "hex": "0x0"
-        },
-        "number_of_cells": {
-          "_type": "integer",
-          "type": "uint16",
-          "offset": 103,
-          "size": 2,
-          "name": "number_of_cells",
-          "value": 0,
-          "hex": "0x0"
-        },
-        "cell_content_offset": {
-          "_type": "integer",
-          "type": "uint16",
-          "offset": 105,
-          "size": 2,
-          "description": "\u30BB\u30EB\u30B3\u30F3\u30C6\u30F3\u30C4\u9818\u57DF\u306E\u5148\u982D\u30D0\u30A4\u30C8\u3078\u306E\u30AA\u30D5\u30BB\u30C3\u30C8\uFF080\u306F65536\u3092\u610F\u5473\u3059\u308B\uFF09",
-          "name": "cell_content_offset",
-          "value": 0,
-          "hex": "0x0"
-        },
-        "fragmented_free_bytes": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 107,
-          "size": 1,
-          "name": "fragmented_free_bytes",
-          "value": 0,
-          "hex": "0x0"
-        },
-        "cell_pointer_array": {
-          "_type": "array",
-          "type": "uint16",
-          "offset": 108,
-          "size": 0,
-          "name": "cell_pointer_array",
-          "count": 0,
-          "elements": []
-        },
-        "cells": {
-          "_type": "array",
+      "size": 0,
+      "name": "pages",
+      "count": 1,
+      "elements": [
+        {
+          "_type": "struct",
           "type": "struct",
-          "offset": 108,
-          "size": 0,
-          "name": "cells",
-          "count": 0,
-          "elements": []
+          "offset": 0,
+          "size": 108,
+          "name": "pages",
+          "struct_type": "page",
+          "children": {
+            "page_number": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 0,
+              "size": 0,
+              "description": "\u30DA\u30FC\u30B8\u756A\u53F7\uFF081 \u304B\u3089\uFF09",
+              "name": "page_number",
+              "value": 1
+            },
+            "page_start": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 0,
+              "size": 0,
+              "description": "\u30DA\u30FC\u30B8\u306E\u5148\u982D\u306E\u30D5\u30A1\u30A4\u30EB\u4E0A\u306E\u4F4D\u7F6E\uFF08\u4F5C\u696D\u7528\uFF09",
+              "name": "page_start",
+              "value": 0
+            },
+            "header_area": {
+              "_type": "bytes",
+              "type": "bytes",
+              "offset": 0,
+              "size": 100,
+              "description": "\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u306E\u30D8\u30C3\u30C0\uFF081 \u30DA\u30FC\u30B8\u76EE\u306E\u5148\u982D 100 \u30D0\u30A4\u30C8\u3002\u4E0A\u306E header \u3067\u5206\u89E3\uFF09",
+              "name": "header_area",
+              "hex": "53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00 10 00 01 01 00 40 20 20 00 00 00 01 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 2E 5F 1C"
+            },
+            "type_byte": {
+              "_type": "integer",
+              "type": "uint8",
+              "offset": 100,
+              "size": 1,
+              "description": "\u30DA\u30FC\u30B8\u306E\u5148\u982D\u306E\u30D0\u30A4\u30C8\uFF08\u4F5C\u696D\u7528\u3002B \u6728\u306E\u30DA\u30FC\u30B8\u306E\u7A2E\u985E\u304B\uFF09",
+              "name": "type_byte",
+              "value": 13,
+              "hex": "0xD"
+            },
+            "is_btree": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 100,
+              "size": 0,
+              "description": "B \u6728\u306E\u30DA\u30FC\u30B8\u304B\uFF08\u4F5C\u696D\u7528\uFF09",
+              "name": "is_btree",
+              "value": 1
+            },
+            "btree": {
+              "_type": "struct",
+              "type": "struct",
+              "offset": 100,
+              "size": 8,
+              "name": "btree",
+              "struct_type": "btree_page",
+              "children": {
+                "page_type": {
+                  "_type": "integer",
+                  "type": "uint8",
+                  "offset": 100,
+                  "size": 1,
+                  "description": "\u30DA\u30FC\u30B8\u306E\u7A2E\u985E",
+                  "name": "page_type",
+                  "value": 13,
+                  "hex": "0xD",
+                  "enum_label": "TABLE_LEAF",
+                  "enum_description": "\u8868\u306E B\u002B \u6728\u306E\u8449\u306E\u30DA\u30FC\u30B8"
+                },
+                "first_freeblock": {
+                  "_type": "integer",
+                  "type": "uint16",
+                  "offset": 101,
+                  "size": 2,
+                  "description": "\u6700\u521D\u306E\u7A7A\u304D\u30D6\u30ED\u30C3\u30AF\u306E\u30DA\u30FC\u30B8\u5185\u306E\u4F4D\u7F6E\uFF080 \u306A\u3089\u7121\u3057\uFF09",
+                  "name": "first_freeblock",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "number_of_cells": {
+                  "_type": "integer",
+                  "type": "uint16",
+                  "offset": 103,
+                  "size": 2,
+                  "description": "\u30BB\u30EB\u306E\u6570",
+                  "name": "number_of_cells",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "cell_content_offset": {
+                  "_type": "integer",
+                  "type": "uint16",
+                  "offset": 105,
+                  "size": 2,
+                  "description": "\u30BB\u30EB\u306E\u9818\u57DF\u306E\u5148\u982D\u306E\u30DA\u30FC\u30B8\u5185\u306E\u4F4D\u7F6E\uFF080 \u306F 65536\uFF09",
+                  "name": "cell_content_offset",
+                  "value": 4096,
+                  "hex": "0x1000"
+                },
+                "fragmented_free_bytes": {
+                  "_type": "integer",
+                  "type": "uint8",
+                  "offset": 107,
+                  "size": 1,
+                  "description": "\u30BB\u30EB\u306E\u9818\u57DF\u306E\u4E2D\u306E\u65AD\u7247\u5316\u3057\u305F\u7A7A\u304D\u30D0\u30A4\u30C8\u6570",
+                  "name": "fragmented_free_bytes",
+                  "value": 0,
+                  "hex": "0x0"
+                },
+                "cell_pointer_array": {
+                  "_type": "array",
+                  "type": "uint16",
+                  "offset": 108,
+                  "size": 0,
+                  "name": "cell_pointer_array",
+                  "count": 0,
+                  "elements": []
+                },
+                "cells": {
+                  "_type": "array",
+                  "type": "switch",
+                  "offset": 108,
+                  "size": 0,
+                  "name": "cells",
+                  "count": 0,
+                  "elements": []
+                }
+              }
+            }
+          }
         }
-      }
+      ]
     }
   }
 }

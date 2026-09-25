@@ -21,18 +21,6 @@ public sealed class FormatDefinitionQualityTests
     /// </summary>
     private static readonly HashSet<string> Pending = new(StringComparer.Ordinal)
     {
-        // データ・その他
-        "sqlite.bdef.yaml",
-        "parquet.bdef.yaml",
-        "pdf.bdef.yaml",
-        "pcap.bdef.yaml",
-        "dns.bdef.yaml",
-        "protobuf.bdef.yaml",
-        "msgpack.bdef.yaml",
-        "cbor.bdef.yaml",
-        "x509.bdef.yaml",
-        "fat.bdef.yaml",
-        "otf.bdef.yaml",
     };
 
     private static readonly Regex Japanese = new(@"[぀-ヿ㐀-鿿]", RegexOptions.Compiled);

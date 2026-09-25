@@ -16,144 +16,107 @@ public class OtfParsingTests
     [Fact]
     public void OtfFormat_LoadsWithoutErrors()
     {
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var result = FormatValidator.Validate(format);
+        var result = FormatValidator.Validate(new YamlFormatLoader().Load(OtfFormatPath));
         result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
+        result.Warnings.Should().BeEmpty();
     }
 
     [Fact]
-    public void OtfFormat_DecodesMinimalOtf()
+    public void OtfFormat_MinimalOtf_DecodesOffsetTableAndHead()
     {
-        var data = OtfTestDataGenerator.CreateMinimalOtf();
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var decoded = Decode(OtfTestDataGenerator.CreateMinimalOtf());
 
-        decoded.Name.Should().Be("OTF");
-        decoded.Children.Should().HaveCount(2);
-        decoded.Children[0].Name.Should().Be("offset_table");
-        decoded.Children[1].Name.Should().Be("table_records");
+        decoded.Child("offset_table").Child("sfVersion").Label().Should().Be("CFF");
+        var head = Tables(decoded)["head"];
+        head.Child("magicNumber").Validation!.Passed.Should().BeTrue();
+        head.Child("unitsPerEm").Int().Should().BeGreaterThan(0);
     }
 
     [Fact]
-    public void OtfFormat_OffsetTable_DecodesCorrectly()
+    public void OtfFormat_MinimalTtf_IsTrueType()
     {
-        var data = OtfTestDataGenerator.CreateMinimalOtf();
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-
-        var offsetTable = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var sfVersion = offsetTable.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        sfVersion.Name.Should().Be("sfVersion");
-        sfVersion.EnumLabel.Should().Be("CFF");
-
-        var numTables = offsetTable.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        numTables.Value.Should().Be(1);
+        Decode(OtfTestDataGenerator.CreateMinimalTtf()).Child("offset_table").Child("sfVersion").Label().Should().Be("TrueType");
     }
 
     [Fact]
-    public void OtfFormat_HeadTable_DecodesCorrectly()
+    public void OtfFormat_NameTable_DecodesStringsByPlatform()
     {
-        var data = OtfTestDataGenerator.CreateMinimalOtf();
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var name = Tables(Decode(OtfTestDataGenerator.CreateTtfWithTables()))["name"];
 
-        var records = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        records.Elements.Should().HaveCount(1);
-
-        var record = records.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var tag = record.Children[0].Should().BeOfType<DecodedString>().Subject;
-        tag.Value.Should().Be("head");
+        var records = name.Child("records").Elements();
+        records.Select(r => r.Child("text").Str()).Should().Equal("Test Sans", "Test Sans", "Regular", "テスト サンス", "Weight");
+        records[0].Child("platformID").Label().Should().Be("Macintosh");
+        records[3].Child("nameID").Label().Should().Be("FullName");
+        records[3].Child("languageID").Int().Should().Be(0x0411);
     }
 
     [Fact]
-    public void OtfFormat_CmapTable_DecodesCorrectly()
+    public void OtfFormat_Cmap_DecodesFormat4And12()
     {
-        var data = OtfTestDataGenerator.CreateOtfWithCmapAndHhea();
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var cmap = Tables(Decode(OtfTestDataGenerator.CreateTtfWithTables()))["cmap"];
 
-        var records = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-        records.Elements.Should().HaveCount(3);
-
-        // records[1] = cmap table_record
-        var cmapRecord = records.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
-        var cmapTag = cmapRecord.Children[0].Should().BeOfType<DecodedString>().Subject;
-        cmapTag.Value.Should().Be("cmap");
-
-        // table_data → cmap_table
-        var cmapTable = cmapRecord.Children[4].Should().BeOfType<DecodedStruct>().Subject;
-        var cmapVersion = cmapTable.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        cmapVersion.Value.Should().Be(0);
-
-        var cmapNumTables = cmapTable.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        cmapNumTables.Value.Should().Be(1);
-
-        var encodingRecords = cmapTable.Children[2].Should().BeOfType<DecodedArray>().Subject;
-        encodingRecords.Elements.Should().HaveCount(1);
-
-        var record = encodingRecords.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var platformID = record.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        platformID.Value.Should().Be(3); // Windows
+        var subtables = cmap.Child("encoding_records").Elements().Select(r => r.Child("subtable")).ToList();
+        subtables.Select(s => s.Child("format").Int()).Should().Equal(4, 12);
+        var format4 = subtables[0].Child("body");
+        format4.Child("segCount").Int().Should().Be(2);
+        format4.Child("startCode").Elements().Select(e => e.Int()).Should().Equal(0x41, 0xFFFF);
+        format4.Child("endCode").Elements().Select(e => e.Int()).Should().Equal(0x43, 0xFFFF);
+        format4.Child("idDelta").Elements()[0].Int().Should().Be(-0x40);
+        var group = subtables[1].Child("body").Child("groups").Elements().Single();
+        group.Child("startCharCode").Int().Should().Be(0x1F600);
+        group.Child("startGlyphID").Int().Should().Be(4);
     }
 
     [Fact]
-    public void OtfFormat_HheaTable_DecodesCorrectly()
+    public void OtfFormat_MetricsAndVariationTables_Decode()
     {
-        var data = OtfTestDataGenerator.CreateOtfWithCmapAndHhea();
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var tables = Tables(Decode(OtfTestDataGenerator.CreateTtfWithTables()));
 
-        var records = decoded.Children[1].Should().BeOfType<DecodedArray>().Subject;
-
-        // records[2] = hhea table_record
-        var hheaRecord = records.Elements[2].Should().BeOfType<DecodedStruct>().Subject;
-        var hheaTag = hheaRecord.Children[0].Should().BeOfType<DecodedString>().Subject;
-        hheaTag.Value.Should().Be("hhea");
-
-        // table_data → hhea_table
-        var hheaTable = hheaRecord.Children[4].Should().BeOfType<DecodedStruct>().Subject;
-        var majorVersion = hheaTable.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        majorVersion.Value.Should().Be(1);
-
-        var ascender = hheaTable.Children[2].Should().BeOfType<DecodedInteger>().Subject;
-        ascender.Name.Should().Be("ascender");
-        ascender.Value.Should().Be(800);
-
-        var descender = hheaTable.Children[3].Should().BeOfType<DecodedInteger>().Subject;
-        descender.Name.Should().Be("descender");
-        descender.Value.Should().Be(-200);
-
-        var numberOfHMetrics = hheaTable.Children.Last().Should().BeOfType<DecodedInteger>().Subject;
-        numberOfHMetrics.Name.Should().Be("numberOfHMetrics");
-        numberOfHMetrics.Value.Should().Be(256);
+        tables["maxp"].Child("numGlyphs").Int().Should().Be(5);
+        tables["hhea"].Child("ascender").Int().Should().Be(800);
+        tables["hhea"].Child("descender").Int().Should().Be(-200);
+        var os2 = tables["OS/2"];
+        os2.Child("version").Int().Should().Be(4);
+        os2.Child("achVendID").Str().Should().Be("TEST");
+        os2.Child("sCapHeight").Int().Should().Be(700);
+        tables["post"].Child("names").Elements().Single().Child("text").Str().Should().Be("smileyfc");
+        var axis = tables["fvar"].Child("axes").Elements().Single();
+        axis.Child("axisTag").Str().Should().Be("wght");
+        axis.Child("maxValue").Int().Should().Be(900 << 16);
+        tables["fvar"].Child("instances").Elements().Select(i => i.Child("coordinates").Elements().Single().Int()).Should().Equal(400 << 16, 700 << 16);
+        var gsub = tables["GSUB"];
+        gsub.Child("script_list").Child("records").Elements().Single().Child("tag").Str().Should().Be("latn");
+        gsub.Child("feature_list").Child("records").Elements().Single().Child("tag").Str().Should().Be("liga");
     }
 
     [Fact]
-    public void MinimalTtf_SfVersion_IsTrueType()
+    public void OtfFormat_Collection_DecodesEachFontWithSharedTables()
     {
-        var data = OtfTestDataGenerator.CreateMinimalTtf();
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var collection = Decode(OtfTestDataGenerator.CreateTtc()).Child("collection");
 
-        var offsetTable = decoded.Children[0].Should().BeOfType<DecodedStruct>().Subject;
-        var sfVersion = offsetTable.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        sfVersion.Name.Should().Be("sfVersion");
-        sfVersion.EnumLabel.Should().Be("TrueType");
+        collection.Child("ttc_tag").Str().Should().Be("ttcf");
+        collection.Child("numFonts").Int().Should().Be(2);
+        var fonts = collection.Child("fonts").Elements();
+        fonts.Should().HaveCount(2);
+        var first = fonts[0].Child("table_records").Elements();
+        var second = fonts[1].Child("table_records").Elements();
+        second.Select(r => r.Child("offset").Int()).Should().Equal(first.Select(r => r.Child("offset").Int()));
+        second.Single(r => r.Child("tag").Str() == "name").Child("table_data").Child("records").Elements()[2].Child("text").Str().Should().Be("Regular");
     }
 
     [Fact]
     public void OtfFormat_TreeOutput_ContainsExpectedElements()
     {
-        var data = OtfTestDataGenerator.CreateMinimalOtf();
-        var format = new YamlFormatLoader().Load(OtfFormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-        var output = new TreeOutputFormatter().Format(decoded);
+        var output = new TreeOutputFormatter().Format(Decode(OtfTestDataGenerator.CreateTtfWithTables()));
 
-        output.Should().Contain("OTF");
-        output.Should().Contain("offset_table");
-        output.Should().Contain("CFF");
-        output.Should().Contain("head");
+        output.Should().Contain("TrueType");
+        output.Should().Contain("テスト サンス");
+        output.Should().NotContain("sfnt_tag");
     }
+
+    private static DecodedStruct Decode(byte[] data) =>
+        new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(OtfFormatPath));
+
+    private static Dictionary<string, DecodedNode> Tables(DecodedStruct root) =>
+        root.Child("table_records").Elements().ToDictionary(r => r.Child("tag").Str(), r => r.Child("table_data"));
 }

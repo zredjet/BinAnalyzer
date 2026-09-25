@@ -13,125 +13,98 @@ public class X509ParsingTests
     private static readonly string X509FormatPath =
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "formats", "x509.bdef.yaml");
 
-    private static DecodedNode Navigate(DecodedStruct root, params string[] path)
-    {
-        DecodedNode current = root;
-        foreach (var name in path)
-        {
-            var s = (DecodedStruct)current;
-            current = s.Children.First(c => c.Name == name);
-        }
-        return current;
-    }
-
     [Fact]
     public void X509Format_LoadsWithoutErrors()
     {
-        var format = new YamlFormatLoader().Load(X509FormatPath);
-        var result = FormatValidator.Validate(format);
+        var result = FormatValidator.Validate(new YamlFormatLoader().Load(X509FormatPath));
         result.IsValid.Should().BeTrue();
-        result.Errors.Should().BeEmpty();
-    }
-
-
-    [Fact]
-    public void X509Format_DecodesMinimalCert()
-    {
-        var data = X509TestDataGenerator.CreateMinimalCertificate();
-        var format = new YamlFormatLoader().Load(X509FormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-
-        decoded.Name.Should().Be("X509");
-        decoded.Children.Should().NotBeEmpty();
-
-        // certificate_content should contain tbs_certificate, sig_algorithm, signature
-        var content = decoded.Children.First(c => c.Name == "content")
-            .Should().BeOfType<DecodedStruct>().Subject;
-        content.Children.Should().Contain(c => c.Name == "tbs_certificate");
-        content.Children.Should().Contain(c => c.Name == "sig_algorithm");
-        content.Children.Should().Contain(c => c.Name == "signature");
+        result.Warnings.Should().BeEmpty();
     }
 
     [Fact]
-    public void X509Format_Version_DecodesCorrectly()
+    public void X509Format_MinimalCertificate_DecodesTbsFields()
     {
-        var data = X509TestDataGenerator.CreateMinimalCertificate();
-        var format = new YamlFormatLoader().Load(X509FormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var tbs = Certificate(X509TestDataGenerator.CreateMinimalCertificate()).Child("tbs_certificate");
 
-        // Navigate to version value: certificate > content > tbs > content > version_explicit > version_integer > value
-        var versionValue = Navigate(decoded,
-            "content", "tbs_certificate", "content", "version_explicit", "version_integer", "value");
-
-        var versionInt = versionValue.Should().BeOfType<DecodedInteger>().Subject;
-        versionInt.Value.Should().Be(2);
-        versionInt.EnumLabel.Should().Be("v3");
+        tbs.Child("version").Child("version").Label().Should().Be("v3");
+        tbs.Child("serial_number").Find("int_value").Int().Should().Be(1);
+        tbs.Child("signature").Find("name").Str().Should().Be("sha256WithRSAEncryption");
+        Oids(tbs.Child("issuer")).Should().Equal("commonName");
+        tbs.Child("issuer").FindAll("text").Select(t => t.Str()).Should().Equal("Test");
+        tbs.Child("validity").FindAll("text").Select(t => t.Str()).Should().Equal("250101000000Z", "260101000000Z");
+        tbs.Child("subject_public_key_info").Child("algorithm").Find("name").Str().Should().Be("Ed25519");
+        tbs.Child("subject_public_key_info").Child("public_key_bytes").Size.Should().Be(32);
     }
 
     [Fact]
-    public void X509Format_Validity_DecodesCorrectly()
+    public void X509Format_V1Certificate_HasNoVersionField()
     {
-        var data = X509TestDataGenerator.CreateMinimalCertificate();
-        var format = new YamlFormatLoader().Load(X509FormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var tbs = Certificate(X509TestDataGenerator.CreateV1Certificate()).Child("tbs_certificate");
 
-        // Navigate to validity content
-        var validityContent = Navigate(decoded,
-            "content", "tbs_certificate", "content", "validity", "content");
-        var vc = (DecodedStruct)validityContent;
-
-        var notBefore = Navigate(vc, "not_before", "value");
-        notBefore.Should().BeOfType<DecodedString>().Which.Value.Should().Be("250101000000Z");
-
-        var notAfter = Navigate(vc, "not_after", "value");
-        notAfter.Should().BeOfType<DecodedString>().Which.Value.Should().Be("260101000000Z");
+        ((DecodedStruct)tbs).Children.Should().NotContain(c => c.Name == "version" || c.Name == "extensions");
+        ((DecodedBytes)tbs.Child("serial_number").Find("int_bytes")).RawBytes.ToArray().Should().Equal(0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23);
+        Oids(tbs.Child("subject")).Should().Equal("countryName", "organizationName", "commonName");
+        tbs.Child("subject").FindAll("text").Select(t => t.Str()).Should().Equal("JP", "テスト", "v1.example");
+        tbs.Child("validity").FindAll("type_name").Select(t => t.Label()).Should().Contain("GeneralizedTime");
     }
 
     [Fact]
-    public void X509Format_Issuer_ContainsRDN()
+    public void X509Format_RsaKey_DecodesModulusAndExponent()
     {
-        var data = X509TestDataGenerator.CreateMinimalCertificate();
-        var format = new YamlFormatLoader().Load(X509FormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
+        var spki = Certificate(X509TestDataGenerator.CreateV1Certificate()).Child("tbs_certificate").Child("subject_public_key_info");
 
-        // Navigate to issuer > content > rdn_sets (array) > first element > content > attrs > first > content > value
-        var issuerContent = Navigate(decoded,
-            "content", "tbs_certificate", "content", "issuer", "content");
-        var ic = (DecodedStruct)issuerContent;
+        spki.Child("algorithm").Find("name").Str().Should().Be("rsaEncryption");
+        var key = spki.Child("public_key").Child("content").Child("items").Elements();
+        key[0].Find("int_bytes").Size.Should().Be(65);
+        key[1].Find("int_value").Int().Should().Be(65537);
+    }
 
-        // rdn_sets is an array
-        var rdnSets = ic.Children.First(c => c.Name == "rdn_sets")
-            .Should().BeOfType<DecodedArray>().Subject;
-        rdnSets.Elements.Should().HaveCountGreaterThanOrEqualTo(1);
+    [Fact]
+    public void X509Format_Extensions_DecodeInnerDer()
+    {
+        var extensions = Certificate(X509TestDataGenerator.CreateCertificateWithExtensions())
+            .Child("tbs_certificate").Child("extensions").Child("extensions").Elements();
 
-        // First RDN SET > content > attrs (array) > first element > content > value (ascii)
-        var firstRdn = rdnSets.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var rdnContent = firstRdn.Children.First(c => c.Name == "content")
-            .Should().BeOfType<DecodedStruct>().Subject;
-        var attrs = rdnContent.Children.First(c => c.Name == "attrs")
-            .Should().BeOfType<DecodedArray>().Subject;
-        var firstAttr = attrs.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var attrContent = firstAttr.Children.First(c => c.Name == "content")
-            .Should().BeOfType<DecodedStruct>().Subject;
+        extensions.Select(e => e.Child("name").Str()).Should().Equal(
+            "basicConstraints", "keyUsage", "extKeyUsage", "subjectAltName", "subjectKeyIdentifier");
+        var basic = extensions[0];
+        basic.Child("critical").Find("bool_value").Int().Should().Be(0xFF);
+        basic.Child("extn_value").Find("bool_value").Int().Should().Be(0xFF);  // cA
+        basic.Child("extn_value").Find("int_value").Int().Should().Be(0);      // pathLenConstraint
+        ((DecodedStruct)extensions[1]).Children.Should().NotContain(c => c.Name == "critical");
+        extensions[2].Child("extn_value").FindAll("name").Select(n => n.Str()).Should().Equal("serverAuth", "clientAuth");
+        extensions[3].Child("extn_value").FindAll("text").Select(t => t.Str()).Should().Equal("example.com", "*.example.com", "a@example.com");
+        extensions[3].Child("extn_value").FindAll("context_tag").Select(t => t.Str()).Should().Equal("[2]", "[2]", "[7]", "[1]");
+        extensions[4].Child("extn_value").Find("data").Size.Should().Be(20);
+    }
 
-        var attrValue = attrContent.Children.First(c => c.Name == "value")
-            .Should().BeOfType<DecodedString>().Subject;
-        attrValue.Value.Should().Be("Test");
+    [Fact]
+    public void X509Format_ConcatenatedCertificates_AreReadInOrder()
+    {
+        var data = X509TestDataGenerator.CreateMinimalCertificate().Concat(X509TestDataGenerator.CreateV1Certificate()).ToArray();
+        var certificates = Decode(data).Child("certificates").Elements();
+
+        certificates.Should().HaveCount(2);
+        certificates[1].Offset.Should().Be(X509TestDataGenerator.CreateMinimalCertificate().Length);
     }
 
     [Fact]
     public void X509Format_TreeOutput_ContainsExpectedElements()
     {
-        var data = X509TestDataGenerator.CreateMinimalCertificate();
-        var format = new YamlFormatLoader().Load(X509FormatPath);
-        var decoded = new BinaryDecoder().Decode(data, format);
-        var output = new TreeOutputFormatter().Format(decoded);
+        var output = new TreeOutputFormatter().Format(Decode(X509TestDataGenerator.CreateCertificateWithExtensions()));
 
-        output.Should().Contain("certificate");
         output.Should().Contain("tbs_certificate");
-        output.Should().Contain("v3");
-        output.Should().Contain("SEQUENCE");
-        output.Should().Contain("validity");
-        output.Should().Contain("250101000000Z");
+        output.Should().Contain("subjectAltName");
+        output.Should().Contain("2.5.29.17");
+        output.Should().NotContain("next_tag");
     }
+
+    private static DecodedStruct Decode(byte[] data) =>
+        new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(X509FormatPath));
+
+    private static DecodedNode Certificate(byte[] data) => Decode(data).Child("certificates").Elements().Single();
+
+    /// <summary>名前の中の属性の OID の名前（RDN の順）。</summary>
+    private static List<string> Oids(DecodedNode name) =>
+        name.OfStruct("der_oid").Select(o => o.Child("name").Str()).ToList();
 }

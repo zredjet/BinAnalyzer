@@ -223,6 +223,17 @@ public sealed class JsonSchemaTests
     [InlineData("mkv.bdef.yaml")]
     [InlineData("common/riff.bdef.yaml")]
     [InlineData("common/isobmff.bdef.yaml")]
+    [InlineData("sqlite.bdef.yaml")]
+    [InlineData("parquet.bdef.yaml")]
+    [InlineData("pdf.bdef.yaml")]
+    [InlineData("pcap.bdef.yaml")]
+    [InlineData("dns.bdef.yaml")]
+    [InlineData("protobuf.bdef.yaml")]
+    [InlineData("msgpack.bdef.yaml")]
+    [InlineData("cbor.bdef.yaml")]
+    [InlineData("x509.bdef.yaml")]
+    [InlineData("fat.bdef.yaml")]
+    [InlineData("otf.bdef.yaml")]
     public void Schema_ValidatesFormatFile(string fileName)
     {
         var schema = LoadSchema();
