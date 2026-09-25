@@ -1,11 +1,188 @@
+# RIFF ファミリー（WAV・AVI・WebP）の共通定義ライブラリ
+# 仕様: Microsoft / IBM "Multimedia Programming Interface and Data Specifications 1.0"（1991）の RIFF・INFO リスト、
+#   Microsoft Learn の WAVEFORMATEX / WAVEFORMATEXTENSIBLE https://learn.microsoft.com/en-us/windows/win32/api/mmreg/ns-mmreg-waveformatex 、
+#   mmreg.h の WAVE_FORMAT_* の登録値
+# 構造: インポートして使う struct の集まり（ルートはダミー）。wave_format は WAV の fmt チャンクと AVI の音声の strf の中身、
+#   info_chunk_data は LIST 'INFO' の中身、raw_data は分解しないチャンクの中身
+# 対応していないもの: 各コーデック固有の拡張データ（ADPCM の係数・MPEG の追加情報など。バイト列として表示）、
+#   mmreg.h の主要な値以外の WAVE_FORMAT_*（番号のみ表示）
 name: RIFF_Common
 root: _riff_common
+
+enums:
+  wave_format_tag:
+    - value: 0x0000
+      label: WAVE_FORMAT_UNKNOWN
+      description: "不明"
+    - value: 0x0001
+      label: PCM
+      description: "リニア PCM（整数）"
+    - value: 0x0002
+      label: ADPCM
+      description: "Microsoft ADPCM"
+    - value: 0x0003
+      label: IEEE_FLOAT
+      description: "IEEE 754 浮動小数点数"
+    - value: 0x0006
+      label: ALAW
+      description: "G.711 A-law"
+    - value: 0x0007
+      label: MULAW
+      description: "G.711 μ-law"
+    - value: 0x0011
+      label: IMA_ADPCM
+      description: "IMA / DVI ADPCM"
+    - value: 0x0031
+      label: GSM610
+      description: "GSM 6.10"
+    - value: 0x0050
+      label: MPEG
+      description: "MPEG-1 Audio Layer I / II"
+    - value: 0x0055
+      label: MPEGLAYER3
+      description: "MPEG-1 Audio Layer III（MP3）"
+    - value: 0x00FF
+      label: RAW_AAC1
+      description: "AAC（ADTS なしの生のストリーム）"
+    - value: 0x1610
+      label: MPEG_HEAAC
+      description: "HE-AAC"
+    - value: 0x2000
+      label: DOLBY_AC3_SPDIF
+      description: "Dolby AC-3（S/PDIF）"
+    - value: 0xFFFE
+      label: EXTENSIBLE
+      description: "WAVEFORMATEXTENSIBLE（本当の形式は SubFormat の GUID）"
+
+flags:
+  speaker_positions:
+    bit_size: 32
+    fields:
+      - name: FRONT_LEFT
+        bit: 0
+      - name: FRONT_RIGHT
+        bit: 1
+      - name: FRONT_CENTER
+        bit: 2
+      - name: LOW_FREQUENCY
+        bit: 3
+      - name: BACK_LEFT
+        bit: 4
+      - name: BACK_RIGHT
+        bit: 5
+      - name: FRONT_LEFT_OF_CENTER
+        bit: 6
+      - name: FRONT_RIGHT_OF_CENTER
+        bit: 7
+      - name: BACK_CENTER
+        bit: 8
+      - name: SIDE_LEFT
+        bit: 9
+      - name: SIDE_RIGHT
+        bit: 10
+      - name: TOP_CENTER
+        bit: 11
+      - name: TOP_FRONT_LEFT
+        bit: 12
+      - name: TOP_FRONT_CENTER
+        bit: 13
+      - name: TOP_FRONT_RIGHT
+        bit: 14
+      - name: TOP_BACK_LEFT
+        bit: 15
+      - name: TOP_BACK_CENTER
+        bit: 16
+      - name: TOP_BACK_RIGHT
+        bit: 17
+
 structs:
   _riff_common:
     - name: _unused
       type: uint8
+      description: "ライブラリのダミーのルート（使われない）"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ（バイト列）"
+
+  # --- WAVEFORMATEX / WAVEFORMATEXTENSIBLE ---
+  wave_format:
+    - name: wFormatTag
+      type: uint16
+      enum: wave_format_tag
+      description: "音声の形式（WAVE_FORMAT_*）"
+    - name: nChannels
+      type: uint16
+      description: "チャンネル数"
+    - name: nSamplesPerSec
+      type: uint32
+      description: "サンプリング周波数（Hz）"
+    - name: nAvgBytesPerSec
+      type: uint32
+      description: "平均のバイトレート（バイト / 秒。PCM なら nSamplesPerSec × nBlockAlign）"
+    - name: nBlockAlign
+      type: uint16
+      description: "ブロックのバイト数（PCM なら全チャンネル分の 1 サンプル = nChannels × wBitsPerSample ÷ 8）"
+    - name: wBitsPerSample
+      type: uint16
+      description: "1 サンプルのビット数（圧縮形式では 0 のことがある）"
+    - name: cbSize
+      type: uint16
+      if: "{remaining >= 2}"
+      description: "拡張データのバイト数（WAVEFORMATEX。16 バイトの PCMWAVEFORMAT には無い）"
+    - name: extensible
+      type: struct
+      struct: wave_format_extensible
+      if: "{wFormatTag == 0xFFFE ? remaining >= 22 : 0}"
+      description: "WAVEFORMATEXTENSIBLE の拡張（有効ビット数・スピーカー配置・本当の形式）"
+    - name: extra
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      description: "形式ごとの拡張データ（ADPCM の係数、MPEG Layer 3 の情報など）"
+
+  wave_format_extensible:
+    - name: wValidBitsPerSample
+      type: uint16
+      description: "有効なビット数（24 ビットを 32 ビットのコンテナに入れるなら 24。圧縮形式ではブロックのサンプル数）"
+    - name: dwChannelMask
+      type: uint32
+      flags: speaker_positions
+      description: "各チャンネルのスピーカーの位置（立っているビットの順にチャンネルを割り当てる）"
+    - name: sub_format_tag
+      type: uint16
+      enum: wave_format_tag
+      description: "SubFormat の GUID の先頭 2 バイト（KSDATAFORMAT_SUBTYPE_* はここが WAVE_FORMAT_* の値）"
+    - name: sub_format_rest
+      type: bytes
+      size: "14"
+      description: "SubFormat の GUID の残り（通常 00 00 00 00 10 00 80 00 00 AA 00 38 9B 71）"
+
+  # --- LIST 'INFO' ---
+  info_chunk_data:
+    - name: sub_chunks
+      type: struct
+      struct: info_sub_chunk
+      repeat: eof
+      description: "INFO の項目（ID + 長さ + 文字列）の並び"
+
+  info_sub_chunk:
+    - name: chunk_id
+      type: ascii
+      size: "4"
+      description: "項目の ID（INAM = 題名、IART = 作者、ICMT = コメント、ICRD = 作成日、IGNR = ジャンル、ICOP = 著作権、ISFT = 作成ソフト、IPRD = アルバム、ITRK = トラック番号 など）"
+    - name: chunk_size
+      type: uint32
+      description: "値のバイト数（NUL を含むことが多い）"
+    - name: value
+      type: ascii
+      size: "{chunk_size}"
+      description: "値の文字列（NUL 終端）"
+    - name: padding
+      type: bytes
+      size: "{chunk_size % 2}"
+      if: "{chunk_size % 2 != 0 ? remaining > 0 : 0}"
+      padding: true
+      description: "項目を 2 バイト境界にそろえる詰め物（chunk_size が奇数のとき）"

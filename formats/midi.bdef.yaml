@@ -1,3 +1,11 @@
+# Standard MIDI File（.mid / .midi / .smf）
+# 仕様: MIDI Manufacturers Association "Standard MIDI Files 1.0"（The Complete MIDI 1.0 Detailed Specification 96.1、第 3 版 2014 に収録）
+# 構造: チャンク（ID 4 バイト + 長さ 4 バイト + 中身）の並び。最初が MThd（形式・トラック数・時間の単位）で、続く MTrk の中は
+#   イベント（デルタタイム（可変長整数）+ ステータス + データ）の並び。ランニングステータス（ステータスを省いた続きのイベント）は、
+#   直前のチャンネルメッセージのステータスを状態変数に覚えておき、データの先頭バイトの最上位ビットが 0 ならそれを使う。
+#   MTrk 以外の未知のチャンクは中身をバイト列として読み飛ばす。
+# 対応していないもの: RIFF で包んだ RMID（.rmi）、テキストのメタイベントの文字コードの判定（Latin-1 として表示。日本の MIDI は Shift_JIS が多い）、
+#   システムエクスクルーシブの中身（メーカーの ID 以降）、シーケンサ固有のメタイベントの中身、XMF / SMF2
 name: MIDI
 endianness: big
 root: midi
@@ -6,13 +14,95 @@ enums:
   midi_format:
     - value: 0
       label: single_track
-      description: "シングルトラック"
+      description: "形式 0（全チャンネルを 1 トラックに入れる）"
     - value: 1
       label: multi_track_sync
-      description: "マルチトラック（同期）"
+      description: "形式 1（同時に演奏する複数のトラック。最初のトラックはテンポなど）"
     - value: 2
       label: multi_track_async
-      description: "マルチトラック（独立）"
+      description: "形式 2（独立した複数のパターン）"
+
+  event_type:
+    - value: 0x8
+      label: note_off
+      description: "ノートオフ（ノート番号・ベロシティ）"
+    - value: 0x9
+      label: note_on
+      description: "ノートオン（ノート番号・ベロシティ。ベロシティ 0 はノートオフ）"
+    - value: 0xA
+      label: polyphonic_key_pressure
+      description: "ポリフォニックキープレッシャー（ノート番号・圧力）"
+    - value: 0xB
+      label: control_change
+      description: "コントロールチェンジ（コントローラ番号・値）"
+    - value: 0xC
+      label: program_change
+      description: "プログラムチェンジ（音色の番号）"
+    - value: 0xD
+      label: channel_pressure
+      description: "チャンネルプレッシャー（圧力）"
+    - value: 0xE
+      label: pitch_bend
+      description: "ピッチベンド（14 ビットの値）"
+    - value: 0xF
+      label: system
+      description: "システムエクスクルーシブ・メタイベント"
+
+  meta_type:
+    - value: 0x00
+      label: sequence_number
+      description: "シーケンス番号"
+    - value: 0x01
+      label: text
+      description: "テキスト"
+    - value: 0x02
+      label: copyright
+      description: "著作権表示"
+    - value: 0x03
+      label: track_name
+      description: "シーケンス名・トラック名"
+    - value: 0x04
+      label: instrument_name
+      description: "楽器名"
+    - value: 0x05
+      label: lyric
+      description: "歌詞"
+    - value: 0x06
+      label: marker
+      description: "マーカー（リハーサル記号など）"
+    - value: 0x07
+      label: cue_point
+      description: "キューポイント"
+    - value: 0x08
+      label: program_name
+      description: "プログラム名"
+    - value: 0x09
+      label: device_name
+      description: "デバイス名"
+    - value: 0x20
+      label: channel_prefix
+      description: "MIDI チャンネルのプレフィックス"
+    - value: 0x21
+      label: port
+      description: "MIDI ポート（非公式だが広く使われる）"
+    - value: 0x2F
+      label: end_of_track
+      description: "トラックの終わり（必須）"
+    - value: 0x51
+      label: set_tempo
+      description: "テンポ（4 分音符あたりのマイクロ秒）"
+    - value: 0x54
+      label: smpte_offset
+      description: "SMPTE オフセット（トラックの開始時刻）"
+    - value: 0x58
+      label: time_signature
+      description: "拍子"
+    - value: 0x59
+      label: key_signature
+      description: "調"
+    - value: 0x7F
+      label: sequencer_specific
+      description: "シーケンサ固有"
 
 structs:
   midi:
@@ -20,106 +110,268 @@ structs:
       type: bytes
       size: "4"
       expected: [0x4D, 0x54, 0x68, 0x64]
-      description: "MThd"
+      description: "ヘッダチャンクの ID（'MThd'）"
     - name: header_length
       type: uint32
-      description: "ヘッダデータ長（常に6）"
-      validate: "{header_length == 6}"
+      validate: "{header_length >= 6}"
+      description: "ヘッダの中身のバイト数（6。将来の拡張で大きくなりうる）"
     - name: format
       type: uint16
       enum: midi_format
+      description: "ファイルの形式"
     - name: ntrks
       type: uint16
-      description: "トラック数"
+      description: "トラックチャンクの数（形式 0 は 1）"
     - name: division
       type: uint16
-      description: "4分音符あたりのティック数（PPQN）またはSMPTEタイミング。ビット15がタイミングモードを選択: 0=PPQN（4分音符あたりのティック数）、1=SMPTE。PPQNモードではビット14:0が4分音符あたりのティック数を表す"
+      description: "時間の単位（最上位ビット 0 = 4 分音符あたりのティック数、1 = SMPTE のフレームとフレームあたりのティック数）"
     - name: timing_mode
       type: virtual
       value: "{division >> 15}"
-      description: "タイミングモード（0=PPQN 4分音符あたりのティック数、1=SMPTE）"
+      description: "時間の単位の種類（0 = 4 分音符あたりのティック数、1 = SMPTE）"
     - name: ticks_per_quarter_note
       type: virtual
-      value: "{division & 32767}"
-      description: "PPQNモード: 4分音符あたりのティック数。SMPTEモード: ビット14:0にフレームレートとフレームあたりのティック数がエンコードされる"
+      value: "{division & 0x7FFF}"
+      if: "{timing_mode == 0}"
+      description: "4 分音符あたりのティック数（デルタタイムの単位。480 など）"
+    - name: smpte_format
+      type: virtual
+      value: "{256 - (division >> 8)}"
+      if: "{timing_mode == 1}"
+      description: "SMPTE のフレームレート（24・25・29（= 29.97 ドロップフレーム）・30。上位バイトの 2 の補数）"
+    - name: ticks_per_frame
+      type: virtual
+      value: "{division & 0xFF}"
+      if: "{timing_mode == 1}"
+      description: "1 フレームのティック数"
+    - name: header_extra
+      type: bytes
+      size: "{header_length - 6}"
+      if: "{header_length > 6}"
+      description: "ヘッダの追加のデータ（将来の拡張）"
     - name: tracks
       type: struct
       struct: mtrk
-      repeat_count: "{ntrks}"
+      repeat: eof
+      description: "チャンクの並び（MTrk が ntrks 個。MTrk 以外の未知のチャンクは読み飛ばす）"
 
   mtrk:
     - name: magic
-      type: bytes
+      type: ascii
       size: "4"
-      expected: [0x4D, 0x54, 0x72, 0x6B]
-      description: "MTrk"
+      description: "チャンクの ID（'MTrk'。それ以外は未知のチャンク）"
     - name: length
       type: uint32
+      description: "中身のバイト数"
+    - name: body
+      type: switch
+      switch_on: "{magic}"
+      size: "{length}"
+      cases:
+        "'MTrk'": track_events
+      default: raw_event_data
+      description: "中身（MTrk はイベントの並び、それ以外はバイト列）"
+
+  track_events:
     - name: events
       type: struct
       struct: midi_event
-      size: "{length}"
       repeat: eof
+      description: "イベントの並び（最後はメタイベントの end_of_track）"
 
   midi_event:
     - name: delta_time
       type: vlq
-      description: "デルタタイム（VLQエンコード）"
-    - name: status
+      description: "前のイベントからの時間（ティック。可変長整数）"
+    - name: status_or_data
       type: uint8
-      description: "ステータスバイト"
+      state: running_status
+      state_if: "{status_or_data >= 0x80 and status_or_data < 0xF0}"
+      state_default: 0
+      description: "ステータスバイト（最上位ビットが 1）。0 ならランニングステータスで、これが最初のデータバイト"
+    - name: is_running_status
+      type: virtual
+      value: "{status_or_data < 0x80 ? 1 : 0}"
+      description: "ランニングステータスか（1 なら直前のチャンネルメッセージのステータスを使う）"
+    - name: status
+      type: virtual
+      value: "{status_or_data < 0x80 ? @running_status : status_or_data}"
+      description: "このイベントのステータス"
+    - name: event_type
+      type: virtual
+      value: "{status >> 4}"
+      enum: event_type
+      description: "イベントの種類（ステータスの上位 4 ビット）"
+    - name: channel
+      type: virtual
+      value: "{status & 0x0F}"
+      if: "{status < 0xF0}"
+      description: "MIDI チャンネル（0〜15。表示上は 1〜16）"
     - name: event_data
       type: switch
-      switch_on: "{status >> 4}"
+      switch_on: "{status >= 0xF0 ? status : (status >> 4)}"
       cases:
-        "8": two_param_event
-        "9": two_param_event
-        "10": two_param_event
-        "11": two_param_event
-        "12": one_param_event
-        "13": one_param_event
-        "14": two_param_event
-        "15": system_event_data
+        "0x8": note_event
+        "0x9": note_event
+        "0xA": note_event
+        "0xB": control_change_event
+        "0xC": one_param_event
+        "0xD": one_param_event
+        "0xE": pitch_bend_event
+        "0xFF": meta_event_body
+        "0xF0": sysex_event_body
+        "0xF7": sysex_event_body
       default: raw_event_data
+      description: "イベントのデータ（種類で振り分ける）"
 
-  two_param_event:
-    - name: param1
+  note_event:
+    - name: note_byte
       type: uint8
-    - name: param2
+      if: "{is_running_status == 0}"
+      description: "ノート番号（0〜127。60 = 中央ハ）"
+    - name: note
+      type: virtual
+      value: "{is_running_status == 1 ? status_or_data : note_byte}"
+      description: "ノート番号（ランニングステータスなら status_or_data）"
+    - name: velocity
       type: uint8
+      description: "ベロシティ（0〜127）、またはポリフォニックキープレッシャーの圧力"
+
+  control_change_event:
+    - name: controller_byte
+      type: uint8
+      if: "{is_running_status == 0}"
+      description: "コントローラ番号（0〜119。7 = ボリューム、10 = パン、64 = サステイン。120〜127 はチャンネルモードメッセージ）"
+    - name: controller
+      type: virtual
+      value: "{is_running_status == 1 ? status_or_data : controller_byte}"
+      description: "コントローラ番号（ランニングステータスなら status_or_data）"
+    - name: value
+      type: uint8
+      description: "コントローラの値（0〜127）"
 
   one_param_event:
-    - name: param1
+    - name: param_byte
       type: uint8
+      if: "{is_running_status == 0}"
+      description: "データ（プログラムチェンジなら音色の番号 0〜127、チャンネルプレッシャーなら圧力）"
+    - name: param
+      type: virtual
+      value: "{is_running_status == 1 ? status_or_data : param_byte}"
+      description: "データ（ランニングステータスなら status_or_data）"
 
-  system_event_data:
-    - name: system_body
-      type: switch
-      switch_on: "{status}"
-      cases:
-        "255": meta_event_body
-        "240": sysex_event_body
-        "247": sysex_event_body
-      default: raw_event_data
+  pitch_bend_event:
+    - name: lsb_byte
+      type: uint8
+      if: "{is_running_status == 0}"
+      description: "ピッチベンドの下位 7 ビット"
+    - name: lsb
+      type: virtual
+      value: "{is_running_status == 1 ? status_or_data : lsb_byte}"
+      description: "ピッチベンドの下位 7 ビット（ランニングステータスなら status_or_data）"
+    - name: msb
+      type: uint8
+      description: "ピッチベンドの上位 7 ビット"
+    - name: bend
+      type: virtual
+      value: "{((msb << 7) | lsb) - 8192}"
+      description: "ピッチベンドの値（−8192〜8191。0 = 中央）"
 
   meta_event_body:
     - name: meta_type
       type: uint8
-      description: "メタイベントタイプ（0x2F=End of Track, 0x51=テンポ, 0x58=拍子記号）"
+      enum: meta_type
+      description: "メタイベントの種類"
     - name: meta_length
       type: vlq
+      description: "データのバイト数（可変長整数）"
     - name: meta_data
-      type: bytes
+      type: switch
+      switch_on: "{meta_type >= 0x01 and meta_type <= 0x09 ? 1 : meta_type}"
       size: "{meta_length}"
+      cases:
+        "1": meta_text
+        "0x51": meta_tempo
+        "0x58": meta_time_signature
+        "0x59": meta_key_signature
+        "0x54": meta_smpte_offset
+      default: raw_event_data
+      description: "メタイベントのデータ（テキスト・テンポ・拍子・調・SMPTE オフセットを分解する）"
+
+  meta_text:
+    - name: text
+      type: latin1
+      size: remaining
+      description: "テキスト（文字コードの決まりは無い。Latin-1 として表示）"
+
+  meta_tempo:
+    - name: tempo
+      type: bitfield
+      size: "3"
+      description: "テンポ"
+      fields:
+        - name: microseconds_per_quarter
+          bits: "23:0"
+          description: "4 分音符のマイクロ秒（500000 = 120 BPM）"
+    - name: bpm
+      type: virtual
+      value: "{microseconds_per_quarter == 0 ? 0 : 60000000 / microseconds_per_quarter}"
+      description: "1 分あたりの 4 分音符の数（整数に丸めた値）"
+
+  meta_time_signature:
+    - name: numerator
+      type: uint8
+      description: "拍子の分子"
+    - name: denominator_power
+      type: uint8
+      description: "拍子の分母の 2 のべき指数（2 = 4 分音符、3 = 8 分音符）"
+    - name: denominator
+      type: virtual
+      value: "{1 << denominator_power}"
+      description: "拍子の分母"
+    - name: clocks_per_click
+      type: uint8
+      description: "メトロノーム 1 回あたりの MIDI クロック数（24 = 4 分音符）"
+    - name: thirty_seconds_per_quarter
+      type: uint8
+      description: "4 分音符あたりの 32 分音符の数（通常 8）"
+
+  meta_key_signature:
+    - name: sharps_flats
+      type: int8
+      description: "調号（正 = シャープの数、負 = フラットの数。0 = ハ長調 / イ短調）"
+    - name: minor
+      type: uint8
+      description: "0 = 長調、1 = 短調"
+
+  meta_smpte_offset:
+    - name: hours
+      type: uint8
+      description: "時（上位 2 ビットはフレームレート）"
+    - name: minutes
+      type: uint8
+      description: "分"
+    - name: seconds
+      type: uint8
+      description: "秒"
+    - name: frames
+      type: uint8
+      description: "フレーム"
+    - name: fractional_frames
+      type: uint8
+      description: "フレームの 1/100"
 
   sysex_event_body:
     - name: sysex_length
       type: vlq
+      description: "データのバイト数（可変長整数）"
     - name: sysex_data
       type: bytes
       size: "{sysex_length}"
+      description: "システムエクスクルーシブのデータ（F0 の後ろはメーカー ID から、最後は F7。F7 のイベントは続きの断片・任意のメッセージ）"
 
   raw_event_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ（未知のチャンクの中身・未知のイベントの残り）"

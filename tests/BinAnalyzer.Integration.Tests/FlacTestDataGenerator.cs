@@ -167,4 +167,15 @@ public static class FlacTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// STREAMINFO だけのメタデータの後ろに、最初の音声フレームのヘッダ（同期コード 0x3FFE、固定ブロックサイズ、ブロックサイズの符号 12 = 4096、
+    /// 44.1 kHz、左右の差のステレオ、16 ビット）と 4 バイトの続きを置いた FLAC（REQ-188）。
+    /// </summary>
+    public static byte[] CreateFlacWithFrameHeader()
+    {
+        var data = CreateMinimalFlac().ToList();
+        data.AddRange(new byte[] { 0xFF, 0xF8, 0xC9, 0x88, 0x00, 0x12, 0x34, 0x56 });
+        return data.ToArray();
+    }
 }

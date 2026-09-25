@@ -1,8 +1,64 @@
+# AVI 動画（.avi。OpenDML の AVI 2.0 を含む）
+# 仕様: Microsoft "AVI RIFF File Reference"（Microsoft Learn） https://learn.microsoft.com/en-us/windows/win32/directshow/avi-riff-file-reference 、
+#   OpenDML AVI File Format Extensions 1.02（1996。AVIX・indx・ix##・dmlh）
+# 構造: 'RIFF' + 大きさ + 'AVI ' → チャンク（ID 4 バイト + 大きさ 4 バイト + 中身 + 奇数なら詰め物）の並び。
+#   LIST（hdrl・strl・movi・INFO・odml）は種類 + 子チャンクの並びとして再帰的に読む。strf の中身は直前の strh の fccType で switch し、
+#   音声の WAVEFORMATEX と LIST 'INFO' は formats/common/riff.bdef.yaml を使う。
+#   1 GiB を超える OpenDML のファイルの後続の 'RIFF' 'AVIX' も、同じチャンクとして読む。
+# 対応していないもの: 映像・音声のフレームの中身（movi の 00dc / 01wb などはバイト列）、vprp（映像の属性）の分解、
+#   OpenDML のフィールドの索引（AVI_INDEX_2FIELD）、索引の各エントリとフレームの対応付け
 name: AVI
 endianness: little
 root: avi
 imports:
   - path: common/riff.bdef.yaml
+
+enums:
+  avi_index_type:
+    - value: 0x00
+      label: AVI_INDEX_OF_INDEXES
+      description: "索引の索引（スーパーインデックス。各エントリが ix## チャンクを指す）"
+    - value: 0x01
+      label: AVI_INDEX_OF_CHUNKS
+      description: "チャンクの索引（標準インデックス。各エントリがフレームを指す）"
+    - value: 0x80
+      label: AVI_INDEX_IS_DATA
+      description: "索引がデータそのもの（未使用）"
+
+flags:
+  avih_flags:
+    bit_size: 32
+    fields:
+      - name: AVIF_HASINDEX
+        bit: 4
+      - name: AVIF_MUSTUSEINDEX
+        bit: 5
+      - name: AVIF_ISINTERLEAVED
+        bit: 8
+      - name: AVIF_TRUSTCKTYPE
+        bit: 11
+      - name: AVIF_WASCAPTUREFILE
+        bit: 16
+      - name: AVIF_COPYRIGHTED
+        bit: 17
+
+  strh_flags:
+    bit_size: 32
+    fields:
+      - name: AVISF_DISABLED
+        bit: 0
+      - name: AVISF_VIDEO_PALCHANGES
+        bit: 16
+
+  idx1_flags:
+    bit_size: 32
+    fields:
+      - name: AVIIF_LIST
+        bit: 0
+      - name: AVIIF_KEYFRAME
+        bit: 4
+      - name: AVIIF_NO_TIME
+        bit: 8
 
 structs:
   avi:
@@ -10,128 +66,172 @@ structs:
       type: ascii
       size: "4"
       expected: [0x52, 0x49, 0x46, 0x46]
-      description: "RIFF"
+      description: "RIFF のマジック（'RIFF'）"
     - name: file_size
       type: uint32
-      description: "ファイルサイズ - 8バイト（RIFFヘッダ分）"
+      description: "'AVI ' 以降のバイト数（最初の RIFF の大きさ − 8。OpenDML では後ろに 'RIFF' 'AVIX' が続く）"
     - name: form_type
       type: ascii
       size: "4"
       expected: [0x41, 0x56, 0x49, 0x20]
-      description: "AVIフォームタイプ（'AVI '）"
+      description: "フォームの種類（'AVI '）"
     - name: chunks
       type: struct
       struct: riff_chunk
       repeat: eof
+      description: "チャンクの並び（LIST 'hdrl' → LIST 'movi' → idx1 が基本。OpenDML の後続の RIFF 'AVIX' を含む）"
 
   riff_chunk:
     - name: chunk_id
       type: ascii
       size: "4"
+      description: "チャンクの ID（'LIST'・'avih'・'strh'・'strf'・'idx1'・'JUNK' など。movi の中は '00dc'（ストリーム 0 の映像）・'01wb'（ストリーム 1 の音声）など）"
     - name: chunk_size
       type: uint32
+      description: "中身のバイト数（詰め物を含まない）"
     - name: data
       type: switch
       size: "{chunk_size}"
-      switch_on: "{chunk_id}"
+      switch_on: "{substr(chunk_id, 0, 2) == 'ix' ? 'indx' : chunk_id}"
       cases:
         "'LIST'": list_chunk
+        "'RIFF'": list_chunk
         "'avih'": main_avi_header
         "'strh'": stream_header
         "'strf'": stream_format
+        "'strn'": stream_name
         "'idx1'": avi_old_index
+        "'indx'": avi_super_index
+        "'dmlh'": extended_avi_header
       default: raw_data
+      description: "チャンクの中身（ID で振り分ける。ix##（OpenDML の標準インデックス）は indx と同じ形。JUNK は位置合わせの詰め物、movi の中のフレームはバイト列）"
     - name: padding
       type: bytes
       size: "{chunk_size % 2}"
-      if: "{chunk_size % 2 != 0}"
+      if: "{chunk_size % 2 != 0 ? remaining > 0 : 0}"
       padding: true
-      description: "2バイト境界アライメント用パディング"
+      description: "次のチャンクを 2 バイト境界にそろえる詰め物（中身が奇数バイトのとき）"
 
   list_chunk:
     - name: list_type
       type: ascii
       size: "4"
-      description: "リストタイプ識別子（hdrl, strl, movi等）"
+      description: "リストの種類（hdrl = ヘッダ、strl = ストリームごとのヘッダ、movi = フレーム、INFO = テキストの情報、odml = OpenDML の拡張ヘッダ、AVIX = OpenDML の後続の RIFF）"
+    - name: body
+      type: switch
+      switch_on: "{list_type}"
+      size: remaining
+      cases:
+        "'INFO'": info_chunk_data
+      default: sub_chunk_list
+      description: "リストの中身（INFO は項目、それ以外は子チャンクの並び）"
+
+  sub_chunk_list:
     - name: sub_chunks
       type: struct
       struct: riff_chunk
       repeat: eof
+      description: "子チャンクの並び"
 
   main_avi_header:
     - name: dwMicroSecPerFrame
       type: uint32
-      description: "フレーム表示間隔（マイクロ秒）"
+      description: "フレームの間隔（マイクロ秒。40000 = 25 fps）"
     - name: dwMaxBytesPerSec
       type: uint32
-      description: "最大データレート"
+      description: "最大のデータレート（バイト / 秒）"
     - name: dwPaddingGranularity
       type: uint32
-      description: "パディング粒度"
+      description: "データを揃える単位（バイト。0 なら揃えない）"
     - name: dwFlags
       type: uint32
-      description: "AVIフラグ"
+      flags: avih_flags
+      description: "ファイルのフラグ（AVIF_HASINDEX = idx1 がある、AVIF_ISINTERLEAVED = 映像と音声が交互 など）"
     - name: dwTotalFrames
       type: uint32
-      description: "総フレーム数"
+      description: "最初の RIFF の中のフレーム数（OpenDML では全体の数が dmlh にある）"
     - name: dwInitialFrames
       type: uint32
-      description: "インターリーブファイルの初期フレーム数"
+      description: "インターリーブのファイルで、最初のフレームより前にある音声のフレーム数"
     - name: dwStreams
       type: uint32
-      description: "ストリーム数"
+      description: "ストリームの数（strl の数）"
     - name: dwSuggestedBufferSize
       type: uint32
-      description: "推奨バッファサイズ"
+      description: "読み込みの推奨バッファサイズ（最大のチャンク以上）"
     - name: dwWidth
       type: uint32
-      description: "動画幅（ピクセル）"
+      description: "映像の幅（ピクセル）"
     - name: dwHeight
       type: uint32
-      description: "動画高さ（ピクセル）"
+      description: "映像の高さ（ピクセル）"
     - name: dwReserved
       type: bytes
       size: "16"
-      description: "予約領域"
+      padding: true
+      description: "予約（0）"
 
   stream_header:
     - name: fccType
       type: ascii
       size: "4"
-      description: "ストリームタイプ（'vids'=映像, 'auds'=音声）"
+      description: "ストリームの種類（'vids' = 映像、'auds' = 音声、'txts' = 字幕、'mids' = MIDI）"
     - name: fccHandler
       type: ascii
       size: "4"
-      description: "コーデック識別子（FourCC）"
+      description: "コーデックの FourCC（映像の 'MJPG'・'H264' など。音声は 0 のことが多い）"
     - name: dwFlags
       type: uint32
+      flags: strh_flags
+      description: "ストリームのフラグ"
     - name: wPriority
       type: uint16
+      description: "ストリームの優先度"
     - name: wLanguage
       type: uint16
+      description: "言語（Windows の言語 ID）"
     - name: dwInitialFrames
       type: uint32
+      description: "インターリーブのファイルで、映像より前にある音声のフレーム数"
     - name: dwScale
       type: uint32
-      description: "タイムスケール"
+      description: "時間の単位の分母（dwRate / dwScale = 1 秒あたりのサンプル数。映像ならフレームレート）"
     - name: dwRate
       type: uint32
-      description: "レート（fps = dwRate / dwScale）"
+      description: "時間の単位の分子"
     - name: dwStart
       type: uint32
+      description: "ストリームの開始時刻（dwScale / dwRate の単位）"
     - name: dwLength
       type: uint32
-      description: "ストリーム長（dwScaleの単位）"
+      description: "ストリームの長さ（dwScale / dwRate の単位）"
     - name: dwSuggestedBufferSize
       type: uint32
+      description: "このストリームの推奨バッファサイズ"
     - name: dwQuality
       type: uint32
+      description: "品質（0〜10000。-1 = 既定）"
     - name: dwSampleSize
       type: uint32
+      description: "1 サンプルのバイト数（0 ならサンプルごとに大きさが変わる。映像は 0）"
     - name: rcFrame
-      type: bytes
-      size: "8"
-      description: "表示矩形（left, top, right, bottom 各 int16）"
+      type: struct
+      struct: avi_rect
+      description: "表示する矩形（映像のとき）"
+
+  avi_rect:
+    - name: left
+      type: int16
+      description: "左端（ピクセル）"
+    - name: top
+      type: int16
+      description: "上端（ピクセル）"
+    - name: right
+      type: int16
+      description: "右端（ピクセル）"
+    - name: bottom
+      type: int16
+      description: "下端（ピクセル）"
 
   stream_format:
     - name: format_data
@@ -140,92 +240,175 @@ structs:
       switch_on: "{fccType}"
       cases:
         "'vids'": bitmap_info_header
-        "'auds'": wave_format_ex
+        "'auds'": wave_format
       default: raw_data
+      description: "ストリームの形式（直前の strh の fccType で振り分ける。映像は BITMAPINFOHEADER、音声は WAVEFORMATEX）"
+
+  stream_name:
+    - name: name
+      type: utf8
+      size: remaining
+      description: "ストリームの名前（NUL 終端）"
 
   bitmap_info_header:
     - name: biSize
       type: uint32
-      description: "構造体サイズ（バイト）"
+      description: "この構造体のバイト数（40）"
     - name: biWidth
       type: int32
-      description: "画像幅（ピクセル）"
+      description: "映像の幅（ピクセル）"
     - name: biHeight
       type: int32
-      description: "画像高さ（正=ボトムアップ、負=トップダウン）"
+      description: "映像の高さ（ピクセル。正ならボトムアップ、負ならトップダウン）"
     - name: biPlanes
       type: uint16
-      description: "プレーン数（常に1）"
+      description: "プレーン数（1）"
     - name: biBitCount
       type: uint16
-      description: "1ピクセルあたりのビット数"
+      description: "1 ピクセルのビット数"
     - name: biCompression
       type: ascii
       size: "4"
-      description: "圧縮方式（FourCC）"
+      description: "圧縮の FourCC（'MJPG'・'H264'・'XVID' など。非圧縮 RGB は 0）"
     - name: biSizeImage
       type: uint32
-      description: "画像データサイズ（バイト）"
+      description: "1 フレームのバイト数（非圧縮 RGB 以外は目安）"
     - name: biXPelsPerMeter
       type: int32
-      description: "水平解像度（ピクセル/メートル）"
+      description: "水平解像度（ピクセル / メートル）"
     - name: biYPelsPerMeter
       type: int32
-      description: "垂直解像度（ピクセル/メートル）"
+      description: "垂直解像度（ピクセル / メートル）"
     - name: biClrUsed
       type: uint32
-      description: "使用色数"
+      description: "使うパレットの色数"
     - name: biClrImportant
       type: uint32
-      description: "重要色数"
+      description: "表示に必要な色数（0 = すべて）"
     - name: extra
       type: bytes
       size: remaining
       if: "{remaining > 0}"
-      description: "追加ヘッダデータ"
+      description: "追加のデータ（パレット、コーデック固有の設定）"
 
-  wave_format_ex:
-    - name: wFormatTag
-      type: uint16
-      description: "オーディオフォーマットタグ（1=PCM）"
-    - name: nChannels
-      type: uint16
-      description: "チャンネル数"
-    - name: nSamplesPerSec
+  extended_avi_header:
+    - name: dwGrandFrames
       type: uint32
-      description: "サンプリングレート（Hz）"
-    - name: nAvgBytesPerSec
-      type: uint32
-      description: "平均バイトレート"
-    - name: nBlockAlign
-      type: uint16
-      description: "ブロックアライメント（バイト）"
-    - name: wBitsPerSample
-      type: uint16
-      description: "1サンプルあたりのビット数"
-    - name: extra
+      description: "ファイル全体のフレーム数（AVIX を含む）"
+    - name: reserved
       type: bytes
       size: remaining
       if: "{remaining > 0}"
-      description: "拡張データ（cbSize + フォーマット固有データ）"
+      padding: true
+      description: "予約（0。ffmpeg などは 244 バイトを確保する）"
 
   avi_old_index:
     - name: entries
       type: struct
       struct: avi_index_entry
       repeat: eof
+      description: "索引のエントリ（16 バイトずつ。movi の中のチャンクの順）"
 
   avi_index_entry:
     - name: dwChunkId
       type: ascii
       size: "4"
-      description: "チャンクID（'00dc'=映像, '01wb'=音声等）"
+      description: "チャンクの ID（'00dc' = ストリーム 0 の圧縮映像、'01wb' = ストリーム 1 の音声 など）"
     - name: dwFlags
       type: uint32
-      description: "フラグ（0x10=AVIIF_KEYFRAME）"
+      flags: idx1_flags
+      description: "フラグ（AVIIF_KEYFRAME = キーフレーム、AVIIF_LIST = LIST チャンク）"
     - name: dwOffset
       type: uint32
-      description: "moviリスト先頭からのオフセット"
+      description: "チャンクの位置（movi の 'movi' の位置から。実装によってはファイル先頭から）"
     - name: dwSize
       type: uint32
-      description: "チャンクデータサイズ"
+      description: "チャンクの中身のバイト数"
+
+  avi_super_index:
+    - name: wLongsPerEntry
+      type: uint16
+      description: "エントリ 1 個の 4 バイト単位の大きさ（スーパーインデックスは 4、標準インデックスは 2）"
+    - name: bIndexSubType
+      type: uint8
+      description: "索引の細分（0 = フレーム、1 = AVI_INDEX_2FIELD）"
+    - name: bIndexType
+      type: uint8
+      enum: avi_index_type
+      description: "索引の種類"
+    - name: nEntriesInUse
+      type: uint32
+      description: "使っているエントリの数"
+    - name: dwChunkId
+      type: ascii
+      size: "4"
+      description: "索引が指すチャンクの ID（'00dc' など）"
+    - name: body
+      type: switch
+      switch_on: "{bIndexType}"
+      size: remaining
+      cases:
+        "0": super_index_entries
+        "1": standard_index_entries
+      default: raw_data
+      description: "索引のエントリ（種類で振り分ける。使っていないエントリの領域は予約）"
+
+  super_index_entries:
+    - name: dwReserved
+      type: bytes
+      size: "12"
+      padding: true
+      description: "予約（0）"
+    - name: entries
+      type: struct
+      struct: super_index_entry
+      repeat_count: "{nEntriesInUse}"
+      description: "ix## チャンクへのエントリ（16 バイトずつ）"
+    - name: unused
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      padding: true
+      description: "後から追記するために確保した未使用のエントリ"
+
+  super_index_entry:
+    - name: qwOffset
+      type: uint64
+      description: "ix## チャンクの位置（ファイル先頭から）"
+    - name: dwSize
+      type: uint32
+      description: "ix## チャンクのバイト数"
+    - name: dwDuration
+      type: uint32
+      description: "その索引が表す時間（strh の単位）"
+
+  standard_index_entries:
+    - name: qwBaseOffset
+      type: uint64
+      description: "各エントリの dwOffset の基準の位置（ファイル先頭から）"
+    - name: dwReserved
+      type: uint32
+      description: "予約（0）"
+    - name: entries
+      type: struct
+      struct: standard_index_entry
+      repeat_count: "{nEntriesInUse}"
+      description: "フレームへのエントリ（8 バイトずつ）"
+    - name: unused
+      type: bytes
+      size: remaining
+      if: "{remaining > 0}"
+      padding: true
+      description: "後から追記するために確保した未使用のエントリ"
+
+  standard_index_entry:
+    - name: dwOffset
+      type: uint32
+      description: "フレームの中身の位置（qwBaseOffset から。チャンクのヘッダの後ろ）"
+    - name: dwSize
+      type: uint32
+      description: "フレームのバイト数（最上位ビットが 1 ならキーフレームでない）"
+    - name: is_keyframe
+      type: virtual
+      value: "{(dwSize >> 31) == 0 ? 1 : 0}"
+      description: "キーフレームか（dwSize の最上位ビットが 0）"

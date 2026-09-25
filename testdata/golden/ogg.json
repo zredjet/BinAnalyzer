@@ -5,6 +5,15 @@
   "name": "OGG",
   "struct_type": "ogg_file",
   "children": {
+    "file_size": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u5168\u4F53\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u4ECA\u306E\u4F4D\u7F6E = file_size \u2212 remaining\uFF09",
+      "name": "file_size",
+      "value": 87
+    },
     "pages": {
       "_type": "array",
       "type": "struct",
@@ -26,6 +35,7 @@
               "type": "bytes",
               "offset": 0,
               "size": 4,
+              "description": "\u30DA\u30FC\u30B8\u306E\u540C\u671F\u306E\u5370\uFF08\u0027OggS\u0027\uFF09",
               "name": "capture_pattern",
               "hex": "4F 67 67 53",
               "valid": true
@@ -35,6 +45,7 @@
               "type": "uint8",
               "offset": 4,
               "size": 1,
+              "description": "\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u69CB\u9020\u306E\u7248\uFF080\uFF09",
               "_validation": {
                 "passed": true,
                 "expression": "{version == 0}"
@@ -44,43 +55,46 @@
               "hex": "0x0"
             },
             "header_type": {
-              "_type": "integer",
-              "type": "uint8",
+              "_type": "bitfield",
+              "type": "bitfield",
               "offset": 5,
               "size": 1,
+              "description": "\u30DA\u30FC\u30B8\u306E\u30D5\u30E9\u30B0",
               "name": "header_type",
-              "value": 2,
-              "hex": "0x2"
-            },
-            "is_continuation": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 6,
-              "size": 0,
-              "name": "is_continuation",
-              "value": 0
-            },
-            "is_bos": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 6,
-              "size": 0,
-              "name": "is_bos",
-              "value": 1
-            },
-            "is_eos": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 6,
-              "size": 0,
-              "name": "is_eos",
-              "value": 0
+              "raw_value": "0x2",
+              "fields": [
+                {
+                  "name": "is_continuation",
+                  "value": 0,
+                  "bit_high": 0,
+                  "bit_low": 0
+                },
+                {
+                  "name": "is_bos",
+                  "value": 1,
+                  "bit_high": 1,
+                  "bit_low": 1
+                },
+                {
+                  "name": "is_eos",
+                  "value": 0,
+                  "bit_high": 2,
+                  "bit_low": 2
+                },
+                {
+                  "name": "reserved",
+                  "value": 0,
+                  "bit_high": 7,
+                  "bit_low": 3
+                }
+              ]
             },
             "granule_position": {
               "_type": "integer",
-              "type": "uint64",
+              "type": "int64",
               "offset": 6,
               "size": 8,
+              "description": "\u3053\u306E\u30DA\u30FC\u30B8\u3067\u7D42\u308F\u308B\u30D1\u30B1\u30C3\u30C8\u306E\u4F4D\u7F6E\uFF08\u30B3\u30FC\u30C7\u30C3\u30AF\u306E\u5358\u4F4D\u3002\u97F3\u58F0\u306A\u3089\u30B5\u30F3\u30D7\u30EB\u6570\u3002-1 = \u3053\u306E\u30DA\u30FC\u30B8\u3067\u7D42\u308F\u308B\u30D1\u30B1\u30C3\u30C8\u304C\u7121\u3044\uFF09",
               "name": "granule_position",
               "value": 0,
               "hex": "0x0"
@@ -90,6 +104,7 @@
               "type": "uint32",
               "offset": 14,
               "size": 4,
+              "description": "\u8AD6\u7406\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u30B7\u30EA\u30A2\u30EB\u756A\u53F7",
               "name": "serial_number",
               "value": 1,
               "hex": "0x1"
@@ -99,6 +114,7 @@
               "type": "uint32",
               "offset": 18,
               "size": 4,
+              "description": "\u8AD6\u7406\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u4E2D\u306E\u30DA\u30FC\u30B8\u756A\u53F7\uFF080 \u304B\u3089\uFF09",
               "name": "page_sequence_number",
               "value": 0,
               "hex": "0x0"
@@ -108,6 +124,7 @@
               "type": "uint32",
               "offset": 22,
               "size": 4,
+              "description": "\u30DA\u30FC\u30B8\u306E CRC-32\uFF08\u3053\u306E\u6B04\u3092 0 \u3068\u3057\u305F\u5168\u4F53\u3002\u591A\u9805\u5F0F 0x04C11DB7\u30FB\u975E\u53CD\u8EE2\u3002\u691C\u8A3C\u3057\u306A\u3044\uFF09",
               "name": "crc32",
               "value": 0,
               "hex": "0x0"
@@ -117,6 +134,7 @@
               "type": "uint8",
               "offset": 26,
               "size": 1,
+              "description": "\u30BB\u30B0\u30E1\u30F3\u30C8\u8868\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
               "name": "num_segments",
               "value": 1,
               "hex": "0x1"
@@ -134,11 +152,40 @@
                   "type": "uint8",
                   "offset": 27,
                   "size": 1,
+                  "description": "lacing \u5024\u306E\u4E26\u3073\uFF08\u5404\u30BB\u30B0\u30E1\u30F3\u30C8\u306E\u30D0\u30A4\u30C8\u6570\u3002255 \u672A\u6E80\u306E\u5024\u3067\u30D1\u30B1\u30C3\u30C8\u304C\u7D42\u308F\u308B\uFF09",
                   "name": "segment_table",
                   "value": 30,
                   "hex": "0x1E"
                 }
               ]
+            },
+            "body_size": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 28,
+              "size": 0,
+              "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF08lacing \u5024\u306E\u5408\u8A08\uFF09",
+              "name": "body_size",
+              "value": 30
+            },
+            "packet_magic": {
+              "_type": "string",
+              "type": "latin1",
+              "offset": 28,
+              "size": 8,
+              "description": "\u30DA\u30FC\u30B8\u306E\u5148\u982D\u306E\u30D1\u30B1\u30C3\u30C8\u306E\u5148\u982D 8 \u30D0\u30A4\u30C8\uFF08\u5148\u8AAD\u307F\u3002\u30B3\u30FC\u30C7\u30C3\u30AF\u306E\u30D8\u30C3\u30C0\u3092\u898B\u5206\u3051\u308B\uFF09",
+              "name": "packet_magic",
+              "value": "\u0001vorbis\u0000",
+              "encoding": "latin1"
+            },
+            "packet_kind": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 28,
+              "size": 0,
+              "description": "\u5148\u982D\u306E\u30D1\u30B1\u30C3\u30C8\u306E\u7A2E\u985E\uFF08vorbis\u30FBOpusHead\u30FBOpusTags\u30FBFLAC\u30FBSpeex\u30FBtheora\u3001\u305D\u308C\u4EE5\u5916\u306F data\uFF09",
+              "name": "packet_kind",
+              "value": "vorbis"
             },
             "page_data": {
               "_type": "struct",
@@ -146,23 +193,26 @@
               "offset": 28,
               "size": 30,
               "name": "page_data",
-              "struct_type": "vorbis_bos_data",
+              "struct_type": "vorbis_header_packet",
               "children": {
                 "packet_type": {
                   "_type": "integer",
                   "type": "uint8",
                   "offset": 28,
                   "size": 1,
+                  "description": "\u30D8\u30C3\u30C0\u30D1\u30B1\u30C3\u30C8\u306E\u7A2E\u985E",
                   "name": "packet_type",
                   "value": 1,
                   "hex": "0x1",
-                  "enum_label": "identification"
+                  "enum_label": "identification",
+                  "enum_description": "\u8B58\u5225\u30D8\u30C3\u30C0\uFF08\u30C1\u30E3\u30F3\u30CD\u30EB\u6570\u30FB\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u5468\u6CE2\u6570\uFF09"
                 },
                 "codec_id": {
                   "_type": "string",
                   "type": "ascii",
                   "offset": 29,
                   "size": 6,
+                  "description": "Vorbis \u306E\u30D8\u30C3\u30C0\u306E\u5370\uFF08\u0027vorbis\u0027\uFF09",
                   "name": "codec_id",
                   "value": "vorbis",
                   "encoding": "ascii"
@@ -180,6 +230,7 @@
                       "type": "uint32",
                       "offset": 35,
                       "size": 4,
+                      "description": "Vorbis \u306E\u7248\uFF080\uFF09",
                       "name": "vorbis_version",
                       "value": 0,
                       "hex": "0x0"
@@ -189,6 +240,7 @@
                       "type": "uint8",
                       "offset": 39,
                       "size": 1,
+                      "description": "\u30C1\u30E3\u30F3\u30CD\u30EB\u6570",
                       "name": "channels",
                       "value": 1,
                       "hex": "0x1"
@@ -198,33 +250,37 @@
                       "type": "uint32",
                       "offset": 40,
                       "size": 4,
+                      "description": "\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u5468\u6CE2\u6570\uFF08Hz\uFF09",
                       "name": "sample_rate",
                       "value": 44100,
                       "hex": "0xAC44"
                     },
                     "bitrate_maximum": {
                       "_type": "integer",
-                      "type": "uint32",
+                      "type": "int32",
                       "offset": 44,
                       "size": 4,
+                      "description": "\u6700\u5927\u306E\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\uFF08\u30D3\u30C3\u30C8 / \u79D2\u30020 = \u6307\u5B9A\u306A\u3057\uFF09",
                       "name": "bitrate_maximum",
                       "value": 0,
                       "hex": "0x0"
                     },
                     "bitrate_nominal": {
                       "_type": "integer",
-                      "type": "uint32",
+                      "type": "int32",
                       "offset": 48,
                       "size": 4,
+                      "description": "\u76EE\u5B89\u306E\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\uFF08\u30D3\u30C3\u30C8 / \u79D2\uFF09",
                       "name": "bitrate_nominal",
                       "value": 128000,
                       "hex": "0x1F400"
                     },
                     "bitrate_minimum": {
                       "_type": "integer",
-                      "type": "uint32",
+                      "type": "int32",
                       "offset": 52,
                       "size": 4,
+                      "description": "\u6700\u5C0F\u306E\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\uFF08\u30D3\u30C3\u30C8 / \u79D2\uFF09",
                       "name": "bitrate_minimum",
                       "value": 0,
                       "hex": "0x0"
@@ -234,6 +290,7 @@
                       "type": "uint8",
                       "offset": 56,
                       "size": 1,
+                      "description": "\u30D6\u30ED\u30C3\u30AF\u30B5\u30A4\u30BA\uFF08\u4E0B\u4F4D 4 \u30D3\u30C3\u30C8 = \u77ED\u3044\u30D6\u30ED\u30C3\u30AF\u3001\u4E0A\u4F4D 4 \u30D3\u30C3\u30C8 = \u9577\u3044\u30D6\u30ED\u30C3\u30AF\u306E 2 \u306E\u3079\u304D\u6307\u6570\uFF09",
                       "name": "blocksize_info",
                       "value": 184,
                       "hex": "0xB8"
@@ -243,6 +300,7 @@
                       "type": "virtual",
                       "offset": 57,
                       "size": 0,
+                      "description": "\u77ED\u3044\u30D6\u30ED\u30C3\u30AF\u306E\u30B5\u30F3\u30D7\u30EB\u6570\u306E 2 \u306E\u3079\u304D\u6307\u6570\uFF086\u301C13\uFF09",
                       "name": "blocksize_0",
                       "value": 8
                     },
@@ -251,6 +309,7 @@
                       "type": "virtual",
                       "offset": 57,
                       "size": 0,
+                      "description": "\u9577\u3044\u30D6\u30ED\u30C3\u30AF\u306E\u30B5\u30F3\u30D7\u30EB\u6570\u306E 2 \u306E\u3079\u304D\u6307\u6570\uFF08blocksize_0 \u4EE5\u4E0A\uFF09",
                       "name": "blocksize_1",
                       "value": 11
                     },
@@ -259,19 +318,12 @@
                       "type": "uint8",
                       "offset": 57,
                       "size": 1,
+                      "description": "\u67A0\u306E\u5370\uFF081\uFF09",
                       "name": "framing_flag",
                       "value": 1,
                       "hex": "0x1"
                     }
                   }
-                },
-                "remaining_data": {
-                  "_type": "bytes",
-                  "type": "bytes",
-                  "offset": 58,
-                  "size": 0,
-                  "name": "remaining_data",
-                  "hex": ""
                 }
               }
             }
@@ -290,6 +342,7 @@
               "type": "bytes",
               "offset": 58,
               "size": 4,
+              "description": "\u30DA\u30FC\u30B8\u306E\u540C\u671F\u306E\u5370\uFF08\u0027OggS\u0027\uFF09",
               "name": "capture_pattern",
               "hex": "4F 67 67 53",
               "valid": true
@@ -299,6 +352,7 @@
               "type": "uint8",
               "offset": 62,
               "size": 1,
+              "description": "\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u69CB\u9020\u306E\u7248\uFF080\uFF09",
               "_validation": {
                 "passed": true,
                 "expression": "{version == 0}"
@@ -308,43 +362,46 @@
               "hex": "0x0"
             },
             "header_type": {
-              "_type": "integer",
-              "type": "uint8",
+              "_type": "bitfield",
+              "type": "bitfield",
               "offset": 63,
               "size": 1,
+              "description": "\u30DA\u30FC\u30B8\u306E\u30D5\u30E9\u30B0",
               "name": "header_type",
-              "value": 4,
-              "hex": "0x4"
-            },
-            "is_continuation": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 64,
-              "size": 0,
-              "name": "is_continuation",
-              "value": 0
-            },
-            "is_bos": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 64,
-              "size": 0,
-              "name": "is_bos",
-              "value": 0
-            },
-            "is_eos": {
-              "_type": "virtual",
-              "type": "virtual",
-              "offset": 64,
-              "size": 0,
-              "name": "is_eos",
-              "value": 1
+              "raw_value": "0x4",
+              "fields": [
+                {
+                  "name": "is_continuation",
+                  "value": 0,
+                  "bit_high": 0,
+                  "bit_low": 0
+                },
+                {
+                  "name": "is_bos",
+                  "value": 0,
+                  "bit_high": 1,
+                  "bit_low": 1
+                },
+                {
+                  "name": "is_eos",
+                  "value": 1,
+                  "bit_high": 2,
+                  "bit_low": 2
+                },
+                {
+                  "name": "reserved",
+                  "value": 0,
+                  "bit_high": 7,
+                  "bit_low": 3
+                }
+              ]
             },
             "granule_position": {
               "_type": "integer",
-              "type": "uint64",
+              "type": "int64",
               "offset": 64,
               "size": 8,
+              "description": "\u3053\u306E\u30DA\u30FC\u30B8\u3067\u7D42\u308F\u308B\u30D1\u30B1\u30C3\u30C8\u306E\u4F4D\u7F6E\uFF08\u30B3\u30FC\u30C7\u30C3\u30AF\u306E\u5358\u4F4D\u3002\u97F3\u58F0\u306A\u3089\u30B5\u30F3\u30D7\u30EB\u6570\u3002-1 = \u3053\u306E\u30DA\u30FC\u30B8\u3067\u7D42\u308F\u308B\u30D1\u30B1\u30C3\u30C8\u304C\u7121\u3044\uFF09",
               "name": "granule_position",
               "value": 0,
               "hex": "0x0"
@@ -354,6 +411,7 @@
               "type": "uint32",
               "offset": 72,
               "size": 4,
+              "description": "\u8AD6\u7406\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u30B7\u30EA\u30A2\u30EB\u756A\u53F7",
               "name": "serial_number",
               "value": 1,
               "hex": "0x1"
@@ -363,6 +421,7 @@
               "type": "uint32",
               "offset": 76,
               "size": 4,
+              "description": "\u8AD6\u7406\u30B9\u30C8\u30EA\u30FC\u30E0\u306E\u4E2D\u306E\u30DA\u30FC\u30B8\u756A\u53F7\uFF080 \u304B\u3089\uFF09",
               "name": "page_sequence_number",
               "value": 1,
               "hex": "0x1"
@@ -372,6 +431,7 @@
               "type": "uint32",
               "offset": 80,
               "size": 4,
+              "description": "\u30DA\u30FC\u30B8\u306E CRC-32\uFF08\u3053\u306E\u6B04\u3092 0 \u3068\u3057\u305F\u5168\u4F53\u3002\u591A\u9805\u5F0F 0x04C11DB7\u30FB\u975E\u53CD\u8EE2\u3002\u691C\u8A3C\u3057\u306A\u3044\uFF09",
               "name": "crc32",
               "value": 0,
               "hex": "0x0"
@@ -381,6 +441,7 @@
               "type": "uint8",
               "offset": 84,
               "size": 1,
+              "description": "\u30BB\u30B0\u30E1\u30F3\u30C8\u8868\u306E\u30A8\u30F3\u30C8\u30EA\u6570",
               "name": "num_segments",
               "value": 1,
               "hex": "0x1"
@@ -398,11 +459,30 @@
                   "type": "uint8",
                   "offset": 85,
                   "size": 1,
+                  "description": "lacing \u5024\u306E\u4E26\u3073\uFF08\u5404\u30BB\u30B0\u30E1\u30F3\u30C8\u306E\u30D0\u30A4\u30C8\u6570\u3002255 \u672A\u6E80\u306E\u5024\u3067\u30D1\u30B1\u30C3\u30C8\u304C\u7D42\u308F\u308B\uFF09",
                   "name": "segment_table",
                   "value": 1,
                   "hex": "0x1"
                 }
               ]
+            },
+            "body_size": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 86,
+              "size": 0,
+              "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF08lacing \u5024\u306E\u5408\u8A08\uFF09",
+              "name": "body_size",
+              "value": 1
+            },
+            "packet_kind": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 86,
+              "size": 0,
+              "description": "\u5148\u982D\u306E\u30D1\u30B1\u30C3\u30C8\u306E\u7A2E\u985E\uFF08vorbis\u30FBOpusHead\u30FBOpusTags\u30FBFLAC\u30FBSpeex\u30FBtheora\u3001\u305D\u308C\u4EE5\u5916\u306F data\uFF09",
+              "name": "packet_kind",
+              "value": "data"
             },
             "page_data": {
               "_type": "struct",
@@ -417,6 +497,7 @@
                   "type": "bytes",
                   "offset": 86,
                   "size": 1,
+                  "description": "\u5206\u89E3\u3057\u306A\u3044\u30C7\u30FC\u30BF\uFF08\u30D1\u30B1\u30C3\u30C8\u306E\u4E2D\u8EAB\u306E\u65AD\u7247\uFF09",
                   "name": "data",
                   "hex": "00"
                 }

@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 
 namespace BinAnalyzer.Integration.Tests;
 
@@ -114,5 +115,45 @@ public static class FlvTestDataGenerator
         BinaryPrimitives.WriteUInt32BigEndian(span[pos..], 12);
 
         return data;
+    }
+
+    /// <summary>
+    /// onMetaData（AMF0 の連想配列: duration = 1.5、width = 64、encoder = "gen"、stereo = true）、AVC の sequence header と
+    /// 表示時刻のずれ −40 ms の NALU、AAC の sequence header を持つ FLV（REQ-188）。PreviousTagSize はすべて正しい値にする。
+    /// </summary>
+    public static byte[] CreateFlvWithMetadata()
+    {
+        static byte[] Be16(int v) => [(byte)(v >> 8), (byte)v];
+        static byte[] Be24(int v) => [(byte)(v >> 16), (byte)(v >> 8), (byte)v];
+        static byte[] Be32(int v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+        static byte[] Str(string s) => Be16(s.Length).Concat(Encoding.ASCII.GetBytes(s)).ToArray();
+        static byte[] Num(double d) { var b = BitConverter.GetBytes(d); Array.Reverse(b); return new byte[] { 0 }.Concat(b).ToArray(); }
+
+        var meta = new byte[] { 2 }.Concat(Str("onMetaData")).Concat(new byte[] { 8 }).Concat(Be32(4))
+            .Concat(Str("duration")).Concat(Num(1.5))
+            .Concat(Str("width")).Concat(Num(64))
+            .Concat(Str("encoder")).Concat(new byte[] { 2 }).Concat(Str("gen"))
+            .Concat(Str("stereo")).Concat(new byte[] { 1, 1 })
+            .Concat(new byte[] { 0, 0, 9 }).ToArray();
+        var ms = new MemoryStream();
+        ms.Write("FLV"u8);
+        ms.Write([1, 5]);
+        ms.Write(Be32(9));
+        ms.Write(Be32(0));
+        void Tag(int type, int timestamp, byte[] body)
+        {
+            ms.WriteByte((byte)type);
+            ms.Write(Be24(body.Length));
+            ms.Write(Be24(timestamp));
+            ms.WriteByte(0);
+            ms.Write(Be24(0));
+            ms.Write(body);
+            ms.Write(Be32(body.Length + 11));
+        }
+        Tag(18, 0, meta);
+        Tag(9, 0, new byte[] { 0x17, 0, 0, 0, 0, 1, 0x64, 0x00, 0x0A, 0xFF });
+        Tag(9, 40, new byte[] { 0x27, 1, 0xFF, 0xFF, 0xD8, 0, 0, 0, 1, 0x41 });
+        Tag(8, 0, new byte[] { 0xAF, 0, 0x12, 0x10 });
+        return ms.ToArray();
     }
 }

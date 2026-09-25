@@ -98,7 +98,10 @@ public class SourceLocationTests
         var lines = File.ReadAllLines(path);
         var result = FormatValidator.Validate(_loader.Load(path));
 
-        var error = result.Errors.Single(d => d.Code == "VAL002");
+        // 単独では iso_box が未定義（container_box の children と dref_box の entries が参照する）
+        var undefined = result.Errors.Where(d => d.Code == "VAL002").OrderBy(d => d.SourceLine).ToList();
+        undefined.Should().HaveCount(2);
+        var error = undefined[0];
         error.SourceFile.Should().Be(path);
         error.SourceLine.Should().Be(LineOf(lines, "- name: children"));
         error.Location.Should().Be($"isobmff.bdef.yaml:{error.SourceLine}");

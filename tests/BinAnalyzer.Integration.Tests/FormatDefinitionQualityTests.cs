@@ -21,18 +21,6 @@ public sealed class FormatDefinitionQualityTests
     /// </summary>
     private static readonly HashSet<string> Pending = new(StringComparer.Ordinal)
     {
-        // 音声・映像
-        "mp3.bdef.yaml",
-        "mp4.bdef.yaml",
-        "wav.bdef.yaml",
-        "flac.bdef.yaml",
-        "ogg.bdef.yaml",
-        "avi.bdef.yaml",
-        "flv.bdef.yaml",
-        "midi.bdef.yaml",
-        "mkv.bdef.yaml",
-        "common/riff.bdef.yaml",
-        "common/isobmff.bdef.yaml",
         // データ・その他
         "sqlite.bdef.yaml",
         "parquet.bdef.yaml",

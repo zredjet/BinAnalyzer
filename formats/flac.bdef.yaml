@@ -1,85 +1,185 @@
+# FLAC 音声（.flac）
+# 仕様: RFC 9639 Free Lossless Audio Codec (FLAC)（2024-12） https://www.rfc-editor.org/rfc/rfc9639
+# 構造: 'fLaC' → メタデータブロック（最終フラグ 1 ビット + 種類 7 ビット + 長さ 24 ビット + 中身）の並び（最終フラグが 1 のブロックまで）
+#   → 音声フレームの並び。メタデータブロックは種類で switch する。VORBIS_COMMENT の中だけリトルエンディアン。
+#   音声フレームは長さを持たない（次のフレームの同期コードまで）ため、最初のフレームのヘッダだけ分解し、フレームの並びは 1 つのバイト列として読む。
+# 対応していないもの: 音声フレームの分割とサブフレーム（ビット単位の符号化）の分解、フレームの CRC-8 / CRC-16 の検証、
+#   ファイルの先頭の ID3v2 タグ（仕様外だがよくある）、Ogg に入った FLAC（formats/ogg.bdef.yaml 側）
 name: FLAC
 endianness: big
 root: flac
 
 enums:
+  block_type:
+    - value: 0
+      label: STREAMINFO
+      description: "ストリームの基本情報（必ず最初）"
+    - value: 1
+      label: PADDING
+      description: "詰め物（後からメタデータを書き足すための空き）"
+    - value: 2
+      label: APPLICATION
+      description: "アプリケーション固有のデータ"
+    - value: 3
+      label: SEEKTABLE
+      description: "シークの表"
+    - value: 4
+      label: VORBIS_COMMENT
+      description: "タグ（KEY=VALUE の文字列）"
+    - value: 5
+      label: CUESHEET
+      description: "キューシート（CD のトラックとインデックス）"
+    - value: 6
+      label: PICTURE
+      description: "画像（カバーアートなど）"
+    - value: 127
+      label: forbidden
+      description: "使用禁止（フレームの同期コードと紛らわしいため）"
+
   picture_type:
     - value: 0
       label: Other
+      description: "その他"
     - value: 1
       label: File_Icon_32x32
+      description: "32 × 32 の PNG のファイルアイコン"
     - value: 2
       label: Other_File_Icon
+      description: "その他のファイルアイコン"
     - value: 3
       label: Front_Cover
+      description: "表紙"
     - value: 4
       label: Back_Cover
+      description: "裏表紙"
     - value: 5
       label: Leaflet
+      description: "リーフレットのページ"
     - value: 6
       label: Media
+      description: "メディア（CD のレーベル面など）"
     - value: 7
       label: Lead_Artist
+      description: "リードアーティスト"
     - value: 8
       label: Artist
+      description: "アーティスト"
     - value: 9
       label: Conductor
+      description: "指揮者"
     - value: 10
       label: Band
+      description: "バンド・オーケストラ"
     - value: 11
       label: Composer
+      description: "作曲者"
     - value: 12
       label: Lyricist
+      description: "作詞者"
     - value: 13
       label: Recording_Location
+      description: "録音場所"
     - value: 14
       label: During_Recording
+      description: "録音中の様子"
     - value: 15
       label: During_Performance
+      description: "演奏中の様子"
     - value: 16
       label: Movie_Screen_Capture
+      description: "映像のキャプチャ"
     - value: 17
       label: A_Bright_Coloured_Fish
+      description: "明るい色の魚（ID3v2 から受け継いだ冗談の項目）"
     - value: 18
       label: Illustration
+      description: "イラスト"
     - value: 19
       label: Band_Logotype
+      description: "バンドのロゴ"
     - value: 20
       label: Publisher_Logotype
+      description: "出版社のロゴ"
+
+  channel_assignment:
+    - value: 0
+      label: mono
+      description: "1 チャンネル"
+    - value: 1
+      label: left_right
+      description: "2 チャンネル（左・右）"
+    - value: 2
+      label: three_channels
+      description: "3 チャンネル（左・右・中央）"
+    - value: 3
+      label: four_channels
+      description: "4 チャンネル"
+    - value: 4
+      label: five_channels
+      description: "5 チャンネル"
+    - value: 5
+      label: six_channels
+      description: "6 チャンネル（5.1ch）"
+    - value: 6
+      label: seven_channels
+      description: "7 チャンネル"
+    - value: 7
+      label: eight_channels
+      description: "8 チャンネル（7.1ch）"
+    - value: 8
+      label: left_side
+      description: "2 チャンネル（左 + 左右の差）"
+    - value: 9
+      label: side_right
+      description: "2 チャンネル（左右の差 + 右）"
+    - value: 10
+      label: mid_side
+      description: "2 チャンネル（和 + 差）"
 
 structs:
   flac:
+    - name: file_size
+      type: virtual
+      value: "{remaining}"
+      description: "ファイル全体のバイト数（今の位置 = file_size − remaining）"
     - name: magic
       type: bytes
       size: "4"
       expected: [0x66, 0x4C, 0x61, 0x43]
-      description: "fLaCマジック"
+      description: "マジック（'fLaC'）"
     - name: metadata_blocks
       type: struct
       struct: metadata_block
       repeat_until: "{is_last == 1}"
+      description: "メタデータブロック（STREAMINFO が最初。最終フラグが 1 のブロックまで）"
+    - name: first_frame_header
+      type: struct
+      struct: frame_header
+      if: "{remaining >= 6}"
+      seek: "{file_size - remaining}"
+      seek_restore: true
+      description: "最初の音声フレームのヘッダ（先読み。frames の先頭 4 バイト）"
+    - name: frames
+      type: bytes
+      size: remaining
+      description: "音声フレームの並び（フレームの長さはヘッダに無いので分けない）"
 
   metadata_block:
-    - name: header_byte
-      type: uint8
-    - name: is_last
-      type: virtual
-      value: "{header_byte >> 7}"
-      description: "最終ブロックフラグ（1=最終）"
-    - name: block_type
-      type: virtual
-      value: "{header_byte & 127}"
-      description: "ブロックタイプ（0=STREAMINFO, 1=PADDING, 2=APPLICATION, 3=SEEKTABLE, 4=VORBIS_COMMENT, 5=CUESHEET, 6=PICTURE）"
-    - name: length_b0
-      type: uint8
-    - name: length_b1
-      type: uint8
-    - name: length_b2
-      type: uint8
-    - name: length
-      type: virtual
-      value: "{(length_b0 << 16) | (length_b1 << 8) | length_b2}"
-      description: "ブロックデータ長（24ビット）"
+    - name: header
+      type: bitfield
+      size: "4"
+      description: "メタデータブロックのヘッダ"
+      fields:
+        - name: is_last
+          bits: "31"
+          description: "1 なら最後のメタデータブロック（後ろは音声フレーム）"
+        - name: block_type
+          bits: "30:24"
+          enum: block_type
+          description: "ブロックの種類（7〜126 は予約）"
+        - name: length
+          bits: "23:0"
+          description: "中身のバイト数"
     - name: data
       type: switch
       size: "{length}"
@@ -93,225 +193,283 @@ structs:
         "5": cuesheet_block
         "6": picture_block
       default: raw_data
+      description: "ブロックの中身（種類で振り分ける）"
 
   streaminfo:
     - name: min_block_size
       type: uint16
-      description: "最小ブロックサイズ（サンプル数）"
+      description: "最小のブロックサイズ（サンプル数。16〜65535）"
     - name: max_block_size
       type: uint16
-      description: "最大ブロックサイズ（サンプル数）"
-    - name: min_frame_size_b0
-      type: uint8
-    - name: min_frame_size_b1
-      type: uint8
-    - name: min_frame_size_b2
-      type: uint8
-    - name: min_frame_size
-      type: virtual
-      value: "{(min_frame_size_b0 << 16) | (min_frame_size_b1 << 8) | min_frame_size_b2}"
-      description: "最小フレームサイズ（バイト、0=不明）"
-    - name: max_frame_size_b0
-      type: uint8
-    - name: max_frame_size_b1
-      type: uint8
-    - name: max_frame_size_b2
-      type: uint8
-    - name: max_frame_size
-      type: virtual
-      value: "{(max_frame_size_b0 << 16) | (max_frame_size_b1 << 8) | max_frame_size_b2}"
-      description: "最大フレームサイズ（バイト、0=不明）"
+      description: "最大のブロックサイズ（サンプル数。固定ブロックサイズなら min と同じ）"
+    - name: frame_sizes
+      type: bitfield
+      size: "6"
+      description: "フレームのバイト数の範囲（24 ビットずつ）"
+      fields:
+        - name: min_frame_size
+          bits: "47:24"
+          description: "最小のフレームのバイト数（0 = 不明）"
+        - name: max_frame_size
+          bits: "23:0"
+          description: "最大のフレームのバイト数（0 = 不明）"
     - name: sample_rate_channels_bps_samples
       type: bitfield
       size: "8"
+      description: "サンプリング周波数・チャンネル数・ビット深度・総サンプル数"
       fields:
         - name: sample_rate
           bits: "63:44"
-          description: "サンプルレート（Hz）"
+          description: "サンプリング周波数（Hz）"
         - name: channels
           bits: "43:41"
-          description: "チャンネル数 - 1（実値は+1）"
+          description: "チャンネル数 − 1"
         - name: bps
           bits: "40:36"
-          description: "ビット/サンプル - 1（実値は+1）"
+          description: "1 サンプルのビット数 − 1"
         - name: total_samples
           bits: "35:0"
-          description: "総サンプル数（0=不明）"
+          description: "チャンネルあたりの総サンプル数（0 = 不明）"
+    - name: channel_count
+      type: virtual
+      value: "{channels + 1}"
+      description: "チャンネル数（1〜8）"
+    - name: bits_per_sample
+      type: virtual
+      value: "{bps + 1}"
+      description: "1 サンプルのビット数（4〜32）"
     - name: md5
       type: bytes
       size: "16"
-      description: "非圧縮オーディオデータのMD5シグネチャ"
+      description: "展開した音声のサンプルの MD5（0 = 未計算。展開が必要なため検証しない）"
 
   padding_block:
     - name: padding
       type: bytes
       size: remaining
+      padding: true
+      description: "詰め物（0）"
 
   application_block:
     - name: app_id
-      type: bytes
+      type: ascii
       size: "4"
-      description: "アプリケーションID"
+      description: "アプリケーションの登録 ID（4 文字。例: 'riff' = 元の RIFF のチャンク、'aiff' = 元の AIFF のチャンク）"
     - name: data
       type: bytes
       size: remaining
+      description: "アプリケーション固有のデータ"
 
   seektable_block:
     - name: seekpoints
       type: struct
       struct: seekpoint
       repeat: eof
+      description: "シークポイント（18 バイトずつ。サンプル番号の昇順）"
 
   seekpoint:
     - name: sample_number
       type: uint64
-      description: "ターゲットフレームの先頭サンプル番号"
+      description: "対象のフレームの先頭のサンプル番号（0xFFFFFFFFFFFFFFFF = 空きの印）"
     - name: offset
       type: uint64
-      description: "先頭フレームヘッダからのオフセット（バイト）"
+      description: "対象のフレームの位置（最初の音声フレームの先頭からのバイト数）"
     - name: num_samples
       type: uint16
-      description: "ターゲットフレームのサンプル数"
+      description: "対象のフレームのサンプル数"
 
   vorbis_comment_block:
     endianness: little
     fields:
       - name: vendor_length
         type: uint32
-        endianness: little
-        description: "ベンダー文字列長"
+        description: "ベンダー文字列のバイト数（リトルエンディアン）"
       - name: vendor_string
         type: utf8
         size: "{vendor_length}"
-        description: "ベンダー文字列"
+        description: "エンコーダの名前（例: 'reference libFLAC 1.4.3'・'Lavf61.1.100'）"
       - name: comment_count
         type: uint32
-        endianness: little
-        description: "コメント数"
+        description: "タグの数"
       - name: comments
         type: struct
         struct: vorbis_comment_entry
         repeat_count: "{comment_count}"
+        description: "タグ（長さ + KEY=VALUE）の並び"
 
   vorbis_comment_entry:
     endianness: little
     fields:
       - name: length
         type: uint32
-        endianness: little
-        description: "コメント文字列長"
+        description: "タグの文字列のバイト数"
       - name: value
         type: utf8
         size: "{length}"
-        description: "コメント文字列（KEY=VALUE形式）"
+        description: "タグ（'TITLE=曲名' のような KEY=VALUE。キーは大文字小文字を区別しない ASCII）"
 
   cuesheet_block:
     - name: media_catalog
       type: ascii
       size: "128"
-      description: "メディアカタログ番号"
+      description: "メディアカタログ番号（CD なら 13 桁の数字、NUL で詰める）"
     - name: lead_in_samples
       type: uint64
-      description: "リードインサンプル数"
+      description: "リードインのサンプル数（CD のとき）"
     - name: cuesheet_flags
       type: bitfield
       size: "1"
+      description: "キューシートのフラグ"
       fields:
         - name: is_cd
           bits: "7"
-          description: "CDフラグ（1=コンパクトディスク）"
+          description: "1 なら CD のキューシート"
+        - name: reserved_flags
+          bits: "6:0"
+          description: "予約（0）"
     - name: reserved
       type: bytes
       size: "258"
-      description: "予約領域"
+      padding: true
+      description: "予約（0）"
     - name: num_tracks
       type: uint8
-      description: "トラック数"
+      description: "トラックの数（リードアウトのトラックを含む）"
     - name: tracks
       type: struct
       struct: cuesheet_track
       repeat_count: "{num_tracks}"
+      description: "トラック"
 
   cuesheet_track:
     - name: track_offset
       type: uint64
-      description: "トラックオフセット（サンプル数）"
+      description: "トラックの開始位置（音声の先頭からのサンプル数）"
     - name: track_number
       type: uint8
-      description: "トラック番号"
+      description: "トラック番号（0 は不可。CD のリードアウトは 170）"
     - name: isrc
       type: ascii
       size: "12"
-      description: "トラックISRC"
+      description: "トラックの ISRC（12 文字。無ければ NUL）"
     - name: track_flags
       type: bitfield
       size: "1"
+      description: "トラックのフラグ"
       fields:
         - name: track_type
           bits: "7"
-          description: "トラックタイプ（0=オーディオ、1=非オーディオ）"
+          description: "トラックの種類（0 = 音声、1 = 音声以外）"
         - name: pre_emphasis
           bits: "6"
-          description: "プリエンファシス（0=なし、1=あり）"
+          description: "プリエンファシス（0 = なし、1 = あり）"
+        - name: reserved_track_flags
+          bits: "5:0"
+          description: "予約（0）"
     - name: track_reserved
       type: bytes
       size: "13"
-      description: "予約領域"
+      padding: true
+      description: "予約（0）"
     - name: num_indices
       type: uint8
-      description: "インデックスポイント数"
+      description: "インデックスポイントの数"
     - name: indices
       type: struct
       struct: cuesheet_index
       repeat_count: "{num_indices}"
+      description: "インデックスポイント"
 
   cuesheet_index:
     - name: offset
       type: uint64
-      description: "トラック先頭からのサンプルオフセット"
+      description: "インデックスの位置（トラックの先頭からのサンプル数）"
     - name: index_number
       type: uint8
-      description: "インデックスポイント番号"
+      description: "インデックスの番号（CD では 0 = プリギャップ、1 = トラックの開始）"
     - name: reserved
       type: bytes
       size: "3"
       padding: true
-      description: "予約領域"
+      description: "予約（0）"
 
   picture_block:
     - name: picture_type
       type: uint32
       enum: picture_type
+      description: "画像の種類（ID3v2 の APIC と同じ番号）"
     - name: mime_length
       type: uint32
+      description: "MIME タイプのバイト数"
     - name: mime
       type: ascii
       size: "{mime_length}"
-      description: "MIMEタイプ"
+      description: "MIME タイプ（'image/png'・'image/jpeg'。'-->' なら画像の URL）"
     - name: desc_length
       type: uint32
+      description: "説明のバイト数"
     - name: description
       type: utf8
       size: "{desc_length}"
-      description: "画像の説明"
+      description: "画像の説明（UTF-8）"
     - name: width
       type: uint32
+      description: "画像の幅（ピクセル。不明なら 0）"
     - name: height
       type: uint32
+      description: "画像の高さ（ピクセル。不明なら 0）"
     - name: depth
       type: uint32
-      description: "ビット深度"
+      description: "色の深さ（ビット / ピクセル。不明なら 0）"
     - name: colors
       type: uint32
-      description: "インデックスカラー数（0=非インデックス）"
+      description: "パレットの色数（パレット画像でなければ 0）"
     - name: data_length
       type: uint32
+      description: "画像のデータのバイト数"
     - name: data
       type: bytes
       size: "{data_length}"
-      description: "画像データ"
+      description: "画像のデータ（PNG・JPEG のファイルそのもの）"
+
+  frame_header:
+    - name: header
+      type: bitfield
+      size: "4"
+      description: "フレームヘッダの先頭 32 ビット"
+      fields:
+        - name: sync_code
+          bits: "31:18"
+          description: "同期コード（0b11111111111110 = 0x3FFE）"
+        - name: reserved_bit
+          bits: "17"
+          description: "予約（0）"
+        - name: blocking_strategy
+          bits: "16"
+          description: "0 = 固定ブロックサイズ（番号はフレーム番号）、1 = 可変ブロックサイズ（番号はサンプル番号）"
+        - name: block_size_code
+          bits: "15:12"
+          description: "ブロックサイズの符号（1 = 192、2〜5 = 576 × 2^(n−2)、6 / 7 = 後ろに 8 / 16 ビットの値、8〜15 = 256 × 2^(n−8)）"
+        - name: sample_rate_code
+          bits: "11:8"
+          description: "サンプリング周波数の符号（0 = STREAMINFO の値、9 = 44.1 kHz、10 = 48 kHz、12〜14 = 後ろに値 など）"
+        - name: channel_code
+          bits: "7:4"
+          enum: channel_assignment
+          description: "チャンネルの割り当て"
+        - name: sample_size_code
+          bits: "3:1"
+          description: "ビット深度の符号（0 = STREAMINFO の値、1 = 8、2 = 12、4 = 16、5 = 20、6 = 24、7 = 32 ビット）"
+        - name: reserved_bit2
+          bits: "0"
+          description: "予約（0）"
+    - name: sync_valid
+      type: virtual
+      value: "{sync_code == 0x3FFE ? 1 : 0}"
+      description: "同期コードが正しいか"
 
   raw_data:
     - name: data
       type: bytes
       size: remaining
+      description: "分解しないデータ（バイト列）"

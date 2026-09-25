@@ -79,7 +79,7 @@ public sealed class GuiImportTests : BunitContext
         doc!.DecodeFailure.Should().BeNull();
         doc.Errors.Should().BeEmpty();
         doc.Format.Definition.Structs.Should().ContainKey("raw_data");
-        doc.Index.ByPath("chunks[0].data.audio_format").Should().NotBeNull();
+        doc.Index.ByPath("chunks[0].data.wFormatTag").Should().NotBeNull();
         doc.Index.ByPath("chunks[1].data.data").Should().NotBeNull();
         handler.RequestedUrls.Should().Contain("formats/common/riff.bdef.yaml");
 

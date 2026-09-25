@@ -54,6 +54,7 @@
                   "type": "ascii",
                   "offset": 8,
                   "size": 4,
+                  "description": "\u4E3B\u306A\u30D6\u30E9\u30F3\u30C9\uFF08\u30D5\u30A1\u30A4\u30EB\u304C\u6E96\u62E0\u3059\u308B\u4ED5\u69D8\u3002\u0027isom\u0027\u30FB\u0027mp42\u0027\u30FB\u0027M4A \u0027\u30FB\u0027heic\u0027 \u306A\u3069\uFF09",
                   "name": "major_brand",
                   "value": "heic",
                   "encoding": "ascii"
@@ -63,17 +64,60 @@
                   "type": "uint32",
                   "offset": 12,
                   "size": 4,
+                  "description": "\u4E3B\u306A\u30D6\u30E9\u30F3\u30C9\u306E\u7248",
                   "name": "minor_version",
                   "value": 0,
                   "hex": "0x0"
                 },
                 "compatible_brands": {
-                  "_type": "bytes",
-                  "type": "bytes",
+                  "_type": "array",
+                  "type": "struct",
                   "offset": 16,
                   "size": 8,
                   "name": "compatible_brands",
-                  "hex": "68 65 69 63 6D 69 66 31"
+                  "count": 2,
+                  "elements": [
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 16,
+                      "size": 4,
+                      "name": "compatible_brands",
+                      "struct_type": "brand",
+                      "children": {
+                        "brand": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 16,
+                          "size": 4,
+                          "description": "\u30D6\u30E9\u30F3\u30C9\uFF084 \u6587\u5B57\uFF09",
+                          "name": "brand",
+                          "value": "heic",
+                          "encoding": "ascii"
+                        }
+                      }
+                    },
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 20,
+                      "size": 4,
+                      "name": "compatible_brands",
+                      "struct_type": "brand",
+                      "children": {
+                        "brand": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 20,
+                          "size": 4,
+                          "description": "\u30D6\u30E9\u30F3\u30C9\uFF084 \u6587\u5B57\uFF09",
+                          "name": "brand",
+                          "value": "mif1",
+                          "encoding": "ascii"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -183,6 +227,7 @@
                               "type": "uint8",
                               "offset": 44,
                               "size": 1,
+                              "description": "box \u306E\u7248\uFF080\uFF09",
                               "name": "version",
                               "value": 0,
                               "hex": "0x0"
@@ -192,6 +237,7 @@
                               "type": "bytes",
                               "offset": 45,
                               "size": 3,
+                              "description": "\u30D5\u30E9\u30B0\uFF080\uFF09",
                               "name": "flags",
                               "hex": "00 00 00"
                             },
@@ -200,6 +246,7 @@
                               "type": "uint32",
                               "offset": 48,
                               "size": 4,
+                              "description": "\u4E88\u7D04\uFF080\u3002QuickTime \u3067\u306F\u30B3\u30F3\u30DD\u30FC\u30CD\u30F3\u30C8\u306E\u7A2E\u985E \u0027mhlr\u0027 / \u0027dhlr\u0027\uFF09",
                               "name": "pre_defined",
                               "value": 0,
                               "hex": "0x0"
@@ -209,6 +256,7 @@
                               "type": "ascii",
                               "offset": 52,
                               "size": 4,
+                              "description": "\u30CF\u30F3\u30C9\u30E9\u306E\u7A2E\u985E\uFF08\u0027vide\u0027 = \u6620\u50CF\u3001\u0027soun\u0027 = \u97F3\u58F0\u3001\u0027hint\u0027\u30FB\u0027meta\u0027\u30FB\u0027mdir\u0027 = iTunes \u306E\u30E1\u30BF\u30C7\u30FC\u30BF\u3001\u0027pict\u0027 = HEIF \u306E\u753B\u50CF \u306A\u3069\uFF09",
                               "name": "handler_type",
                               "value": "pict",
                               "encoding": "ascii"
@@ -218,6 +266,7 @@
                               "type": "bytes",
                               "offset": 56,
                               "size": 12,
+                              "description": "\u4E88\u7D04\uFF080\uFF09",
                               "name": "reserved",
                               "hex": "00 00 00 00 00 00 00 00 00 00 00 00"
                             }
@@ -588,6 +637,7 @@
                   "type": "bytes",
                   "offset": 140,
                   "size": 8,
+                  "description": "\u5206\u89E3\u3057\u306A\u3044\u30C7\u30FC\u30BF\uFF08\u30D0\u30A4\u30C8\u5217\uFF09",
                   "name": "data",
                   "hex": "FF FF FF FF FF FF FF FF"
                 }

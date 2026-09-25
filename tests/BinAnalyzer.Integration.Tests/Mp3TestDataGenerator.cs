@@ -69,4 +69,60 @@ public static class Mp3TestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// ID3v2.4 + MPEG-1 Layer III（128 kbps・44.1 kHz・モノラル）+ ID3v1.1 の MP3（REQ-188）。ID3v2.4 には TIT2（UTF-8 "タイトル"）・
+    /// TPE1（BOM 付き UTF-16 "Artist"）・200 バイトの TXXX（シンクセーフ整数の大きさ）と 16 バイトの詰め物、最初のフレームに Info ヘッダ、
+    /// 続いて 417 バイトのフレーム 2 個、末尾に ID3v1.1（"V1Title"、トラック 7、ジャンル 17）。
+    /// </summary>
+    public static byte[] CreateMp3WithTags()
+    {
+        static byte[] Syncsafe(int v) => [(byte)((v >> 21) & 0x7F), (byte)((v >> 14) & 0x7F), (byte)((v >> 7) & 0x7F), (byte)(v & 0x7F)];
+        static byte[] Frame(string id, byte[] body) => Encoding.ASCII.GetBytes(id).Concat(Syncsafe(body.Length)).Concat(new byte[2]).Concat(body).ToArray();
+        var frames = Frame("TIT2", new byte[] { 3 }.Concat(Encoding.UTF8.GetBytes("タイトル")).ToArray())
+            .Concat(Frame("TPE1", new byte[] { 1, 0xFF, 0xFE }.Concat(Encoding.Unicode.GetBytes("Artist")).ToArray()))
+            .Concat(Frame("TXXX", new byte[] { 0 }.Concat(Encoding.ASCII.GetBytes("key\0" + new string('x', 195))).ToArray()))
+            .Concat(new byte[16]).ToArray();
+        var ms = new MemoryStream();
+        ms.Write("ID3"u8);
+        ms.Write([4, 0, 0]);
+        ms.Write(Syncsafe(frames.Length));
+        ms.Write(frames);
+
+        byte[] MpegFrame(bool info)
+        {
+            var f = new byte[417];
+            new byte[] { 0xFF, 0xFB, 0x90, 0xC4 }.CopyTo(f, 0);
+            if (info)
+            {
+                "Info"u8.CopyTo(f.AsSpan(4 + 17));
+                BinaryPrimitives.WriteUInt32BigEndian(f.AsSpan(25), 0x3);     // frames | bytes
+                BinaryPrimitives.WriteUInt32BigEndian(f.AsSpan(29), 2);
+                BinaryPrimitives.WriteUInt32BigEndian(f.AsSpan(33), 417 * 3);
+                "LAME3.100"u8.CopyTo(f.AsSpan(37));
+            }
+            return f;
+        }
+        ms.Write(MpegFrame(true));
+        ms.Write(MpegFrame(false));
+        ms.Write(MpegFrame(false));
+
+        var v1 = new byte[128];
+        "TAG"u8.CopyTo(v1);
+        "V1Title"u8.CopyTo(v1.AsSpan(3));
+        "1999"u8.CopyTo(v1.AsSpan(93));
+        v1[126] = 7;
+        v1[127] = 17;
+        ms.Write(v1);
+        return ms.ToArray();
+    }
+
+    /// <summary>ID3 タグの無い MPEG-2 Layer III（64 kbps・22.05 kHz・モノラル、208 バイト）のフレーム 2 個（REQ-188）。</summary>
+    public static byte[] CreateMp3WithoutTags()
+    {
+        var data = new byte[208 * 2];
+        for (var i = 0; i < 2; i++)
+            new byte[] { 0xFF, 0xF3, 0x80, 0xC4 }.CopyTo(data, i * 208);
+        return data;
+    }
 }

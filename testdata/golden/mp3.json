@@ -5,31 +5,63 @@
   "name": "MP3",
   "struct_type": "mp3",
   "children": {
-    "id3v2_header": {
+    "file_size": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u30D5\u30A1\u30A4\u30EB\u5168\u4F53\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u672B\u5C3E\u306E ID3v1 \u3092\u63A2\u3059\u306E\u306B\u4F7F\u3046\uFF09",
+      "name": "file_size",
+      "value": 26
+    },
+    "id3v2_probe": {
+      "_type": "string",
+      "type": "ascii",
+      "offset": 0,
+      "size": 3,
+      "description": "\u5148\u982D 3 \u30D0\u30A4\u30C8\uFF08\u5148\u8AAD\u307F\u3002\u0027ID3\u0027 \u306A\u3089 ID3v2 \u30BF\u30B0\u304C\u3042\u308B\uFF09",
+      "name": "id3v2_probe",
+      "value": "ID3",
+      "encoding": "ascii"
+    },
+    "has_id3v1": {
+      "_type": "virtual",
+      "type": "virtual",
+      "offset": 0,
+      "size": 0,
+      "description": "\u672B\u5C3E\u306B ID3v1 \u30BF\u30B0\u304C\u3042\u308B\u304B",
+      "name": "has_id3v1",
+      "value": 0
+    },
+    "id3v2": {
       "_type": "struct",
       "type": "struct",
       "offset": 0,
-      "size": 10,
-      "name": "id3v2_header",
-      "struct_type": "id3v2_header",
+      "size": 22,
+      "name": "id3v2",
+      "struct_type": "id3v2_tag",
       "children": {
         "magic": {
           "_type": "string",
           "type": "ascii",
           "offset": 0,
           "size": 3,
-          "description": "ID3",
+          "description": "ID3v2 \u306E\u5370\uFF08\u0027ID3\u0027\uFF09",
+          "_validation": {
+            "passed": true,
+            "expression": "{magic == \u0027ID3\u0027}"
+          },
           "name": "magic",
           "value": "ID3",
           "encoding": "ascii"
         },
-        "version": {
+        "version_major": {
           "_type": "integer",
           "type": "uint8",
           "offset": 3,
           "size": 1,
-          "description": "ID3v2\u30D0\u30FC\u30B8\u30E7\u30F3\uFF083=v2.3, 4=v2.4\uFF09",
-          "name": "version",
+          "description": "ID3v2 \u306E\u7248\uFF082 = v2.2\u30013 = v2.3\u30014 = v2.4\uFF09",
+          "name": "version_major",
           "value": 3,
           "hex": "0x3"
         },
@@ -38,6 +70,7 @@
           "type": "uint8",
           "offset": 4,
           "size": 1,
+          "description": "\u6539\u8A02\u756A\u53F7\uFF080\uFF09",
           "name": "revision",
           "value": 0,
           "hex": "0x0"
@@ -47,6 +80,7 @@
           "type": "bitfield",
           "offset": 5,
           "size": 1,
+          "description": "\u30BF\u30B0\u306E\u30D5\u30E9\u30B0",
           "name": "flags",
           "raw_value": "0x0",
           "fields": [
@@ -69,46 +103,20 @@
               "bit_low": 5
             },
             {
-              "name": "footer",
+              "name": "footer_present",
               "value": 0,
               "bit_high": 4,
               "bit_low": 4
             }
           ]
         },
-        "size_b0": {
+        "size_raw": {
           "_type": "integer",
-          "type": "uint8",
+          "type": "uint32",
           "offset": 6,
-          "size": 1,
-          "name": "size_b0",
-          "value": 0,
-          "hex": "0x0"
-        },
-        "size_b1": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 7,
-          "size": 1,
-          "name": "size_b1",
-          "value": 0,
-          "hex": "0x0"
-        },
-        "size_b2": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 8,
-          "size": 1,
-          "name": "size_b2",
-          "value": 0,
-          "hex": "0x0"
-        },
-        "size_b3": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 9,
-          "size": 1,
-          "name": "size_b3",
+          "size": 4,
+          "description": "\u30BF\u30B0\u306E\u5927\u304D\u3055\uFF08\u30B7\u30F3\u30AF\u30BB\u30FC\u30D5\u6574\u6570\u3002\u5404\u30D0\u30A4\u30C8\u306E\u4E0B\u4F4D 7 \u30D3\u30C3\u30C8\uFF09",
+          "name": "size_raw",
           "value": 12,
           "hex": "0xC"
         },
@@ -117,252 +125,357 @@
           "type": "virtual",
           "offset": 10,
           "size": 0,
-          "description": "\u30B7\u30F3\u30AF\u30BB\u30FC\u30D5\u6574\u6570\u304B\u3089\u7B97\u51FA\u3057\u305F\u30BF\u30B0\u30B5\u30A4\u30BA",
+          "description": "\u30D8\u30C3\u30C0\u3068\u30D5\u30C3\u30BF\u3092\u9664\u3044\u305F\u30BF\u30B0\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30B7\u30F3\u30AF\u30BB\u30FC\u30D5\u6574\u6570\u3092\u6570\u5024\u306B\u3057\u305F\u3082\u306E\uFF09",
           "name": "tag_size",
           "value": 12
+        },
+        "body": {
+          "_type": "struct",
+          "type": "struct",
+          "offset": 10,
+          "size": 12,
+          "name": "body",
+          "struct_type": "id3v2_body",
+          "children": {
+            "frames": {
+              "_type": "struct",
+              "type": "switch",
+              "offset": 10,
+              "size": 12,
+              "name": "frames",
+              "struct_type": "id3v2_frames",
+              "children": {
+                "frames": {
+                  "_type": "array",
+                  "type": "struct",
+                  "offset": 10,
+                  "size": 12,
+                  "name": "frames",
+                  "count": 1,
+                  "elements": [
+                    {
+                      "_type": "struct",
+                      "type": "struct",
+                      "offset": 10,
+                      "size": 12,
+                      "name": "frames",
+                      "struct_type": "id3v2_frame",
+                      "children": {
+                        "frame_id": {
+                          "_type": "string",
+                          "type": "ascii",
+                          "offset": 10,
+                          "size": 4,
+                          "description": "\u30D5\u30EC\u30FC\u30E0\u306E ID\uFF08TIT2 = \u66F2\u540D\u3001TPE1 = \u30A2\u30FC\u30C6\u30A3\u30B9\u30C8\u3001TALB = \u30A2\u30EB\u30D0\u30E0\u3001TRCK = \u30C8\u30E9\u30C3\u30AF\u756A\u53F7\u3001APIC = \u753B\u50CF\u3001COMM = \u30B3\u30E1\u30F3\u30C8 \u306A\u3069\uFF09",
+                          "name": "frame_id",
+                          "value": "TIT2",
+                          "encoding": "ascii"
+                        },
+                        "is_padding": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 14,
+                          "size": 0,
+                          "description": "\u8A70\u3081\u7269\u304B\uFF08ID \u304C 0 \u3067\u59CB\u307E\u308B\u306A\u3089\u3001\u3053\u3053\u304B\u3089\u30BF\u30B0\u306E\u672B\u5C3E\u307E\u3067\u306F 0 \u306E\u8A70\u3081\u7269\uFF09",
+                          "name": "is_padding",
+                          "value": 0
+                        },
+                        "frame_size_raw": {
+                          "_type": "integer",
+                          "type": "uint32",
+                          "offset": 14,
+                          "size": 4,
+                          "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF08v2.3 \u306F\u901A\u5E38\u306E\u6574\u6570\u3001v2.4 \u306F\u30B7\u30F3\u30AF\u30BB\u30FC\u30D5\u6574\u6570\uFF09",
+                          "name": "frame_size_raw",
+                          "value": 2,
+                          "hex": "0x2"
+                        },
+                        "frame_size": {
+                          "_type": "virtual",
+                          "type": "virtual",
+                          "offset": 18,
+                          "size": 0,
+                          "description": "\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF08v2.4 \u306F\u30B7\u30F3\u30AF\u30BB\u30FC\u30D5\u6574\u6570\u3092\u6570\u5024\u306B\u3057\u305F\u3082\u306E\uFF09",
+                          "name": "frame_size",
+                          "value": 2
+                        },
+                        "frame_flags": {
+                          "_type": "integer",
+                          "type": "uint16",
+                          "offset": 18,
+                          "size": 2,
+                          "description": "\u30D5\u30EC\u30FC\u30E0\u306E\u30D5\u30E9\u30B0\uFF08\u4E0A\u4F4D\u30D0\u30A4\u30C8 = \u72B6\u614B\u306E\u30D5\u30E9\u30B0\u3001\u4E0B\u4F4D\u30D0\u30A4\u30C8 = \u5F62\u5F0F\u306E\u30D5\u30E9\u30B0\uFF08\u5727\u7E2E\u30FB\u6697\u53F7\u5316\u30FB\u30B0\u30EB\u30FC\u30D7\u30FB\u975E\u540C\u671F\u5316\u30FB\u30C7\u30FC\u30BF\u9577\uFF09\uFF09",
+                          "name": "frame_flags",
+                          "value": 0,
+                          "hex": "0x0"
+                        },
+                        "body": {
+                          "_type": "struct",
+                          "type": "switch",
+                          "offset": 20,
+                          "size": 2,
+                          "name": "body",
+                          "struct_type": "text_frame",
+                          "children": {
+                            "encoding": {
+                              "_type": "integer",
+                              "type": "uint8",
+                              "offset": 20,
+                              "size": 1,
+                              "description": "\u6587\u5B57\u30B3\u30FC\u30C9",
+                              "name": "encoding",
+                              "value": 3,
+                              "hex": "0x3",
+                              "enum_label": "UTF-8",
+                              "enum_description": "UTF-8\uFF08ID3v2.4 \u4EE5\u964D\uFF09"
+                            },
+                            "text": {
+                              "_type": "struct",
+                              "type": "switch",
+                              "offset": 21,
+                              "size": 1,
+                              "name": "text",
+                              "struct_type": "utf8_text",
+                              "children": {
+                                "value": {
+                                  "_type": "string",
+                                  "type": "utf8",
+                                  "offset": 21,
+                                  "size": 1,
+                                  "description": "UTF-8 \u306E\u6587\u5B57\u5217",
+                                  "name": "value",
+                                  "value": "A",
+                                  "encoding": "utf8"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
         }
       }
     },
     "frames": {
       "_type": "array",
       "type": "struct",
-      "offset": 10,
-      "size": 12,
+      "offset": 22,
+      "size": 4,
       "name": "frames",
       "count": 1,
       "elements": [
         {
           "_type": "struct",
           "type": "struct",
-          "offset": 10,
-          "size": 12,
+          "offset": 22,
+          "size": 4,
           "name": "frames",
-          "struct_type": "id3v2_frame",
+          "struct_type": "mpeg_frame",
           "children": {
-            "frame_id": {
-              "_type": "string",
-              "type": "ascii",
-              "offset": 10,
+            "frame_offset": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 22,
+              "size": 0,
+              "description": "\u3053\u306E\u30D5\u30EC\u30FC\u30E0\u306E\u4F4D\u7F6E\uFF08\u30D5\u30A1\u30A4\u30EB\u5148\u982D\u304B\u3089\uFF09",
+              "name": "frame_offset",
+              "value": 22
+            },
+            "header": {
+              "_type": "bitfield",
+              "type": "bitfield",
+              "offset": 22,
               "size": 4,
-              "description": "\u30D5\u30EC\u30FC\u30E0\u8B58\u5225\u5B50\uFF08TIT2, TPE1, TALB\u7B49\uFF09",
-              "name": "frame_id",
-              "value": "TIT2",
-              "encoding": "ascii"
+              "description": "\u30D5\u30EC\u30FC\u30E0\u30D8\u30C3\u30C0\uFF0832 \u30D3\u30C3\u30C8\uFF09",
+              "name": "header",
+              "raw_value": "0xFFFB9004",
+              "fields": [
+                {
+                  "name": "sync",
+                  "value": 2047,
+                  "bit_high": 31,
+                  "bit_low": 21
+                },
+                {
+                  "name": "version",
+                  "value": 3,
+                  "bit_high": 20,
+                  "bit_low": 19,
+                  "enum_label": "MPEG1",
+                  "enum_description": "MPEG-1\uFF0832\u301C48 kHz\uFF09"
+                },
+                {
+                  "name": "layer",
+                  "value": 1,
+                  "bit_high": 18,
+                  "bit_low": 17,
+                  "enum_label": "Layer_III",
+                  "enum_description": "Layer III\uFF08MP3\uFF09"
+                },
+                {
+                  "name": "protection_absent",
+                  "value": 1,
+                  "bit_high": 16,
+                  "bit_low": 16
+                },
+                {
+                  "name": "bitrate_index",
+                  "value": 9,
+                  "bit_high": 15,
+                  "bit_low": 12
+                },
+                {
+                  "name": "sampling_rate_index",
+                  "value": 0,
+                  "bit_high": 11,
+                  "bit_low": 10
+                },
+                {
+                  "name": "padding_bit",
+                  "value": 0,
+                  "bit_high": 9,
+                  "bit_low": 9
+                },
+                {
+                  "name": "private_bit",
+                  "value": 0,
+                  "bit_high": 8,
+                  "bit_low": 8
+                },
+                {
+                  "name": "channel_mode",
+                  "value": 0,
+                  "bit_high": 7,
+                  "bit_low": 6,
+                  "enum_label": "stereo",
+                  "enum_description": "\u30B9\u30C6\u30EC\u30AA"
+                },
+                {
+                  "name": "mode_extension",
+                  "value": 0,
+                  "bit_high": 5,
+                  "bit_low": 4
+                },
+                {
+                  "name": "copyright",
+                  "value": 0,
+                  "bit_high": 3,
+                  "bit_low": 3
+                },
+                {
+                  "name": "original",
+                  "value": 1,
+                  "bit_high": 2,
+                  "bit_low": 2
+                },
+                {
+                  "name": "emphasis",
+                  "value": 0,
+                  "bit_high": 1,
+                  "bit_low": 0,
+                  "enum_label": "none",
+                  "enum_description": "\u306A\u3057"
+                }
+              ]
             },
-            "frame_size": {
-              "_type": "integer",
-              "type": "uint32",
-              "offset": 14,
-              "size": 4,
-              "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u30B5\u30A4\u30BA",
-              "name": "frame_size",
-              "value": 2,
-              "hex": "0x2"
+            "is_valid": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "\u9577\u3055\u3092\u6C42\u3081\u3089\u308C\u308B\u6B63\u3057\u3044\u30D8\u30C3\u30C0\u304B\uFF08\u540C\u671F\u30EF\u30FC\u30C9\u30FB\u7248\u30FB\u30EC\u30A4\u30E4\u30FB\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\u30FB\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u5468\u6CE2\u6570\uFF09",
+              "name": "is_valid",
+              "value": 1
             },
-            "frame_flags": {
-              "_type": "integer",
-              "type": "uint16",
-              "offset": 18,
-              "size": 2,
-              "description": "\u30D5\u30EC\u30FC\u30E0\u30D5\u30E9\u30B0",
-              "name": "frame_flags",
-              "value": 0,
-              "hex": "0x0"
+            "bitrate_kbps": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\uFF08kbps\u3002\u7248\u3068\u30EC\u30A4\u30E4\u3054\u3068\u306E\u8868\u304B\u3089 bitrate_index \u3067\u5F15\u304F\uFF09",
+              "name": "bitrate_kbps",
+              "value": 128
             },
-            "frame_data": {
+            "sample_rate_hz": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u5468\u6CE2\u6570\uFF08Hz\uFF09",
+              "name": "sample_rate_hz",
+              "value": 44100
+            },
+            "samples_per_frame": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "1 \u30D5\u30EC\u30FC\u30E0\u306E\u30B5\u30F3\u30D7\u30EB\u6570\uFF08Layer I = 384\u3001Layer II = 1152\u3001Layer III = MPEG-1 \u3067 1152\u3001MPEG-2 / 2.5 \u3067 576\uFF09",
+              "name": "samples_per_frame",
+              "value": 1152
+            },
+            "frame_length": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30D8\u30C3\u30C0\u3092\u542B\u3080\u3002\u30D8\u30C3\u30C0\u304C\u6B63\u3057\u304F\u306A\u3051\u308C\u3070\u3001ID3v1 \u306E\u624B\u524D\u307E\u3067\u306E\u6B8B\u308A\u5168\u90E8\uFF09",
+              "name": "frame_length",
+              "value": 417
+            },
+            "side_info_size": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "Layer III \u306E\u30B5\u30A4\u30C9\u60C5\u5831\u306E\u30D0\u30A4\u30C8\u6570\uFF08MPEG-1 \u306F\u30E2\u30CE\u30E9\u30EB 17\u30FB\u305D\u308C\u4EE5\u5916 32\u3001MPEG-2 / 2.5 \u306F 9\u30FB17\uFF09",
+              "name": "side_info_size",
+              "value": 32
+            },
+            "vbr_tag_offset": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "Xing / Info \u30D8\u30C3\u30C0\u304C\u3042\u308B\u306F\u305A\u306E\u4F4D\u7F6E\uFF08\u30B5\u30A4\u30C9\u60C5\u5831\u306E\u76F4\u5F8C\uFF09",
+              "name": "vbr_tag_offset",
+              "value": 58
+            },
+            "payload_length": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u306E\u4E2D\u8EAB\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u30D8\u30C3\u30C0\u3068 CRC \u3092\u9664\u304F\uFF09",
+              "name": "payload_length",
+              "value": 413
+            },
+            "available_length": {
+              "_type": "virtual",
+              "type": "virtual",
+              "offset": 26,
+              "size": 0,
+              "description": "ID3v1 \u306E\u624B\u524D\u307E\u3067\u306E\u6B8B\u308A\u306E\u30D0\u30A4\u30C8\u6570\uFF08\u9014\u4E2D\u3067\u5207\u308C\u305F\u30D5\u30A1\u30A4\u30EB\u306E\u6700\u5F8C\u306E\u30D5\u30EC\u30FC\u30E0\u306B\u4F7F\u3046\uFF09",
+              "name": "available_length",
+              "value": 0
+            },
+            "audio_data": {
               "_type": "bytes",
               "type": "bytes",
-              "offset": 20,
-              "size": 2,
-              "description": "\u30D5\u30EC\u30FC\u30E0\u30C7\u30FC\u30BF\u672C\u4F53",
-              "name": "frame_data",
-              "hex": "03 41"
+              "offset": 26,
+              "size": 0,
+              "description": "\u30D5\u30EC\u30FC\u30E0\u306E\u4E2D\u8EAB\uFF08\u30B5\u30A4\u30C9\u60C5\u5831\u3068\u30E1\u30A4\u30F3\u30C7\u30FC\u30BF\u3002\u6700\u521D\u306E\u30D5\u30EC\u30FC\u30E0\u306B VBR \u30D8\u30C3\u30C0\u304C\u3042\u308B\u3068\u304D\u306F\u305D\u308C\u3092\u542B\u3080\u3002\u30D8\u30C3\u30C0\u304C\u6B63\u3057\u304F\u306A\u3051\u308C\u3070\u6B8B\u308A\u306E\u30C7\u30FC\u30BF\u3002\u30D5\u30A1\u30A4\u30EB\u304C\u9014\u4E2D\u3067\u5207\u308C\u3066\u3044\u308C\u3070\u3001\u3042\u308B\u3060\u3051\uFF09",
+              "name": "audio_data",
+              "hex": ""
             }
           }
         }
       ]
-    },
-    "mpeg_frame_header": {
-      "_type": "struct",
-      "type": "struct",
-      "offset": 22,
-      "size": 2,
-      "name": "mpeg_frame_header",
-      "struct_type": "mpeg_frame_header",
-      "children": {
-        "raw": {
-          "_type": "integer",
-          "type": "uint16",
-          "offset": 22,
-          "size": 2,
-          "description": "MPEG\u30D5\u30EC\u30FC\u30E0\u30D8\u30C3\u30C0\u524D\u534A2\u30D0\u30A4\u30C8",
-          "name": "raw",
-          "value": 65531,
-          "hex": "0xFFFB"
-        },
-        "sync": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 24,
-          "size": 0,
-          "description": "\u540C\u671F\u30EF\u30FC\u30C9\uFF080x7FF\uFF09",
-          "name": "sync",
-          "value": 2047
-        },
-        "mpeg_version": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 24,
-          "size": 0,
-          "description": "MPEG\u30D0\u30FC\u30B8\u30E7\u30F3\uFF080=MPEG2.5, 2=MPEG2, 3=MPEG1\uFF09",
-          "name": "mpeg_version",
-          "value": 3,
-          "enum_label": "MPEG1"
-        },
-        "layer": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 24,
-          "size": 0,
-          "description": "\u30EC\u30A4\u30E4\u30FC\uFF081=Layer III, 2=Layer II, 3=Layer I\uFF09",
-          "name": "layer",
-          "value": 1,
-          "enum_label": "Layer_III"
-        },
-        "protection": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 24,
-          "size": 0,
-          "description": "CRC\u4FDD\u8B77\uFF080=\u3042\u308A, 1=\u306A\u3057\uFF09",
-          "name": "protection",
-          "value": 1
-        }
-      }
-    },
-    "audio_properties": {
-      "_type": "struct",
-      "type": "struct",
-      "offset": 24,
-      "size": 1,
-      "name": "audio_properties",
-      "struct_type": "audio_properties",
-      "children": {
-        "raw": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 24,
-          "size": 1,
-          "description": "\u30AA\u30FC\u30C7\u30A3\u30AA\u30D7\u30ED\u30D1\u30C6\u30A3\u30D0\u30A4\u30C8",
-          "name": "raw",
-          "value": 144,
-          "hex": "0x90"
-        },
-        "bitrate_index": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 25,
-          "size": 0,
-          "description": "\u30D3\u30C3\u30C8\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08\u30E9\u30D9\u30EB\u306F MPEG-1 Layer III \u306E\u5024\uFF09",
-          "name": "bitrate_index",
-          "value": 9,
-          "enum_label": "128kbps"
-        },
-        "sample_rate_index": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 25,
-          "size": 0,
-          "description": "\u30B5\u30F3\u30D7\u30EA\u30F3\u30B0\u30EC\u30FC\u30C8\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\uFF08\u30E9\u30D9\u30EB\u306F MPEG-1 \u306E\u5024\uFF09",
-          "name": "sample_rate_index",
-          "value": 0,
-          "enum_label": "44100Hz"
-        },
-        "padding": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 25,
-          "size": 0,
-          "description": "\u30D1\u30C7\u30A3\u30F3\u30B0\u30D3\u30C3\u30C8",
-          "name": "padding",
-          "value": 0
-        },
-        "private": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 25,
-          "size": 0,
-          "description": "\u30D7\u30E9\u30A4\u30D9\u30FC\u30C8\u30D3\u30C3\u30C8",
-          "name": "private",
-          "value": 0
-        }
-      }
-    },
-    "channel_mode_and_extension": {
-      "_type": "struct",
-      "type": "struct",
-      "offset": 25,
-      "size": 1,
-      "name": "channel_mode_and_extension",
-      "struct_type": "channel_mode_and_extension",
-      "children": {
-        "raw": {
-          "_type": "integer",
-          "type": "uint8",
-          "offset": 25,
-          "size": 1,
-          "description": "\u30C1\u30E3\u30F3\u30CD\u30EB\u30E2\u30FC\u30C9\u30FB\u62E1\u5F35\u30D0\u30A4\u30C8",
-          "name": "raw",
-          "value": 4,
-          "hex": "0x4"
-        },
-        "channel_mode": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 26,
-          "size": 0,
-          "description": "\u30C1\u30E3\u30F3\u30CD\u30EB\u30E2\u30FC\u30C9\uFF080=\u30B9\u30C6\u30EC\u30AA, 1=\u30B8\u30E7\u30A4\u30F3\u30C8\u30B9\u30C6\u30EC\u30AA, 2=\u30C7\u30E5\u30A2\u30EB\u30C1\u30E3\u30F3\u30CD\u30EB, 3=\u30E2\u30CE\u30E9\u30EB\uFF09",
-          "name": "channel_mode",
-          "value": 0,
-          "enum_label": "stereo"
-        },
-        "mode_extension": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 26,
-          "size": 0,
-          "description": "\u30E2\u30FC\u30C9\u62E1\u5F35\uFF08\u30B8\u30E7\u30A4\u30F3\u30C8\u30B9\u30C6\u30EC\u30AA\u6642\u306E\u307F\u6709\u52B9\uFF09",
-          "name": "mode_extension",
-          "value": 0
-        },
-        "copyright": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 26,
-          "size": 0,
-          "description": "\u30B3\u30D4\u30FC\u30E9\u30A4\u30C8\u30D5\u30E9\u30B0",
-          "name": "copyright",
-          "value": 0
-        },
-        "original": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 26,
-          "size": 0,
-          "description": "\u30AA\u30EA\u30B8\u30CA\u30EB\u30D5\u30E9\u30B0",
-          "name": "original",
-          "value": 1
-        },
-        "emphasis": {
-          "_type": "virtual",
-          "type": "virtual",
-          "offset": 26,
-          "size": 0,
-          "description": "\u30A8\u30F3\u30D5\u30A1\u30B7\u30B9\uFF080=\u306A\u3057, 1=50/15ms, 2=reserved, 3=CCITT J.17\uFF09",
-          "name": "emphasis",
-          "value": 0
-        }
-      }
     }
   }
 }

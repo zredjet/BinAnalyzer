@@ -1508,10 +1508,10 @@ structs:
 
 `formats/common/` ディレクトリに、複数のフォーマット定義で共有される構造体が用意されています。新しいフォーマット定義を作成する際に import して利用できます。
 
-| ファイル | 内容 | 提供する構造体 |
+| ファイル | 内容 | 提供する構造体・列挙型・フラグ |
 |---|---|---|
-| `common/isobmff.bdef.yaml` | ISO Base Media File Format 共通構造体 | `container_box`, `ftyp_box`, `hdlr_box`, `dref_box`, `raw_data` |
-| `common/riff.bdef.yaml` | RIFF ファミリー共通構造体 | `raw_data` |
+| `common/isobmff.bdef.yaml` | ISO Base Media File Format 共通構造体 | `container_box`, `ftyp_box`, `brand`, `hdlr_box`, `dref_box`, `raw_data` |
+| `common/riff.bdef.yaml` | RIFF ファミリー共通構造体（WAVEFORMATEX と LIST 'INFO'） | `raw_data`, `wave_format`, `wave_format_extensible`, `info_chunk_data`, `info_sub_chunk`、列挙型 `wave_format_tag`、フラグ `speaker_positions` |
 
 #### ISO BMFF ライブラリの使用例
 
@@ -1564,8 +1564,8 @@ structs:
       type: switch
       switch_on: "{chunk_id}"
       cases:
-        "'fmt '": fmt_chunk
-      default: raw_data    # common/riff から
+        "'fmt '": wave_format   # common/riff から
+      default: raw_data        # common/riff から
 ```
 
 ## 計算フィールド（Virtual）

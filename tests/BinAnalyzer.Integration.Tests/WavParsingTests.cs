@@ -25,143 +25,157 @@ public class WavParsingTests
     [Fact]
     public void WavFormat_DecodesMinimalWav()
     {
-        var wavData = WavTestDataGenerator.CreateMinimalWav();
-        var format = new YamlFormatLoader().Load(WavFormatPath);
-        var decoded = new BinaryDecoder().Decode(wavData, format);
+        var decoded = Decode(WavTestDataGenerator.CreateMinimalWav());
 
         decoded.Name.Should().Be("WAV");
-        decoded.Children.Should().HaveCountGreaterThanOrEqualTo(4);
-        decoded.Children[0].Name.Should().Be("riff_id");
-        decoded.Children[1].Name.Should().Be("file_size");
-        decoded.Children[2].Name.Should().Be("wave_id");
-        decoded.Children[3].Name.Should().Be("chunks");
+        decoded.Children.Select(c => c.Name).Should().Equal("riff_id", "file_size", "wave_id", "chunks");
     }
 
     [Fact]
     public void WavFormat_RiffHeader_DecodesCorrectly()
     {
-        var wavData = WavTestDataGenerator.CreateMinimalWav();
-        var format = new YamlFormatLoader().Load(WavFormatPath);
-        var decoded = new BinaryDecoder().Decode(wavData, format);
+        var decoded = Decode(WavTestDataGenerator.CreateMinimalWav());
 
-        var riffId = decoded.Children[0].Should().BeOfType<DecodedString>().Subject;
+        var riffId = (DecodedString)Child(decoded, "riff_id");
         riffId.Value.Should().Be("RIFF");
-
-        var fileSize = decoded.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        fileSize.Value.Should().Be(40);
-
-        var waveId = decoded.Children[2].Should().BeOfType<DecodedString>().Subject;
-        waveId.Value.Should().Be("WAVE");
+        riffId.Validation!.Passed.Should().BeTrue();
+        ((DecodedInteger)Child(decoded, "file_size")).Value.Should().Be(40);
+        ((DecodedString)Child(decoded, "wave_id")).Value.Should().Be("WAVE");
     }
 
     [Fact]
     public void WavFormat_FmtChunk_DecodesCorrectly()
     {
-        var wavData = WavTestDataGenerator.CreateMinimalWav();
-        var format = new YamlFormatLoader().Load(WavFormatPath);
-        var decoded = new BinaryDecoder().Decode(wavData, format);
+        var fmtChunk = Chunk(Decode(WavTestDataGenerator.CreateMinimalWav()), 0);
 
-        var chunks = decoded.Children[3].Should().BeOfType<DecodedArray>().Subject;
-        var fmtChunk = chunks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-
-        var chunkId = fmtChunk.Children[0].Should().BeOfType<DecodedString>().Subject;
-        chunkId.Value.Should().Be("fmt ");
-
-        var chunkSize = fmtChunk.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        chunkSize.Value.Should().Be(16);
-
-        // data は switch → fmt_chunk struct
-        var fmtData = fmtChunk.Children[2].Should().BeOfType<DecodedStruct>().Subject;
-
-        var audioFormat = fmtData.Children[0].Should().BeOfType<DecodedInteger>().Subject;
-        audioFormat.Value.Should().Be(1);
-        audioFormat.EnumLabel.Should().Be("PCM");
-
-        var numChannels = fmtData.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        numChannels.Value.Should().Be(1);
-
-        var sampleRate = fmtData.Children[2].Should().BeOfType<DecodedInteger>().Subject;
-        sampleRate.Value.Should().Be(8000);
-
-        var byteRate = fmtData.Children[3].Should().BeOfType<DecodedInteger>().Subject;
-        byteRate.Value.Should().Be(8000);
-
-        var blockAlign = fmtData.Children[4].Should().BeOfType<DecodedInteger>().Subject;
-        blockAlign.Value.Should().Be(1);
-
-        var bitsPerSample = fmtData.Children[5].Should().BeOfType<DecodedInteger>().Subject;
-        bitsPerSample.Value.Should().Be(8);
+        ((DecodedString)Child(fmtChunk, "chunk_id")).Value.Should().Be("fmt ");
+        ((DecodedInteger)Child(fmtChunk, "chunk_size")).Value.Should().Be(16);
+        var fmt = (DecodedStruct)Child(fmtChunk, "data");
+        fmt.StructType.Should().Be("wave_format");
+        var formatTag = (DecodedInteger)Child(fmt, "wFormatTag");
+        formatTag.Value.Should().Be(1);
+        formatTag.EnumLabel.Should().Be("PCM");
+        ((DecodedInteger)Child(fmt, "nChannels")).Value.Should().Be(1);
+        ((DecodedInteger)Child(fmt, "nSamplesPerSec")).Value.Should().Be(8000);
+        ((DecodedInteger)Child(fmt, "nAvgBytesPerSec")).Value.Should().Be(8000);
+        ((DecodedInteger)Child(fmt, "nBlockAlign")).Value.Should().Be(1);
+        ((DecodedInteger)Child(fmt, "wBitsPerSample")).Value.Should().Be(8);
+        // 16 バイトの fmt には cbSize が無い
+        fmt.Children.Should().NotContain(c => c.Name == "cbSize");
     }
 
     [Fact]
     public void WavFormat_DataChunk_DecodesCorrectly()
     {
-        var wavData = WavTestDataGenerator.CreateMinimalWav();
-        var format = new YamlFormatLoader().Load(WavFormatPath);
-        var decoded = new BinaryDecoder().Decode(wavData, format);
+        var decoded = Decode(WavTestDataGenerator.CreateMinimalWav());
 
-        var chunks = decoded.Children[3].Should().BeOfType<DecodedArray>().Subject;
-        chunks.Elements.Should().HaveCount(2);
-
-        var dataChunk = chunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
-
-        var chunkId = dataChunk.Children[0].Should().BeOfType<DecodedString>().Subject;
-        chunkId.Value.Should().Be("data");
-
-        var chunkSize = dataChunk.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        chunkSize.Value.Should().Be(4);
+        ((DecodedArray)Child(decoded, "chunks")).Elements.Should().HaveCount(2);
+        var dataChunk = Chunk(decoded, 1);
+        ((DecodedString)Child(dataChunk, "chunk_id")).Value.Should().Be("data");
+        ((DecodedInteger)Child(dataChunk, "chunk_size")).Value.Should().Be(4);
+        Child(Child(dataChunk, "data"), "data").Size.Should().Be(4);
     }
 
     [Fact]
     public void WavFormat_ListInfo_DecodesCorrectly()
     {
-        var wavData = WavTestDataGenerator.CreateWavWithListInfo();
-        var format = new YamlFormatLoader().Load(WavFormatPath);
-        var decoded = new BinaryDecoder().Decode(wavData, format);
+        var decoded = Decode(WavTestDataGenerator.CreateWavWithListInfo());
 
-        var chunks = decoded.Children[3].Should().BeOfType<DecodedArray>().Subject;
-        chunks.Elements.Should().HaveCount(2); // fmt + LIST
-
-        var listChunk = chunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
-        var chunkId = listChunk.Children[0].Should().BeOfType<DecodedString>().Subject;
-        chunkId.Value.Should().Be("LIST");
-
-        // data → switch → list_chunk → data → info_chunk_data → sub_chunks
-        var listData = listChunk.Children[2].Should().BeOfType<DecodedStruct>().Subject;
-        var infoData = listData.Children[1].Should().BeOfType<DecodedStruct>().Subject;
-        var subChunks = infoData.Children[0].Should().BeOfType<DecodedArray>().Subject;
+        ((DecodedArray)Child(decoded, "chunks")).Elements.Should().HaveCount(2); // fmt + LIST
+        var listChunk = Chunk(decoded, 1);
+        ((DecodedString)Child(listChunk, "chunk_id")).Value.Should().Be("LIST");
+        var list = Child(listChunk, "data");
+        ((DecodedString)Child(list, "list_type")).Value.Should().Be("INFO");
+        var subChunks = (DecodedArray)Child(Child(list, "data"), "sub_chunks");
         subChunks.Elements.Should().HaveCount(2);
 
-        // sub_chunks[0]: INAM
-        var inam = subChunks.Elements[0].Should().BeOfType<DecodedStruct>().Subject;
-        var inamId = inam.Children[0].Should().BeOfType<DecodedString>().Subject;
-        inamId.Value.Should().Be("INAM");
-        var inamSize = inam.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        inamSize.Value.Should().Be(5);
+        ((DecodedString)Child(subChunks.Elements[0], "chunk_id")).Value.Should().Be("INAM");
+        ((DecodedInteger)Child(subChunks.Elements[0], "chunk_size")).Value.Should().Be(5);
+        ((DecodedString)Child(subChunks.Elements[1], "chunk_id")).Value.Should().Be("ISFT");
+        ((DecodedInteger)Child(subChunks.Elements[1], "chunk_size")).Value.Should().Be(4);
+    }
 
-        // sub_chunks[1]: ISFT
-        var isft = subChunks.Elements[1].Should().BeOfType<DecodedStruct>().Subject;
-        var isftId = isft.Children[0].Should().BeOfType<DecodedString>().Subject;
-        isftId.Value.Should().Be("ISFT");
-        var isftSize = isft.Children[1].Should().BeOfType<DecodedInteger>().Subject;
-        isftSize.Value.Should().Be(4);
+    [Fact]
+    public void WavFormat_PcmWith18ByteFmt_ReadsCbSize()
+    {
+        var decoded = Decode(WavTestDataGenerator.CreatePcmWavWith18ByteFmt());
+
+        var fmt = Child(Chunk(decoded, 0), "data");
+        ((DecodedInteger)Child(fmt, "wFormatTag")).EnumLabel.Should().Be("PCM");
+        ((DecodedInteger)Child(fmt, "cbSize")).Value.Should().Be(0);
+        // cbSize を読んだ後も data チャンクの位置がずれない
+        var dataChunk = Chunk(decoded, 1);
+        ((DecodedString)Child(dataChunk, "chunk_id")).Value.Should().Be("data");
+        ((DecodedInteger)Child(dataChunk, "chunk_size")).Value.Should().Be(4);
+    }
+
+    [Fact]
+    public void WavFormat_Rf64_UsesDs64Sizes()
+    {
+        var decoded = Decode(WavTestDataGenerator.CreateRf64ExtensibleWav());
+
+        ((DecodedString)Child(decoded, "riff_id")).Value.Should().Be("RF64");
+        ((DecodedArray)Child(decoded, "chunks")).Elements.Should().HaveCount(4);
+
+        var ds64 = Child(Chunk(decoded, 0), "data");
+        ((DecodedInteger)Child(ds64, "riff_size")).Value.Should().Be(120);
+        ((DecodedInteger)Child(ds64, "ds64_data_size")).Value.Should().Be(12);
+        ((DecodedInteger)Child(ds64, "sample_count")).Value.Should().Be(2);
+
+        // data チャンクの 0xFFFFFFFF は ds64 の大きさに置き換える
+        var dataChunk = Chunk(decoded, 3);
+        ((DecodedInteger)Child(dataChunk, "chunk_size")).Value.Should().Be(0xFFFFFFFF);
+        ((DecodedVirtual)Child(dataChunk, "body_size")).Value.Should().Be(12L);
+        Child(Child(dataChunk, "data"), "data").Size.Should().Be(12);
+    }
+
+    [Fact]
+    public void WavFormat_Extensible_DecodesSubFormatAndChannelMask()
+    {
+        var fmt = Child(Chunk(Decode(WavTestDataGenerator.CreateRf64ExtensibleWav()), 1), "data");
+
+        ((DecodedInteger)Child(fmt, "wFormatTag")).EnumLabel.Should().Be("EXTENSIBLE");
+        ((DecodedInteger)Child(fmt, "cbSize")).Value.Should().Be(22);
+        var extensible = Child(fmt, "extensible");
+        ((DecodedInteger)Child(extensible, "wValidBitsPerSample")).Value.Should().Be(24);
+        var mask = (DecodedFlags)Child(extensible, "dwChannelMask");
+        mask.FlagStates.Where(f => f.IsSet).Select(f => f.Name).Should().Equal("FRONT_LEFT", "FRONT_RIGHT");
+        ((DecodedInteger)Child(extensible, "sub_format_tag")).EnumLabel.Should().Be("PCM");
+    }
+
+    [Fact]
+    public void WavFormat_OddSizedChunk_SkipsPaddingByte()
+    {
+        var decoded = Decode(WavTestDataGenerator.CreateRf64ExtensibleWav());
+
+        var note = Chunk(decoded, 2);
+        ((DecodedString)Child(note, "chunk_id")).Value.Should().Be("note");
+        ((DecodedInteger)Child(note, "chunk_size")).Value.Should().Be(3);
+        note.Size.Should().Be(12); // ヘッダ 8 + 中身 3 + 詰め物 1
+        ((DecodedString)Child(Chunk(decoded, 3), "chunk_id")).Value.Should().Be("data");
     }
 
     [Fact]
     public void WavFormat_TreeOutput_ContainsExpectedElements()
     {
-        var wavData = WavTestDataGenerator.CreateMinimalWav();
-        var format = new YamlFormatLoader().Load(WavFormatPath);
-        var decoded = new BinaryDecoder().Decode(wavData, format);
-        var output = new TreeOutputFormatter().Format(decoded);
+        var output = new TreeOutputFormatter().Format(Decode(WavTestDataGenerator.CreateMinimalWav()));
 
         output.Should().Contain("WAV");
         output.Should().Contain("riff_id");
         output.Should().Contain("wave_id");
         output.Should().Contain("fmt ");
         output.Should().Contain("PCM");
-        output.Should().Contain("sample_rate: 8000");
-        output.Should().Contain("bits_per_sample: 8");
+        output.Should().Contain("nSamplesPerSec: 8000");
+        output.Should().Contain("wBitsPerSample: 8");
         output.Should().Contain("data");
     }
+
+    private static DecodedStruct Decode(byte[] data) =>
+        new BinaryDecoder().Decode(data, new YamlFormatLoader().Load(WavFormatPath));
+
+    private static DecodedNode Chunk(DecodedStruct root, int index) =>
+        ((DecodedArray)Child(root, "chunks")).Elements[index];
+
+    private static DecodedNode Child(DecodedNode node, string name) =>
+        ((DecodedStruct)node).Children.First(c => c.Name == name);
 }

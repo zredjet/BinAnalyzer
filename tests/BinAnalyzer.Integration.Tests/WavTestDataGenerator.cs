@@ -129,4 +129,40 @@ public static class WavTestDataGenerator
 
         return data;
     }
+
+    /// <summary>
+    /// RF64（REQ-188）: ds64（data の本当の大きさ 12）、WAVEFORMATEXTENSIBLE の fmt（24 ビット・ステレオ・FL | FR）、
+    /// 奇数バイトの独自チャンク 'note'（3 バイト + 詰め物）、大きさ 0xFFFFFFFF の data（12 バイト）。
+    /// </summary>
+    public static byte[] CreateRf64ExtensibleWav()
+    {
+        var ms = new MemoryStream();
+        var w = new BinaryWriter(ms);
+        w.Write("RF64"u8); w.Write(0xFFFFFFFFu); w.Write("WAVE"u8);
+        w.Write("ds64"u8); w.Write(28u);
+        w.Write(0UL); w.Write(12UL); w.Write(2UL); w.Write(0u);
+        w.Write("fmt "u8); w.Write(40u);
+        w.Write((ushort)0xFFFE); w.Write((ushort)2); w.Write(48000u); w.Write(288000u); w.Write((ushort)6); w.Write((ushort)24);
+        w.Write((ushort)22); w.Write((ushort)24); w.Write(3u);
+        w.Write(new byte[] { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 });
+        w.Write("note"u8); w.Write(3u); w.Write("abc"u8); w.Write((byte)0);
+        w.Write("data"u8); w.Write(0xFFFFFFFFu); w.Write(new byte[12]);
+        var data = ms.ToArray();
+        BinaryPrimitives.WriteUInt64LittleEndian(data.AsSpan(20), (ulong)(data.Length - 8));
+        return data;
+    }
+
+    /// <summary>fmt が 18 バイト（cbSize = 0 付き）の PCM の WAV（REQ-188）。</summary>
+    public static byte[] CreatePcmWavWith18ByteFmt()
+    {
+        var ms = new MemoryStream();
+        var w = new BinaryWriter(ms);
+        w.Write("RIFF"u8); w.Write(0u); w.Write("WAVE"u8);
+        w.Write("fmt "u8); w.Write(18u);
+        w.Write((ushort)1); w.Write((ushort)1); w.Write(8000u); w.Write(16000u); w.Write((ushort)2); w.Write((ushort)16); w.Write((ushort)0);
+        w.Write("data"u8); w.Write(4u); w.Write(new byte[] { 0x00, 0x10, 0x00, 0xF0 });
+        var data = ms.ToArray();
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(4), (uint)(data.Length - 8));
+        return data;
+    }
 }

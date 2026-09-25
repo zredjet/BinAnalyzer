@@ -245,4 +245,63 @@ public static class Mp4TestDataGenerator
         BinaryPrimitives.WriteUInt32BigEndian(dest[28..], 0);          // y = 0
         BinaryPrimitives.WriteUInt32BigEndian(dest[32..], 0x40000000); // w = 1.0
     }
+
+    /// <summary>
+    /// フラグメント MP4（REQ-188）。moov に映像（avc1 + avcC、SPS・PPS 1 個ずつ）と音声（mp4a + esds、AAC LC 44100 Hz ステレオ）のトラック、
+    /// mvex / trex、udta / meta / ilst（'©nam' = "Title"）を置き、moof（mfhd・traf（tfhd・tfdt 版 1・trun 2 サンプル））+ mdat が続く。
+    /// </summary>
+    public static byte[] CreateFragmentedMp4()
+    {
+        static byte[] Be16(int v) => [(byte)(v >> 8), (byte)v];
+        static byte[] Be32(long v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+        static byte[] Be64(long v) => Be32(v >> 32).Concat(Be32(v & 0xFFFFFFFF)).ToArray();
+        static byte[] Cat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
+        static byte[] Box(string type, params byte[][] content)
+        {
+            var body = Cat(content);
+            return Cat(Be32(8 + body.Length), Encoding.Latin1.GetBytes(type), body);
+        }
+        static byte[] Full(int version, int flags) => [(byte)version, (byte)(flags >> 16), (byte)(flags >> 8), (byte)flags];
+        var matrix = Cat(Be32(0x10000), Be32(0), Be32(0), Be32(0), Be32(0x10000), Be32(0), Be32(0), Be32(0), Be32(0x40000000));
+        byte[] Tkhd(int id, int w, int h) => Box("tkhd", Full(0, 3), Be32(0), Be32(0), Be32(id), Be32(0), Be32(0), new byte[8], Be16(0), Be16(0),
+            Be16(w == 0 ? 0x100 : 0), Be16(0), matrix, Be32(w << 16), Be32(h << 16));
+        byte[] Mdhd(int timescale) => Box("mdhd", Full(0, 0), Be32(0), Be32(0), Be32(timescale), Be32(0), Be16(0x55C4), Be16(0));
+        byte[] Hdlr(string type, string name) => Box("hdlr", Full(0, 0), Be32(0), Encoding.ASCII.GetBytes(type), new byte[12], Encoding.UTF8.GetBytes(name + "\0"));
+        var dinf = Box("dinf", Box("dref", Full(0, 0), Be32(1), Box("url ", Full(0, 1))));
+        byte[] EmptyTables() => Cat(Box("stts", Full(0, 0), Be32(0)), Box("stsc", Full(0, 0), Be32(0)), Box("stsz", Full(0, 0), Be32(0), Be32(0)), Box("stco", Full(0, 0), Be32(0)));
+
+        var avcc = Box("avcC", [1, 0x64, 0x00, 0x0A, 0xFF, 0xE1], Be16(4), [0x67, 0x64, 0x00, 0x0A], [1], Be16(4), [0x68, 0xEE, 0x3C, 0x80]);
+        var compressor = new byte[32];
+        compressor[0] = 3;
+        "gen"u8.CopyTo(compressor.AsSpan(1));
+        var avc1 = Box("avc1", new byte[6], Be16(1), Be16(0), Be16(0), new byte[12], Be16(64), Be16(48), Be32(0x480000), Be32(0x480000), Be32(0), Be16(1),
+            compressor, Be16(0x18), Be16(0xFFFF), avcc);
+        var videoTrak = Box("trak", Tkhd(1, 64, 48), Box("mdia", Mdhd(10), Hdlr("vide", "VideoHandler"),
+            Box("minf", Box("vmhd", Full(0, 1), new byte[8]), dinf, Box("stbl", Box("stsd", Full(0, 0), Be32(1), avc1), EmptyTables()))));
+
+        byte[] Descriptor(int tag, params byte[][] body)
+        {
+            var b = Cat(body);
+            return Cat([(byte)tag, (byte)b.Length], b);
+        }
+        var esds = Box("esds", Full(0, 0), Descriptor(0x03, Be16(1), [0],
+            Descriptor(0x04, [0x40, 0x15, 0x00, 0x00, 0x00], Be32(128000), Be32(128000), Descriptor(0x05, [0x12, 0x10])),
+            Descriptor(0x06, [0x02])));
+        var mp4a = Box("mp4a", new byte[6], Be16(1), Be16(0), new byte[6], Be16(2), Be16(16), Be16(0), Be16(0), Be32(44100L << 16), esds);
+        var audioTrak = Box("trak", Tkhd(2, 0, 0), Box("mdia", Mdhd(44100), Hdlr("soun", "SoundHandler"),
+            Box("minf", Box("smhd", Full(0, 0), Be16(0), Be16(0)), dinf, Box("stbl", Box("stsd", Full(0, 0), Be32(1), mp4a), EmptyTables()))));
+
+        byte[] Trex(int id) => Box("trex", Full(0, 0), Be32(id), Be32(1), Be32(0), Be32(0), Be32(0));
+        var udta = Box("udta", Box("meta", Full(0, 0), Hdlr("mdir", ""), Box("ilst", Box("©nam", Box("data", Be32(1), Be32(0), "Title"u8.ToArray())))));
+        var moov = Box("moov", Box("mvhd", Full(0, 0), Be32(0), Be32(0), Be32(1000), Be32(0), Be32(0x10000), Be16(0x100), new byte[10], matrix, new byte[24], Be32(3)),
+            videoTrak, audioTrak, Box("mvex", Trex(1), Trex(2)), udta);
+        var ftyp = Box("ftyp", "isom"u8.ToArray(), Be32(0x200), "isomiso6mp41"u8.ToArray());
+
+        var samples = new byte[] { 0, 0, 0, 1, 0x65, 0, 0, 0, 1, 0x41 };
+        byte[] Moof(int dataOffset) => Box("moof", Box("mfhd", Full(0, 0), Be32(1)),
+            Box("traf", Box("tfhd", Full(0, 0x020008), Be32(1), Be32(1)), Box("tfdt", Full(1, 0), Be64(0)),
+                Box("trun", Full(0, 0x000301), Be32(2), Be32(dataOffset), Be32(1), Be32(5), Be32(1), Be32(5))));
+        var moofLength = Moof(0).Length;
+        return Cat(ftyp, moov, Moof(moofLength + 8), Box("mdat", samples));
+    }
 }
