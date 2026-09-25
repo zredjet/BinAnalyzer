@@ -1450,16 +1450,47 @@ public sealed class BinaryDecoder : IBinaryDecoder
         if (elementSize is not { } size || context.IsBitstreamMode)
         {
             var elem = DecodeSingleField(singleField, format, context);
-            return (elem, ExpressionEvaluator.EvaluateAsBool(condition, context));
+            return (elem, EvaluateUntilCondition(elem, format, condition, context));
         }
 
         context.PushScope(size);
         var element = DecodeSingleField(singleField, format, context);
         // repeat_untilの条件はスコープ内で評価（要素内の変数を参照するため）
-        var met = ExpressionEvaluator.EvaluateAsBool(condition, context);
+        var met = EvaluateUntilCondition(element, format, condition, context);
         context.PopScope();
         return (element, met);
     }
+
+    /// <summary>
+    /// repeat_until の条件を評価する。要素が独自の変数のスコープを持つ struct（<c>scope: isolated</c>・エンディアンの形・テンプレートの引数）なら、
+    /// 要素の値はそのスコープと一緒に消えているので、一時的な変数のスコープに昇格と同じ範囲の値を入れてから評価する（REQ-196）。
+    /// それ以外の要素の値は今のスコープに束縛されているので、そのまま評価する（従来どおり）。
+    /// </summary>
+    private static bool EvaluateUntilCondition(DecodedNode element, FormatDefinition format, Expression condition, DecodeContext context)
+    {
+        if (element is not DecodedStruct st
+            || !format.Structs.TryGetValue(st.StructType, out var structDef)
+            || !HasOwnVariableScope(structDef))
+            return ExpressionEvaluator.EvaluateAsBool(condition, context);
+
+        context.PushVariableScope();
+        try
+        {
+            PromoteDecodedValues(element, context);
+            return ExpressionEvaluator.EvaluateAsBool(condition, context);
+        }
+        finally
+        {
+            context.PopScope();
+        }
+    }
+
+    /// <summary>デコードの間だけ変数を捕まえるスコープを持つ struct か（中の値は struct のデコードの後に見えない）。</summary>
+    private static bool HasOwnVariableScope(StructDefinition structDef) =>
+        structDef.IsolatedScope
+        || structDef.Endianness.HasValue
+        || structDef.EndiannessExpression is not null
+        || structDef.Parameters.Count > 0;
 
     /// <summary>
     /// 要素デコードをエラー回復付きで実行する。成功時はtrue、マーカー見つからず終了時はfalse。
